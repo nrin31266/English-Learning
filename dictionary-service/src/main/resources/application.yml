@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: dictionary-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/demo-realm
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dictionary
+    driverClassName: org.postgresql.Driver
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+server:
+  port: 8082
+  servlet:
+    context-path: /
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+

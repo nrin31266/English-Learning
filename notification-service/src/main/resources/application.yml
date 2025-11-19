@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: notification-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/demo-realm
+
+server:
+  port: 8083
+  servlet:
+    context-path: /
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
