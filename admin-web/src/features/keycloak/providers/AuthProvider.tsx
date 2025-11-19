@@ -67,7 +67,7 @@ const AuthProvider = () => {
     return <FullScreenSpinner label="Loading Information..." />;
   }
 
-  if (!loading && profile && !profile?.roles.includes("admin")) {
+  if (!loading && profile && !profile?.roles.includes("ADMIN")) {
     return <AccessDenied />;
   }
  

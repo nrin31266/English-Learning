@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: learning-content-service
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/learning-content
+    driverClassName: org.postgresql.Driver
+    username: root
+    password: root
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/demo-realm
+
+server:
+  servlet:
+    context-path: /
+  port: 8081
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/

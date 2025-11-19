@@ -1,0 +1,9 @@
+# https://github.com/provectus/kafka-ui
+
+kafka:
+  clusters:
+    - name: local-cluster
+      bootstrapServers: "kafka:29092"
+#      schemaRegistry: "http://schema-registry:9081"
+      zookeeper: "zookeeper:2181"
+      readOnly: false

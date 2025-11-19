@@ -6,15 +6,11 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: http://localhost:8080/realms/demo-realm
-  datasource:
-    url: jdbc:postgresql://localhost:5432/dictionary
-    driverClassName: org.postgresql.Driver
-    username: root
-    password: root
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+
+
 
 server:
   port: 8082

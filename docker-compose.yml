@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16
-    container_name: postgres_toeic
+    container_name: postgres_english_learning
     ports:
       - "5432:5432"
     environment:
@@ -11,10 +11,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - toeic
+      - english-learning-network
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.1
-    container_name: keycloak_toeic
+    container_name: keycloak_english_learning
     command: start-dev
     ports:
       - "8080:8080"
@@ -29,56 +29,56 @@ services:
     depends_on:
       - postgres
     networks:
-      - toeic
-#  kafka:
-#    image: confluentinc/cp-kafka:7.4.4
-#    container_name: kafka_toeic
-#    ports:
-#      - "9092:9092"
-#      - "29092:29092"
-#    environment:
-#      KAFKA_BROKER_ID: 1
-#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-#      # Hai listener: 1 cho container nội bộ, 1 cho host ngoài Docker
-#      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
-#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-#      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-#    depends_on:
-#      - zookeeper
-#    networks:
-#      - toeic
-#
-#  zookeeper:
-#    image: confluentinc/cp-zookeeper:7.4.4
-#    container_name: zookeeper_toeic
-#    ports:
-#      - "2181:2181"
-#    environment:
-#      ZOOKEEPER_CLIENT_PORT: 2181
-#      ZOOKEEPER_TICK_TIME: 2000
-#    networks:
-#      - toeic
-#  kafka-ui:
-#    image: provectuslabs/kafka-ui:latest
-#    container_name: kafka_ui_toeic
-#    ports:
-#      - "9082:8080"
-#    environment:
-#      DYNAMIC_CONFIG_ENABLED: 'true'
-#    volumes:
-#      - ./kui/config.yml:/etc/kafkaui/dynamic_config.yaml
-#    depends_on:
-#      - kafka
-#    #      - schema-registry
-#    networks:
-#      - toeic
+      - english-learning-network
+  kafka:
+    image: confluentinc/cp-kafka:7.4.4
+    container_name: kafka_english_learning
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Hai listener: 1 cho container nội bộ, 1 cho host ngoài Docker
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - english-learning-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.4
+    container_name: zookeeper_english_learning
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - english-learning-network
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka_ui_english_learning
+    ports:
+      - "9082:8080"
+    environment:
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    volumes:
+      - ./kui/config.yml:/etc/kafkaui/dynamic_config.yaml
+    depends_on:
+      - kafka
+    #      - schema-registry
+    networks:
+      - english-learning-network
 
 volumes:
   postgres_data:
 
 
 networks:
-  toeic:
+  english-learning-network:
     driver: bridge

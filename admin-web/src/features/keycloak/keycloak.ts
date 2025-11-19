@@ -9,7 +9,7 @@ export default class KeycloakClient {
   private constructor() {
     this._keycloak = new Keycloak({
       url: "http://localhost:8080",
-      realm: "toeic-realm",
+      realm: "english-learning-realm",
       clientId: "admin-web",
     });
   }
