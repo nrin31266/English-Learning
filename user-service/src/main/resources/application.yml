@@ -1,12 +1,12 @@
 spring:
   application:
-    name: learning-content-service
+    name: user-service
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/learning-content
+    url: jdbc:postgresql://localhost:5432/user
     driverClassName: org.postgresql.Driver
     username: root
     password: root
@@ -19,7 +19,7 @@ spring:
 server:
   servlet:
     context-path: /
-  port: 8081
+  port: 8083
 eureka:
   client:
     service-url:

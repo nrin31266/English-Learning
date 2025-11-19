@@ -11,16 +11,6 @@
         <module name="discovery-service" />
         <module name="notification-service" />
       </profile>
-      <profile name="Annotation profile for dictionary-service" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
-        </processorPath>
-        <module name="dictionary-service" />
-      </profile>
       <profile name="Annotation profile for learning-content-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -29,6 +19,8 @@
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.42/lombok-1.18.42.jar" />
         </processorPath>
         <module name="learning-content-service" />
+        <module name="dictionary-service" />
+        <module name="user-service" />
       </profile>
     </annotationProcessing>
   </component>
@@ -39,6 +31,7 @@
       <module name="discovery-service" options="-parameters" />
       <module name="learning-content-service" options="-parameters" />
       <module name="notification-service" options="-parameters" />
+      <module name="user-service" options="-parameters" />
     </option>
   </component>
 </project>

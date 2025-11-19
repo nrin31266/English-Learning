@@ -18,6 +18,22 @@ spring:
           filters:
             - RemoveRequestHeader=Cookie # 👈 Xoá header Cookie để tránh vấn đề với WebSocket
             - PreserveHostHeader # 👈 Giữ nguyên header Host
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/profiles/**
+        - id: dictionary-service
+          uri: lb://dictionary-service
+          predicates:
+            - Path=/api/dictionaries/**
+        - id: learning-content-service
+          uri: lb://learning-content-service
+          predicates:
+            - Path=/api/learning-contents/**
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
 
 eureka:
   client:
