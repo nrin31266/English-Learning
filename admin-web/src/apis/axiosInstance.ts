@@ -4,7 +4,7 @@ import KeycloakClient from "@/features/keycloak/keycloak";
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: import.meta.env.VITE_GATEWAY_URL,
   headers: { "Content-Type": "application/json" },
   timeout: 10000, // default timeout 10s
 });

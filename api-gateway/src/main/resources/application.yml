@@ -7,6 +7,22 @@ spring:
 
   cloud:
     gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:3001"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+        add-to-simple-url-handler-mapping: true
       httpclient:
         websocket:
           max-frame-payload-length: 65536  # 👈 Tăng kích thước khung tối đa nếu cần
@@ -21,7 +37,7 @@ spring:
         - id: user-service
           uri: lb://user-service
           predicates:
-            - Path=/api/profiles/**
+            - Path=/api/user-profiles/**
         - id: dictionary-service
           uri: lb://dictionary-service
           predicates:
@@ -34,6 +50,8 @@ spring:
           uri: lb://notification-service
           predicates:
             - Path=/api/notifications/**
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials Access-Control-Allow-Methods Access-Control-Allow-Headers
 
 eureka:
   client:

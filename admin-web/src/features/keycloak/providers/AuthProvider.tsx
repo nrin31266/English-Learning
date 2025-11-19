@@ -4,88 +4,100 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import FullScreenSpinner from "@/components/FullScreenSpinner";
 import AccessDenied from "@/components/AccessDenied";
 import KeycloakClient from "../keycloak";
+import handleAPI from "@/apis/handleAPI";
 
 type AuthContextType = {
   profile: IUserProfile | null;
   setProfile: (profile: IUserProfile | null) => void;
-  setLoading: (loading: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
   profile: null,
   setProfile: () => {},
-  setLoading: () => {},
 });
 
-
-let initFlag = false; // 🔹 fix double render
-
-
+let initFlag = false;
 
 const AuthProvider = () => {
   const [profile, setProfile] = useState<IUserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const location = useLocation();
+
+  const [loadingKC, setLoadingKC] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  const keycloak = KeycloakClient.getInstance().keycloak;
+  const roles = keycloak.realmAccess?.roles || [];
+
+  const isAdmin = roles.includes("ADMIN");
+  // ───────────────────────────────────────────
+  // 1️⃣ INIT KEYCLOAK
+  // ───────────────────────────────────────────
   const init = async () => {
     if (initFlag) return;
     initFlag = true;
-    console.log("Start keycloak...")
-    const keycloak = KeycloakClient.getInstance().keycloak;
 
     await keycloak.init({
       onLoad: "check-sso",
       pkceMethod: "S256",
-      silentCheckSsoRedirectUri:
-        window.location.origin + "/silent-check-sso.html",
+      silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
     });
+
     if (keycloak.authenticated) {
-      const roles = keycloak.realmAccess?.roles || [];
-      const userProfile = await keycloak.loadUserProfile();
-      const token = keycloak.token || "";
-      setProfile({
-        ...userProfile,
-        roles,
-        token,
-      });
       KeycloakClient.getInstance().setupTokenRefresh();
-      console.log("User authenticated");
-    }else{
-      console.log("User not authenticated");
+    } else {
       keycloak.login();
     }
-    setLoading(false);
-  
-  }
 
+    setLoadingKC(false);
+  };
 
   useEffect(() => {
     init();
   }, []);
 
+  // ───────────────────────────────────────────
+  // 2️⃣ LOAD USER PROFILE FROM BACKEND
+  // ───────────────────────────────────────────
+  const fetchProfile = async () => {
+    if (!keycloak.authenticated || !isAdmin) return;
 
-  if (loading || !profile) {
-    return <FullScreenSpinner label="Loading Information..." />;
-  }
+    const backendProfile = await handleAPI<IUserProfile>({
+      method: "POST",
+      endpoint: "/api/user-profiles/me",
+      isAuth: true,
+    });
 
-  if (!loading && profile && !profile?.roles.includes("ADMIN")) {
-    return <AccessDenied />;
-  }
- 
+    setProfile(backendProfile);
+    setLoadingProfile(false);
+  };
 
+  useEffect(() => {
+    if (!loadingKC && keycloak.authenticated) {
+      fetchProfile();
+    }
+  }, [loadingKC]);
 
+  
+
+  // ───────────────────────────────────────────
+  // 3️⃣ UI STATE RENDER
+  // ───────────────────────────────────────────
+
+  if (loadingKC) return <FullScreenSpinner label="Checking session..." />;
+
+  if (!keycloak.authenticated) return <FullScreenSpinner label="Redirecting..." />;
+  if (!isAdmin) return <AccessDenied />;
+
+  if (loadingProfile) return <FullScreenSpinner label="Loading profile..." />;
+
+  
+  
 
   return (
-    <AuthContext.Provider
-      value={{
-        profile,
-        setProfile,
-        setLoading,
-      }}
-    >
+    <AuthContext.Provider value={{ profile, setProfile }}>
       <Outlet />
     </AuthContext.Provider>
   );
-}
+};
 
 export const useAuth = () => useContext(AuthContext);
 
