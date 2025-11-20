@@ -5,6 +5,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+    open-in-view: false
   datasource:
     url: jdbc:postgresql://localhost:5432/learning-content
     driverClassName: org.postgresql.Driver

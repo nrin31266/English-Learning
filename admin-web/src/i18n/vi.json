@@ -1,0 +1,22 @@
+{
+  "auth": {
+    "checkingSession": "Đang kiểm tra phiên đăng nhập...",
+    "redirecting": "Đang chuyển hướng...",
+    "loadingProfile": "Đang tải hồ sơ người dùng...",
+    "accessDenied": "Bạn không có quyền truy cập",
+    "loginRequired": "Vui lòng đăng nhập để tiếp tục",
+    "adminOnly": "Chỉ quản trị viên mới được phép truy cập",
+    "fetchProfileError": "Không thể tải thông tin người dùng"
+  },
+  "common": {
+    "welcome": "Chào mừng bạn đến với ứng dụng của chúng tôi",
+    "logout": "Đăng xuất",
+    "hello": "Xin chào, {{name}}!",
+    "feedback": "Phản hồi",
+    "settings": "Cài đặt",
+    "support": "Hỗ trợ",
+    "myProfile": "Hồ sơ của tôi",
+    "billing": "Thanh toán",
+    "myAccount": "Tài khoản của tôi"
+  }
+}

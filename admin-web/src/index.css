@@ -118,3 +118,12 @@
     @apply bg-background text-foreground;
   }
 }
+.fugaz-one-regular {
+  font-family: "Fugaz One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+body{
+  font-family: 'Poppins', sans-serif;
+}

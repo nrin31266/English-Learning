@@ -1,0 +1,22 @@
+{
+  "auth": {
+    "checkingSession": "Checking session...",
+    "redirecting": "Redirecting...",
+    "loadingProfile": "Loading profile...",
+    "accessDenied": "Access denied",
+    "loginRequired": "Please log in to continue",
+    "adminOnly": "Admins only",
+    "fetchProfileError": "Failed to load user profile"
+  },
+  "common":{
+    "welcome": "Welcome",
+    "logout": "Logout",
+    "hello": "Hello",
+    "feedback": "Feedback",
+    "settings": "Settings",
+    "support": "Support",
+    "myProfile": "My Profile",
+    "billing": "Billing",
+    "myAccount": "My Account"
+  }
+}

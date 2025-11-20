@@ -1,8 +1,6 @@
 export interface IUserProfile {
-  username?: string;
   email?: string;
-//   firstName?: string;
-//   lastName?: string;
-  token?: string;
+  firstName?: string;
+  lastName?: string;
   roles: string[];
 }

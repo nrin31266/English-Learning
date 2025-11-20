@@ -5,6 +5,7 @@ import FullScreenSpinner from "@/components/FullScreenSpinner";
 import AccessDenied from "@/components/AccessDenied";
 import KeycloakClient from "../keycloak";
 import handleAPI from "@/apis/handleAPI";
+import { useTranslation } from "react-i18next";
 
 type AuthContextType = {
   profile: IUserProfile | null;
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
 let initFlag = false;
 
 const AuthProvider = () => {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<IUserProfile | null>(null);
 
   const [loadingKC, setLoadingKC] = useState(true);
@@ -82,12 +84,12 @@ const AuthProvider = () => {
   // 3️⃣ UI STATE RENDER
   // ───────────────────────────────────────────
 
-  if (loadingKC) return <FullScreenSpinner label="Checking session..." />;
+  if (loadingKC) return <FullScreenSpinner label={t("auth.checkingSession")} />;
 
-  if (!keycloak.authenticated) return <FullScreenSpinner label="Redirecting..." />;
+  if (!keycloak.authenticated) return <FullScreenSpinner label={t("auth.redirecting")} />;
   if (!isAdmin) return <AccessDenied />;
 
-  if (loadingProfile) return <FullScreenSpinner label="Loading profile..." />;
+  if (loadingProfile) return <FullScreenSpinner label={t("auth.loadingProfile")} />;
 
   
   
