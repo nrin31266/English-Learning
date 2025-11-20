@@ -32,6 +32,7 @@ public class Topic {
     @Builder.Default
     Boolean isActive =false;
 
+    String color; // Highlight topic
 
     @CreationTimestamp
     private LocalDateTime createdAt;

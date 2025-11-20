@@ -1,6 +1,7 @@
 import AuthProvider from "@/features/keycloak/providers/AuthProvider";
 import AppLayout from "@/components/layout/AppLayout";
 import { createBrowserRouter } from "react-router-dom";
+import AllTopic from "@/features/learningcontent/pages/AllTopic";
 
 const router = createBrowserRouter([
   {
@@ -22,7 +23,7 @@ const router = createBrowserRouter([
           // -------------------------
           {
             path: "/topics",
-            element: <div>Topics Page</div>,
+            element: <AllTopic/>,
           },
           {
             path: "/all-lessons",
