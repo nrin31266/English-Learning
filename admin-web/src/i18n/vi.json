@@ -9,7 +9,7 @@
     "fetchProfileError": "Không thể tải thông tin người dùng"
   },
   "common": {
-    "welcome": "Chào mừng bạn đến với ứng dụng của chúng tôi",
+    "welcome": "Chào mừng bạn",
     "logout": "Đăng xuất",
     "hello": "Xin chào, {{name}}!",
     "feedback": "Phản hồi",
@@ -18,5 +18,40 @@
     "myProfile": "Hồ sơ của tôi",
     "billing": "Thanh toán",
     "myAccount": "Tài khoản của tôi"
+  },
+  "appMenu": {
+    "dashboard": "Bảng điều khiển",
+    "learningContent": "Nội dung học tập",
+    "topics": "Chủ đề",
+    "allLessons": "Tất cả bài học",
+    "generateLessons": "Tạo bài học",
+    "vocabulary": "Từ vựng",
+    "allWords": "Tất cả từ",
+    "system": "Hệ thống",
+    "healthCheck": "Kiểm tra hệ thống",
+    "queueMonitor": "Giám sát hàng đợi",
+    "aiJobs": "Tác vụ AI",
+    "logs": "Nhật ký",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt"
+  },
+  "footer": {
+    "aboutTitle": "Giới thiệu",
+    "aboutDescription": "Bảng điều khiển dành cho quản trị viên để quản lý nội dung học do AI tạo, hệ thống từ vựng và hoạt động hệ thống.",
+    "resourcesTitle": "Tài nguyên",
+    "documentation": "Tài liệu hướng dẫn",
+    "apiReference": "Tài liệu API",
+    "developerGuides": "Hướng dẫn dành cho lập trình viên",
+    "systemToolsTitle": "Công cụ hệ thống",
+    "healthCheck": "Kiểm tra hệ thống",
+    "queueMonitor": "Giám sát hàng đợi",
+    "logsViewer": "Xem nhật ký",
+    "aiJobs": "Tác vụ AI",
+    "contactTitle": "Liên hệ",
+    "email": "Email",
+    "phone": "Điện thoại",
+    "github": "Github",
+    "madeWith": "Được tạo nên bằng",
+    "byTeam": "bởi Cat AI Team"
   }
 }

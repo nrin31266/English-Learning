@@ -54,14 +54,7 @@ const ProfileNav = () => {
             {t('common.myProfile')}
             
           </DropdownMenuItem>
-          <DropdownMenuItem disabled> 
-            {t('common.billing')}
-            
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            {t('common.settings')}
-            
-          </DropdownMenuItem>
+         
         </DropdownMenuGroup>
 
 

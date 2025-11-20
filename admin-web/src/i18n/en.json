@@ -8,15 +8,50 @@
     "adminOnly": "Admins only",
     "fetchProfileError": "Failed to load user profile"
   },
-  "common":{
+  "common": {
     "welcome": "Welcome",
     "logout": "Logout",
-    "hello": "Hello",
+    "hello": "Hello, {{name}}!",
     "feedback": "Feedback",
     "settings": "Settings",
     "support": "Support",
     "myProfile": "My Profile",
     "billing": "Billing",
     "myAccount": "My Account"
+  },
+  "appMenu": {
+    "dashboard": "Dashboard",
+    "learningContent": "Learning Content",
+    "topics": "Topics",
+    "allLessons": "All Lessons",
+    "generateLessons": "Generate Lessons",
+    "vocabulary": "Vocabulary",
+    "allWords": "All Words",
+    "system": "System",
+    "healthCheck": "Health Check",
+    "queueMonitor": "Queue Monitor",
+    "aiJobs": "AI Jobs",
+    "logs": "Logs",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "footer": {
+    "aboutTitle": "About",
+    "aboutDescription": "Internal admin dashboard for managing AI-generated learning content, vocabulary system, and system operations.",
+    "resourcesTitle": "Resources",
+    "documentation": "Documentation",
+    "apiReference": "API Reference",
+    "developerGuides": "Developer Guides",
+    "systemToolsTitle": "System Tools",
+    "healthCheck": "Health Check",
+    "queueMonitor": "Queue Monitor",
+    "logsViewer": "Logs Viewer",
+    "aiJobs": "AI Jobs",
+    "contactTitle": "Contact",
+    "email": "Email",
+    "phone": "Phone",
+    "github": "Github",
+    "madeWith": "Made with",
+    "byTeam": "by Cat AI Team"
   }
 }
