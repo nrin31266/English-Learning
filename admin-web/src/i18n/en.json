@@ -35,6 +35,91 @@
     "profile": "Profile",
     "settings": "Settings"
   },
+  "generateLessons": {
+    "form": {
+      "title": "Generate lessons",
+      "description": "Define the topic, source material, and optional features before generating lessons.",
+      "requiredBadge": "Required",
+      "optionalHint": "Optional"
+    },
+    "sections": {
+      "topicBasics": {
+        "title": "Topic & basics",
+        "subtitle": "Connect the lesson to a topic and set the essential metadata."
+      },
+      "source": {
+        "title": "Source material",
+        "subtitle": "Choose where the content comes from and how it should be parsed."
+      },
+      "features": {
+        "title": "Feature toggles",
+        "subtitle": "Enable or disable learning aids for the generated lessons."
+      }
+    },
+    "fields": {
+      "topic": "Topic",
+      "title": "Lesson title",
+      "lessonType": "Lesson type",
+      "languageLevel": "Language level",
+      "description": "Short description",
+      "sourceType": "Source type",
+      "sourceLanguage": "Source language",
+      "sourceUrl": "Source URL",
+      "thumbnailUrl": "Thumbnail URL",
+      "enableDictation": "Dictation practice",
+      "enableShadowing": "Shadowing practice"
+    },
+    "placeholders": {
+      "topic": "Pick a topic",
+      "title": "Name for this lesson",
+      "lessonType": "Select the lesson style",
+      "languageLevel": "Select a CEFR level",
+      "description": "Brief description of the lesson",
+      "sourceType": "Where is the source from?",
+      "sourceLanguage": "Language of the source content",
+      "thumbnail": "https://your-domain.com/thumbnail.png",
+      "youtubeSourceUrl": "Paste a YouTube URL (https://...)",
+      "genericSourceUrl": "Paste an article or audio URL"
+    },
+    "helperTexts": {
+      "enableDictation": "Adds voice-typing drills using the generated transcript.",
+      "enableShadowing": "Adds synchronized audio shadowing mode."
+    },
+    "actions": {
+      "reset": "Reset form",
+      "submit": "Generate lesson"
+    },
+    "validation": {
+      "topic": "Topic is required",
+      "title": "Title is required",
+      "sourceUrl": "Enter a valid source URL",
+      "thumbnailUrl": "Enter a valid thumbnail URL",
+      "thumbnailRequired": "Thumbnail URL is required for non-YouTube sources"
+    },
+    "enums": {
+      "lessonType": {
+        "AI_ASSISTED": "AI-assisted",
+        "TRADITIONAL": "Traditional"
+      },
+      "languageLevel": {
+        "A1": "Beginner (A1)",
+        "A2": "Elementary (A2)",
+        "B1": "Intermediate (B1)",
+        "B2": "Upper intermediate (B2)",
+        "C1": "Advanced (C1)",
+        "C2": "Proficient (C2)"
+      },
+      "sourceType": {
+        "YOUTUBE": "YouTube video",
+        "AUDIO_FILE": "Audio file",
+        "OTHER": "Other source"
+      },
+      "sourceLanguage": {
+        "en-US": "English (US)",
+        "en-UK": "English (UK)"
+      }
+    }
+  },
   "footer": {
     "aboutTitle": "About",
     "aboutDescription": "Internal admin dashboard for managing AI-generated learning content, vocabulary system, and system operations.",

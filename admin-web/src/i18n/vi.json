@@ -35,6 +35,91 @@
     "profile": "Hồ sơ",
     "settings": "Cài đặt"
   },
+  "generateLessons": {
+    "form": {
+      "title": "Tạo bài học",
+      "description": "Thiết lập chủ đề, nguồn nội dung và các tính năng trước khi tạo bài học.",
+      "requiredBadge": "Bắt buộc",
+      "optionalHint": "Không bắt buộc"
+    },
+    "sections": {
+      "topicBasics": {
+        "title": "Chủ đề & thông tin cơ bản",
+        "subtitle": "Liên kết bài học với một chủ đề và khai báo các thông tin quan trọng."
+      },
+      "source": {
+        "title": "Nguồn nội dung",
+        "subtitle": "Chọn nguồn dữ liệu và cách hệ thống sẽ xử lý."
+      },
+      "features": {
+        "title": "Tính năng hỗ trợ",
+        "subtitle": "Bật hoặc tắt các công cụ hỗ trợ học tập cho bài học."
+      }
+    },
+    "fields": {
+      "topic": "Chủ đề",
+      "title": "Tiêu đề bài học",
+      "lessonType": "Loại bài học",
+      "languageLevel": "Trình độ ngôn ngữ",
+      "description": "Mô tả ngắn",
+      "sourceType": "Loại nguồn",
+      "sourceLanguage": "Ngôn ngữ nguồn",
+      "sourceUrl": "Liên kết nguồn",
+      "thumbnailUrl": "Liên kết ảnh đại diện",
+      "enableDictation": "Bài tập chính tả",
+      "enableShadowing": "Luyện shadowing"
+    },
+    "placeholders": {
+      "topic": "Chọn một chủ đề",
+      "title": "Đặt tên cho bài học",
+      "lessonType": "Chọn kiểu bài học",
+      "languageLevel": "Chọn cấp độ CEFR",
+      "description": "Mô tả ngắn về bài học",
+      "sourceType": "Nguồn nội dung đến từ đâu?",
+      "sourceLanguage": "Ngôn ngữ của tài liệu nguồn",
+      "thumbnail": "https://ten-mien-cua-ban/thumbnail.png",
+      "youtubeSourceUrl": "Dán liên kết YouTube (https://...)",
+      "genericSourceUrl": "Dán liên kết bài viết hoặc audio"
+    },
+    "helperTexts": {
+      "enableDictation": "Thêm bài tập nhập liệu bằng giọng nói dựa trên bản chép.",
+      "enableShadowing": "Bổ sung chế độ shadowing với âm thanh đồng bộ."
+    },
+    "actions": {
+      "reset": "Làm mới",
+      "submit": "Tạo bài học"
+    },
+    "validation": {
+      "topic": "Vui lòng chọn chủ đề",
+      "title": "Vui lòng nhập tiêu đề",
+      "sourceUrl": "Liên kết nguồn không hợp lệ",
+      "thumbnailUrl": "Liên kết ảnh đại diện không hợp lệ",
+      "thumbnailRequired": "Cần ảnh đại diện cho nguồn không phải YouTube"
+    },
+    "enums": {
+      "lessonType": {
+        "AI_ASSISTED": "AI hỗ trợ",
+        "TRADITIONAL": "Truyền thống"
+      },
+      "languageLevel": {
+        "A1": "Sơ cấp (A1)",
+        "A2": "Cơ bản (A2)",
+        "B1": "Trung cấp (B1)",
+        "B2": "Trung cao (B2)",
+        "C1": "Nâng cao (C1)",
+        "C2": "Thành thạo (C2)"
+      },
+      "sourceType": {
+        "YOUTUBE": "Video YouTube",
+        "AUDIO_FILE": "Tệp âm thanh",
+        "OTHER": "Nguồn khác"
+      },
+      "sourceLanguage": {
+        "en-US": "Tiếng Anh (Mỹ)",
+        "en-UK": "Tiếng Anh (Anh)"
+      }
+    }
+  },
   "footer": {
     "aboutTitle": "Giới thiệu",
     "aboutDescription": "Bảng điều khiển dành cho quản trị viên để quản lý nội dung học do AI tạo, hệ thống từ vựng và hoạt động hệ thống.",

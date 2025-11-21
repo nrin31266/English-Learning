@@ -1,4 +1,6 @@
 package com.rin.englishlearning.common.constants;
 
-public class LessonType {
+public enum LessonType {
+    AI_ASSISTED,
+    TRADITIONAL
 }

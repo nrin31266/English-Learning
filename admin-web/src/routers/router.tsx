@@ -1,10 +1,19 @@
-import AuthProvider from "@/features/keycloak/providers/AuthProvider";
-import AppLayout from "@/components/layout/AppLayout";
-import { createBrowserRouter } from "react-router-dom";
-import AllTopic from "@/features/learningcontent/pages/AllTopic";
+import AppLayout from "@/components/layout/AppLayout"
+import { createBrowserRouter } from "react-router-dom"
+import { Suspense, lazy, type ReactElement } from "react"
+import SkeletonComponent from "@/components/SkeletonComponent"
+
+const AllTopic = lazy(() => import("@/features/learningcontent/pages/AllTopic"))
+const GenerateLessons = lazy(() => import("@/features/learningcontent/pages/GenerateLessons"))
+
+const withSuspense = (element: ReactElement) => (
+  <Suspense fallback={<SkeletonComponent/>}>
+    {element}
+  </Suspense>
+)
 
 const router = createBrowserRouter([
-
+    
       {
         element: <AppLayout />, // layout bọc các route con
         children: [
@@ -21,7 +30,7 @@ const router = createBrowserRouter([
           // -------------------------
           {
             path: "/topics",
-            element: <AllTopic/>,
+            element: withSuspense(<AllTopic />),
           },
           {
             path: "/all-lessons",
@@ -29,7 +38,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/generate-lessons",
-            element: <div>Generate Lessons Page</div>,
+            element: withSuspense(<GenerateLessons />),
           },
 
           // -------------------------

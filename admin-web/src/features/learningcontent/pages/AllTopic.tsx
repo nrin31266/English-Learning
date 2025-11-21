@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge"
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -5,13 +6,7 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator
 } from "@/components/ui/breadcrumb"
-import { BadgeCheckIcon, SquarePlus, CircleX, ExternalLink, SettingsIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useTranslation } from 'react-i18next'
-import { TopicDialog } from "../components/TopicDialog"
-import { useEffect, useState } from "react"
-import { useAppDispatch, useAppSelector } from "@/store"
-import { fetchTopicOptions, fetchTopics } from "@/store/learningcontent/topicReducer"
 import {
     Table,
     TableBody,
@@ -22,34 +17,43 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Link } from "react-router-dom"
+import { useAppDispatch, useAppSelector } from "@/store"
+import { fetchTopicOptions, fetchTopics } from "@/store/learningcontent/topicReducer"
 import { getTextColorForHex } from "@/utils/colorUtils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
-let initFlag = false;
+import { BadgeCheckIcon, CircleX, SettingsIcon, SquarePlus } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useTranslation } from 'react-i18next'
+import { Link } from "react-router-dom"
+import { TopicDialog } from "../components/TopicDialog"
+import SkeletonComponent from "@/components/SkeletonComponent"
 const AllTopic = () => {
     const { t } = useTranslation()
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<'add' | 'edit'>('add');
     const [topic, setTopic] = useState<any>(null);
     const dispatch = useAppDispatch();
-    const { topics, topicMutation, topicOptions } = useAppSelector((state) => state.learningContent.topics);
-
+    const { topics } = useAppSelector((state) => state.learningContent.topics);
+    const [hydrating, setHydrating] = useState(true);
     useEffect(() => {
-        if (!initFlag) {
-            initFlag = true;
-            if (topics.status === 'idle') {
-                dispatch(fetchTopics());
-            }
-            if (topicOptions.status === 'idle') {
-                dispatch(fetchTopicOptions());
-            }
+            const id = setTimeout(() => setHydrating(false), 50); // 10–120ms
+            return () => clearTimeout(id);
+        }, []);
+    useEffect(() => {
+        if (topics.status === 'idle') {
+            dispatch(fetchTopics());
         }
+        // if (topicOptions.status === 'idle') {
+            //     dispatch(fetchTopicOptions());
+            // }
+        
     }, [dispatch]);
-
+    if (hydrating) {
+        return <SkeletonComponent/>;
+    }
     return (
         <div className="flex flex-col gap-8">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center h-6">
                 <Breadcrumb>
                     <BreadcrumbList>
                         <BreadcrumbItem >
@@ -115,7 +119,7 @@ const AllTopic = () => {
                                     background: item.color ? item.color : "white",
                                     color: getTextColorForHex(item.color ? item.color : "#FFFFFF") === "light" ? "white" : "black"
                                 }}>
-                                    <Link className="hover:underline line-clamp-none truncate" to={`/topics/${item.id}`}> # {item.name} </Link>
+                                    <Link className="hover:underline line-clamp-none truncate" to={`/topics/${item.slug}`}> # {item.name} </Link>
                                 </TableCell>
                                 <TableCell className="max-w-[300px] text-stone-500">
                                     <p className="truncate line-clamp-1">{item.description ? item.description : "No description available"}</p>

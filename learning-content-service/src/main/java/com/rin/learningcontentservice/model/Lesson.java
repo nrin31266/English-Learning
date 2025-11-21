@@ -1,8 +1,6 @@
 package com.rin.learningcontentservice.model;
 
-import com.rin.englishlearning.common.constants.CefrLevel;
-import com.rin.englishlearning.common.constants.LessonSourceType;
-import com.rin.englishlearning.common.constants.LessonStatus;
+import com.rin.englishlearning.common.constants.*;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,13 +33,20 @@ public class Lesson {
     @Column(nullable = false)
     private String title;
 
+    private String thumbnailUrl;
+
     @Column(nullable = false, unique = true)
     private String slug;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Enumerated(EnumType.STRING)
+    @Column
+    private LessonType lessonType; // ai_assisted, traditional
 
+    @Enumerated(EnumType.STRING)
+    private LessonProcessingStep processingStep;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "language_level")
@@ -57,7 +62,7 @@ public class Lesson {
     private String sourceUrl;
 
     @Column(name = "source_reference_id")
-    private String sourceReferenceId;  // YouTube video ID, internal file ID…
+    private String sourceReferenceId;  // YouTube video ID, internal file ID…   
 
     @Column(name = "source_language")
     private String sourceLanguage; // e.g. en-US, en-UK

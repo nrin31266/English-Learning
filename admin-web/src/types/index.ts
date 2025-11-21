@@ -46,3 +46,7 @@ export interface IAsyncState<T> {
 }
 
 export type MutationType = "add" | "edit" | "delete" | null;
+export const lessonTypeOptions = ["AI_ASSISTED", "TRADITIONAL"] as const
+export const cefrLevelOptions = ["A1", "A2", "B1", "B2", "C1", "C2"] as const
+export const sourceTypeOptions = ["YOUTUBE", "AUDIO_FILE", "OTHER"] as const
+export const sourceLanguageOptions = ["en-US", "en-UK"] as const
