@@ -41,6 +41,9 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { cefrLevelOptions, lessonTypeOptions, sourceLanguageOptions, sourceTypeOptions } from "@/types"
 import { Skeleton } from "@/components/ui/skeleton"
 import SkeletonComponent from "@/components/SkeletonComponent"
+import { useNavigate } from "react-router-dom"
+import handleAPI from "@/apis/handleAPI"
+import { Spinner2 } from "@/components/ui/spinner2"
 
 const mockTopics = [
     { value: "travel-stories", label: "Travel Stories" },
@@ -96,6 +99,8 @@ const GenerateLessons = () => {
     const schema = React.useMemo(() => createLessonSchema(t), [t])
     const { data, status } = useAppSelector((state) => state.learningContent.topics.topicOptions);
     const dispatch = useAppDispatch();
+    const [loading, setLoading] = React.useState(false);
+    const navigate = useNavigate();
     const [hydrating, setHydrating] = React.useState(true);
     React.useEffect(() => {
         const id = setTimeout(() => setHydrating(false), 10); // 10–120ms
@@ -152,23 +157,34 @@ const GenerateLessons = () => {
         [t]
     )
 
-      // ---------- Placeholder ----------
-  const sourceUrlPlaceholder =  watchedSourceType === "YOUTUBE"
-    ? t("generateLessons.placeholders.youtubeSourceUrl")
-    : t("generateLessons.placeholders.genericSourceUrl")
+    // ---------- Placeholder ----------
+    const sourceUrlPlaceholder = watchedSourceType === "YOUTUBE"
+        ? t("generateLessons.placeholders.youtubeSourceUrl")
+        : t("generateLessons.placeholders.genericSourceUrl")
 
 
-    function onSubmit(values: LessonFormValues) {
+    async function onSubmit(values: LessonFormValues) {
         const normalizedPayload = {
             ...values,
             description: values.description?.trim() || undefined,
             thumbnailUrl: values.sourceType === "YOUTUBE" ? undefined : values.thumbnailUrl?.trim(),
         }
         console.log("Prepared lesson payload", normalizedPayload)
+        const data = await handleAPI({
+            endpoint: "/learning-contents/lessons",
+            method: "POST",
+            isAuth: true,
+            body: normalizedPayload,
+        })
+
+        console.log(data);
+
+        navigate("/all-lessons");
+
         form.reset(defaultValues)
     }
     if (hydrating) {
-        return <SkeletonComponent/>
+        return <SkeletonComponent />
     }
     return (
         <div className="space-y-6">
@@ -478,7 +494,8 @@ const GenerateLessons = () => {
                             <Button type="button" variant="outline" onClick={() => form.reset(defaultValues)}>
                                 {t("generateLessons.actions.reset")}
                             </Button>
-                            <Button type="submit">
+                            <Button disabled={loading} type="submit">
+                                {loading && <Spinner2 />}
                                 {t("generateLessons.actions.submit")}
                             </Button>
                         </CardFooter>

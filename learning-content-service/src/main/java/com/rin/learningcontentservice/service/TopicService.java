@@ -24,8 +24,8 @@ public class TopicService {
     public TopicResponse addTopic(AddEditTopicRequest topicRequest) {
         String slug = textUtils.toSlug(topicRequest.getName());
         if(topicRepository.findBySlug(slug).isPresent()) {
-            throw new BaseException(LearningContentErrorCode.LESSON_WITH_NAME_EXISTS,
-                    LearningContentErrorCode.LESSON_WITH_NAME_EXISTS.formatMessage(topicRequest.getName()));
+            throw new BaseException(LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS,
+                    LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS.formatMessage(topicRequest.getName()));
         }
         Topic newTopic = topicMapper.toTopic(topicRequest);
         newTopic.setSlug(slug);
@@ -49,13 +49,13 @@ public class TopicService {
 
     public TopicResponse editTopic(String slug, AddEditTopicRequest topicRequest) {
         Topic existingTopic = topicRepository.findBySlug(slug)
-                .orElseThrow(() -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND,
-                        LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(slug)));
+                .orElseThrow(() -> new BaseException(LearningContentErrorCode.TOPIC_NOT_FOUND,
+                        LearningContentErrorCode.TOPIC_NOT_FOUND.formatMessage(slug)));
 
         String newSlug = textUtils.toSlug(topicRequest.getName());
         if(!newSlug.equals(slug) && topicRepository.findBySlug(newSlug).isPresent()) {
-            throw new BaseException(LearningContentErrorCode.LESSON_WITH_NAME_EXISTS,
-                    LearningContentErrorCode.LESSON_WITH_NAME_EXISTS.formatMessage(topicRequest.getName()));
+            throw new BaseException(LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS,
+                    LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS.formatMessage(topicRequest.getName()));
         }
 
         existingTopic.setName(topicRequest.getName());

@@ -3,10 +3,10 @@ package com.rin.englishlearning.common.constants;
 public enum LessonProcessingStep {
     NONE,
 
-    FETCH_SOURCE,           // download file / youtube content
-    TRANSCRIBE,             // speech-to-text
-    NLP_ANALYSIS,           // detect language, CEFR, etc
-    POST_PROCESSING,        // cleanup, align timing
+    SOURCE_FETCHED,        // downloaded file / youtube content fetched
+    TRANSCRIBED,           // speech-to-text completed
+    NLP_ANALYZED,          // NLP analysis done (language, CEFR…)
+    POST_PROCESSED,        // alignment and cleanup finished
 
     COMPLETED,
     FAILED

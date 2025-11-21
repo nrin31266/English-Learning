@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -62,7 +64,7 @@ public class Lesson {
     private String sourceUrl;
 
     @Column(name = "source_reference_id")
-    private String sourceReferenceId;  // YouTube video ID, internal file ID…   
+    private String sourceReferenceId;  // YouTube video ID, internal file ID…
 
     @Column(name = "source_language")
     private String sourceLanguage; // e.g. en-US, en-UK
@@ -91,9 +93,11 @@ public class Lesson {
 
     // ───────────────────────────────────────────
     // Timestamps
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Timestamp createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Timestamp updatedAt;
 
