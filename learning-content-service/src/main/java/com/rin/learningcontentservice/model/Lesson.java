@@ -35,8 +35,13 @@ public class Lesson {
     @Column(nullable = false)
     private String title;
 
+    @Column(nullable = false, unique = true)
+    private String slug;
+
     @Column(columnDefinition = "TEXT")
     private String description;
+
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "language_level")

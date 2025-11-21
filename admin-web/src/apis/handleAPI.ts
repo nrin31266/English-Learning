@@ -1,6 +1,7 @@
 import type { Method } from "axios";
 import axiosInstance from "./axiosInstance";
 import axios from "axios";
+import type { IApiResponse } from "@/types";
 
 
 interface RequestParams<B = unknown> {
@@ -13,11 +14,7 @@ interface RequestParams<B = unknown> {
   timeout?: number; // in milliseconds
 }
 
-interface ApiResponse<T> {
-  result: T;
-  message: string;
-  code: number;
-}
+
 
 const handleAPI = async <T, B = unknown>({
   endpoint,
@@ -46,15 +43,23 @@ const handleAPI = async <T, B = unknown>({
       timeout: timeout || 10000
     });
 
-    const response: ApiResponse<T> = axiosResponse.data;
+    const response: IApiResponse<T> = axiosResponse.data;
     return response.result;
 
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || "An unexpected error occurred.");
-    } else {
-      throw new Error("An unexpected error occurred. 2");
-    }
+        // ⬇️ Trả ra object lỗi để UI tự map theo từng ngôn ngữ
+        throw {
+          code: error.response.data.code,
+          message: error.response.data.message,
+          // raw: error.response.data, // optional: debug
+        };
+      }
+
+      throw {
+        code: -1,
+        message: "An unexpected error occurred.",
+      };
   }
 };
 

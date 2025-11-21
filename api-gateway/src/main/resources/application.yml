@@ -35,17 +35,20 @@ spring:
             - RemoveRequestHeader=Cookie # 👈 Xoá header Cookie để tránh vấn đề với WebSocket
             - PreserveHostHeader # 👈 Giữ nguyên header Host
         - id: user-service
-          uri: lb://user-service
+          uri: http://localhost:8083
           predicates:
             - Path=/api/user-profiles/**
         - id: dictionary-service
           uri: lb://dictionary-service
           predicates:
             - Path=/api/dictionaries/**
-        - id: learning-content-service
-          uri: lb://learning-content-service
+        - id: learning-content
+          uri: http://localhost:8081
           predicates:
             - Path=/api/learning-contents/**
+          filters:
+            - StripPrefix=2
+
         - id: notification-service
           uri: lb://notification-service
           predicates:
@@ -53,7 +56,7 @@ spring:
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials Access-Control-Allow-Methods Access-Control-Allow-Headers
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
+#eureka:
+#  client:
+#    service-url:
+#      defaultZone: http://localhost:8761/eureka/

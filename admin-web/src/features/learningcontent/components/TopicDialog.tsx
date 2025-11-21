@@ -1,59 +1,98 @@
 
+import { Button } from "@/components/ui/button"
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
-    DialogTitle,
     DialogDescription,
     DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 
-import { useForm } from "react-hook-form"
-import { z } from "zod"
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from "@/components/ui/textarea"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
-import { DialogClose } from "@radix-ui/react-dialog"
-import { Checkbox } from '@/components/ui/checkbox';
-export const topicSchema = z.object({
-    name: z.string().min(1, "Name is required"),
+import { z } from "zod"
+
+import { TOPIC_COLOR_LIST } from "@/types/colorMap"
+import { getRandomTopicColor, getTextColorForHex } from "@/utils/colorUtils"
+import type { TFunction } from "i18next"
+import { useAppDispatch, useAppSelector } from "@/store"
+import { Spinner2 } from "@/components/ui/spinner2"
+import { addTopic, deleteTopic, editTopic } from "@/store/learningcontent/topicReducer"
+import type { ITopicDto } from "@/types"
+import { useEffect } from "react"
+export const createTopicSchema = (t: TFunction) =>
+  z.object({
+    name: z.string().min(1, t("topicDialog.nameRequired")),
     description: z.string().optional(),
     isActive: z.boolean(),
     color: z.string().optional(),
-});
+  });
 
 interface Props {
     onClose?: () => void;
     open?: boolean;
     mode?: 'add' | 'edit';
-    topic: any;
+    topic: ITopicDto | null;
 }
 export function TopicDialog({ onClose, open, mode = 'add', topic }: Props) {
     const { t } = useTranslation();
-    const form = useForm<z.infer<typeof topicSchema>>({
-        resolver: zodResolver(topicSchema),
+    // const [highlightedColor, setHighlightedColor] = useState<string | null>(null);
+    const form = useForm<z.infer<ReturnType<typeof createTopicSchema>>>({
+        resolver: zodResolver(createTopicSchema(t)),
         defaultValues: {
             name: topic?.name ?? "",
             description: topic?.description ?? "",
             isActive: topic?.isActive ?? false,
-            color: topic?.color ?? "",
+            color: topic?.color ?? getRandomTopicColor(),
         },
     });
-    function onSubmit(values: z.infer<typeof topicSchema>) {
+
+    useEffect(() => {
+        form.reset({
+            name: topic?.name ?? "",
+            description: topic?.description ?? "",
+            isActive: topic?.isActive ?? false,
+            color: topic?.color ?? getRandomTopicColor(),
+        });
+    }, [topic]);
+    const dispatch = useAppDispatch();
+    const {type, status, error } = useAppSelector((state) => state.learningContent.topics.topicMutation);
+    function onSubmit(values: z.infer<ReturnType<typeof createTopicSchema>>) {
         console.log("Form values:", values);
+        const fd = new FormData();
+        for (let key in values) fd.append(key, (values as any)[key]);
+        if(mode === 'add') {
+            dispatch(addTopic(fd)).unwrap().then(() => {
+                onClose && onClose();
+                form.reset();
+            });
+        }else if(mode === 'edit' && topic) {
+            dispatch(editTopic({ slug: topic.slug, data: fd })).unwrap().then(() => {
+                onClose && onClose();
+                form.reset();
+            });
+        }
+    }
+
+    function handleDelete() {
+        // Xử lý xóa topic ở đây
+        if(topic) {
+            dispatch(deleteTopic(topic.slug)).unwrap().then(() => {
+                onClose && onClose();
+                form.reset();
+            });
+        }
     }
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            {/* <form> */}
-            {/* <DialogTrigger asChild>
-          <Button variant={"outline"} className="h-6 text-xs">
-                        <SquarePlus/>
-                        Add Topic</Button>
-        </DialogTrigger> */}
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-[425px] [&>button]:hidden">
                 <DialogHeader>
                     <DialogTitle>{mode === 'add' ? t("topicDialog.addTitle") : t("topicDialog.editTitle")}</DialogTitle>
                     <DialogDescription>
@@ -73,29 +112,15 @@ export function TopicDialog({ onClose, open, mode = 'add', topic }: Props) {
                             name="name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Name</FormLabel>
+                                    <FormLabel>{t("topicDialog.nameLabel")}</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Topic name" {...field} />
+                                        <Input placeholder={t("topicDialog.namePlaceholder")} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        {/* slug */}
-                        {/* <FormField
-                            control={form.control}
-                            name="slug"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Slug</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="topic-slug" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        /> */}
 
                         {/* description */}
                         <FormField
@@ -103,9 +128,9 @@ export function TopicDialog({ onClose, open, mode = 'add', topic }: Props) {
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Description</FormLabel>
+                                    <FormLabel>{t("topicDialog.descriptionLabel")}</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Short description..." {...field} />
+                                        <Textarea placeholder={t("topicDialog.descriptionPlaceholder")} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -118,14 +143,40 @@ export function TopicDialog({ onClose, open, mode = 'add', topic }: Props) {
                             name="color"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Color</FormLabel>
-                                    <FormControl>
-                                        <Input type="color" {...field} />
-                                    </FormControl>
+                                    <FormLabel>{t("topicDialog.colorLabel")}</FormLabel>
+
+                                    <div className="grid grid-cols-5 gap-2 mt-2">
+                                        {TOPIC_COLOR_LIST.map((hex) => {
+                                            const isSelected = field.value === hex;
+                                            const textColor = getTextColorForHex(hex) === "light" ? "text-white" : "text-black";
+
+                                            return (
+                                                <button
+                                                    key={hex}
+                                                    type="button"
+                                                    onClick={() => field.onChange(hex)}
+                                                    className={`
+                                        h-8 w-8 rounded-md transition
+                                        ${isSelected ? "ring-2 ring-black scale-110" : "ring-1 ring-gray-300"}
+                                    `}
+                                                    style={{ backgroundColor: hex }}
+                                                >
+                                                    {/* optional: dấu check */}
+                                                    {isSelected && (
+                                                        <span className={`block text-center text-xs font-bold ${textColor}`}>
+                                                            Aa
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+
 
                         {/* isActive */}
                         <FormField
@@ -139,29 +190,41 @@ export function TopicDialog({ onClose, open, mode = 'add', topic }: Props) {
                                             onCheckedChange={field.onChange}
                                         />
                                     </FormControl>
-                                    <FormLabel>Active</FormLabel>
+                                    <FormLabel>{t("topicDialog.isActiveLabel")}</FormLabel>
                                 </FormItem>
                             )}
+                            
                         />
 
+                        {/* Error */}
+                        {error && (
+                            <div className="text-destructive text-sm mb-2">
+                                {error.message}
+                            </div>
+                        )}
+
                         <DialogFooter>
-                            <Button variant="outline" onClick={onClose}>
-                                Cancel
+                            
+                            {
+                                mode === 'edit' && (<Button onClick={handleDelete}  type="button" variant="destructive" className="mr-auto" disabled={status === "loading"}>
+                                    {status === "loading" && type === "delete" && <Spinner2 />}
+                                    {t("topicDialog.deleteButton")}
+                                </Button>
+                                )
+                            }
+                            <Button type="button" variant="outline" disabled={status === "loading"} onClick={onClose}>
+                                {t("topicDialog.cancelButton")}
                             </Button>
-                            <Button type="submit">
-                                {mode === "add" ? "Create" : "Save"}
+                            <Button type="submit" disabled={status === "loading"} >
+                                {status === "loading" && type !== "delete" && <Spinner2  />}
+                                {mode === "add" ? t("topicDialog.addButton") : t("topicDialog.editButton")}
                             </Button>
                         </DialogFooter>
                     </form>
                 </Form>
-                {/* <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button type="submit">Save changes</Button>
-                </DialogFooter> */}
             </DialogContent>
             {/* </form> */}
         </Dialog>
     )
 }
+

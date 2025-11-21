@@ -4,13 +4,11 @@ import { createBrowserRouter } from "react-router-dom";
 import AllTopic from "@/features/learningcontent/pages/AllTopic";
 
 const router = createBrowserRouter([
-  {
-    element: <AuthProvider />,
-    children: [
+
       {
         element: <AppLayout />, // layout bọc các route con
         children: [
-          // -------------------------
+           // -------------------------
           // Dashboard
           // -------------------------
           {
@@ -75,8 +73,6 @@ const router = createBrowserRouter([
           },
         ],
       },
-    ],
-  },
 ]);
 
 export default router;

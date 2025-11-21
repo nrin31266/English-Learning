@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType>({
 
 let initFlag = false;
 
-const AuthProvider = () => {
+const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
   const [profile, setProfile] = useState<IUserProfile | null>(null);
 
@@ -64,7 +64,7 @@ const AuthProvider = () => {
 
     const backendProfile = await handleAPI<IUserProfile>({
       method: "POST",
-      endpoint: "/api/user-profiles/me",
+      endpoint: "/user-profiles/me",
       isAuth: true,
     });
 
@@ -96,7 +96,7 @@ const AuthProvider = () => {
 
   return (
     <AuthContext.Provider value={{ profile, setProfile }}>
-      <Outlet />
+      {children}
     </AuthContext.Provider>
   );
 };

@@ -8,11 +8,11 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum BaseErrorCode implements ErrorCode {
     // 🔹 Common errors
-    INTERNAL_SERVER_ERROR(1000, "Lỗi máy chủ nội bộ", HttpStatus.INTERNAL_SERVER_ERROR),
-    INVALID_REQUEST(1001, "Dữ liệu yêu cầu không hợp lệ", HttpStatus.BAD_REQUEST),
-    UNAUTHORIZED(1002, "Không được phép", HttpStatus.UNAUTHORIZED),
-    NO_ACCESS(1003, "Không có quyền truy cập", HttpStatus.FORBIDDEN),
-    RESOURCE_NOT_FOUND(1004, "Không tìm thấy tài nguyên", HttpStatus.NOT_FOUND),
+    INTERNAL_SERVER_ERROR(9000, "Internal Server Error", HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_REQUEST(9001, "Invalid Request", HttpStatus.BAD_REQUEST),
+    UNAUTHORIZED(9002, "UNAUTHORIZED", HttpStatus.UNAUTHORIZED),
+    NO_ACCESS(9003, "No Access", HttpStatus.FORBIDDEN),
+    RESOURCE_NOT_FOUND(9004, "Resource Not Found", HttpStatus.NOT_FOUND),
 
     ;
 

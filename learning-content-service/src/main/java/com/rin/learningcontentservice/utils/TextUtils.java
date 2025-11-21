@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TextUtils {
 
-    public static boolean hasPunctuation(String token) {
+    public boolean hasPunctuation(String token) {
         if (token == null || token.isEmpty()) return false;
 
         // Các punctuation phổ biến trong tiếng Anh
@@ -19,7 +19,7 @@ public class TextUtils {
         return false;
     }
 
-    public static String normalizeWordLower(String token) {
+    public String normalizeWordLower(String token) {
         if (token == null) return null;
 
         return token
@@ -29,7 +29,7 @@ public class TextUtils {
     }
 
 
-    public static String toSlug(String input) {
+    public String toSlug(String input) {
         if (input == null) return null;
 
         // 1) Normalize unicode (loại dấu tiếng Việt)

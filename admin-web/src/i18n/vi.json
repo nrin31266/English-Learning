@@ -55,6 +55,21 @@
     "byTeam": "bởi Cat AI Team"
   },
   "topicDialog": {
-    
+    "addTitle": "Thêm chủ đề mới",
+    "editTitle": "Chỉnh sửa chủ đề",
+    "nameLabel": "Tên chủ đề",
+    "namePlaceholder": "Nhập tên chủ đề",
+    "descriptionLabel": "Mô tả",
+    "descriptionPlaceholder": "Nhập mô tả chủ đề",
+    "addDescription": "Tạo một chủ đề mới để tổ chức các bài học liên quan lại với nhau.",
+    "editDescription": "Cập nhật thông tin chủ đề theo nhu cầu của bạn.",
+    "addButton": "Lưu chủ đề",
+    "editButton": "Cập nhật chủ đề",
+    "cancelButton": "Hủy",
+    "isActiveLabel": "Kích hoạt",
+    "colorLabel": "Màu chủ đề",
+    "colorDescription": "Chọn màu sắc để đại diện cho chủ đề này trong giao diện người dùng.",
+    "nameRequired": "Tên chủ đề là bắt buộc",
+    "deleteButton": "Xóa chủ đề"
   }
 }
