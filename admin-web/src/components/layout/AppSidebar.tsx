@@ -3,8 +3,9 @@ import { Blocks, BookMarked, Calendar, CircleUserRound, Home, Inbox, PlaneTakeof
 import { Link, useLocation } from "react-router-dom"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, 
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar"
-import LogoName from "./LogoName"
+
 import { useTranslation } from "react-i18next"
+import LogoName from "../LogoName"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation()

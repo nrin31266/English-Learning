@@ -38,17 +38,23 @@ const AppFooter = () => {
           <ul className="space-y-2">
             <li>
               <a className="flex items-center gap-2 hover:text-gray-900 transition" href="#">
-                {t("footer.documentation")} <ExternalLink size={14} />
+                {t("footer.documentation")} <div>
+                  <ExternalLink size={14} />
+                </div>
               </a>
             </li>
             <li>
               <a className="flex items-center gap-2 hover:text-gray-900 transition" href="#">
-                {t("footer.apiReference")} <ExternalLink size={14} />
+                {t("footer.apiReference")} <div>
+                  <ExternalLink size={14} />
+                </div>
               </a>
             </li>
             <li>
               <a className="flex items-center gap-2 hover:text-gray-900 transition" href="#">
-                {t("footer.developerGuides")} <ExternalLink size={14} />
+                {t("footer.developerGuides")} <div>
+                  <ExternalLink size={14} />
+                </div>
               </a>
             </li>
           </ul>
@@ -91,19 +97,19 @@ const AppFooter = () => {
           </h3>
           <ul className="space-y-3">
             <li className="flex items-center gap-2">
-              <Mail size={16} />
+              <div><Mail size={16} /></div>
               <a href="mailto:support@example.com" className="hover:text-gray-900">
                 {t("footer.email")}: nrin31266@gmail.com
               </a>
             </li>
             <li className="flex items-center gap-2">
-              <Phone size={16} />
+              <div><Phone size={16} /></div>
               <a href="tel:+123456789" className="hover:text-gray-900">
                 {t("footer.phone")}: +1 234 567 890
               </a>
             </li>
             <li className="flex items-center gap-2">
-              <Github size={16} />
+              <div><Github size={16} /></div>
               <a
                 href="https://github.com/your-org"
                 className="hover:text-gray-900"

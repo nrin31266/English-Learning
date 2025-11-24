@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import {
     Card,
+    CardAction,
     CardContent,
     CardDescription,
     CardFooter,
@@ -39,11 +40,11 @@ import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { cefrLevelOptions, lessonTypeOptions, sourceLanguageOptions, sourceTypeOptions } from "@/types"
-import { Skeleton } from "@/components/ui/skeleton"
 import SkeletonComponent from "@/components/SkeletonComponent"
 import { useNavigate } from "react-router-dom"
 import handleAPI from "@/apis/handleAPI"
 import { Spinner2 } from "@/components/ui/spinner2"
+import { CircleX, MousePointer2 } from "lucide-react"
 
 const mockTopics = [
     { value: "travel-stories", label: "Travel Stories" },
@@ -100,6 +101,33 @@ const GenerateLessons = () => {
     const { data, status } = useAppSelector((state) => state.learningContent.topics.topicOptions);
     const dispatch = useAppDispatch();
     const [loading, setLoading] = React.useState(false);
+    const [storedThumbnailsOpen, setStoredThumbnailsOpen] = React.useState(false);
+    const handleStoredClick = () => {
+        setStoredThumbnailsOpen(!storedThumbnailsOpen);
+    }
+    // stored_thumbnails: [url1, url2, ...]
+    const [storedThumbnails, setStoredThumbnails] = React.useState<string[]>(() => {
+        try {
+            const raw = localStorage.getItem("stored_thumbnails");
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    });
+
+
+    const hanldeUpdateStoredThumbnails = (newThumbnail: string) => {
+        // max 10, if exists, move to front
+        let updatedThumbnails = storedThumbnails.filter(url => url !== newThumbnail);
+        updatedThumbnails.unshift(newThumbnail);
+        if (updatedThumbnails.length > 10) {
+            updatedThumbnails = updatedThumbnails.slice(0, 10);
+        }
+        setStoredThumbnails(updatedThumbnails);
+        localStorage.setItem("stored_thumbnails", JSON.stringify(updatedThumbnails));
+    }
     const navigate = useNavigate();
     const [hydrating, setHydrating] = React.useState(true);
     React.useEffect(() => {
@@ -164,24 +192,35 @@ const GenerateLessons = () => {
 
 
     async function onSubmit(values: LessonFormValues) {
-        const normalizedPayload = {
-            ...values,
-            description: values.description?.trim() || undefined,
-            thumbnailUrl: values.sourceType === "YOUTUBE" ? undefined : values.thumbnailUrl?.trim(),
+        setLoading(true);
+        try {
+            const normalizedPayload = {
+                ...values,
+                description: values.description?.trim() || undefined,
+                thumbnailUrl: values.sourceType === "YOUTUBE" ? undefined : values.thumbnailUrl?.trim(),
+            }
+            if (normalizedPayload.thumbnailUrl) {
+                hanldeUpdateStoredThumbnails(normalizedPayload.thumbnailUrl);
+            }
+            console.log("Prepared lesson payload", normalizedPayload)
+            const data = await handleAPI({
+                endpoint: "/learning-contents/lessons",
+                method: "POST",
+                isAuth: true,
+                body: normalizedPayload,
+            })
+
+            console.log(data);
+
+            navigate("/all-lessons");
+
+            form.reset(defaultValues)
+        } catch (error) {
+
+            console.error("Failed to create lesson", error);
+        } finally {
+            setLoading(false);
         }
-        console.log("Prepared lesson payload", normalizedPayload)
-        const data = await handleAPI({
-            endpoint: "/learning-contents/lessons",
-            method: "POST",
-            isAuth: true,
-            body: normalizedPayload,
-        })
-
-        console.log(data);
-
-        navigate("/all-lessons");
-
-        form.reset(defaultValues)
     }
     if (hydrating) {
         return <SkeletonComponent />
@@ -415,15 +454,50 @@ const GenerateLessons = () => {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>{t("generateLessons.fields.thumbnailUrl")}</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder={t("generateLessons.placeholders.thumbnail")}
-                                                            {...field} />
-                                                    </FormControl>
+                                                    <div className="grid grid-cols-[1fr_auto] gap-4 items-center">
+                                                        <FormControl>
+                                                            <Input placeholder={t("generateLessons.placeholders.thumbnail")}
+                                                                {...field} />
+
+                                                        </FormControl>
+
+                                                        <div className="relative">
+                                                            <Button onClick={handleStoredClick} type="button" className="" variant={"ghost"}>Stored</Button>
+                                                            {
+                                                                storedThumbnailsOpen &&
+                                                                <div className="absolute z-50 top-8 right-0
+                                                                    sm:w-[600px] w-[300px]
+                                                                    max-h-[70vh] overflow-auto
+                                                                    bg-white rounded-md shadow-md border
+                                                                   ">
+                                                                    <div className="flex justify-between items-center px-4 h-8 py-2 border-b">
+                                                                        <h1 className="font-semibold">Select a Thumbnail</h1>
+
+                                                                        <Button onClick={handleStoredClick} className="h-6 w-6" type="button" variant={"ghost"}><CircleX /></Button>
+
+                                                                    </div>
+                                                                    <div className=" px-4 py-2  ">
+                                                                        {storedThumbnails.map((thumbnailUrl, index) =>
+                                                                            <div key={index} className="overflow-clip grid grid-cols-[1fr_auto] items-center">
+                                                                                <p className="truncate line-clamp-1 " >{thumbnailUrl}</p>
+                                                                                <Button onClick={() => {
+                                                                                    form.setValue("thumbnailUrl", thumbnailUrl);
+                                                                                    setStoredThumbnailsOpen(false);
+                                                                                }} type="button" className="h-6 w-6" variant={"ghost"}><MousePointer2 /></Button>
+                                                                            </div>)}
+
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                        </div>
+
+                                                    </div>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
                                     )}
+
                                 </div>
                             </section>
 

@@ -3,11 +3,13 @@ package com.rin.learningcontentservice.service;
 import com.rin.englishlearning.common.constants.LessonProcessingStep;
 import com.rin.englishlearning.common.constants.LessonStatus;
 import com.rin.englishlearning.common.constants.LessonType;
+import com.rin.englishlearning.common.event.LessonGenerationRequestedEvent;
 import com.rin.englishlearning.common.exception.BaseException;
 import com.rin.learningcontentservice.dto.request.AddLessonRequest;
 import com.rin.learningcontentservice.dto.response.LessonMinimalResponse;
 import com.rin.learningcontentservice.dto.response.TopicResponse;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
+import com.rin.learningcontentservice.kafka.KafkaProducer;
 import com.rin.learningcontentservice.mapper.LessonMapper;
 import com.rin.learningcontentservice.model.Lesson;
 import com.rin.learningcontentservice.model.Topic;
@@ -26,6 +28,7 @@ public class LessonService {
     private final TopicRepository topicRepository;
     private final LessonMapper lessonMapper;
     private final TextUtils textUtils;
+    private final KafkaProducer kafkaProducer;
     public LessonMinimalResponse addLesson(AddLessonRequest request) {
         Topic topic = topicRepository.findBySlug(request.getTopicSlug()).orElseThrow(
                 () -> new BaseException(LearningContentErrorCode.TOPIC_NOT_FOUND,
@@ -46,6 +49,12 @@ public class LessonService {
         if(lesson.getLessonType().equals(LessonType.AI_ASSISTED)){
             // Push to message queue for processing
             log.info("Lesson {} is AI_ASSISTED, pushing to processing queue", lesson.getId());
+            var event  = LessonGenerationRequestedEvent.builder()
+                    .lessonId(lesson.getId())
+                    .sourceType(lesson.getSourceType())
+                    .sourceUrl(lesson.getSourceUrl())
+                    .build();
+            kafkaProducer.publishLessonGenerationRequested(event);
         }
 
         return lessonMapper.toLessonMinimalResponse(lesson);

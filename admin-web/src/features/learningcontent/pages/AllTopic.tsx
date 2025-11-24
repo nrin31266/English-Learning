@@ -122,7 +122,7 @@ const AllTopic = () => {
                                     <Link className="hover:underline line-clamp-none truncate" to={`/topics/${item.slug}`}> # {item.name} </Link>
                                 </TableCell>
                                 <TableCell className="max-w-[300px] text-stone-500">
-                                    <p className="truncate line-clamp-1">{item.description ? item.description : "No description available"}</p>
+                                    <p className="truncate line-clamp-1">{item.description ? item.description : "-"}</p>
                                 </TableCell>
                                 <TableCell>
                                     <Badge
