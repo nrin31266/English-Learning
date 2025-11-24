@@ -93,6 +93,15 @@ export const lessonStatusSelectOptions = [
 ] as const;
 
 
+export const lessonType = [
+  "AI_ASSISTED",
+  "TRADITIONAL"
+]
+export const lessonTypeSelectOptions = [
+  { value: "AI_ASSISTED", label: "AI Assisted" },
+  { value: "TRADITIONAL", label: "Traditional" },
+] as const;
+
 export interface ISortInfo {
   empty: boolean;
   sorted: boolean;

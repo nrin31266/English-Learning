@@ -7,54 +7,81 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import LessonDataTableRow from "./LessonDataTableRow"
+import { Badge } from "@/components/ui/badge"
+import { Loader2 } from "lucide-react"
 import type { ILessonDto } from "@/types"
-
-const data = [
-  { id: "m5gr84i9", amount: 316, status: "success", email: "ken99@example.com" },
-  { id: "3u1reuv4", amount: 242, status: "success", email: "Abe45@example.com" },
-  { id: "derv1ws0", amount: 837, status: "processing", email: "Monserrat44@example.com" },
-  { id: "5kma53ae", amount: 874, status: "success", email: "Silas22@example.com" },
-  { id: "bhqecj4p", amount: 721, status: "failed", email: "carmella@example.com" },
-]
+import LessonDataTableRow from "./LessonDataTableRow"
 
 interface LessonDataTableProps {
-  // Define any props if needed
-  data: ILessonDto[],
-  loading: boolean,
+  data: ILessonDto[]
+  loading: boolean
 }
 
 const LessonDataTable = ({ data, loading }: LessonDataTableProps) => {
   return (
+    <div className="rounded-md border">
+      <Table className="text-xs overflow-auto">
+        <TableHeader>
+          <TableRow className="h-8">
+            <TableHead className="w-[60px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+              ID
+            </TableHead>
+            <TableHead className="min-w-[220px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+              Lesson
+            </TableHead>
+            <TableHead className="w-[70px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-center">
+              Level
+            </TableHead>
+            {/* NEW: Type column */}
+            <TableHead className="w-[110px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+              Type
+            </TableHead>
+            <TableHead className="w-[110px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+              Source
+            </TableHead>
+            <TableHead className="w-[90px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-center">
+              Dictation
+            </TableHead>
+            <TableHead className="w-[90px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-center">
+              Shadowing
+            </TableHead>
+            <TableHead className="w-[110px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+              Status
+            </TableHead>
+            <TableHead className="w-[130px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+              Processing
+            </TableHead>
+            <TableHead className="w-[120px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+              Created At
+            </TableHead>
+            <TableHead className="w-[60px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-right">
+              Actions
+            </TableHead>
+          </TableRow>
+        </TableHeader>
 
-
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>ID</TableHead>
-          <TableHead>Amount</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Email</TableHead>
-        </TableRow>
-      </TableHeader>
-
-      <TableBody className="">
-        {
-          loading ? <TableRow>
-            <TableCell colSpan={7} className="h-60 text-center">
-              <div className="flex justify-center items-center gap-2 text-stone-500">
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-400 border-t-transparent"></div>
-                <span>Loading Lessons...</span>
-              </div>
-            </TableCell>
-          </TableRow> : data.map((item) => (
-          <LessonDataTableRow key={item.id} row={item} />
-        ))
-        }
-        
-      </TableBody>
-    </Table>
-
+        <TableBody>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={11} className="h-40 text-center align-middle">
+                <div className="flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading lessons...</span>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={11} className="h-32 text-center text-[12px] text-muted-foreground">
+                No lessons found.
+              </TableCell>
+            </TableRow>
+          ) : (
+            data.map((lesson) => <LessonDataTableRow key={lesson.id} row={lesson} />)
+          )}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 
