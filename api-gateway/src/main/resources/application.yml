@@ -28,7 +28,7 @@ spring:
           max-frame-payload-length: 65536  # 👈 Tăng kích thước khung tối đa nếu cần
       routes:
         - id: notification-ws
-          uri: ws://localhost:8888   # 👈 Dùng lb:ws:// thay vì lb:http://
+          uri: ws://localhost:8084
           predicates:
             - Path=/ws/**  # 👈 hoặc /ws/** nếu bạn muốn ngắn hơn
           filters:

@@ -3,6 +3,7 @@ export interface IUserProfile {
   firstName?: string;
   lastName?: string;
   roles: string[];
+  keyCloakId: string;
 }
 
 export interface IApiResponse<T> {
