@@ -49,4 +49,100 @@ export type MutationType = "add" | "edit" | "delete" | null;
 export const lessonTypeOptions = ["AI_ASSISTED", "TRADITIONAL"] as const
 export const cefrLevelOptions = ["A1", "A2", "B1", "B2", "C1", "C2"] as const
 export const sourceTypeOptions = ["YOUTUBE", "AUDIO_FILE", "OTHER"] as const
+export const sourceTypeSelectOptions = [
+  { value: "YOUTUBE", label: "YouTube" },
+  { value: "AUDIO_FILE", label: "Audio File" },
+  { value: "OTHER", label: "Other" },
+] as const
+
 export const sourceLanguageOptions = ["en-US", "en-UK"] as const
+//  NONE,
+//     PROCESSING_STARTED,
+//     SOURCE_FETCHED,        // downloaded file / youtube content fetched
+//     TRANSCRIBED,           // speech-to-text completed
+//     NLP_ANALYZED,          // NLP analysis done (language, CEFR…)
+//     POST_PROCESSED,        // alignment and cleanup finished
+
+//     COMPLETED,
+//     FAILED
+export const LessonProcessingStep = [
+  "NONE",
+  "PROCESSING_STARTED",
+  "SOURCE_FETCHED",
+  "TRANSCRIBED",
+  "NLP_ANALYZED",
+  "POST_PROCESSED",
+  "COMPLETED",
+  "FAILED"
+] as const;
+  // DRAFT,
+  //   PROCESSING,
+  //   READY,
+  //   ERROR,
+export const LessonStatus = [
+  "DRAFT",
+  "PROCESSING",
+  "READY",
+  "ERROR"
+] as const;
+export const lessonStatusSelectOptions = [
+  { value: "DRAFT", label: "Draft" },
+  { value: "PROCESSING", label: "Processing" },
+  { value: "READY", label: "Ready" },
+  { value: "ERROR", label: "Error" },
+] as const;
+
+
+export interface ISortInfo {
+  empty: boolean;
+  sorted: boolean;
+  unsorted: boolean;
+}
+export interface IPageableInfo {
+  pageNumber: number;
+  pageSize: number;
+  sort: ISortInfo;
+  offset: number;
+  paged: boolean;
+  unpaged: boolean;
+}
+
+export interface IPageResponse <T> {
+  content: T[];
+  pageable: IPageableInfo;
+  last: boolean;
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number; // page number
+  first: boolean;
+  numberOfElements: number;
+  sort: ISortInfo;
+  empty: boolean;
+}
+
+export interface ILessonDto {
+  id: number
+  topic: ITopicOption
+  title: string
+  thumbnailUrl: string | null
+  slug: string
+  description: string | null
+  lessonType: string
+  processingStep: string
+  languageLevel: string
+  sourceType: string
+  sourceUrl: string
+  audioUrl: string | null
+  sourceReferenceId: string | null
+  sourceLanguage: string
+  durationSeconds: number | null
+  totalSentences: number | null
+  status: string
+  aiJobId: string | null
+  enableDictation: boolean
+  enableShadowing: boolean
+  createdAt: string
+  updatedAt: string
+  publishedAt: string | null
+}

@@ -1,6 +1,5 @@
 import type { IUserProfile } from "@/types";
 import { createContext, useContext, useEffect, useState } from "react";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
 import FullScreenSpinner from "@/components/FullScreenSpinner";
 import AccessDenied from "@/components/AccessDenied";
 import KeycloakClient from "../keycloak";

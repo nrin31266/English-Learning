@@ -11,7 +11,8 @@ public enum LearningContentErrorCode implements ErrorCode {
     LESSON_NOT_FOUND(1001, "Lesson not found with id: %s", HttpStatus.NOT_FOUND),
     LESSON_WITH_NAME_EXISTS(1002, "Lesson with name '%s' already exists", HttpStatus.CONFLICT),
     TOPIC_NOT_FOUND(1003, "Topic not found with slug: %s", HttpStatus.NOT_FOUND),
-    TOPIC_WITH_NAME_EXISTS(1004, "Topic with name '%s' already exists", HttpStatus.CONFLICT)
+    TOPIC_WITH_NAME_EXISTS(1004, "Topic with name '%s' already exists", HttpStatus.CONFLICT),
+    LESSON_NOT_AI_ASSISTED(1005, "Lesson with id: %s is not AI assisted", HttpStatus.BAD_REQUEST)
     ;
 
 

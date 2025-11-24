@@ -478,7 +478,7 @@ const GenerateLessons = () => {
                                                                     </div>
                                                                     <div className=" px-4 py-2  ">
                                                                         {storedThumbnails.map((thumbnailUrl, index) =>
-                                                                            <div key={index} className="overflow-clip grid grid-cols-[1fr_auto] items-center">
+                                                                            <div key={index} className=" grid grid-cols-[1fr_auto] items-center">
                                                                                 <p className="truncate line-clamp-1 " >{thumbnailUrl}</p>
                                                                                 <Button onClick={() => {
                                                                                     form.setValue("thumbnailUrl", thumbnailUrl);

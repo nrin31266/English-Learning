@@ -1,6 +1,6 @@
 import SwitchingLanguage from '../SwitchingLanguage'
 import { SidebarTrigger } from '../ui/sidebar'
-import HeadNav from './HeadNav'
+import HeadNav from './ThemeToggle'
 import Notification from './Notification'
 import ProfileNav from './ProfileNav'
 

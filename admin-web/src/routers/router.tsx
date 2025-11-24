@@ -3,10 +3,12 @@ import { createBrowserRouter } from "react-router-dom"
 import { Suspense, lazy, type ReactElement } from "react"
 import SkeletonComponent from "@/components/SkeletonComponent"
 
+
 const AllTopic = lazy(() => import("@/features/learningcontent/pages/AllTopic"))
 const GenerateLessons = lazy(() => import("@/features/learningcontent/pages/GenerateLessons"))
+const AllLesson = lazy(() => import("@/features/learningcontent/pages/AllLesson"))
 
-const withSuspense = (element: ReactElement) => (
+export const withSuspense = (element: ReactElement) => (
   <Suspense fallback={<SkeletonComponent/>}>
     {element}
   </Suspense>
@@ -34,7 +36,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/all-lessons",
-            element: <div>All Lessons Page</div>,
+            element: withSuspense(<AllLesson />),
           },
           {
             path: "/generate-lessons",

@@ -63,6 +63,8 @@ public class Lesson {
     @Column(name = "source_url", length = 500)
     private String sourceUrl;
 
+    private String audioUrl;
+
     @Column(name = "source_reference_id")
     private String sourceReferenceId;  // YouTube video ID, internal file ID…
 

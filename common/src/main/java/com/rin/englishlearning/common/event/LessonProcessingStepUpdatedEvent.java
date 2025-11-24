@@ -28,4 +28,8 @@ public class LessonProcessingStepUpdatedEvent {
 
     /** Optional debug info */
     private String message;
+
+    private String audioUrl;
+
+    private String sourceReferenceId;
 }

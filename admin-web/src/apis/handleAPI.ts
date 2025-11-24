@@ -20,7 +20,7 @@ const handleAPI = async <T, B = unknown>({
   endpoint,
   body,
   method = "GET",
-  isAuth = false,
+  isAuth = true,
   params,
   withCredentials = false,
   timeout
