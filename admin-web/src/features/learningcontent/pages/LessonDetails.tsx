@@ -32,9 +32,11 @@ import DictationBadge from "../components/DictationBadge"
 import ProcessingSection from "../components/ProcessingSection"
 import ShadowingBadge from "../components/ShadowingBadge"
 import { useAppDispatch, useAppSelector } from "@/store"
-import { cancelAiProcessing, fetchLessonDetails, retryLessonGeneration, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
+import { cancelAiProcessing, fetchLessonDetails, publishLesson, reloadLessonDetails, retryLessonGeneration, unpublishLesson, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
 import SkeletonComponent from "@/components/SkeletonComponent"
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
+import SentencesTab from "../components/SentencesTab"
+import LessonSitting from "../components/LessonSitting"
 
 // ───────────────────────────────────────────
 // Helpers
@@ -295,7 +297,11 @@ const LessonDetails: React.FC = () => {
         try {
           const event: ILessonProcessingStepNotifyEvent = JSON.parse(msg.body);
           console.log("LessonDetailsPage received event:", event);
-          dispatch(updateLessonDetailsFromProcessingEvent(event));
+          
+          // If completed, reload full lesson details
+          if(event.processingStep === "COMPLETED" ) {dispatch(reloadLessonDetails({ slug: lesson.slug }))} else{
+            dispatch(updateLessonDetailsFromProcessingEvent(event));
+          }
         } catch (e) {
           console.error("Failed to parse WS event for lesson", lesson.id, e);
         }
@@ -357,14 +363,32 @@ const LessonDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Thumbnail + meta */}
+    
+      {/* Tabs: transcript / meta */}
+      <Tabs defaultValue="summary" className="space-y-3">
+        <TabsList className="h-8">
+          <TabsTrigger value="summary" className="h-7 px-3 text-xs">
+            Summary
+          </TabsTrigger>
+          <TabsTrigger value="transcript" className="h-7 px-3 text-xs">
+            Transcript
+          </TabsTrigger>
+          <TabsTrigger value="meta" className="h-7 px-3 text-xs">
+            Metadata
+          </TabsTrigger>
+          <TabsTrigger value="sitting" className="h-7 px-3 text-xs">
+            Sitting
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="summary" className="mt-0">
+            {/* Thumbnail + meta */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Card className="overflow-hidden">
-          <div className="h-60 w-full bg-slate-100">
+          <div className="h-64 w-full bg-slate-100">
               <img
                 src={data.thumbnailUrl || '/default_thumbnail.png'}
                 alt={data.title}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
             </div>
           <CardContent className="space-y-3 p-4">
@@ -409,7 +433,7 @@ const LessonDetails: React.FC = () => {
                   {renderSourceIcon(data.sourceType)}
                 </div>
                 <p className="truncate text-muted-foreground">
-                  <span className="font-medium">URL: </span>
+                  <span className="font-medium">Source URL: </span>
                   <a
                     href={data.sourceUrl}
                     target="_blank"
@@ -417,6 +441,17 @@ const LessonDetails: React.FC = () => {
                     className="truncate text-[11px] text-blue-600 underline"
                   >
                     {data.sourceUrl}
+                  </a>
+                </p>
+                <p className="truncate text-muted-foreground">
+                  <span className="font-medium">Audio URL: </span>
+                  <a
+                    href={data.audioUrl || "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-[11px] text-blue-600 underline"
+                  >
+                    {data.audioUrl || "#"}
                   </a>
                 </p>
               </div>
@@ -467,7 +502,16 @@ const LessonDetails: React.FC = () => {
               {/* <Button size="sm" variant="default">
                 Preview learner view
               </Button> */}
-              <Button disabled={data.status !== "READY"} size="sm" variant="outline">
+              <Button onClick={()=>{
+                if(!data.publishedAt){
+                  dispatch(publishLesson({id: data.id}));
+                }else{
+                  dispatch(unpublishLesson({id: data.id}));
+                }
+              }} className={`${data.publishedAt ? "bg-gray-500 text-white hover:bg-gray-500/90 hover:text-white" : "bg-blue-500 text-white hover:bg-blue-500/90 hover:text-white"}`} disabled={data.status !== "READY" || mutationStatus === "loading"} size="sm" variant="outline">
+                { mutationStatus === "loading" && mutationType === "publish" &&
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                }
                 {data.publishedAt ? "Unpublish lesson" : "Publish lesson"}
               </Button>
               <Button onClick={()=>{
@@ -503,20 +547,10 @@ const LessonDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs: transcript / meta */}
-      <Tabs defaultValue="transcript" className="space-y-3">
-        <TabsList className="h-8">
-          <TabsTrigger value="transcript" className="h-7 px-3 text-xs">
-            Transcript
-          </TabsTrigger>
-          <TabsTrigger value="meta" className="h-7 px-3 text-xs">
-            Metadata
-          </TabsTrigger>
-        </TabsList>
-
-        {/* <TabsContent value="transcript" className="mt-0">
-          <SentencesTab lesson={lesson} />
-        </TabsContent> */}
+        </TabsContent>
+        <TabsContent value="transcript" className="mt-0">
+          <SentencesTab lesson={data} />
+        </TabsContent>
 
         <TabsContent value="meta" className="mt-0">
           <Card>
@@ -532,6 +566,9 @@ const LessonDetails: React.FC = () => {
               </pre>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="sitting" className="mt-0">
+          <LessonSitting lesson={data} />
         </TabsContent>
       </Tabs>
     </div>

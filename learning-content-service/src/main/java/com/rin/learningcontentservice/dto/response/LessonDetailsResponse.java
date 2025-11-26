@@ -37,5 +37,5 @@ public class LessonDetailsResponse {
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private Timestamp publishedAt;
-    private List<LessonSentenceResponse> lessonSentences;
+    private List<LessonSentenceResponse> sentences;
 }

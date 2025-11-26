@@ -4,21 +4,21 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import type {
-  ILessonDto,
-  IPageResponse,
   IErrorState,
 
   ILessonDetailsDto,
   ILessonProcessingStepNotifyEvent,
   IAsyncState,
   ILessonMinimalDto,
+  ILessonDto,
+  IEditLessonPayload,
 } from "@/types";
 import handleAPI from "@/apis/handleAPI";
 import { extractError } from "@/utils/reduxUtils";
 
 interface LessonDetailsState {
   lessonDetails: IAsyncState<ILessonDetailsDto | null>;
-  lessonDetailsMutation: IAsyncState<null> & { type: "re-try" | "stop-ai-processing" | null };
+  lessonDetailsMutation: IAsyncState<null> & { type: "re-try" | "stop-ai-processing" | "publish" | "update" | "delete" | null };
 }
 const initialState: LessonDetailsState = {
   lessonDetails: {
@@ -48,6 +48,22 @@ export const fetchLessonDetails = createAsyncThunk(
     }
   }
 );
+
+export const reloadLessonDetails = createAsyncThunk(
+  "lessons/reloadLessonDetails",
+  async ({ slug }: { slug: string }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<ILessonDetailsDto>({
+        endpoint: `/learning-contents/lessons/${slug}`,
+        method: "GET",
+      });
+      return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  }
+);
+
 export const retryLessonGeneration = createAsyncThunk(
   "lessons/retryLessonGeneration",
   async ({ id , isRestart }: { id: number, isRestart: boolean }, { rejectWithValue }) => {
@@ -83,6 +99,67 @@ export const cancelAiProcessing = createAsyncThunk(
     }
   }
 );
+export const publishLesson = createAsyncThunk(
+  "lessons/publishLesson",
+  async ({ id }: { id: number }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<ILessonDto>({
+        endpoint: `/learning-contents/lessons/${id}/publish`,
+        method: "POST",
+        isAuth: true,
+      });
+      return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  }
+);
+export const unpublishLesson = createAsyncThunk(
+  "lessons/unpublishLesson",
+  async ({ id }: { id: number }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<ILessonDto>({
+        endpoint: `/learning-contents/lessons/${id}/unpublish`,
+        method: "POST",
+        isAuth: true,
+      });
+      return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  }
+);
+export const deleteLesson = createAsyncThunk(
+  "lessons/deleteLesson",
+  async ({ id }: { id: number }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<null>({
+        endpoint: `/learning-contents/lessons/${id}`,
+        method: "DELETE",
+        isAuth: true,
+      });
+      return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  }
+);
+export const updateLesson = createAsyncThunk(
+  "lessons/updateLesson",
+  async ({ id, data }: { id: number, data: IEditLessonPayload }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<ILessonDto>({
+        endpoint: `/learning-contents/lessons/${id}`,
+        method: "PUT",
+        isAuth: true,
+        body: data,
+      });
+      return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  }
+);
 
 
 export const lessonDetailsSlice = createSlice({
@@ -93,7 +170,7 @@ export const lessonDetailsSlice = createSlice({
       state,
       action: PayloadAction<ILessonProcessingStepNotifyEvent>
     ) => {
-      const { lessonId, processingStep, aiJobId, audioUrl, sourceReferenceId, thumbnailUrl, aiMessage } =
+      const { lessonId, processingStep, aiJobId, audioUrl, sourceReferenceId, thumbnailUrl, aiMessage, durationSeconds } =
         action.payload;
       if (!state.lessonDetails.data) return;
 
@@ -108,6 +185,7 @@ export const lessonDetailsSlice = createSlice({
       if (sourceReferenceId) lesson.sourceReferenceId = sourceReferenceId;
       if (thumbnailUrl) lesson.thumbnailUrl = thumbnailUrl;
       if (aiMessage) lesson.aiMessage = aiMessage;
+      if (durationSeconds !== null) lesson.durationSeconds = durationSeconds;
 
       // map step -> status
       if (processingStep === "FAILED") {
@@ -166,6 +244,79 @@ export const lessonDetailsSlice = createSlice({
         }
       })
       .addCase(cancelAiProcessing.rejected, (state, action) => {
+        state.lessonDetailsMutation.status = "failed";
+        state.lessonDetailsMutation.error = action.payload as IErrorState;
+      })
+      .addCase(reloadLessonDetails.pending, (state) => {
+        state.lessonDetails.error = { code: null, message: null };
+      })
+      .addCase(reloadLessonDetails.fulfilled, (state, action) => {
+        state.lessonDetails.data = action.payload;
+      })
+      .addCase(reloadLessonDetails.rejected, (state, action) => {
+        state.lessonDetails.error = action.payload as IErrorState;
+      })
+      .addCase(publishLesson.pending, (state) => {
+        state.lessonDetailsMutation.status = "loading";
+        state.lessonDetailsMutation.error = { code: null, message: null };
+        state.lessonDetailsMutation.type = "publish";
+      })
+      .addCase(publishLesson.fulfilled, (state, action) => {
+        state.lessonDetailsMutation.status = "succeeded";
+        if(state.lessonDetails.data && state.lessonDetails.data.id === action.meta.arg.id){
+          state.lessonDetails.data.publishedAt = new Date().toLocaleString();
+        }
+      })
+      .addCase(publishLesson.rejected, (state, action) => {
+        state.lessonDetailsMutation.status = "failed";
+        state.lessonDetailsMutation.error = action.payload as IErrorState;
+      })
+      .addCase(unpublishLesson.pending, (state) => {
+        state.lessonDetailsMutation.status = "loading";
+        state.lessonDetailsMutation.error = { code: null, message: null };
+        state.lessonDetailsMutation.type = "publish";
+      })
+      .addCase(unpublishLesson.fulfilled, (state, action) => {
+        state.lessonDetailsMutation.status = "succeeded";
+        if(state.lessonDetails.data && state.lessonDetails.data.id === action.meta.arg.id){
+          state.lessonDetails.data.publishedAt = null;
+        }
+      })
+      .addCase(unpublishLesson.rejected, (state, action) => {
+        state.lessonDetailsMutation.status = "failed";
+        state.lessonDetailsMutation.error = action.payload as IErrorState;
+      })
+      .addCase(updateLesson.pending, (state) => {
+        state.lessonDetailsMutation.status = "loading";
+        state.lessonDetailsMutation.error = { code: null, message: null };
+        state.lessonDetailsMutation.type = "update";
+      })
+      .addCase(updateLesson.fulfilled, (state, action) => {
+        state.lessonDetailsMutation.status = "succeeded";
+        if(state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id){
+          state.lessonDetails.data.title = action.payload.title;
+          state.lessonDetails.data.description = action.payload.description;
+          state.lessonDetails.data.languageLevel = action.payload.languageLevel;
+          state.lessonDetails.data.sourceLanguage = action.payload.sourceLanguage;
+          state.lessonDetails.data.thumbnailUrl = action.payload.thumbnailUrl;
+          state.lessonDetails.data.enableDictation = action.payload.enableDictation;
+          state.lessonDetails.data.enableShadowing = action.payload.enableShadowing;
+        }
+      })
+      .addCase(updateLesson.rejected, (state, action) => {
+        state.lessonDetailsMutation.status = "failed";
+        state.lessonDetailsMutation.error = action.payload as IErrorState;
+      })
+      .addCase(deleteLesson.pending, (state) => {
+        state.lessonDetailsMutation.status = "loading";
+        state.lessonDetailsMutation.error = { code: null, message: null };
+        state.lessonDetailsMutation.type = "delete";
+      })
+      .addCase(deleteLesson.fulfilled, (state, action) => {
+        state.lessonDetailsMutation.status = "succeeded";
+        state.lessonDetails.data = null;
+      })
+      .addCase(deleteLesson.rejected, (state, action) => {
         state.lessonDetailsMutation.status = "failed";
         state.lessonDetailsMutation.error = action.payload as IErrorState;
       })

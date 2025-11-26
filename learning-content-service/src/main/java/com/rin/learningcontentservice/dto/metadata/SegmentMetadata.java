@@ -8,9 +8,9 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Segment {
-    private double start;
-    private double end;
+public class SegmentMetadata {
+    private Double start;
+    private Double end;
     private String text;
-    private java.util.List<Word> words;
+    private java.util.List<WordMetadata> words;
 }

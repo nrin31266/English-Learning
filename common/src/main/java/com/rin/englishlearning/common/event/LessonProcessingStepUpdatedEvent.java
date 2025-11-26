@@ -34,6 +34,8 @@ public class LessonProcessingStepUpdatedEvent {
     private String thumbnailUrl;
 
     private Boolean isSkip;
+//    duration
+    private Integer durationSeconds;
 
     private String aiMetadataUrl;
 }

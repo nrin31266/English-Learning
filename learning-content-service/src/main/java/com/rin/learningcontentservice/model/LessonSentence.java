@@ -85,6 +85,6 @@ public class LessonSentence {
     @Column(name = "updated_at", nullable = false)
     private Timestamp updatedAt;
 
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "sentence", fetch = FetchType.LAZY)
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "sentence", fetch = FetchType.LAZY, orphanRemoval = true)
     List<LessonWord> lessonWords;
 }

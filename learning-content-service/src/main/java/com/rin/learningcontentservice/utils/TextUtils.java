@@ -23,10 +23,11 @@ public class TextUtils {
         if (token == null) return null;
 
         return token
-                .toLowerCase()            // 1. chữ thường hết
-                .replace("'", "")         // 2. bỏ dấu apostrophe (it's -> its)
-                .replaceAll("[^a-z]", ""); // 3. bỏ hết punctuation + số + ký tự khác
+                .toLowerCase()                 // chữ thường
+                .replace("'", "")              // bỏ apostrophe (it's → its)
+                .replaceAll("[^a-z0-9]", "");  // ❗ giữ lại chữ + số
     }
+
 
 
     public String toSlug(String input) {

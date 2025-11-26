@@ -1,11 +1,13 @@
 package com.rin.learningcontentservice.mapper;
 
 import com.rin.learningcontentservice.dto.request.AddLessonRequest;
+import com.rin.learningcontentservice.dto.request.EditLessonRequest;
 import com.rin.learningcontentservice.dto.response.LessonDetailsResponse;
 import com.rin.learningcontentservice.dto.response.LessonMinimalResponse;
 import com.rin.learningcontentservice.dto.response.LessonResponse;
 import com.rin.learningcontentservice.model.Lesson;
 import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface LessonMapper {
@@ -17,5 +19,5 @@ public interface LessonMapper {
 
     LessonDetailsResponse toLessonDetailsResponse(Lesson lesson);
 
-
+    void updateLessonFromRequest(EditLessonRequest lessonRequest, @MappingTarget Lesson lesson);
 }

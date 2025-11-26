@@ -7,9 +7,9 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Word {
+public class WordMetadata {
     private String word;
-    private double start;
-    private double end;
-    private double score;
+    private Double start;
+    private Double end;
+    private Double score;
 }

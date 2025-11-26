@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Sentence {
+public class SentenceMetadata {
     private int orderIndex;
     private String phoneticUk;
     private String phoneticUs;

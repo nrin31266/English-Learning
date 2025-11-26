@@ -34,4 +34,6 @@ public class LessonProcessingStepNotifyEvent {
     private String sourceReferenceId;
 
     private String thumbnailUrl;
+
+    private Integer durationSeconds;
 }

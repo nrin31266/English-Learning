@@ -69,7 +69,7 @@ export const lessonSlice = createSlice({
       state,
       action: PayloadAction<ILessonProcessingStepNotifyEvent>
     ) => {
-      const { lessonId, processingStep, aiJobId, audioUrl, sourceReferenceId, thumbnailUrl } =
+      const { lessonId, processingStep, aiJobId, audioUrl, sourceReferenceId, thumbnailUrl, durationSeconds } =
         action.payload;
       if (!state.lessons.data) return;
 
@@ -82,6 +82,7 @@ export const lessonSlice = createSlice({
       if (audioUrl) lesson.audioUrl = audioUrl;
       if (sourceReferenceId) lesson.sourceReferenceId = sourceReferenceId;
       if (thumbnailUrl) lesson.thumbnailUrl = thumbnailUrl;
+      if (durationSeconds !== null) lesson.durationSeconds = durationSeconds;
 
       // map step -> status
       if (processingStep === "FAILED") {

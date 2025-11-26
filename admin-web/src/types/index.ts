@@ -163,6 +163,7 @@ export interface ILessonProcessingStepNotifyEvent {
   audioUrl: string | null;
   sourceReferenceId: string | null;
   thumbnailUrl: string | null;
+  durationSeconds: number | null;
 }
 export interface ILessonSentence {
   id: number;
@@ -177,8 +178,8 @@ export interface ILessonSentence {
   phoneticUk: string | null;
   phoneticUs: string | null;
 
-  audioStartMs: number | null;
-  audioEndMs: number | null;
+  audioStartMs: number 
+  audioEndMs: number 
   audioSegmentUrl: string | null;
 
   aiMetadataJson: string | null;
@@ -246,4 +247,14 @@ export interface ILessonMinimalDto{
   id: number;
   slug: string;
   title: string;
+}
+
+export interface IEditLessonPayload {
+  title: string;
+  description: string | null;
+  languageLevel: typeof cefrLevelOptions[number];
+  sourceLanguage: string;
+  thumbnailUrl: string | null;
+  enableDictation: boolean;
+  enableShadowing: boolean;
 }

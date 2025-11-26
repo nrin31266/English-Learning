@@ -7,6 +7,7 @@ import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
 import com.rin.learningcontentservice.model.Lesson;
 import com.rin.learningcontentservice.repository.LessonRepository;
+import com.rin.learningcontentservice.service.LessonService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -20,6 +21,7 @@ public class KafkaConsumer {
 
     LessonRepository lessonRepository;
     KafkaProducer kafkaProducer;
+    LessonService lessonService;
 
     @KafkaListener(
             topics = KafkaTopics.LESSON_PROCESSING_STEP_UPDATED_TOPIC,
@@ -49,6 +51,7 @@ public class KafkaConsumer {
                 lesson.setAiMessage(event.getAiMessage());
                 lesson.setAudioUrl(event.getAudioUrl());
                 lesson.setSourceReferenceId(event.getSourceReferenceId());
+                lesson.setDurationSeconds(event.getDurationSeconds());
 
                 if (event.getThumbnailUrl() != null)
                     lesson.setThumbnailUrl(event.getThumbnailUrl());
@@ -67,12 +70,8 @@ public class KafkaConsumer {
             }
 
             case COMPLETED -> {
-                lesson.setProcessingStep(LessonProcessingStep.COMPLETED);
-                lesson.setStatus(LessonStatus.READY);
-                lesson.setAiMessage(event.getAiMessage());
-
-                if (event.getAiMetadataUrl() != null)
-                    lesson.setAiMetadataUrl(event.getAiMetadataUrl());
+                lessonService.completeLessonWithMetadata(lesson.getId(), event.getAiMetadataUrl());
+                return; // Đã lưu trong completeLessonWithMetadata, không cần lưu lại ở dưới
             }
 
             case FAILED -> {
@@ -95,6 +94,7 @@ public class KafkaConsumer {
         notify.setAudioUrl(event.getAudioUrl());
         notify.setSourceReferenceId(event.getSourceReferenceId());
         notify.setThumbnailUrl(event.getThumbnailUrl());
+        notify.setDurationSeconds(event.getDurationSeconds());
 
         kafkaProducer.publishLessonProcessingStepNotify(notify);
 

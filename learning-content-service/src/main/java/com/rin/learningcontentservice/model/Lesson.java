@@ -114,7 +114,7 @@ public class Lesson {
     private Timestamp publishedAt;
 
 
-    @OneToMany(mappedBy = "lesson", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "lesson", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LessonSentence> sentences;
 
 }

@@ -13,14 +13,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @Data
 public class EditLessonRequest {
-    private String topicSlug;
     private String title;
-    private LessonType lessonType;
     private String description;
     private CefrLevel languageLevel;
-    private LessonSourceType sourceType;
     private String sourceLanguage;
-    private String sourceUrl;
     private String thumbnailUrl;
     private Boolean enableDictation;
     private Boolean enableShadowing;
