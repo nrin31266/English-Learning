@@ -26,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.TimeUnit;
 
 
 @Service
@@ -38,7 +39,7 @@ public class LessonService {
     private final TextUtils textUtils;
     private final KafkaProducer kafkaProducer;
     private final LanguageProcessingClient languageProcessingClient;
-    RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
     public LessonMinimalResponse addLesson(AddLessonRequest request) {
 
         Topic topic = topicRepository.findBySlug(request.getTopicSlug()).orElseThrow(
@@ -70,13 +71,15 @@ public class LessonService {
                 .sourceType(lesson.getSourceType())
                 .sourceUrl(lesson.getSourceUrl())
                 .aiJobId(lesson.getAiJobId())
+                .aiMetadataUrl(null)
+                .lessonId(lesson.getId())
                 .build();
         kafkaProducer.publishLessonGenerationRequested(event);
 
         return lessonMapper.toLessonMinimalResponse(lesson);
     }
     // Re try
-    public LessonMinimalResponse retryLessonGeneration(Long lessonId) {
+    public LessonMinimalResponse retryLessonGeneration(Long lessonId, Boolean isRestart) {
         Lesson lesson = lessonRepository.findById(lessonId).orElseThrow(
                 () -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND,
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(lessonId))
@@ -94,6 +97,9 @@ public class LessonService {
                 .sourceType(lesson.getSourceType())
                 .sourceUrl(lesson.getSourceUrl())
                 .aiJobId(lesson.getAiJobId())
+                .aiMetadataUrl(lesson.getAiMetadataUrl())
+                .lessonId(lesson.getId())
+                .isRestart(isRestart)
                 .build();
         kafkaProducer.publishLessonGenerationRequested(event);
 
@@ -144,9 +150,10 @@ public class LessonService {
         lesson.setAiMessage("AI processing cancelled.");
 
         lessonRepository.save(lesson);
-
+        // 30 minutes expiration
         redisTemplate.opsForValue().set(
-                "aiJobStatus:" + lesson.getAiJobId(), "CANCELLED"
+                "aiJobStatus:" + lesson.getAiJobId(), "CANCELLED",
+                30 * 60, TimeUnit.SECONDS
         );
         return lessonMapper.toLessonMinimalResponse(lesson);
     }

@@ -16,6 +16,11 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: http://localhost:8080/realms/english-learning-realm
+  data:
+    redis:
+      url: ${REDIS_URL}
+      ssl:
+        enabled: true # Enable SSL if REDIS_URL uses rediss://
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:

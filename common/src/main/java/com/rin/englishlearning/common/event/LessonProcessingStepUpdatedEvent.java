@@ -32,4 +32,8 @@ public class LessonProcessingStepUpdatedEvent {
     private String sourceReferenceId;
 
     private String thumbnailUrl;
+
+    private Boolean isSkip;
+
+    private String aiMetadataUrl;
 }

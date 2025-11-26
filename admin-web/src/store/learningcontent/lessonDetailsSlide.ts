@@ -11,6 +11,7 @@ import type {
   ILessonDetailsDto,
   ILessonProcessingStepNotifyEvent,
   IAsyncState,
+  ILessonMinimalDto,
 } from "@/types";
 import handleAPI from "@/apis/handleAPI";
 import { extractError } from "@/utils/reduxUtils";
@@ -47,6 +48,42 @@ export const fetchLessonDetails = createAsyncThunk(
     }
   }
 );
+export const retryLessonGeneration = createAsyncThunk(
+  "lessons/retryLessonGeneration",
+  async ({ id , isRestart }: { id: number, isRestart: boolean }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<ILessonMinimalDto>({
+        endpoint: `/learning-contents/lessons/${id}/re-try`,
+        method: "POST",
+        isAuth: true,
+        params: { isRestart: isRestart }
+      });
+      return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  }
+);
+
+/**
+ * POST /learning-contents/admin/lessons/{id}/cancel-ai-processing
+ */
+export const cancelAiProcessing = createAsyncThunk(
+  "lessons/cancelAiProcessing",
+  async ({ id }: { id: number }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<ILessonMinimalDto>({
+        endpoint: `/learning-contents/lessons/${id}/cancel-ai-processing`,
+        method: "POST",
+        isAuth: true,
+      });
+      return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  }
+);
+
 
 export const lessonDetailsSlice = createSlice({
   name: "lessonDetails",
@@ -56,7 +93,7 @@ export const lessonDetailsSlice = createSlice({
       state,
       action: PayloadAction<ILessonProcessingStepNotifyEvent>
     ) => {
-      const { lessonId, processingStep, aiJobId, audioUrl, sourceReferenceId, thumbnailUrl } =
+      const { lessonId, processingStep, aiJobId, audioUrl, sourceReferenceId, thumbnailUrl, aiMessage } =
         action.payload;
       if (!state.lessonDetails.data) return;
 
@@ -70,6 +107,7 @@ export const lessonDetailsSlice = createSlice({
       if (audioUrl) lesson.audioUrl = audioUrl;
       if (sourceReferenceId) lesson.sourceReferenceId = sourceReferenceId;
       if (thumbnailUrl) lesson.thumbnailUrl = thumbnailUrl;
+      if (aiMessage) lesson.aiMessage = aiMessage;
 
       // map step -> status
       if (processingStep === "FAILED") {
@@ -96,7 +134,42 @@ export const lessonDetailsSlice = createSlice({
       .addCase(fetchLessonDetails.rejected, (state, action) => {
         state.lessonDetails.status = "failed";
         state.lessonDetails.error = action.payload as IErrorState;
-      });
+      })
+      .addCase(retryLessonGeneration.pending, (state) => {
+        state.lessonDetailsMutation.status = "loading";
+        state.lessonDetailsMutation.error = { code: null, message: null };
+        state.lessonDetailsMutation.type = "re-try";
+      })
+      .addCase(retryLessonGeneration.fulfilled, (state, action) => {
+        state.lessonDetailsMutation.status = "succeeded";
+        if(state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id){
+          state.lessonDetails.data.processingStep = "PROCESSING_STARTED";
+          state.lessonDetails.data.status = "PROCESSING";
+          state.lessonDetails.data.aiMessage = "AI generation has been retried.";
+        }
+      })
+      .addCase(retryLessonGeneration.rejected, (state, action) => {
+        state.lessonDetailsMutation.status = "failed";
+        state.lessonDetailsMutation.error = action.payload as IErrorState;
+      })
+      .addCase(cancelAiProcessing.pending, (state) => {
+        state.lessonDetailsMutation.status = "loading";
+        state.lessonDetailsMutation.error = { code: null, message: null };
+        state.lessonDetailsMutation.type = "stop-ai-processing";
+      })
+      .addCase(cancelAiProcessing.fulfilled, (state, action) => {
+        state.lessonDetailsMutation.status = "succeeded";
+        if(state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id){
+          // state.lessonDetails.data.processingStep = "NONE";
+          state.lessonDetails.data.status = "DRAFT";
+          state.lessonDetails.data.aiMessage = "AI generation has been cancelled.";
+        }
+      })
+      .addCase(cancelAiProcessing.rejected, (state, action) => {
+        state.lessonDetailsMutation.status = "failed";
+        state.lessonDetailsMutation.error = action.payload as IErrorState;
+      })
+      ;
   },
 });
 

@@ -18,11 +18,7 @@ spring:
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-  data:
-    redis:
-      url: ${REDIS_URL}
-      ssl:
-        enabled: true # Enable SSL if REDIS_URL uses rediss://
+
 server:
   port: 8084
   servlet:

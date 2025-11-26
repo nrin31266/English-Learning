@@ -47,16 +47,18 @@ public class LessonController {
         return ApiResponse.success(lessonService.getLessonDetails(slug));
     }
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/lesson/{id}/re-try" )
+    @PostMapping("/lessons/{id}/re-try" )
     public ApiResponse<LessonMinimalResponse> retryLessonGeneration(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "false") Boolean isRestart
     ) {
-        return ApiResponse.success(lessonService.retryLessonGeneration(id));
+        return ApiResponse.success(lessonService.retryLessonGeneration(id, isRestart), "Lesson generation retried successfully");
     }
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/lessons/{id}/cancel-ai-processing" )
     public ApiResponse<LessonMinimalResponse> cancelAiProcessing(
             @PathVariable Long id
+
     ) {
 
         return ApiResponse.success(lessonService.cancelAiProcessing(id), "AI processing cancelled successfully");

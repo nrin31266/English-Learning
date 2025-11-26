@@ -241,3 +241,9 @@ export interface ILessonDetailsDto {
   aiMessage: string | null
   sentences: ILessonSentence[];
 }
+
+export interface ILessonMinimalDto{
+  id: number;
+  slug: string;
+  title: string;
+}

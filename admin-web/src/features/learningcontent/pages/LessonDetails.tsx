@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ILessonDetailsDto, ILessonProcessingStepNotifyEvent } from "@/types"
-import { getProcessingMeta } from "@/utils/lessonContentUtils"
 import { formatDate, formatDuration } from "@/utils/timeUtils"
 import {
   AlertTriangle,
@@ -31,10 +30,9 @@ import { useTranslation } from "react-i18next"
 import { Link, useParams } from "react-router-dom"
 import DictationBadge from "../components/DictationBadge"
 import ProcessingSection from "../components/ProcessingSection"
-import SentencesTab from "../components/SentencesTab"
 import ShadowingBadge from "../components/ShadowingBadge"
 import { useAppDispatch, useAppSelector } from "@/store"
-import { fetchLessonDetails, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
+import { cancelAiProcessing, fetchLessonDetails, retryLessonGeneration, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
 import SkeletonComponent from "@/components/SkeletonComponent"
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
 
@@ -277,6 +275,7 @@ const LessonDetails: React.FC = () => {
   const { t } = useTranslation()
 
   const {  data, status, error } = useAppSelector(state => state.learningContent.lessonDetails.lessonDetails);
+  const { status: mutationStatus, type: mutationType } = useAppSelector(state => state.learningContent.lessonDetails.lessonDetailsMutation);
     //  const data = mockLessonDetails;
   const [ lesson ] = useMemo(() => {
     if (data && data.slug === slug) {
@@ -471,11 +470,32 @@ const LessonDetails: React.FC = () => {
               <Button disabled={data.status !== "READY"} size="sm" variant="outline">
                 {data.publishedAt ? "Unpublish lesson" : "Publish lesson"}
               </Button>
-              <Button disabled={(data.status !== "ERROR" && data.status !== "DRAFT") || data.publishedAt != null} size="sm" variant="outline">
+              <Button onClick={()=>{
+                dispatch(retryLessonGeneration({ id: data.id , isRestart: false }));
+              }} disabled={(data.status !== "ERROR" && data.status !== "DRAFT") || data.publishedAt != null || mutationStatus === "loading"} size="sm" variant="outline">
+                {
+                  mutationStatus === "loading" && mutationType === "re-try" &&
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                }
                 Regenerate with AI
               </Button>
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white hover:text-white" onClick={()=>{
+                dispatch(retryLessonGeneration({ id: data.id , isRestart: true }));
+              }} disabled={(data.status !== "ERROR" && data.status !== "DRAFT") || data.publishedAt != null || mutationStatus === "loading"} size="sm" variant="outline">
+                {
+                  mutationStatus === "loading" && mutationType === "re-try" &&
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                }
+                Restart AI processing
+              </Button>
               {/* Red button */}
-              <Button  size="sm" variant="destructive" disabled={data.status !== "PROCESSING"}>
+              <Button onClick={()=>{
+                dispatch(cancelAiProcessing({id: data.id}))
+              }} size="sm" variant="destructive" disabled={data.status !== "PROCESSING" || mutationStatus === "loading"}>
+                {
+                  mutationStatus === "loading" && mutationType === "stop-ai-processing" &&
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                }
                 Stop processing
               </Button>
             </CardContent>

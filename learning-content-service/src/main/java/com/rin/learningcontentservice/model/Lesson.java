@@ -74,6 +74,10 @@ public class Lesson {
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
 
+    private String aiMetadataUrl;
+
+
+
     // ───────────────────────────────────────────
     // Metadata for processing
     @Column(name = "total_sentences")
