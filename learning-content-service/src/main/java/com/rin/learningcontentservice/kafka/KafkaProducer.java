@@ -2,6 +2,7 @@ package com.rin.learningcontentservice.kafka;
 
 import com.rin.englishlearning.common.constants.KafkaTopics;
 import com.rin.englishlearning.common.event.LessonGenerationRequestedEvent;
+import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -23,6 +24,17 @@ public class KafkaProducer {
                         log.info("✅ Gửi LessonGenerationRequestedEvent thành công tới topic {}", KafkaTopics.LESSON_GENERATION_REQUESTED_TOPIC);
                     } else {
                         log.error("❌ Lỗi gửi LessonGenerationRequestedEvent: {}", ex.getMessage());
+                    }
+                });
+    }
+
+    public void publishLessonProcessingStepNotify(LessonProcessingStepNotifyEvent event) {
+        kafkaTemplate.send(KafkaTopics.LESSON_PROCESSING_STEP_NOTIFY_TOPIC, event)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("✅ Gửi LessonProcessingStepNotifyEvent thành công tới topic {}", KafkaTopics.LESSON_PROCESSING_STEP_NOTIFY_TOPIC);
+                    } else {
+                        log.error("❌ Lỗi gửi LessonProcessingStepNotifyEvent: {}", ex.getMessage());
                     }
                 });
     }

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import { lessonStatusSelectOptions, lessonTypeOptions } from "@/types";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { fetchTopicOptions } from "@/store/learningcontent/topicReducer";
+import { fetchTopicOptions } from "@/store/learningcontent/topicSlide";
 interface LessonFilterPanelProps {
     searchParams: URLSearchParams;
     setSearchParams: Dispatch<SetStateAction<URLSearchParams>>;

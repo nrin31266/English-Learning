@@ -3,6 +3,7 @@ package com.rin.learningcontentservice.controller;
 import com.rin.englishlearning.common.dto.ApiResponse;
 import com.rin.learningcontentservice.dto.request.AddLessonRequest;
 import com.rin.learningcontentservice.dto.request.LessonFilterRequest;
+import com.rin.learningcontentservice.dto.response.LessonDetailsResponse;
 import com.rin.learningcontentservice.dto.response.LessonMinimalResponse;
 import com.rin.learningcontentservice.dto.response.LessonResponse;
 import com.rin.learningcontentservice.service.LessonService;
@@ -29,13 +30,7 @@ public class LessonController {
     }
 
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/lesson/{id}/re-try" )
-    public ApiResponse<LessonMinimalResponse> retryLessonGeneration(
-            @PathVariable Long id
-    ) {
-        return ApiResponse.success(lessonService.retryLessonGeneration(id));
-    }
+
 
     @GetMapping("/lessons")
     public ApiResponse<Page<LessonResponse>> getLessons(
@@ -45,5 +40,26 @@ public class LessonController {
         return ApiResponse.success(lessonService.getAllLessons(filter, pageable));
     }
 
+    @GetMapping("/lessons/{slug}")
+    public ApiResponse<LessonDetailsResponse> getLessonBySlug(
+            @PathVariable String slug
+    ) {
+        return ApiResponse.success(lessonService.getLessonDetails(slug));
+    }
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/lesson/{id}/re-try" )
+    public ApiResponse<LessonMinimalResponse> retryLessonGeneration(
+            @PathVariable Long id
+    ) {
+        return ApiResponse.success(lessonService.retryLessonGeneration(id));
+    }
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/lessons/{id}/cancel-ai-processing" )
+    public ApiResponse<LessonMinimalResponse> cancelAiProcessing(
+            @PathVariable Long id
+    ) {
+
+        return ApiResponse.success(lessonService.cancelAiProcessing(id), "AI processing cancelled successfully");
+    }
 
 }

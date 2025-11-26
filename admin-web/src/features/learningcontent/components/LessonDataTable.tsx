@@ -54,9 +54,12 @@ const LessonDataTable = ({ data, loading }: LessonDataTableProps) => {
             <TableHead className="w-[120px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
               Created At
             </TableHead>
-            <TableHead className="w-[60px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-right">
-              Actions
+            <TableHead className="w-[120px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+              Published
             </TableHead>
+            {/* <TableHead className="w-[60px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-right">
+              Actions
+            </TableHead> */}
           </TableRow>
         </TableHeader>
 

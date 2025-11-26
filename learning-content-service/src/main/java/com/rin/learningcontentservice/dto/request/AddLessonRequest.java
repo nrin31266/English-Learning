@@ -20,7 +20,7 @@ public class AddLessonRequest {
     private CefrLevel languageLevel;
     private LessonSourceType sourceType;
     private String sourceLanguage;
-    private String inputSourceUrl;
+    private String sourceUrl;
     private String thumbnailUrl;
     private Boolean enableDictation;
     private Boolean enableShadowing;

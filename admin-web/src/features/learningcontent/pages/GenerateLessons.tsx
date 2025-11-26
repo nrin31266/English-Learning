@@ -34,12 +34,12 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useAppDispatch, useAppSelector } from "@/store"
-import { fetchTopicOptions } from "@/store/learningcontent/topicReducer"
+import { fetchTopicOptions } from "@/store/learningcontent/topicSlide"
 import type { TFunction } from "i18next"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { cefrLevelOptions, lessonTypeOptions, sourceLanguageOptions, sourceTypeOptions } from "@/types"
+import { cefrLevelOptions, lessonTypeOptions, sourceLanguageOptions, sourceTypeOptions, type ILessonDto } from "@/types"
 import SkeletonComponent from "@/components/SkeletonComponent"
 import { useNavigate } from "react-router-dom"
 import handleAPI from "@/apis/handleAPI"
@@ -131,7 +131,7 @@ const GenerateLessons = () => {
     const navigate = useNavigate();
     const [hydrating, setHydrating] = React.useState(true);
     React.useEffect(() => {
-        const id = setTimeout(() => setHydrating(false), 10); // 10–120ms
+        const id = setTimeout(() => setHydrating(false), 50); // 10–120ms
         return () => clearTimeout(id);
     }, []);
 
@@ -203,7 +203,7 @@ const GenerateLessons = () => {
                 hanldeUpdateStoredThumbnails(normalizedPayload.thumbnailUrl);
             }
             console.log("Prepared lesson payload", normalizedPayload)
-            const data = await handleAPI({
+            const data = await handleAPI<ILessonDto>({
                 endpoint: "/learning-contents/lessons",
                 method: "POST",
                 isAuth: true,
@@ -212,7 +212,7 @@ const GenerateLessons = () => {
 
             console.log(data);
 
-            navigate("/all-lessons");
+            navigate("/lessons/" + data.slug);
 
             form.reset(defaultValues)
         } catch (error) {

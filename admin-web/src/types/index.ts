@@ -72,7 +72,6 @@ export const LessonProcessingStep = [
   "SOURCE_FETCHED",
   "TRANSCRIBED",
   "NLP_ANALYZED",
-  "POST_PROCESSED",
   "COMPLETED",
   "FAILED"
 ] as const;
@@ -94,10 +93,10 @@ export const lessonStatusSelectOptions = [
 ] as const;
 
 
-export const lessonType = [
+export const LessonType = [
   "AI_ASSISTED",
   "TRADITIONAL"
-]
+] as const;
 export const lessonTypeSelectOptions = [
   { value: "AI_ASSISTED", label: "AI Assisted" },
   { value: "TRADITIONAL", label: "Traditional" },
@@ -138,21 +137,107 @@ export interface ILessonDto {
   thumbnailUrl: string | null
   slug: string
   description: string | null
-  lessonType: string
-  processingStep: string
-  languageLevel: string
-  sourceType: string
+  lessonType: typeof LessonType[number]
+  processingStep: typeof LessonProcessingStep[number]
+  languageLevel: typeof cefrLevelOptions[number]
+  sourceType: typeof sourceTypeOptions[number]
   sourceUrl: string
   audioUrl: string | null
   sourceReferenceId: string | null
   sourceLanguage: string
   durationSeconds: number | null
   totalSentences: number | null
-  status: string
+  status: typeof LessonStatus[number]
   aiJobId: string | null
   enableDictation: boolean
   enableShadowing: boolean
   createdAt: string
   updatedAt: string
   publishedAt: string | null
+}
+export interface ILessonProcessingStepNotifyEvent {
+  lessonId: number;
+  processingStep: (typeof LessonProcessingStep)[number];
+  aiJobId: string | null;
+  aiMessage: string | null;
+  audioUrl: string | null;
+  sourceReferenceId: string | null;
+  thumbnailUrl: string | null;
+}
+export interface ILessonSentence {
+  id: number;
+  lessonId: number;
+
+  orderIndex: number;
+
+  textRaw: string;
+  textDisplay: string | null;
+  translationVi: string | null;
+
+  phoneticUk: string | null;
+  phoneticUs: string | null;
+
+  audioStartMs: number | null;
+  audioEndMs: number | null;
+  audioSegmentUrl: string | null;
+
+  aiMetadataJson: string | null;
+
+  isActive: boolean;
+
+  createdAt: string;
+  updatedAt: string;
+
+  lessonWords: ILessonWord[];
+}
+export interface ILessonWord {
+  id: number;
+  sentenceId: number;
+
+  orderIndex: number;
+
+  wordText: string;
+  wordLower: string | null;
+  wordNormalized: string | null;
+  wordSlug: string | null;
+
+  startCharIndex: number | null;
+  endCharIndex: number | null;
+
+  audioStartMs: number | null;
+  audioEndMs: number | null;
+
+  isPunctuation: boolean;
+  isClickable: boolean;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ILessonDetailsDto {
+  id: number
+  topic: ITopicOption
+  title: string
+  thumbnailUrl: string | null
+  slug: string
+  description: string | null
+  lessonType: typeof LessonType[number]
+  processingStep: typeof LessonProcessingStep[number]
+  languageLevel: typeof cefrLevelOptions[number]
+  sourceType: typeof sourceTypeOptions[number]
+  sourceUrl: string
+  audioUrl: string | null
+  sourceReferenceId: string | null
+  sourceLanguage: string
+  durationSeconds: number | null
+  totalSentences: number | null
+  status: typeof LessonStatus[number]
+  aiJobId: string | null
+  enableDictation: boolean
+  enableShadowing: boolean
+  createdAt: string
+  updatedAt: string
+  publishedAt: string | null
+  aiMessage: string | null
+  sentences: ILessonSentence[];
 }

@@ -1,8 +1,9 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+
 import {
   Youtube,
   FileAudio2,
@@ -13,14 +14,17 @@ import {
   CircleDot,
   Mic,
   MicOff,
-  Eye,
-  EyeOff,
   MoreHorizontal,
   Sparkles,
   User2,
   NotebookPen,
 } from "lucide-react"
-import type { ILessonDto } from "@/types"
+import type { ILessonDto, ILessonProcessingStepNotifyEvent, LessonProcessingStep, LessonStatus } from "@/types"
+import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
+import { useAppDispatch } from "@/store"
+import { updateLessonFromProcessingEvent } from "@/store/learningcontent/lessonSlice"
+import { Link } from "react-router-dom"
+import { getProcessingMeta } from "@/utils/lessonContentUtils"
 
 interface LessonDataTableRowProps {
   row: ILessonDto
@@ -125,28 +129,7 @@ const renderLessonType = (type: ILessonDto["lessonType"]) => {
   )
 }
 
-// NEW: meta cho progress theo processingStep
-const getProcessingMeta = (step: ILessonDto["processingStep"]) => {
-  switch (step) {
-    case "PROCESSING_STARTED":
-      return { label: "Processing started", progress: 10 }
-    case "SOURCE_FETCHED":
-      return { label: "Source fetched", progress: 25 }
-    case "TRANSCRIBED":
-      return { label: "Transcribed", progress: 50 }
-    case "NLP_ANALYZED":
-      return { label: "NLP analyzed", progress: 70 }
-    case "POST_PROCESSED":
-      return { label: "Post processed", progress: 85 }
-    case "COMPLETED":
-      return { label: "Completed", progress: 100 }
-    case "FAILED":
-      return { label: "Failed", progress: 100 }
-    case "NONE":
-    default:
-      return { label: "Not started", progress: 0 }
-  }
-}
+
 
 const DictationCell = ({ enabled }: { enabled: boolean }) => {
   return (
@@ -194,6 +177,29 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
   const processing = getProcessingMeta(row.processingStep)
   const isError = row.status === "ERROR"
   const isDone = row.processingStep === "COMPLETED"
+  const stompClient = useWebSocket();
+  const dispatch = useAppDispatch();
+  useEffect(() => {
+    if (!stompClient) return;
+
+    const destination = `/topic/learning-contents/lessons/${row.id}/processing-step`;
+    console.log("📡 Subscribing:", destination);
+
+    const subscription = stompClient.subscribe(destination, (msg) => {
+      try {
+        const event: ILessonProcessingStepNotifyEvent = JSON.parse(msg.body);
+        dispatch(updateLessonFromProcessingEvent(event));
+      } catch (e) {
+        console.error("Failed to parse WS event for lesson", row.id, e);
+      }
+    });
+
+    return () => {
+      console.log("❌ Unsubscribing:", destination);
+      subscription.unsubscribe();
+    };
+  }, [stompClient?.ws, dispatch, row.id]);
+
 
   return (
     <TableRow className="h-9 text-xs">
@@ -205,16 +211,16 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
       {/* Lesson title + slug */}
       <TableCell className="px-3 py-1 align-middle">
         <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-medium truncate max-w-[260px]">
+          <Link className="underline" to={`/lessons/${row.slug}`}><span className="text-xs font-medium truncate max-w-[260px]">
             {row.title}
-          </span>
+          </span></Link>
           <span className="text-[11px] text-muted-foreground truncate max-w-[260px]">
             {row.topic.slug}
           </span>
         </div>
       </TableCell>
 
-     
+
 
       {/* Level */}
       <TableCell className="px-3 py-1 align-middle text-center">
@@ -279,8 +285,27 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
         {formatDate(row.createdAt)}
       </TableCell>
 
-      {/* Actions */}
-      <TableCell className="px-3 py-1 align-middle text-right">
+      {/* Publish */}
+      <TableCell className="px-3 py-1 align-middle text-center">
+        {row.publishedAt ? (
+          <Badge
+            variant="outline"
+            className="gap-1 border-emerald-300/70 text-emerald-600 text-[11px] px-2 py-0 h-5"
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Published at {formatDate(row.publishedAt)}
+          </Badge>
+        ) : (
+          <Badge
+            variant="outline"
+            className="gap-1 border-slate-300 text-slate-600 text-[11px] px-2 py-0 h-5"
+          >
+            <AlertTriangle className="h-3 w-3" />
+            Unpublished
+          </Badge>
+        )}
+      </TableCell>
+      {/* <TableCell className="px-3 py-1 align-middle text-right">
         <Button
           variant="ghost"
           size="icon"
@@ -289,7 +314,7 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
         >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
-      </TableCell>
+      </TableCell> */}
     </TableRow>
   )
 }

@@ -19,17 +19,17 @@ import lombok.NoArgsConstructor;
 @Builder
 public class LessonProcessingStepUpdatedEvent {
 
-    private Long lessonId;
 
     private LessonProcessingStep processingStep;
 
-    /** Present when step = PROCESSING_STARTED (ACK) */
     private String aiJobId;
 
     /** Optional debug info */
-    private String message;
+    private String aiMessage;
 
     private String audioUrl;
 
     private String sourceReferenceId;
+
+    private String thumbnailUrl;
 }

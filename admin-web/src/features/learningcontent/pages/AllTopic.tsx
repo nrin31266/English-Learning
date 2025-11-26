@@ -18,7 +18,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { useAppDispatch, useAppSelector } from "@/store"
-import { fetchTopicOptions, fetchTopics } from "@/store/learningcontent/topicReducer"
+import { fetchTopicOptions, fetchTopics } from "@/store/learningcontent/topicSlide"
 import { getTextColorForHex } from "@/utils/colorUtils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
 import { BadgeCheckIcon, CircleX, SettingsIcon, SquarePlus } from "lucide-react"

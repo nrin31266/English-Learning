@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { Stomp, type CompatClient } from "@stomp/stompjs";
 import { useAuth } from '@/features/keycloak/providers/AuthProvider';
 import KeycloakClient from '@/features/keycloak/keycloak';
-
+const WsContext = createContext<CompatClient | null>(null);
+export const useWebSocket = () => useContext(WsContext);
 const WebSockerProvider = ({ children }: { children: React.ReactNode }) => {
     const [stompClient, setStompClient] = useState<CompatClient | null>(null);
     const auth = useAuth();
@@ -36,7 +37,9 @@ const WebSockerProvider = ({ children }: { children: React.ReactNode }) => {
     }, [auth.profile?.keyCloakId]);
 
     return (
-        <div>{children}</div>
+        <WsContext.Provider value={stompClient}>
+            {children}
+        </WsContext.Provider>
     )
 }
 

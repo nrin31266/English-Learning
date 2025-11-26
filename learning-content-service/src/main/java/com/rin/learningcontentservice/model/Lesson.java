@@ -85,6 +85,9 @@ public class Lesson {
     @Column(name = "ai_job_id")
     private String aiJobId;
 
+    @Column(name = "ai_message", length = 1000)
+    private String aiMessage;
+
     // ───────────────────────────────────────────
     // Feature toggles
     @Column(name = "enable_dictation", nullable = false)

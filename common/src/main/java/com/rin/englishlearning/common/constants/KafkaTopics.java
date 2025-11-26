@@ -5,6 +5,8 @@ public final class KafkaTopics {
 
     public static final String LESSON_GENERATION_REQUESTED_TOPIC = "lesson-generation-requested-v1";
     public static final String LESSON_PROCESSING_STEP_UPDATED_TOPIC = "lesson-processing-step-updated-v1";
+    public static final String LESSON_PROCESSING_STEP_NOTIFY_TOPIC = "lesson-processing-step-notify-v1";
+
 
 //    public static final String PAYMENT_SUCCESS = "payment-success";
 //    public static final String PAYMENT_FAILED = "payment-failed";

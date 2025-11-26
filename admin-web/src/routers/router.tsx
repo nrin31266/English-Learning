@@ -2,6 +2,7 @@ import AppLayout from "@/components/layout/AppLayout"
 import { createBrowserRouter } from "react-router-dom"
 import { Suspense, lazy, type ReactElement } from "react"
 import SkeletonComponent from "@/components/SkeletonComponent"
+import LessonDetails from "@/features/learningcontent/pages/LessonDetails"
 
 
 const AllTopic = lazy(() => import("@/features/learningcontent/pages/AllTopic"))
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
           {
             path: "/all-lessons",
             element: withSuspense(<AllLesson />),
+          },
+          {
+            path: "/lessons/:slug",
+            element: withSuspense(<LessonDetails />),
           },
           {
             path: "/generate-lessons",

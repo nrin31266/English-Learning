@@ -23,7 +23,7 @@ import { getRandomTopicColor, getTextColorForHex } from "@/utils/colorUtils"
 import type { TFunction } from "i18next"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { Spinner2 } from "@/components/ui/spinner2"
-import { addTopic, deleteTopic, editTopic } from "@/store/learningcontent/topicReducer"
+import { addTopic, deleteTopic, editTopic } from "@/store/learningcontent/topicSlide"
 import type { ITopicDto } from "@/types"
 import { useEffect } from "react"
 export const createTopicSchema = (t: TFunction) =>

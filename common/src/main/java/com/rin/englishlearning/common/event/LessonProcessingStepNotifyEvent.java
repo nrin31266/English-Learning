@@ -24,9 +24,10 @@ public class LessonProcessingStepNotifyEvent {
 
     /** Present when step = PROCESSING_STARTED (ACK) */
     private String aiJobId;
+    private Long lessonId;
 
     /** Optional debug info */
-    private String message;
+    private String aiMessage;
 
     private String audioUrl;
 

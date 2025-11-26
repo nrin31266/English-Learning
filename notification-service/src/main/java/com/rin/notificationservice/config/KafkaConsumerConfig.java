@@ -1,5 +1,6 @@
 package com.rin.notificationservice.config;
 
+import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -8,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 import java.util.HashMap;
@@ -29,18 +31,18 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConsumerFactory<String, LessonProcessingStepUpdatedEvent> lessonProcessingStepUpdatedConsumerFactory() {
+    public ConsumerFactory<String, LessonProcessingStepNotifyEvent> lessonProcessingStepNotifyEventConsumerFactory() {
         Map<String, Object> props = baseProps();
-        return new org.springframework.kafka.core.DefaultKafkaConsumerFactory<>(
+        return new DefaultKafkaConsumerFactory<>(
                 props,
                 new StringDeserializer(),
-                new JsonDeserializer<>(LessonProcessingStepUpdatedEvent.class)
+                new JsonDeserializer<>(LessonProcessingStepNotifyEvent.class)
         );
     }
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, LessonProcessingStepUpdatedEvent> lessonProcessingStepUpdatedKafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, LessonProcessingStepUpdatedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(lessonProcessingStepUpdatedConsumerFactory());
+    public ConcurrentKafkaListenerContainerFactory<String, LessonProcessingStepNotifyEvent> lessonProcessingStepNotifyEventConcurrentKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, LessonProcessingStepNotifyEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(lessonProcessingStepNotifyEventConsumerFactory());
         return factory;
     }
 }
