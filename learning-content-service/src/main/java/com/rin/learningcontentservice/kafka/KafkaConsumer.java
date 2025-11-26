@@ -38,13 +38,9 @@ public class KafkaConsumer {
             return;
         }
 
-        // --- CASE 1: SKIP (không update DB, chỉ notify UI) ---
-        if (Boolean.TRUE.equals(event.getIsSkip())) {
-            publishNotify(event, lesson.getId());
-            return;
-        }
-
-        // --- CASE 2: NORMAL PROCESSING ---
+        // ================================
+        //     ALWAYS UPDATE DB
+        // ================================
         switch (event.getProcessingStep()) {
 
             case SOURCE_FETCHED -> {
@@ -59,8 +55,6 @@ public class KafkaConsumer {
 
                 if (event.getAiMetadataUrl() != null)
                     lesson.setAiMetadataUrl(event.getAiMetadataUrl());
-
-                lessonRepository.save(lesson);
             }
 
             case TRANSCRIBED, NLP_ANALYZED -> {
@@ -70,8 +64,6 @@ public class KafkaConsumer {
 
                 if (event.getAiMetadataUrl() != null)
                     lesson.setAiMetadataUrl(event.getAiMetadataUrl());
-
-                lessonRepository.save(lesson);
             }
 
             case COMPLETED -> {
@@ -81,29 +73,23 @@ public class KafkaConsumer {
 
                 if (event.getAiMetadataUrl() != null)
                     lesson.setAiMetadataUrl(event.getAiMetadataUrl());
-
-                lessonRepository.save(lesson);
             }
 
             case FAILED -> {
                 lesson.setStatus(LessonStatus.ERROR);
                 lesson.setAiMessage(event.getAiMessage());
-                lessonRepository.save(lesson);
             }
         }
 
-        // --- ALWAYS NOTIFY UI ---
-        publishNotify(event, lesson.getId());
-    }
+        // Lưu DB cho mọi trường hợp
+        lessonRepository.save(lesson);
 
-    /**
-     * ALWAYS publish notify event, skip or non-skip
-     */
-    private void publishNotify(LessonProcessingStepUpdatedEvent event, Long lessonId) {
-
+        // ================================
+        //     ALWAYS NOTIFY UI
+        // ================================
         var notify = new LessonProcessingStepNotifyEvent();
         notify.setAiJobId(event.getAiJobId());
-        notify.setLessonId(lessonId);
+        notify.setLessonId(lesson.getId());
         notify.setProcessingStep(event.getProcessingStep());
         notify.setAiMessage(event.getAiMessage());
         notify.setAudioUrl(event.getAudioUrl());
@@ -111,5 +97,7 @@ public class KafkaConsumer {
         notify.setThumbnailUrl(event.getThumbnailUrl());
 
         kafkaProducer.publishLessonProcessingStepNotify(notify);
+
+        System.out.println("📤 Notify UI đã gửi: " + notify);
     }
 }
