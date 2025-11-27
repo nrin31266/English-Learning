@@ -15,7 +15,7 @@ const AppFooter = () => {
   const { t } = useTranslation();
 
   return (
-    <footer className="w-full border-t bg-white">
+    <footer className="w-full border-t bg-background">
       <div className="max-w-screen-2xl mx-auto px-6 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 text-sm text-gray-600">
 
         {/* Column 1 - About */}

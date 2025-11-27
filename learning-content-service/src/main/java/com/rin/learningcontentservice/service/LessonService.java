@@ -28,10 +28,13 @@ import com.rin.learningcontentservice.utils.TextUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.net.URL;
 import java.sql.Timestamp;
@@ -54,6 +57,10 @@ public class LessonService {
     private final KafkaProducer kafkaProducer;
     private final LanguageProcessingClient languageProcessingClient;
     private final RedisTemplate<String, Object> redisTemplate;
+    //
+    private ApplicationEventPublisher eventPublisher;
+
+
     public LessonMinimalResponse addLesson(AddLessonRequest request) {
 
         Topic topic = topicRepository.findBySlug(request.getTopicSlug()).orElseThrow(
@@ -337,7 +344,14 @@ public class LessonService {
         lessonRepository.save(lesson);
 
         //Push notification to UI
-        kafkaProducer.publishLessonProcessingStepNotify(
+//        kafkaProducer.publishLessonProcessingStepNotify(
+//                LessonProcessingStepNotifyEvent.builder()
+//                        .lessonId(lesson.getId())
+//                        .processingStep(LessonProcessingStep.COMPLETED)
+//                        .aiMessage("Lesson generation completed successfully.")
+//                        .build()
+//        );
+        eventPublisher.publishEvent(
                 LessonProcessingStepNotifyEvent.builder()
                         .lessonId(lesson.getId())
                         .processingStep(LessonProcessingStep.COMPLETED)

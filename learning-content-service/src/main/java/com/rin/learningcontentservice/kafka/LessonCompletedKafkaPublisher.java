@@ -8,7 +8,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 @RequiredArgsConstructor
-public class KafkaListener {
+public class LessonCompletedKafkaPublisher {
 
     private final KafkaProducer kafkaProducer;
 

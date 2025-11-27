@@ -37,6 +37,7 @@ import SkeletonComponent from "@/components/SkeletonComponent"
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
 import SentencesTab from "../components/SentencesTab"
 import LessonSitting from "../components/LessonSitting"
+import { showNotification } from "@/store/system/notificationSlice"
 
 // ───────────────────────────────────────────
 // Helpers
@@ -396,35 +397,9 @@ const LessonDetails: React.FC = () => {
               <p className="text-sm text-muted-foreground">{data.description}</p>
             )}
 
-            <div className="grid gap-3 text-[11px] md:grid-cols-3">
-              <div className="space-y-1">
-                <p className="flex items-center gap-1.5 font-medium">
-                  <Languages className="h-3.5 w-3.5" />
-                  Level & language
-                </p>
-                <p className="text-muted-foreground">
-                  Level: <span className="font-medium">{data.languageLevel}</span>
-                </p>
-                <p className="text-muted-foreground">
-                  Source language: <span className="font-medium">{data.sourceLanguage}</span>
-                </p>
-              </div>
+            <div className="grid gap-3 text-[11px] md:grid-cols-12">
 
-              <div className="space-y-1">
-                <p className="flex items-center gap-1.5 font-medium">
-                  <Clock className="h-3.5 w-3.5" />
-                  Duration
-                </p>
-                <p className="text-muted-foreground">
-                  {formatDuration(data.durationSeconds)}
-                </p>
-                <p className="text-muted-foreground">
-                  Sentences:{" "}
-                  <span className="font-medium">{data.totalSentences || (data.sentences && data.sentences.length) || 0}</span>
-                </p>
-              </div>
-
-              <div className="space-y-1">
+              <div className="space-y-1 col-span-6 ">
                 <p className="flex items-center gap-1.5 font-medium">
                   <FileAudio2 className="h-3.5 w-3.5" />
                   Source
@@ -455,6 +430,33 @@ const LessonDetails: React.FC = () => {
                   </a>
                 </p>
               </div>
+              <div className="space-y-1 col-span-3">
+                <p className="flex items-center gap-1.5 font-medium">
+                  <Languages className="h-3.5 w-3.5" />
+                  Level & language
+                </p>
+                <p className="text-muted-foreground">
+                  Level: <span className="font-medium">{data.languageLevel}</span>
+                </p>
+                <p className="text-muted-foreground">
+                  Source language: <span className="font-medium">{data.sourceLanguage}</span>
+                </p>
+              </div>
+
+              <div className="space-y-1 col-span-3">
+                <p className="flex items-center gap-1.5 font-medium">
+                  <Clock className="h-3.5 w-3.5" />
+                  Duration
+                </p>
+                <p className="text-muted-foreground">
+                  {formatDuration(data.durationSeconds)}
+                </p>
+                <p className="text-muted-foreground">
+                  Sentences:{" "}
+                  <span className="font-medium">{data.totalSentences || (data.sentences && data.sentences.length) || 0}</span>
+                </p>
+              </div>
+
             </div>
 
             <Separator className="my-2" />

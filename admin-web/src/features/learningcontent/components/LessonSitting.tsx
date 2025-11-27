@@ -52,6 +52,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertTriangle, Info, Loader2, Trash2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import { showNotification } from "@/store/system/notificationSlice"
 
 // ───────────────────────────────────────────
 // Schema
@@ -160,7 +161,27 @@ const LessonSitting = ({ lesson }: { lesson: ILessonDetailsDto }) => {
       enableShadowing: values.enableShadowing,
     }
 
-    dispatch(updateLesson({ id: lesson.id, data: payload }))
+    dispatch(updateLesson({ id: lesson.id, data: payload })).unwrap().then(() => {
+      dispatch(showNotification({
+        title: t("lessonSettings.notifications.updateSuccess.title", {
+          defaultValue: "Lesson updated",
+        }),
+        message: t("lessonSettings.notifications.updateSuccess.message", {
+          defaultValue: "The lesson settings have been successfully updated.",
+        }),
+        variant: "success",
+      }))
+    }).catch(() => {
+      dispatch(showNotification({
+        title: t("lessonSettings.notifications.updateError.title", {
+          defaultValue: "Update failed",
+        }),
+        message: t("lessonSettings.notifications.updateError.message", {
+          defaultValue: "There was an error updating the lesson. Please try again.",
+        }),
+        variant: "error",
+      }))
+    })
   }
 
   // ───────────────────────────────────────────

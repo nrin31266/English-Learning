@@ -6,7 +6,7 @@ import ProfileNav from './ProfileNav'
 
 const AppHeader = () => {
   return (
-    <div className='bg-white sticky top-0 z-50 h-16 border-b border grid grid-cols-[auto_1fr]'>
+    <div className='bg-background sticky top-0 z-50 h-16 border-b border grid grid-cols-[auto_1fr]'>
       {/* <nav className='flex items-center px-4 hover:cursor-pointer'>
         <LogoName fontSize='24px'/>
       </nav> */}

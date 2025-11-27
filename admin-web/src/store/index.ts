@@ -4,8 +4,10 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit';
  // Thunk không cần destructure
 import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux'; 
 import learningContentReducer from './learningcontent/index';
+import systemReducer from './system/index';
 const rootReducer = combineReducers({
-  learningContent: learningContentReducer
+  learningContent: learningContentReducer,
+  system: systemReducer
 });
 
 
