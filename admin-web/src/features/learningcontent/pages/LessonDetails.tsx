@@ -429,6 +429,17 @@ const LessonDetails: React.FC = () => {
                     {data.audioUrl || "#"}
                   </a>
                 </p>
+                 <p className="truncate text-muted-foreground">
+                  <span className="font-medium">AI Metadata URL: </span>
+                  <a
+                    href={data.aiMetadataUrl || "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-[11px] text-blue-600 underline"
+                  >
+                    {data.aiMetadataUrl || "#"}
+                  </a>
+                </p>
               </div>
               <div className="space-y-1 col-span-3">
                 <p className="flex items-center gap-1.5 font-medium">
@@ -510,6 +521,7 @@ const LessonDetails: React.FC = () => {
                 }else{
                   dispatch(unpublishLesson({id: data.id}));
                 }
+                
               }} className={`${data.publishedAt ? "bg-gray-500 text-white hover:bg-gray-500/90 hover:text-white" : "bg-blue-500 text-white hover:bg-blue-500/90 hover:text-white"}`} disabled={data.status !== "READY" || mutationStatus === "loading"} size="sm" variant="outline">
                 { mutationStatus === "loading" && mutationType === "publish" &&
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -192,9 +192,31 @@ const LessonSitting = ({ lesson }: { lesson: ILessonDetailsDto }) => {
   const navigate = useNavigate()
   const handleDelete = () => {
     if (deleteInput !== lesson.slug) return
-    dispatch(deleteLesson({ id: lesson.id }))
-    setDeleteDialogOpen(false)
-    navigate("/all-lessons")
+    dispatch(deleteLesson({ id: lesson.id })).unwrap().then(() => {
+      dispatch(showNotification({
+        title: t("lessonSettings.notifications.deleteSuccess.title", {
+          defaultValue: "Lesson deleted",
+        }),
+        message: t("lessonSettings.notifications.deleteSuccess.message", {
+          defaultValue: "The lesson has been permanently deleted.",
+        }),
+        variant: "success",
+      }))
+    }).catch(() => {
+      dispatch(showNotification({
+        title: t("lessonSettings.notifications.deleteError.title", {
+          defaultValue: "Deletion failed",
+        }),
+        message: t("lessonSettings.notifications.deleteError.message", {
+          defaultValue: "There was an error deleting the lesson. Please try again.",
+        }),
+        variant: "error",
+      }))
+    }).finally(() => {
+      setDeleteDialogOpen(false)
+      navigate("/all-lessons")
+    })
+
   }
 
   const resetForm = () => {
@@ -351,13 +373,13 @@ const LessonSitting = ({ lesson }: { lesson: ILessonDetailsDto }) => {
                           <Info className="h-3 w-3" />
                           {lesson.sourceType === "YOUTUBE"
                             ? t("lessonSettings.helperTexts.youtubeThumbnail", {
-                                defaultValue:
-                                  "For YouTube sources, the system may auto-generate a thumbnail.",
-                              })
+                              defaultValue:
+                                "For YouTube sources, the system may auto-generate a thumbnail.",
+                            })
                             : t("lessonSettings.helperTexts.thumbnailRequired", {
-                                defaultValue:
-                                  "For non-YouTube sources, a thumbnail URL is required.",
-                              })}
+                              defaultValue:
+                                "For non-YouTube sources, a thumbnail URL is required.",
+                            })}
                         </p>
                       </FormItem>
                     )}

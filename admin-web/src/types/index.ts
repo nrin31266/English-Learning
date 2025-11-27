@@ -240,6 +240,7 @@ export interface ILessonDetailsDto {
   updatedAt: string
   publishedAt: string | null
   aiMessage: string | null
+  aiMetadataUrl?: string | null
   sentences: ILessonSentence[];
 }
 

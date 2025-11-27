@@ -58,7 +58,7 @@ public class LessonService {
     private final LanguageProcessingClient languageProcessingClient;
     private final RedisTemplate<String, Object> redisTemplate;
     //
-    private ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     public LessonMinimalResponse addLesson(AddLessonRequest request) {
@@ -68,7 +68,7 @@ public class LessonService {
                         LearningContentErrorCode.TOPIC_NOT_FOUND.formatMessage(request.getTopicSlug()))
         );
         String lessonSlug = textUtils.toSlug(request.getTitle());
-        if(lessonRepository.findBySlug(lessonSlug).isPresent()) {
+        if (lessonRepository.findBySlug(lessonSlug).isPresent()) {
             throw new BaseException(LearningContentErrorCode.LESSON_WITH_NAME_EXISTS,
                     LearningContentErrorCode.LESSON_WITH_NAME_EXISTS.formatMessage(request.getTitle()));
         }
@@ -79,7 +79,7 @@ public class LessonService {
         lesson.setSlug(lessonSlug);
 
         // If traditional, save and return
-        if(request.getLessonType().equals(LessonType.TRADITIONAL)){
+        if (request.getLessonType().equals(LessonType.TRADITIONAL)) {
             lessonRepository.save(lesson);
             return lessonMapper.toLessonMinimalResponse(lesson);
         }
@@ -88,7 +88,7 @@ public class LessonService {
 
         // Push to message queue for processing
         log.info("Lesson {} is AI_ASSISTED, pushing to processing queue", lesson.getId());
-        var event  = LessonGenerationRequestedEvent.builder()
+        var event = LessonGenerationRequestedEvent.builder()
                 .sourceType(lesson.getSourceType())
                 .sourceUrl(lesson.getSourceUrl())
                 .aiJobId(lesson.getAiJobId())
@@ -99,13 +99,14 @@ public class LessonService {
 
         return lessonMapper.toLessonMinimalResponse(lesson);
     }
+
     // Re try
     public LessonMinimalResponse retryLessonGeneration(Long lessonId, Boolean isRestart) {
         Lesson lesson = lessonRepository.findById(lessonId).orElseThrow(
                 () -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND,
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(lessonId))
         );
-        if(!lesson.getLessonType().equals(LessonType.AI_ASSISTED)){
+        if (!lesson.getLessonType().equals(LessonType.AI_ASSISTED)) {
             throw new BaseException(LearningContentErrorCode.LESSON_NOT_AI_ASSISTED,
                     LearningContentErrorCode.LESSON_NOT_AI_ASSISTED.formatMessage(lessonId));
         }
@@ -114,7 +115,7 @@ public class LessonService {
 
         // Push to message queue for processing
         log.info("Retrying lesson generation for Lesson {}", lesson.getId());
-        var event  = LessonGenerationRequestedEvent.builder()
+        var event = LessonGenerationRequestedEvent.builder()
                 .sourceType(lesson.getSourceType())
                 .sourceUrl(lesson.getSourceUrl())
                 .aiJobId(lesson.getAiJobId())
@@ -135,7 +136,7 @@ public class LessonService {
             lesson.setProcessingStep(LessonProcessingStep.PROCESSING_STARTED);
             lesson.setStatus(LessonStatus.PROCESSING);
             lessonRepository.save(lesson);
-        }catch (BaseException e){
+        } catch (BaseException e) {
             log.error("Failed to create AI job for lesson {}: {}", lesson.getId(), e.getMessage());
             throw new BaseException(LearningContentErrorCode.AI_JOB_CREATION_FAILED,
                     LearningContentErrorCode.AI_JOB_CREATION_FAILED.formatMessage(e.getMessage()));

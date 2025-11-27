@@ -37,5 +37,6 @@ public class LessonDetailsResponse {
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private Timestamp publishedAt;
+    private String aiMetadataUrl;
     private List<LessonSentenceResponse> sentences;
 }
