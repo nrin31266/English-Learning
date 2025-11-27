@@ -375,22 +375,22 @@ const LessonDetails: React.FC = () => {
       {/* Tabs: transcript / meta */}
       <Tabs defaultValue={searchParams.get("tab") || "summary"} className="space-y-3">
         <TabsList className="h-8">
-          <TabsTrigger onClick={()=>{
+          <TabsTrigger onClick={() => {
             handleChangeTab("summary");
           }} value="summary" className="h-7 px-3 text-xs">
             {t("lessonDetails.tabs.summary")}
           </TabsTrigger>
-          <TabsTrigger onClick={()=>{
+          <TabsTrigger onClick={() => {
             handleChangeTab("transcript");
           }} value="transcript" className="h-7 px-3 text-xs">
             {t("lessonDetails.tabs.transcript")}
           </TabsTrigger>
-          <TabsTrigger onClick={()=>{
+          <TabsTrigger onClick={() => {
             handleChangeTab("meta");
           }} value="meta" className="h-7 px-3 text-xs">
             {t("lessonDetails.tabs.metadata")}
           </TabsTrigger>
-          <TabsTrigger onClick={()=>{
+          <TabsTrigger onClick={() => {
             handleChangeTab("sitting");
           }} value="sitting" className="h-7 px-3 text-xs">
             {t("lessonDetails.tabs.settings")}

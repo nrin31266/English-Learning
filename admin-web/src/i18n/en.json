@@ -289,7 +289,9 @@
     "editDescription": "Edit sentences text. Actions are UI only for now.",
     "editModeButton": "Edit mode",
     "viewModeButton": "View mode",
-    "noSentences": "No sentences available for this lesson."
+    "noSentences": "No sentences available for this lesson.",
+    "detailedViewButton": "Detailed view",
+    "minimalViewButton": "Minimal view"
   },
   "lessonSettings": {
     "title": "Lesson settings",

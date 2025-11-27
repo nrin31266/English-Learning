@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, RotateCcw, Save, Sparkles, ToggleLeft, ToggleRight } from "lucide-react"
+import { Loader2, RotateCcw, Save, Sparkles, EyeOff, ToggleRight } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { showNotification } from "@/store/system/notificationSlice"
 import { markSentenceActiveInactive } from "@/store/learningcontent/lessonDetailsSlide"
@@ -21,13 +21,15 @@ type SentenceItemProps = {
     translationVi: string
     phoneticUk: string
     phoneticUs: string
-  }) => void
+  }) => void,
+  viewMode?: "minimal" | "detailed"
 }
 
-const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) => {
-    const {type, status} = useAppSelector(state => state.learningContent.lessonDetails.sentenceMutation);
+const SentenceItem = ({ sentence, mode = "view", onSave, viewMode = "minimal" }: SentenceItemProps) => {
+    const {type, status, data} = useAppSelector(state => state.learningContent.lessonDetails.sentenceMutation);
   const s = sentence
   const isEditMode = mode === "edit"
+  const isMinimalView = viewMode === "minimal"
     const dispatch = useAppDispatch()
   // ───────────────────────────────────────────
   // State & initial values
@@ -100,21 +102,7 @@ const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) =>
     }))
   }
   const handleMarkActiveInactive = (id: number, isActive: boolean) => {
-    dispatch(markSentenceActiveInactive({ id, active: isActive })).unwrap()
-      .then(() => {
-        dispatch(showNotification({
-          title: "Success",
-          message: `Sentence has been marked as ${isActive ? "Active" : "Inactive"}.`,
-          variant: "success",
-        }))
-      })
-      .catch((error) => {
-        dispatch(showNotification({
-          title: "Error",
-          message: `Failed to update sentence status: ${error.message}`,
-          variant: "error",
-        }))
-      });
+    dispatch(markSentenceActiveInactive({ id, active: isActive }));
   }
 
   // ───────────────────────────────────────────
@@ -122,7 +110,7 @@ const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) =>
   // ───────────────────────────────────────────
 
   return (
-    <div className="flex gap-3 py-3">
+    <div className={`flex gap-3 py-3`}>
       {/* Time column */}
       <div className="mt-0.5 w-12 shrink-0 text-[14px] text-muted-foreground">
         {formatTimeMs(s.audioStartMs)}
@@ -150,7 +138,10 @@ const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) =>
                 />
               </div>
 
-              {/* Translation */}
+              {
+                !isMinimalView && (
+                  <>
+                    {/* Translation */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground">
                   Vietnamese translation
@@ -204,6 +195,9 @@ const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) =>
                   />
                 </div>
               </div>
+                  </>
+                )
+              }
             </div>
 
             {/* Actions row */}
@@ -245,12 +239,13 @@ const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) =>
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={status === "loading"}
+                disabled={status === "loading" && data !== null && data === s.id.toString()}
                 className="h-7 px-2 text-[12px]"
                 onClick={() => handleMarkActiveInactive(s.id, !s.isActive)}
               >
                 {
-                    status === "loading" && type === "mark-active-inactive" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null
+                    
+                    data === s.id.toString() && status === "loading" && type === "mark-active-inactive" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null
                 }
                {
                      s.isActive ? <ToggleRight className="mr-1 h-3 w-3" /> : <ToggleRight className="mr-1 h-3 w-3 rotate-180 text-red-500" />
@@ -262,9 +257,20 @@ const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) =>
         ) : (
           <>
             {/* View mode */}
-            <p className="leading-snug">{s.textDisplay ?? s.textRaw}</p>
+            <p className="leading-snug relative">{s.textDisplay ?? s.textRaw}
+              {
+                !s.isActive && (
+                    <span className="absolute top-0 right-0 rounded bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      <EyeOff className="inline mr-1 h-3 w-3" />
+                      Inactive
+                    </span>
+                )
+              }
+            </p>
 
-            {s.translationVi && (
+            {!isMinimalView && (
+              <>
+                {s.translationVi && (
               <p className="leading-snug text-muted-foreground">
                 {s.translationVi}
               </p>
@@ -300,6 +306,8 @@ const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) =>
                   </button>
                 ))}
               </div>
+            )}
+              </>
             )}
           </>
         )}

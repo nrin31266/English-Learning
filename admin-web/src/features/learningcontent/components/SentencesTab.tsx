@@ -4,13 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import type { ILessonDetailsDto } from "@/types"
-import { Headphones, Eye, Pencil } from "lucide-react"
+import { Headphones, Eye, Pencil, Minimize, Maximize } from "lucide-react"
 import { useMemo, useState } from "react"
 import SentenceItem from "./SentenceItem" // chỉnh path cho đúng
 
 const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
   const { t } = useTranslation()
   const [mode, setMode] = useState<"view" | "edit">("view")
+  const [viewMode, setViewMode] = useState<"minimal" | "detailed">("minimal")
 
   const orderIndexFiltered = useMemo(() => {
     if (!lesson.sentences) return []
@@ -39,7 +40,9 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
           </CardDescription>
         </div>
 
-        <Button
+        
+        <div className="flex gap-2">
+          <Button
           type="button"
           size="sm"
           variant={mode === "view" ? "outline" : "default"}
@@ -58,6 +61,19 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
             </>
           )}
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={viewMode === "minimal" ? "outline" : "default"}
+          className="h-7 px-2 text-[12px]"
+          onClick={() => setViewMode(viewMode === "minimal" ? "detailed" : "minimal")}
+        >
+          {
+            viewMode === "minimal" ? <Minimize className="mr-1 h-3 w-3" /> : <Maximize className="mr-1 h-3 w-3" />
+          }
+          {viewMode === "minimal" ? t("sentencesTab.detailedViewButton") : t("sentencesTab.minimalViewButton")}
+        </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="h-[480px] p-0">
@@ -66,7 +82,7 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
             {orderIndexFiltered && orderIndexFiltered.length > 0 ? (
               orderIndexFiltered.map((index) => {
                 const s = lesson.sentences[index]
-                return <SentenceItem key={s.id} sentence={s} mode={mode} />
+                return <SentenceItem  key={s.id} sentence={s} mode={mode} viewMode={viewMode} />
               })
             ) : (
               <div className="py-6 text-center text-sm text-muted-foreground">

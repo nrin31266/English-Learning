@@ -304,7 +304,9 @@
     "editDescription": "Chỉnh sửa văn bản câu. Các hành động chỉ là giao diện.",
     "editModeButton": "Chế độ chỉnh sửa",
     "viewModeButton": "Chế độ xem",
-    "noSentences": "Không có câu nào cho bài học này."
+    "noSentences": "Không có câu nào cho bài học này.",
+    "detailedViewButton": "Chế độ chi tiết",
+    "minimalViewButton": "Chế độ tối giản"
   },
   "lessonSettings": {
     "title": "Cài đặt bài học",
