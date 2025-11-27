@@ -6,6 +6,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { useTranslation } from "react-i18next"
 
 interface Props {
   page: number;          // backend return: number = current page (0-based)
@@ -26,6 +27,7 @@ export default function PaginationBar({
   onPageChange,
     hasBorderTop = false,
 }: Props) {
+  const { t } = useTranslation();
   const start = page * size + 1;
   const end = page * size + numberOfElements;
 
@@ -34,8 +36,8 @@ export default function PaginationBar({
       {/* Bên trái: Showing X–Y of Z */}
       <div className="text-sm text-muted-foreground">
         {totalElements === 0
-          ? "No results"
-          : `Showing ${start}–${end} of ${totalElements}`}
+          ? t("allLessons.pagination.noResults")
+          : t("allLessons.pagination.showing", { start, end, total: totalElements })}
       </div>
 
       {/* Bên phải: Pagination */}
@@ -78,6 +80,7 @@ export default function PaginationBar({
                 if (page < totalPages - 1) onPageChange(page + 1);
               }}
               aria-disabled={page === totalPages - 1}
+              
             />
           </PaginationItem>
         </PaginationContent>

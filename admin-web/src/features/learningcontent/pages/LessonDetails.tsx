@@ -334,9 +334,9 @@ const LessonDetails: React.FC = () => {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
 
-              <BreadcrumbItem>
+              <BreadcrumbItem >
                 <Link to="/all-lessons" className="flex underline items-center gap-1  text-muted-foreground">
-                  Lessons
+                  {t("lessonDetails.breadcrumb.lessons")}
                 </Link>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
@@ -358,7 +358,7 @@ const LessonDetails: React.FC = () => {
             {renderLessonType(data.lessonType)}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Topic:{" "}
+            {t("lessonDetails.topicLabel")}{" "}
             <span className="font-medium">{data.topic.name}</span>
           </p>
         </div>
@@ -369,16 +369,16 @@ const LessonDetails: React.FC = () => {
       <Tabs defaultValue="summary" className="space-y-3">
         <TabsList className="h-8">
           <TabsTrigger value="summary" className="h-7 px-3 text-xs">
-            Summary
+            {t("lessonDetails.tabs.summary")}
           </TabsTrigger>
           <TabsTrigger value="transcript" className="h-7 px-3 text-xs">
-            Transcript
+            {t("lessonDetails.tabs.transcript")}
           </TabsTrigger>
           <TabsTrigger value="meta" className="h-7 px-3 text-xs">
-            Metadata
+            {t("lessonDetails.tabs.metadata")}
           </TabsTrigger>
           <TabsTrigger value="sitting" className="h-7 px-3 text-xs">
-            Sitting
+            {t("lessonDetails.tabs.settings")}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="summary" className="mt-0">
@@ -402,13 +402,13 @@ const LessonDetails: React.FC = () => {
               <div className="space-y-1 col-span-6 ">
                 <p className="flex items-center gap-1.5 font-medium">
                   <FileAudio2 className="h-3.5 w-3.5" />
-                  Source
+                  {t("lessonDetails.summary.source")}
                 </p>
                 <div className="text-muted-foreground">
                   {renderSourceIcon(data.sourceType)}
                 </div>
                 <p className="truncate text-muted-foreground">
-                  <span className="font-medium">Source URL: </span>
+                  <span className="font-medium">{t("lessonDetails.summary.sourceUrl")} </span>
                   <a
                     href={data.sourceUrl}
                     target="_blank"
@@ -419,7 +419,7 @@ const LessonDetails: React.FC = () => {
                   </a>
                 </p>
                 <p className="truncate text-muted-foreground">
-                  <span className="font-medium">Audio URL: </span>
+                  <span className="font-medium">{t("lessonDetails.summary.audioUrl")} </span>
                   <a
                     href={data.audioUrl || "#"}
                     target="_blank"
@@ -430,7 +430,7 @@ const LessonDetails: React.FC = () => {
                   </a>
                 </p>
                  <p className="truncate text-muted-foreground">
-                  <span className="font-medium">AI Metadata URL: </span>
+                  <span className="font-medium">{t("lessonDetails.summary.aiMetadataUrl")} </span>
                   <a
                     href={data.aiMetadataUrl || "#"}
                     target="_blank"
@@ -444,26 +444,26 @@ const LessonDetails: React.FC = () => {
               <div className="space-y-1 col-span-3">
                 <p className="flex items-center gap-1.5 font-medium">
                   <Languages className="h-3.5 w-3.5" />
-                  Level & language
+                  {t("lessonDetails.summary.levelLanguage")}
                 </p>
                 <p className="text-muted-foreground">
-                  Level: <span className="font-medium">{data.languageLevel}</span>
+                  {t("lessonDetails.summary.level")} <span className="font-medium">{data.languageLevel}</span>
                 </p>
                 <p className="text-muted-foreground">
-                  Source language: <span className="font-medium">{data.sourceLanguage}</span>
+                  {t("lessonDetails.summary.sourceLanguage")} <span className="font-medium">{data.sourceLanguage}</span>
                 </p>
               </div>
 
               <div className="space-y-1 col-span-3">
                 <p className="flex items-center gap-1.5 font-medium">
                   <Clock className="h-3.5 w-3.5" />
-                  Duration
+                  {t("lessonDetails.summary.duration")}
                 </p>
                 <p className="text-muted-foreground">
                   {formatDuration(data.durationSeconds)}
                 </p>
                 <p className="text-muted-foreground">
-                  Sentences:{" "}
+                  {t("lessonDetails.summary.sentences")}{" "}
                   <span className="font-medium">{data.totalSentences || (data.sentences && data.sentences.length) || 0}</span>
                 </p>
               </div>
@@ -481,17 +481,17 @@ const LessonDetails: React.FC = () => {
 
             <div className="grid gap-3 text-[11px] md:grid-cols-3">
               <div>
-                <p className="font-medium">Created at</p>
+                <p className="font-medium">{t("lessonDetails.summary.createdAt")}</p>
                 <p className="text-muted-foreground">{formatDate(data.createdAt)}</p>
               </div>
               <div>
-                <p className="font-medium">Updated at</p>
+                <p className="font-medium">{t("lessonDetails.summary.updatedAt")}</p>
                 <p className="text-muted-foreground">{formatDate(data.updatedAt)}</p>
               </div>
               <div>
-                <p className="font-medium">Published</p>
+                <p className="font-medium">{t("lessonDetails.summary.published")}</p>
                 <p className="text-muted-foreground">
-                  {data.publishedAt ? formatDate(data.publishedAt) : "Unpublished"}
+                  {data.publishedAt ? formatDate(data.publishedAt) : t("lessonDetails.summary.unpublished")}
                 </p>
               </div>
             </div>
@@ -505,10 +505,10 @@ const LessonDetails: React.FC = () => {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Sparkles className="h-4 w-4" />
-                Actions
+                {t("lessonDetails.actions.title")}
               </CardTitle>
               <CardDescription className="text-xs">
-                Mock buttons for future actions (publish, re-generate, etc.).
+                {t("lessonDetails.actions.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
@@ -526,7 +526,7 @@ const LessonDetails: React.FC = () => {
                 { mutationStatus === "loading" && mutationType === "publish" &&
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 }
-                {data.publishedAt ? "Unpublish lesson" : "Publish lesson"}
+                {data.publishedAt ? t("lessonDetails.actions.unpublishLesson") : t("lessonDetails.actions.publishLesson")}
               </Button>
               <Button onClick={()=>{
                 dispatch(retryLessonGeneration({ id: data.id , isRestart: false }));
@@ -535,7 +535,7 @@ const LessonDetails: React.FC = () => {
                   mutationStatus === "loading" && mutationType === "re-try" &&
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 }
-                Regenerate with AI
+                {t("lessonDetails.actions.regenerate")}
               </Button>
               <Button className="bg-orange-500 hover:bg-orange-600 text-white hover:text-white" onClick={()=>{
                 dispatch(retryLessonGeneration({ id: data.id , isRestart: true }));
@@ -544,7 +544,7 @@ const LessonDetails: React.FC = () => {
                   mutationStatus === "loading" && mutationType === "re-try" &&
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 }
-                Restart AI processing
+                {t("lessonDetails.actions.restart")}
               </Button>
               {/* Red button */}
               <Button onClick={()=>{
@@ -554,7 +554,7 @@ const LessonDetails: React.FC = () => {
                   mutationStatus === "loading" && mutationType === "stop-ai-processing" &&
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 }
-                Stop processing
+                {t("lessonDetails.actions.stopProcessing")}
               </Button>
             </CardContent>
           </Card>
@@ -569,9 +569,9 @@ const LessonDetails: React.FC = () => {
         <TabsContent value="meta" className="mt-0">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Raw metadata</CardTitle>
+              <CardTitle className="text-sm">{t("lessonDetails.metadata.title")}</CardTitle>
               <CardDescription className="text-xs">
-                Simple JSON view so you can quickly inspect the lesson object (mock).
+                {t("lessonDetails.metadata.description")}
               </CardDescription>
             </CardHeader>
             <CardContent>

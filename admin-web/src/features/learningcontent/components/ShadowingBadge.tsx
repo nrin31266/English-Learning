@@ -1,14 +1,15 @@
 import { Badge } from "@/components/ui/badge"
-import {
-    Mic
-} from "lucide-react"
+import { Mic } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 const ShadowingBadge = ({ enabled }: { enabled: boolean }) => {
+  const { t } = useTranslation()
+  
   if (!enabled) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
         <Mic className="h-3 w-3 opacity-60" />
-        Shadowing Off
+        {t("badges.shadowing.off")}
       </span>
     )
   }
@@ -19,7 +20,7 @@ const ShadowingBadge = ({ enabled }: { enabled: boolean }) => {
       className="inline-flex items-center gap-1 border-blue-300/70 px-2 py-0 text-[11px] text-blue-600"
     >
       <Mic className="h-3 w-3" />
-      Shadowing On
+      {t("badges.shadowing.on")}
     </Badge>
   )
 }

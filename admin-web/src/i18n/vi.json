@@ -156,5 +156,245 @@
     "colorDescription": "Chọn màu sắc để đại diện cho chủ đề này trong giao diện người dùng.",
     "nameRequired": "Tên chủ đề là bắt buộc",
     "deleteButton": "Xóa chủ đề"
+  },
+  "allLessons": {
+    "addButton": "Thêm bài học",
+    "table": {
+      "loading": "Đang tải bài học...",
+      "noResults": "Không tìm thấy bài học nào.",
+      "columns": {
+        "id": "ID",
+        "lesson": "Bài học",
+        "level": "Cấp độ",
+        "type": "Loại",
+        "source": "Nguồn",
+        "dictation": "Chính tả",
+        "shadowing": "Shadowing",
+        "status": "Trạng thái",
+        "processing": "Xử lý",
+        "createdAt": "Ngày tạo",
+        "published": "Xuất bản"
+      }
+    },
+    "filter": {
+      "label": "Lọc theo:",
+      "search": "Tìm kiếm bài học...",
+      "allStatuses": "Tất cả trạng thái",
+      "allTopics": "Tất cả chủ đề",
+      "allTypes": "Tất cả loại",
+      "moreButton": "Thêm",
+      "lessonStatus": "Trạng thái bài học",
+      "lessonType": "Loại bài học",
+      "topicLabel": "Chủ đề",
+      "lessButton": "Ít hơn"
+    },
+    "pagination": {
+      "noResults": "Không có kết quả",
+      "showing": "Hiển thị {{start}}–{{end}} trong {{total}}",
+      "previous": "Trước",
+      "next": "Tiếp"
+    }
+  },
+  "allTopics": {
+    "addButton": "Thêm chủ đề",
+    "table": {
+      "caption": "Danh sách chủ đề.",
+      "loading": "Đang tải chủ đề...",
+      "noResults": "Không tìm thấy chủ đề nào.",
+      "columns": {
+        "index": "#",
+        "name": "Tên",
+        "description": "Mô tả",
+        "active": "Kích hoạt",
+        "lessons": "Bài học",
+        "time": "Thời gian",
+        "actions": "Hành động"
+      },
+      "active": "Đang hoạt động",
+      "inactive": "Không hoạt động",
+      "created": "Tạo: {{date}}",
+      "updated": "Cập nhật: {{date}}",
+      "total": "Tổng: {{count}}"
+    }
+  },
+  "lessonDetails": {
+    "breadcrumb": {
+      "lessons": "Bài học"
+    },
+    "topicLabel": "Chủ đề:",
+    "summary": {
+      "source": "Nguồn",
+      "sourceUrl": "URL nguồn:",
+      "audioUrl": "URL âm thanh:",
+      "aiMetadataUrl": "URL metadata AI:",
+      "levelLanguage": "Cấp độ & ngôn ngữ",
+      "level": "Cấp độ:",
+      "sourceLanguage": "Ngôn ngữ nguồn:",
+      "duration": "Thời lượng",
+      "sentences": "Câu:",
+      "createdAt": "Ngày tạo",
+      "updatedAt": "Cập nhật",
+      "published": "Xuất bản",
+      "unpublished": "Chưa xuất bản"
+    },
+    "actions": {
+      "title": "Hành động",
+      "description": "Các nút mô phỏng cho các hành động trong tương lai (xuất bản, tạo lại, v.v.).",
+      "publishLesson": "Xuất bản bài học",
+      "unpublishLesson": "Hủy xuất bản",
+      "regenerate": "Tạo lại với AI",
+      "restart": "Khởi động lại xử lý AI",
+      "stopProcessing": "Dừng xử lý"
+    },
+    "tabs": {
+      "summary": "Tóm tắt",
+      "transcript": "Bản chép",
+      "metadata": "Siêu dữ liệu",
+      "settings": "Cài đặt"
+    },
+    "metadata": {
+      "title": "Siêu dữ liệu thô",
+      "description": "Giao diện JSON đơn giản để kiểm tra nhanh đối tượng bài học (mô phỏng)."
+    }
+  },
+  "processingSection": {
+    "title": "Xử lý bài học",
+    "description": "Trạng thái thời gian thực của quy trình AI cho bài học này.",
+    "steps": {
+      "NONE": "Chưa bắt đầu",
+      "PROCESSING_STARTED": "Đã bắt đầu xử lý",
+      "SOURCE_FETCHED": "Đã tải nguồn",
+      "TRANSCRIBED": "Đã chép",
+      "NLP_ANALYZED": "Đã phân tích NLP",
+      "POST_PROCESSED": "Đã hậu xử lý",
+      "COMPLETED": "Hoàn thành",
+      "FAILED": "Thất bại"
+    },
+    "errorMessage": "Quy trình dừng do lỗi. Hãy thử tạo lại bài học này.",
+    "draftMessage": "Bài học này hiện đang ở trạng thái nháp."
+  },
+  "badges": {
+    "dictation": {
+      "on": "Chính tả Bật",
+      "off": "Tắt"
+    },
+    "shadowing": {
+      "on": "Shadowing Bật",
+      "off": "Shadowing Tắt"
+    },
+    "lessonType": {
+      "aiAssisted": "AI Hỗ trợ",
+      "traditional": "Truyền thống"
+    },
+    "status": {
+      "ready": "Sẵn sàng",
+      "processing": "Đang xử lý",
+      "error": "Lỗi",
+      "draft": "Nháp"
+    },
+    "source": {
+      "youtube": "YouTube",
+      "audioFile": "Tệp âm thanh",
+      "other": "Khác"
+    }
+  },
+  "sentencesTab": {
+    "title": "Bản chép & câu",
+    "viewDescription": "Nhấp vào từ để mở từ vựng sau này (giao diện mô phỏng).",
+    "editDescription": "Chỉnh sửa văn bản câu. Các hành động chỉ là giao diện.",
+    "editModeButton": "Chế độ chỉnh sửa",
+    "viewModeButton": "Chế độ xem",
+    "noSentences": "Không có câu nào cho bài học này."
+  },
+  "lessonSettings": {
+    "title": "Cài đặt bài học",
+    "badge": "Chỉ các trường có thể chỉnh sửa",
+    "description": "Cập nhật thông tin người học và tính năng. Các trường hệ thống được quản lý tự động.",
+    "optional": "Tùy chọn",
+    "sections": {
+      "basic": {
+        "title": "Thông tin cơ bản",
+        "subtitle": "Hiển thị cho người học trên trang bài học."
+      },
+      "features": {
+        "title": "Ngôn ngữ & tính năng",
+        "subtitle": "Kiểm soát siêu dữ liệu ngôn ngữ và chế độ luyện tập có sẵn."
+      }
+    },
+    "fields": {
+      "title": "Tiêu đề",
+      "languageLevel": "Cấp độ ngôn ngữ (CEFR)",
+      "description": "Mô tả",
+      "thumbnailUrl": "URL ảnh đại diện",
+      "sourceLanguage": "Ngôn ngữ nguồn",
+      "enableDictation": "Bật chế độ chính tả",
+      "enableShadowing": "Bật chế độ shadowing"
+    },
+    "placeholders": {
+      "title": "Nhập tiêu đề bài học",
+      "languageLevel": "Chọn cấp độ",
+      "description": "Tóm tắt ngắn người học sẽ thấy...",
+      "thumbnail": "https://...",
+      "sourceLanguage": "Chọn ngôn ngữ nguồn"
+    },
+    "helperTexts": {
+      "youtubeThumbnail": "Đối với nguồn YouTube, hệ thống có thể tự tạo ảnh đại diện.",
+      "thumbnailRequired": "Đối với nguồn không phải YouTube, cần URL ảnh đại diện.",
+      "enableDictation": "Người học có thể gõ những gì nghe được và kiểm tra chính tả & dấu câu.",
+      "enableShadowing": "Người học có thể lặp lại câu to và luyện phát âm."
+    },
+    "actions": {
+      "reset": "Đặt lại thay đổi",
+      "save": "Lưu cài đặt"
+    },
+    "validation": {
+      "titleRequired": "Tiêu đề là bắt buộc",
+      "thumbnailUrl": "Nhập URL ảnh đại diện hợp lệ",
+      "thumbnailRequired": "Cần URL ảnh đại diện cho nguồn không phải YouTube"
+    },
+    "enums": {
+      "languageLevel": {
+        "A1": "Sơ cấp (A1)",
+        "A2": "Cơ bản (A2)",
+        "B1": "Trung cấp (B1)",
+        "B2": "Trung cao (B2)",
+        "C1": "Nâng cao (C1)",
+        "C2": "Thành thạo (C2)"
+      },
+      "sourceLanguage": {
+        "en-US": "Tiếng Anh (Mỹ)",
+        "en-UK": "Tiếng Anh (Anh)"
+      }
+    },
+    "danger": {
+      "title": "Vùng nguy hiểm",
+      "description": "Xóa bài học là vĩnh viễn và không thể hoàn tác.",
+      "slugHint": "Để xác nhận xóa, bạn phải nhập chính xác slug bài học:",
+      "deleteButton": "Xóa bài học",
+      "dialogTitle": "Xác nhận xóa bài học",
+      "warningTitle": "Hành động này không thể hoàn tác",
+      "warningBody": "Tất cả câu, từ và dữ liệu người học liên kết với bài học này sẽ bị xóa.",
+      "confirmLabel": "Nhập slug bài học để xác nhận",
+      "confirmHint": "Xóa chỉ được kích hoạt khi slug khớp chính xác.",
+      "confirmDelete": "Xóa vĩnh viễn"
+    },
+    "notifications": {
+      "updateSuccess": {
+        "title": "Đã cập nhật bài học",
+        "message": "Cài đặt bài học đã được cập nhật thành công."
+      },
+      "updateError": {
+        "title": "Cập nhật thất bại",
+        "message": "Có lỗi khi cập nhật bài học. Vui lòng thử lại."
+      },
+      "deleteSuccess": {
+        "title": "Đã xóa bài học",
+        "message": "Bài học đã bị xóa vĩnh viễn."
+      },
+      "deleteError": {
+        "title": "Xóa thất bại",
+        "message": "Có lỗi khi xóa bài học. Vui lòng thử lại."
+      }
+    }
   }
 }

@@ -2,6 +2,7 @@
 import { SearchForm } from "@/components/SearchForm";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import {
     Select,
@@ -22,6 +23,7 @@ interface LessonFilterPanelProps {
 
 
 const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelProps) => {
+    const { t } = useTranslation();
     const isExtendFilter = useMemo(() => {
         return searchParams.get("extendFilter") === "true"
     }, [searchParams]);
@@ -82,7 +84,7 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
     return (
         <div className="p-2 space-y-2 text-xs bg-background rounded-md border border-border">
             <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-2 items-center">
-                <span className="text-sm font-semibold">Filter by:</span>
+                <span className="text-sm font-semibold">{t("allLessons.filter.label")}</span>
                 <SearchForm
                     value={searchTerm || ""}
                     onChange={(value) => {
@@ -97,7 +99,7 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
                     <SelectContent>
                         <SelectGroup>
                             {/* No value */}
-                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="all">{t("allLessons.filter.allStatuses")}</SelectItem>
                             {
                                 lessonStatusSelectOptions.map((option) => (
                                     <SelectItem key={option.value} value={option.value}>
@@ -115,7 +117,7 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
-                            <SelectItem value="all">All Topics</SelectItem>
+                            <SelectItem value="all">{t("allLessons.filter.allTopics")}</SelectItem>
                             {
                                 topicOptions.data.map((topic) => (
                                     <SelectItem key={topic.slug} value={topic.slug}>
@@ -127,17 +129,17 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
                     </SelectContent>
                 </Select>
 
-                <Button onClick={() => handleBooleanParam("extendFilter", isExtendFilter ? false : true, false)} className="h-8" variant={"ghost"}><ChevronDown /> More</Button>
+                <Button onClick={() => handleBooleanParam("extendFilter", isExtendFilter ? false : true, false)} className="h-8" variant={"ghost"}><ChevronDown /> {isExtendFilter ? t("allLessons.filter.lessButton") : t("allLessons.filter.moreButton")}</Button>
             </div>
             {isExtendFilter && <div>
-                <Select value={searchParams.get("lessonType") || "all"} onValueChange={(value) =>
+                {/* <Select value={searchParams.get("lessonType") || "all"} onValueChange={(value) =>
                     handleChangeSearchParam("lessonType", value === "all" ? null : value)}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Lesson Type" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
-                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="all">{t("allLessons.filter.allTypes")}</SelectItem>
                             {
                                 lessonTypeOptions.map((type) => (
                                     <SelectItem key={type} value={type}>
@@ -147,7 +149,8 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
                             }
                         </SelectGroup>
                     </SelectContent>
-                </Select>
+                </Select> */}
+                <p className="p-2text-sm text-gray-500 text-center">All Functions will be updated soon!</p>
             </div>}
         </div>
     )

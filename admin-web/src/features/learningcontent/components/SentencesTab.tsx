@@ -1,4 +1,5 @@
 // SentencesTab.tsx
+import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
@@ -8,6 +9,7 @@ import { useMemo, useState } from "react"
 import SentenceItem from "./SentenceItem" // chỉnh path cho đúng
 
 const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<"view" | "edit">("view")
 
   const orderIndexFiltered = useMemo(() => {
@@ -28,12 +30,12 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
         <div>
           <CardTitle className="flex items-center gap-2 text-sm">
             <Headphones className="h-4 w-4" />
-            Transcript & sentences
+            {t("sentencesTab.title")}
           </CardTitle>
           <CardDescription className="text-xs">
             {mode === "view"
-              ? "Click on words to open vocabulary later (mock UI for now)."
-              : "Edit sentences text. Actions are UI only for now."}
+              ? t("sentencesTab.viewDescription")
+              : t("sentencesTab.editDescription")}
           </CardDescription>
         </div>
 
@@ -47,12 +49,12 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
           {mode === "view" ? (
             <>
               <Pencil className="mr-1 h-3 w-3" />
-              Edit mode
+              {t("sentencesTab.editModeButton")}
             </>
           ) : (
             <>
               <Eye className="mr-1 h-3 w-3" />
-              View mode
+              {t("sentencesTab.viewModeButton")}
             </>
           )}
         </Button>
@@ -68,7 +70,7 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
               })
             ) : (
               <div className="py-6 text-center text-sm text-muted-foreground">
-                No sentences available for this lesson.
+                {t("sentencesTab.noSentences")}
               </div>
             )}
           </div>

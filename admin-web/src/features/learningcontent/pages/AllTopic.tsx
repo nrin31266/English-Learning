@@ -73,21 +73,21 @@ const AllTopic = () => {
                         setTopic(undefined);
                     }} variant={"outline"} className="h-6 text-xs">
                         <SquarePlus />
-                        Add Topic</Button>
+                        {t("allTopics.addButton")}</Button>
                 </div>
             </div>
             <div className="border p-2 rounded-md">
                 <Table>
-                    <TableCaption>A list of topics.</TableCaption>
+                    <TableCaption>{t("allTopics.table.caption")}</TableCaption>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-4 max-w-8">#</TableHead>
-                            <TableHead >Name</TableHead>
-                            <TableHead >Description</TableHead>
-                            <TableHead>Active</TableHead>
-                            <TableHead className="text-center">Lessons</TableHead>
-                            <TableHead>Time</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead className="w-4 max-w-8">{t("allTopics.table.columns.index")}</TableHead>
+                            <TableHead>{t("allTopics.table.columns.name")}</TableHead>
+                            <TableHead>{t("allTopics.table.columns.description")}</TableHead>
+                            <TableHead>{t("allTopics.table.columns.active")}</TableHead>
+                            <TableHead className="text-center">{t("allTopics.table.columns.lessons")}</TableHead>
+                            <TableHead>{t("allTopics.table.columns.time")}</TableHead>
+                            <TableHead className="text-right">{t("allTopics.table.columns.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -97,7 +97,7 @@ const AllTopic = () => {
                                 <TableCell colSpan={7} className="h-32 text-center">
                                     <div className="flex justify-center items-center gap-2 text-stone-500">
                                         <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-400 border-t-transparent"></div>
-                                        <span>Loading topics...</span>
+                                        <span>{t("allTopics.table.loading")}</span>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -107,7 +107,7 @@ const AllTopic = () => {
                         {topics.status === "succeeded" && topics.data.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={7} className="h-32 text-center text-stone-500">
-                                    No topics found.
+                                    {t("allTopics.table.noResults")}
                                 </TableCell>
                             </TableRow>
                         )}
@@ -133,7 +133,7 @@ const AllTopic = () => {
                                             item.isActive ? <BadgeCheckIcon className="inline-block mr-1" /> : <CircleX className="inline-block mr-1" />
                                         }
                                         {
-                                            item.isActive ? 'Active' : 'Inactive'
+                                            item.isActive ? t("allTopics.table.active") : t("allTopics.table.inactive")
                                         }
 
                                     </Badge>
@@ -151,15 +151,15 @@ const AllTopic = () => {
                                         <TooltipTrigger>
 
                                             <div className="text-xs text-stone-400 flex flex-col">
-                                                <span>Created: {new Date(item.createdAt).toLocaleDateString()}</span>
-                                                <span>Updated: {new Date(item.updatedAt).toLocaleDateString()}</span>
+                                                <span>{t("allTopics.table.created", { date: new Date(item.createdAt).toLocaleDateString() })}</span>
+                                                <span>{t("allTopics.table.updated", { date: new Date(item.updatedAt).toLocaleDateString() })}</span>
                                             </div>
 
                                         </TooltipTrigger>
                                         <TooltipContent>
                                             <div className="text-xs text-stone-400 flex flex-col bg-black p-2 rounded-md">
-                                                <span>Created: {new Date(item.createdAt).toLocaleString()}</span>
-                                                <span>Updated: {new Date(item.updatedAt).toLocaleString()}</span>
+                                                <span>{t("allTopics.table.created", { date: new Date(item.createdAt).toLocaleString() })}</span>
+                                                <span>{t("allTopics.table.updated", { date: new Date(item.updatedAt).toLocaleString() })}</span>
                                             </div>
                                         </TooltipContent>
                                     </Tooltip>
@@ -179,7 +179,7 @@ const AllTopic = () => {
                     </TableBody>
                     <TableFooter>
                         <TableRow>
-                            <TableCell colSpan={7}>Total: {topics.data.length}</TableCell>
+                            <TableCell colSpan={7}>{t("allTopics.table.total", { count: topics.data.length })}</TableCell>
                         </TableRow>
                     </TableFooter>
                 </Table>

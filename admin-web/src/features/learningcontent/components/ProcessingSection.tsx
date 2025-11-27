@@ -1,4 +1,5 @@
 // src/features/learning-content/components/ProcessingSection.tsx
+import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
@@ -9,6 +10,7 @@ import { AlertTriangle, CheckCircle2, CircleDot, Gauge, Loader2 } from "lucide-r
 type ProcessingStep = ILessonDetailsDto["processingStep"]
 
 const ProcessingSection = ({ lesson }: { lesson: ILessonDetailsDto }) => {
+  const { t } = useTranslation()
 
   console.log(lesson)  
   const meta = getProcessingMeta(lesson.processingStep)
@@ -55,10 +57,10 @@ const ProcessingSection = ({ lesson }: { lesson: ILessonDetailsDto }) => {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Gauge className="h-4 w-4" />
-          Lesson processing
+          {t("processingSection.title")}
         </CardTitle>
         <CardDescription className="text-xs">
-          Real-time status of AI pipeline for this lesson.
+          {t("processingSection.description")}
         </CardDescription>
       </CardHeader>
 
@@ -135,13 +137,13 @@ const ProcessingSection = ({ lesson }: { lesson: ILessonDetailsDto }) => {
         )}
         {isError && (
           <p className="pt-1 text-[11px] text-red-500">
-            Pipeline stopped due to an error. Try re-generating this lesson.
+            {t("processingSection.errorMessage")}
           </p>
         )}
         {
             isDraft && (
               <p className="pt-1 text-[11px] text-gray-500">
-                This lesson is currently in draft status.
+                {t("processingSection.draftMessage")}
               </p>
             )
         }

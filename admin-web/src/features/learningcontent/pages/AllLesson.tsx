@@ -404,7 +404,7 @@ const AllLesson = () => {
         const filters = Object.fromEntries(uRLSearchParams.entries());
         // Has page: page -= 1;
         filters.page = filters.page ? String(Number(filters.page) - 1) : "0";
-        filters.size = filters.size || "5";
+        filters.size = filters.size || "12";
         filters.sort = filters.sort || "id,desc";
 
         dispatch(fetchLessons(filters));
@@ -437,7 +437,7 @@ const AllLesson = () => {
                     className="h-6 text-xs"
                 >
                     <SquarePlus />
-                    Add Lesson
+                    {t("allLessons.addButton")}
                 </Button>
             </div>
 
