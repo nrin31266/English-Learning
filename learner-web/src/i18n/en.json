@@ -1,0 +1,387 @@
+{
+  "auth": {
+    "checkingSession": "Checking session...",
+    "redirecting": "Redirecting...",
+    "loadingProfile": "Loading profile...",
+    "accessDenied": "Access denied",
+    "loginRequired": "Please log in to continue",
+    "adminOnly": "Admins only",
+    "fetchProfileError": "Failed to load user profile"
+  },
+  "common": {
+    "welcome": "Welcome",
+    "logout": "Logout",
+    "hello": "Hello, {{name}}!",
+    "feedback": "Feedback",
+    "settings": "Settings",
+    "support": "Support",
+    "myProfile": "My Profile",
+    "billing": "Billing",
+    "myAccount": "My Account"
+  },
+  "appMenu": {
+    "dashboard": "Dashboard",
+    "learningContent": "Learning Content",
+    "topics": "Topics",
+    "allLessons": "All Lessons",
+    "generateLessons": "Generate Lessons",
+    "vocabulary": "Vocabulary",
+    "allWords": "All Words",
+    "system": "System",
+    "healthCheck": "Health Check",
+    "queueMonitor": "Queue Monitor",
+    "aiJobs": "AI Jobs",
+    "logs": "Logs",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "generateLessons": {
+    "form": {
+      "title": "Generate lessons",
+      "description": "Define the topic, source material, and optional features before generating lessons.",
+      "requiredBadge": "Required",
+      "optionalHint": "Optional"
+    },
+    "sections": {
+      "topicBasics": {
+        "title": "Topic & basics",
+        "subtitle": "Connect the lesson to a topic and set the essential metadata."
+      },
+      "source": {
+        "title": "Source material",
+        "subtitle": "Choose where the content comes from and how it should be parsed."
+      },
+      "features": {
+        "title": "Feature toggles",
+        "subtitle": "Enable or disable learning aids for the generated lessons."
+      }
+    },
+    "fields": {
+      "topic": "Topic",
+      "title": "Lesson title",
+      "lessonType": "Lesson type",
+      "languageLevel": "Language level",
+      "description": "Short description",
+      "sourceType": "Source type",
+      "sourceLanguage": "Source language",
+      "sourceUrl": "Source URL",
+      "thumbnailUrl": "Thumbnail URL",
+      "enableDictation": "Dictation practice",
+      "enableShadowing": "Shadowing practice"
+    },
+    "placeholders": {
+      "topic": "Pick a topic",
+      "title": "Name for this lesson",
+      "lessonType": "Select the lesson style",
+      "languageLevel": "Select a CEFR level",
+      "description": "Brief description of the lesson",
+      "sourceType": "Where is the source from?",
+      "sourceLanguage": "Language of the source content",
+      "thumbnail": "https://your-domain.com/thumbnail.png",
+      "youtubeSourceUrl": "Paste a YouTube URL (https://...)",
+      "genericSourceUrl": "Paste an article or audio URL"
+    },
+    "helperTexts": {
+      "enableDictation": "Adds voice-typing drills using the generated transcript.",
+      "enableShadowing": "Adds synchronized audio shadowing mode."
+    },
+    "actions": {
+      "reset": "Reset form",
+      "submit": "Generate lesson"
+    },
+    "validation": {
+      "topic": "Topic is required",
+      "title": "Title is required",
+      "sourceUrl": "Enter a valid source URL",
+      "thumbnailUrl": "Enter a valid thumbnail URL",
+      "thumbnailRequired": "Thumbnail URL is required for non-YouTube sources"
+    },
+    "enums": {
+      "lessonType": {
+        "AI_ASSISTED": "AI-assisted",
+        "TRADITIONAL": "Traditional"
+      },
+      "languageLevel": {
+        "A1": "Beginner (A1)",
+        "A2": "Elementary (A2)",
+        "B1": "Intermediate (B1)",
+        "B2": "Upper intermediate (B2)",
+        "C1": "Advanced (C1)",
+        "C2": "Proficient (C2)"
+      },
+      "sourceType": {
+        "YOUTUBE": "YouTube video",
+        "AUDIO_FILE": "Audio file",
+        "OTHER": "Other source"
+      },
+      "sourceLanguage": {
+        "en-US": "English (US)",
+        "en-UK": "English (UK)"
+      }
+    }
+  },
+  "footer": {
+    "aboutTitle": "About",
+    "aboutDescription": "Internal admin dashboard for managing AI-generated learning content, vocabulary system, and system operations.",
+    "resourcesTitle": "Resources",
+    "documentation": "Documentation",
+    "apiReference": "API Reference",
+    "developerGuides": "Developer Guides",
+    "systemToolsTitle": "System Tools",
+    "healthCheck": "Health Check",
+    "queueMonitor": "Queue Monitor",
+    "logsViewer": "Logs Viewer",
+    "aiJobs": "AI Jobs",
+    "contactTitle": "Contact",
+    "email": "Email",
+    "phone": "Phone",
+    "github": "Github",
+    "madeWith": "Made with",
+    "byTeam": "by Cat AI Team"
+  },
+  "topicDialog": {
+    
+  },
+  "allLessons": {
+    "addButton": "Add Lesson",
+    "table": {
+      "loading": "Loading lessons...",
+      "noResults": "No lessons found.",
+      "columns": {
+        "id": "ID",
+        "lesson": "Lesson",
+        "level": "Level",
+        "type": "Type",
+        "source": "Source",
+        "dictation": "Dictation",
+        "shadowing": "Shadowing",
+        "status": "Status",
+        "processing": "Processing",
+        "createdAt": "Created At",
+        "published": "Published"
+      }
+    },
+    "filter": {
+      "label": "Filter by:",
+      "search": "Search lessons...",
+      "allStatuses": "All Statuses",
+      "allTopics": "All Topics",
+      "allTypes": "All Types",
+      "moreButton": "More",
+      "lessonStatus": "Lesson Status",
+      "lessonType": "Lesson Type",
+      "topicLabel": "Topic",
+      "lessButton": "Less"
+    },
+    "pagination": {
+      "noResults": "No results",
+      "showing": "Showing {{start}}–{{end}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
+    }
+  },
+  "allTopics": {
+    "addButton": "Add Topic",
+    "table": {
+      "caption": "A list of topics.",
+      "loading": "Loading topics...",
+      "noResults": "No topics found.",
+      "columns": {
+        "index": "#",
+        "name": "Name",
+        "description": "Description",
+        "active": "Active",
+        "lessons": "Lessons",
+        "time": "Time",
+        "actions": "Actions"
+      },
+      "active": "Active",
+      "inactive": "Inactive",
+      "created": "Created: {{date}}",
+      "updated": "Updated: {{date}}",
+      "total": "Total: {{count}}"
+    }
+  },
+  "lessonDetails": {
+    "breadcrumb": {
+      "lessons": "Lessons"
+    },
+    "topicLabel": "Topic:",
+    "summary": {
+      "source": "Source",
+      "sourceUrl": "Source URL:",
+      "audioUrl": "Audio URL:",
+      "aiMetadataUrl": "AI Metadata URL:",
+      "levelLanguage": "Level & language",
+      "level": "Level:",
+      "sourceLanguage": "Source language:",
+      "duration": "Duration",
+      "sentences": "Sentences:",
+      "createdAt": "Created at",
+      "updatedAt": "Updated at",
+      "published": "Published",
+      "unpublished": "Unpublished"
+    },
+    "actions": {
+      "title": "Actions",
+      "description": "Mock buttons for future actions (publish, re-generate, etc.).",
+      "publishLesson": "Publish lesson",
+      "unpublishLesson": "Unpublish lesson",
+      "regenerate": "Regenerate with AI",
+      "restart": "Restart AI processing",
+      "stopProcessing": "Stop processing"
+    },
+    "tabs": {
+      "summary": "Summary",
+      "transcript": "Transcript",
+      "metadata": "Metadata",
+      "settings": "Sitting"
+    },
+    "metadata": {
+      "title": "Raw metadata",
+      "description": "Simple JSON view so you can quickly inspect the lesson object (mock)."
+    }
+  },
+  "processingSection": {
+    "title": "Lesson processing",
+    "description": "Real-time status of AI pipeline for this lesson.",
+    "steps": {
+      "NONE": "Not started",
+      "PROCESSING_STARTED": "Processing started",
+      "SOURCE_FETCHED": "Source fetched",
+      "TRANSCRIBED": "Transcribed",
+      "NLP_ANALYZED": "NLP analyzed",
+      "POST_PROCESSED": "Post processed",
+      "COMPLETED": "Completed",
+      "FAILED": "Failed"
+    },
+    "errorMessage": "Pipeline stopped due to an error. Try re-generating this lesson.",
+    "draftMessage": "This lesson is currently in draft status."
+  },
+  "badges": {
+    "dictation": {
+      "on": "Dictation On",
+      "off": "Off"
+    },
+    "shadowing": {
+      "on": "Shadowing On",
+      "off": "Shadowing Off"
+    },
+    "lessonType": {
+      "aiAssisted": "AI Assisted",
+      "traditional": "Traditional"
+    },
+    "status": {
+      "ready": "Ready",
+      "processing": "Processing",
+      "error": "Error",
+      "draft": "Draft"
+    },
+    "source": {
+      "youtube": "YouTube",
+      "audioFile": "Audio file",
+      "other": "Other"
+    }
+  },
+  "sentencesTab": {
+    "title": "Transcript & sentences",
+    "viewDescription": "Click on words to open vocabulary later (mock UI for now).",
+    "editDescription": "Edit sentences text. Actions are UI only for now.",
+    "editModeButton": "Edit mode",
+    "viewModeButton": "View mode",
+    "noSentences": "No sentences available for this lesson.",
+    "detailedViewButton": "Detailed view",
+    "minimalViewButton": "Minimal view"
+  },
+  "lessonSettings": {
+    "title": "Lesson settings",
+    "badge": "Editable fields only",
+    "description": "Update learner-facing information and feature toggles. System fields are managed automatically.",
+    "optional": "Optional",
+    "sections": {
+      "basic": {
+        "title": "Basic information",
+        "subtitle": "Shown to learners on the lesson page."
+      },
+      "features": {
+        "title": "Language & features",
+        "subtitle": "Control language metadata and which practice modes are available."
+      }
+    },
+    "fields": {
+      "title": "Title",
+      "languageLevel": "Language level (CEFR)",
+      "description": "Description",
+      "thumbnailUrl": "Thumbnail URL",
+      "sourceLanguage": "Source language",
+      "enableDictation": "Enable dictation mode",
+      "enableShadowing": "Enable shadowing mode"
+    },
+    "placeholders": {
+      "title": "Enter lesson title",
+      "languageLevel": "Select level",
+      "description": "Short summary learners will see...",
+      "thumbnail": "https://...",
+      "sourceLanguage": "Select source language"
+    },
+    "helperTexts": {
+      "youtubeThumbnail": "For YouTube sources, the system may auto-generate a thumbnail.",
+      "thumbnailRequired": "For non-YouTube sources, a thumbnail URL is required.",
+      "enableDictation": "Learners can type what they hear and check spelling & punctuation.",
+      "enableShadowing": "Learners can repeat sentences out loud and practice pronunciation."
+    },
+    "actions": {
+      "reset": "Reset changes",
+      "save": "Save settings"
+    },
+    "validation": {
+      "titleRequired": "Title is required",
+      "thumbnailUrl": "Enter a valid thumbnail URL",
+      "thumbnailRequired": "Thumbnail URL is required for non-YouTube sources"
+    },
+    "enums": {
+      "languageLevel": {
+        "A1": "Beginner (A1)",
+        "A2": "Elementary (A2)",
+        "B1": "Intermediate (B1)",
+        "B2": "Upper intermediate (B2)",
+        "C1": "Advanced (C1)",
+        "C2": "Proficient (C2)"
+      },
+      "sourceLanguage": {
+        "en-US": "English (US)",
+        "en-UK": "English (UK)"
+      }
+    },
+    "danger": {
+      "title": "Danger zone",
+      "description": "Deleting a lesson is permanent and cannot be undone.",
+      "slugHint": "To confirm deletion, you must type the lesson slug exactly:",
+      "deleteButton": "Delete lesson",
+      "dialogTitle": "Confirm lesson deletion",
+      "warningTitle": "This action cannot be undone",
+      "warningBody": "All sentences, words and learner data linked to this lesson will be removed.",
+      "confirmLabel": "Type the lesson slug to confirm",
+      "confirmHint": "Deletion is only enabled when the slug matches exactly.",
+      "confirmDelete": "Delete permanently"
+    },
+    "notifications": {
+      "updateSuccess": {
+        "title": "Lesson updated",
+        "message": "The lesson settings have been successfully updated."
+      },
+      "updateError": {
+        "title": "Update failed",
+        "message": "There was an error updating the lesson. Please try again."
+      },
+      "deleteSuccess": {
+        "title": "Lesson deleted",
+        "message": "The lesson has been permanently deleted."
+      },
+      "deleteError": {
+        "title": "Deletion failed",
+        "message": "There was an error deleting the lesson. Please try again."
+      }
+    }
+  }
+}
