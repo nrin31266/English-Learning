@@ -19,6 +19,7 @@ import { extractError } from "@/utils/reduxUtils";
 interface LessonDetailsState {
   lessonDetails: IAsyncState<ILessonDetailsDto | null>;
   lessonDetailsMutation: IAsyncState<null> & { type: "re-try" | "stop-ai-processing" | "publish" | "update" | "delete" | null };
+  sentenceMutation: IAsyncState<string | null> & { type: "mark-active-inactive" | null };
 }
 const initialState: LessonDetailsState = {
   lessonDetails: {
@@ -27,6 +28,12 @@ const initialState: LessonDetailsState = {
     error: { code: null, message: null },
   },
   lessonDetailsMutation: {
+    data: null,
+    status: "idle",
+    type: null,
+    error: { code: null, message: null },
+  },
+  sentenceMutation: {
     data: null,
     status: "idle",
     type: null,
@@ -155,6 +162,23 @@ export const updateLesson = createAsyncThunk(
         body: data,
       });
       return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  }
+);
+
+export const markSentenceActiveInactive = createAsyncThunk(
+  "lessons/markSentenceActiveInactive",
+  async ({ id, active }: { id: number, active: boolean }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<null>({
+        endpoint: `/learning-contents/sentences/${id}/mark-active-inactive`,
+        method: "POST",
+        isAuth: true,
+        params: { active: active }
+      });
+      return active ? "active" : "inactive";
     } catch (err) {
       return rejectWithValue(extractError(err));
     }
@@ -319,6 +343,27 @@ export const lessonDetailsSlice = createSlice({
       .addCase(deleteLesson.rejected, (state, action) => {
         state.lessonDetailsMutation.status = "failed";
         state.lessonDetailsMutation.error = action.payload as IErrorState;
+      })
+      .addCase(markSentenceActiveInactive.pending, (state, action) => {
+        state.sentenceMutation.status = "loading";
+        state.sentenceMutation.error = { code: null, message: null };
+        state.sentenceMutation.type = "mark-active-inactive";
+        state.sentenceMutation.data = action.meta.arg.id.toString();
+      })
+      .addCase(markSentenceActiveInactive.fulfilled, (state, action) => {
+        state.sentenceMutation.status = "succeeded";
+        const sentenceId = action.meta.arg.id;
+        const isActive = action.meta.arg.active;
+        if(state.lessonDetails.data){
+          const sentence = state.lessonDetails.data.sentences.find(s => s.id === sentenceId);
+          if(sentence){
+            sentence.isActive = isActive;
+          }
+        }
+      })
+      .addCase(markSentenceActiveInactive.rejected, (state, action) => {
+        state.sentenceMutation.status = "failed";
+        state.sentenceMutation.error = action.payload as IErrorState;
       })
       ;
   },

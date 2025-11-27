@@ -5,9 +5,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { RotateCcw, Save, Sparkles } from "lucide-react"
-import { useAppDispatch } from "@/store"
+import { Loader2, RotateCcw, Save, Sparkles, ToggleLeft, ToggleRight } from "lucide-react"
+import { useAppDispatch, useAppSelector } from "@/store"
 import { showNotification } from "@/store/system/notificationSlice"
+import { markSentenceActiveInactive } from "@/store/learningcontent/lessonDetailsSlide"
 
 
 type SentenceItemProps = {
@@ -24,6 +25,7 @@ type SentenceItemProps = {
 }
 
 const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) => {
+    const {type, status} = useAppSelector(state => state.learningContent.lessonDetails.sentenceMutation);
   const s = sentence
   const isEditMode = mode === "edit"
     const dispatch = useAppDispatch()
@@ -96,6 +98,23 @@ const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) =>
       variant: "info",
       message: `AI regeneration feature is coming soon!`,
     }))
+  }
+  const handleMarkActiveInactive = (id: number, isActive: boolean) => {
+    dispatch(markSentenceActiveInactive({ id, active: isActive })).unwrap()
+      .then(() => {
+        dispatch(showNotification({
+          title: "Success",
+          message: `Sentence has been marked as ${isActive ? "Active" : "Inactive"}.`,
+          variant: "success",
+        }))
+      })
+      .catch((error) => {
+        dispatch(showNotification({
+          title: "Error",
+          message: `Failed to update sentence status: ${error.message}`,
+          variant: "error",
+        }))
+      });
   }
 
   // ───────────────────────────────────────────
@@ -221,6 +240,22 @@ const SentenceItem = ({ sentence, mode = "view", onSave }: SentenceItemProps) =>
               >
                 <Sparkles className="mr-1 h-3 w-3" />
                 Regenerate with AI
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={status === "loading"}
+                className="h-7 px-2 text-[12px]"
+                onClick={() => handleMarkActiveInactive(s.id, !s.isActive)}
+              >
+                {
+                    status === "loading" && type === "mark-active-inactive" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null
+                }
+               {
+                     s.isActive ? <ToggleRight className="mr-1 h-3 w-3" /> : <ToggleRight className="mr-1 h-3 w-3 rotate-180 text-red-500" />
+               }
+                {s.isActive ? "Active" : "Inactive"}
               </Button>
             </div>
           </>
