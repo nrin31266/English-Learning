@@ -106,4 +106,11 @@ public class LessonController {
         return ApiResponse.success(null, "Lesson unpublished successfully");
     }
 
+    @GetMapping("/learner/lessons/{slug}")
+    public ApiResponse<LessonDetailsResponse> getLessonDetailsForLearner(
+            @PathVariable String slug
+    ) {
+        return ApiResponse.success(lessonService.getLessonDetails(slug));
+    }
+
 }

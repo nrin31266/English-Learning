@@ -3,11 +3,13 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
  // Thunk không cần destructure
 import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux'; 
-import learningContentReducer from './learningcontent/index';
 import systemReducer from './system/index';
+import topicsReducer from './topicsSlide';
+import topicReducer from './topicSlide';
 const rootReducer = combineReducers({
-  learningContent: learningContentReducer,
-  system: systemReducer
+  system: systemReducer,
+  topics: topicsReducer,
+  topic: topicReducer
 });
 
 

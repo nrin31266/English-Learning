@@ -2,6 +2,8 @@ package com.rin.learningcontentservice.controller;
 
 import com.rin.englishlearning.common.dto.ApiResponse;
 import com.rin.learningcontentservice.dto.request.AddEditTopicRequest;
+import com.rin.learningcontentservice.dto.response.LHomeResponse;
+import com.rin.learningcontentservice.dto.response.LTopicResponse;
 import com.rin.learningcontentservice.dto.response.TopicMinimalResponse;
 import com.rin.learningcontentservice.dto.response.TopicResponse;
 import com.rin.learningcontentservice.service.TopicService;
@@ -54,5 +56,21 @@ public class TopicController {
     ) {
         topicService.deleteTopicBySlug(slug);
         return ApiResponse.success(null, "Topic deleted successfully");
+    }
+
+
+    @GetMapping("/learner/home/topics")
+    public ApiResponse<LHomeResponse> getTopicsForLearnerHome(
+            @RequestParam (defaultValue = "4") int limitLessonsPerTopic,
+            @RequestParam (defaultValue = "10") int limitTopics
+    ){
+        return ApiResponse.success(topicService.getTopicsForLearnerHome(limitTopics, limitLessonsPerTopic));
+    }
+
+    @GetMapping("/learner/topics/{slug}")
+    public ApiResponse<LTopicResponse> getLeanerTopicBySlug(
+            @PathVariable String slug
+    ){
+        return ApiResponse.success(topicService.getLeanerTopicBySlug(slug));
     }
 }

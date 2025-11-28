@@ -19,7 +19,7 @@ import {
   User2,
   NotebookPen,
 } from "lucide-react"
-import type { ILessonDto, ILessonProcessingStepNotifyEvent, LessonProcessingStep, LessonStatus } from "@/types"
+import type { ILessonDto, ILessonProcessingStepNotifyEvent, lessonProcessingStep, LessonStatus } from "@/types"
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
 import { useAppDispatch } from "@/store"
 import { updateLessonFromProcessingEvent } from "@/store/learningcontent/lessonSlice"

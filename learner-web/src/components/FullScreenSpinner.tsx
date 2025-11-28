@@ -3,7 +3,7 @@ import { Spinner } from './ui/spinner'
 
 const FullScreenSpinner = ({label} : {label: string}) => {
   return (
-    <div className='h-screen w-screen flex items-center justify-center'>
+    <div className='h-screen w-full flex items-center justify-center'>
      <Spinner/>
      <p className='ml-4 text-lg'>{label}</p>
     </div>

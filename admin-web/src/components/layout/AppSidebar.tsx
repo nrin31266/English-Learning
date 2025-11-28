@@ -50,7 +50,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
       <SidebarHeader className="flex flex-col items-center justify-center border-b h-16">
-        <LogoName fontSize="1.5rem" />
+         <Link to="/" className="flex items-center gap-2">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
+            EN
+          </span>
+          <span className="hidden sm:inline text-base font-semibold">
+            English Learning
+          </span>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>

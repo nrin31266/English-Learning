@@ -1,5 +1,6 @@
 package com.rin.learningcontentservice.repository;
 
+import com.rin.learningcontentservice.dto.response.ActiveTopicMinimalResponse;
 import com.rin.learningcontentservice.dto.response.TopicMinimalResponse;
 import com.rin.learningcontentservice.dto.response.TopicResponse;
 import com.rin.learningcontentservice.model.Topic;
@@ -55,8 +56,28 @@ public interface TopicRepository extends JpaRepository<Topic,Long> {
     """)
     List<TopicMinimalResponse> findTopicMinimals();
 
+    @Query("""
+    SELECT new com.rin.learningcontentservice.dto.response.ActiveTopicMinimalResponse(
+            t.id,
+            t.name,
+            t.slug,
+            t.updatedAt,
+            COUNT(DISTINCT l.id)
+    )
+    FROM Topic t
+    LEFT JOIN Lesson l ON l.topic.id = t.id
+    WHERE t.isActive = true
+    GROUP BY t.id, t.name, t.slug, t.updatedAt
+    ORDER BY t.updatedAt DESC
+""")
+    List<ActiveTopicMinimalResponse> findActiveTopicMinimals();
+
+
+
     @Transactional
     @Modifying
     @Query("DELETE FROM Topic t WHERE t.slug = :slug")
     void deleteBySlug(String slug);
+
+
 }

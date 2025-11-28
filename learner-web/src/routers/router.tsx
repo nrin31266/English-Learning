@@ -1,18 +1,18 @@
+import FullScreenSpinner from "@/components/FullScreenSpinner"
 import AppLayout from "@/components/layout/AppLayout"
-import { createBrowserRouter } from "react-router-dom"
 import { Suspense, lazy, type ReactElement } from "react"
-import SkeletonComponent from "@/components/SkeletonComponent"
-import LessonDetails from "@/features/learningcontent/pages/LessonDetails"
+import { createBrowserRouter } from "react-router-dom"
 
 
 const HomePage = () => <div>Home Page</div>
-const TopicsPage = () => <div>Topics Page</div>
+const TopicsPage = lazy(() => import('@/features/topic/pages/Topics'))
+const TopicsDetailsPage = lazy(() => import('@/features/topic/pages/TopicDetails'))
 const DictionaryPage = () => <div>Dictionary Page</div>
 const ReviewPage = () => <div>Review Page</div>
 const SettingsPage = () => <div>Settings Page</div>
 const ProfilePage = () => <div>Profile Page</div>
 export const withSuspense = (element: ReactElement) => (
-  <Suspense fallback={<SkeletonComponent/>}>
+  <Suspense fallback={<FullScreenSpinner label="Waiting..."/>}>
     {element}
   </Suspense>
 )
@@ -28,7 +28,11 @@ const router = createBrowserRouter([
       },
       {
         path: "/topics",
-        element: <TopicsPage />,
+        element: withSuspense(<TopicsPage />),
+      },
+      {
+        path: "/topics/:slug",
+        element: withSuspense(<TopicsDetailsPage />),
       },
       {
         path: "/dictionary",
