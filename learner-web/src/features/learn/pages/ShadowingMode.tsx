@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { fetchLessonBySlug } from "@/store/lessonSlide"
@@ -6,7 +6,6 @@ import { fetchLessonBySlug } from "@/store/lessonSlide"
 import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -30,11 +29,14 @@ import {
   Mic,
   Volume2,
 } from "lucide-react"
-import ShadowingTranscript from "../components/ShadowingTranscript"
+
 import YouTubeTag from "@/components/YouTubeTag"
 import AudioFileTag from "@/components/AudioFileTag"
 import LanguageLevelBadge from "@/components/LanguageLevel"
-
+import type { ShadowingPlayerRef } from "../components/ShadowingPlayer.types"
+import AudioShadowing from "../components/AudioShadowing"
+import YouTubeShadowing from "../components/YoutubeShadowing"
+import ShadowingTranscript from "../components/ShadowingTranscript"
 
 const ShadowingMode = () => {
   const { slug } = useParams<{ slug: string }>()
@@ -50,13 +52,14 @@ const ShadowingMode = () => {
 
   const [activeIndex, setActiveIndex] = useState(0)
 
+  const playerRef = useRef<ShadowingPlayerRef | null>(null)
+
   useEffect(() => {
     if (slug) {
       dispatch(fetchLessonBySlug(slug))
     }
   }, [dispatch, slug])
 
-  // reset index khi lesson đổi
   useEffect(() => {
     setActiveIndex(0)
   }, [lesson?.id])
@@ -68,73 +71,67 @@ const ShadowingMode = () => {
     [lesson]
   )
 
-  const currentSentence = sentences[activeIndex] as ILLessonSentence | undefined
+  const currentSentence = sentences[activeIndex]
 
-  const videoHeightClass = largeVideo ? "h-[420px]" : "h-[280px]"
-
-  const handlePrev = () => {
+  // prev/next với guard
+  const handlePrev = useCallback(() => {
     setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev))
-  }
+  }, [])
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setActiveIndex((prev) =>
       prev < sentences.length - 1 ? prev + 1 : prev
     )
-  }
+  }, [sentences.length])
 
   const handleReplay = () => {
-    // TODO: sau này gắn logic audio
-    if (currentSentence) {
-      console.log("Replay sentence", currentSentence.orderIndex)
-    }
+    playerRef.current?.playCurrentSegment()
   }
 
   const handlePlay = () => {
-    // TODO: audio play logic
-    if (currentSentence) {
-      console.log("Play sentence", currentSentence.orderIndex)
-    }
+    playerRef.current?.play()
   }
 
   const handlePause = () => {
-    // TODO: audio pause logic
-    console.log("Pause")
+    playerRef.current?.pause()
   }
 
   const handleSelectSentence = (index: number) => {
     setActiveIndex(index)
   }
 
-  const handleBackToLesson = () => {
-    if (!lesson) {
+  const handleBackToTopic = () => {
+    if (lesson?.topic) {
+      navigate(`/topics/${lesson.topic.slug}`)
+    } else {
       navigate("/topics")
-      return
-    }
-    navigate(`/learn/lessons/${lesson.slug}`)
-  }
-
-  // helper chuyển youtube url -> embed url
-  const getYoutubeEmbedUrl = (url: string | null | undefined): string | null => {
-    if (!url) return null
-    try {
-      const u = new URL(url)
-      if (u.hostname.includes("youtu.be")) {
-        return `https://www.youtube.com/embed${u.pathname}`
-      }
-      if (u.hostname.includes("youtube.com")) {
-        const v = u.searchParams.get("v")
-        if (v) return `https://www.youtube.com/embed/${v}`
-      }
-      return url
-    } catch {
-      return url
     }
   }
 
-  const embedUrl =
-    lesson?.sourceType === "YOUTUBE"
-      ? getYoutubeEmbedUrl(lesson.sourceUrl)
-      : null
+  // Keyboard shortcuts: Space = replay current segment, Tab = next sentence
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName
+      const isEditable =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        target?.isContentEditable
+
+      if (isEditable) return
+
+      if (e.code === "Space") {
+        e.preventDefault()
+        playerRef.current?.playCurrentSegment()
+      } else if (e.key === "Tab") {
+        e.preventDefault()
+        handleNext()
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [handleNext])
 
   return (
     <div className="flex min-h-[calc(100vh-64px)] flex-col gap-4 py-4 px-1">
@@ -142,7 +139,7 @@ const ShadowingMode = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <Breadcrumb>
-            <BreadcrumbList className="">
+            <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink
                   className="cursor-pointer"
@@ -182,9 +179,11 @@ const ShadowingMode = () => {
                 <span>·</span>
                 <LanguageLevelBadge level={lesson.languageLevel} />
                 <span>·</span>
-                <span className="truncate">
-                  {lesson.sourceType === "YOUTUBE" ? <YouTubeTag /> : <AudioFileTag/>}
-                </span>
+                {lesson.sourceType === "YOUTUBE" ? (
+                  <YouTubeTag />
+                ) : (
+                  <AudioFileTag />
+                )}
               </>
             )}
           </div>
@@ -195,10 +194,10 @@ const ShadowingMode = () => {
             variant="outline"
             size="sm"
             className="hidden gap-2 sm:flex"
-            onClick={handleBackToLesson}
+            onClick={handleBackToTopic}
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to lesson
+            Back to Topic
           </Button>
 
           <Button
@@ -244,26 +243,25 @@ const ShadowingMode = () => {
         </div>
       ) : (
         <div className="flex flex-col gap-4 lg:flex-row">
-          {/* LEFT: video + active sentence */}
+          {/* LEFT: media + active sentence */}
           <div className="flex min-h-0 flex-1 flex-col gap-3">
-            {/* Video */}
-            <div
-              className={`w-full overflow-hidden rounded-xl border bg-black ${videoHeightClass}`}
-            >
-              {embedUrl ? (
-                <iframe
-                  src={embedUrl}
-                  title={lesson.title}
-                  className="h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-                  No video available for this lesson.
-                </div>
-              )}
-            </div>
+            {/* Media player */}
+            {lesson.sourceType === "YOUTUBE" ? (
+              <YouTubeShadowing
+                ref={playerRef}
+                lesson={lesson as ILLessonDetailsDto}
+                currentSentence={currentSentence}
+                autoStop={autoStop}
+                largeVideo={largeVideo}
+              />
+            ) : (
+              <AudioShadowing
+                ref={playerRef}
+                lesson={lesson as ILLessonDetailsDto}
+                currentSentence={currentSentence}
+                autoStop={autoStop}
+              />
+            )}
 
             {/* Toggles row */}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2 text-xs">
@@ -383,6 +381,7 @@ const ShadowingMode = () => {
                 sentences={sentences}
                 activeIndex={activeIndex}
                 onSelectSentence={handleSelectSentence}
+                 visible={showTranscript}
               />
             </div>
           )}
