@@ -7,6 +7,7 @@ import { createBrowserRouter } from "react-router-dom"
 const HomePage = () => <div>Home Page</div>
 const TopicsPage = lazy(() => import('@/features/topic/pages/Topics'))
 const TopicsDetailsPage = lazy(() => import('@/features/topic/pages/TopicDetails'))
+const ShadowingModePage = lazy(() => import('@/features/learn/pages/ShadowingMode'))
 const DictionaryPage = () => <div>Dictionary Page</div>
 const ReviewPage = () => <div>Review Page</div>
 const SettingsPage = () => <div>Settings Page</div>
@@ -33,6 +34,10 @@ const router = createBrowserRouter([
       {
         path: "/topics/:slug",
         element: withSuspense(<TopicsDetailsPage />),
+      },
+      {
+        path: "/learn/lessons/:slug/shadowing",
+        element: withSuspense(<ShadowingModePage />),
       },
       {
         path: "/dictionary",

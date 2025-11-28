@@ -6,10 +6,12 @@ import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux
 import systemReducer from './system/index';
 import topicsReducer from './topicsSlide';
 import topicReducer from './topicSlide';
+import lessonReducer from './lessonSlide';
 const rootReducer = combineReducers({
   system: systemReducer,
   topics: topicsReducer,
-  topic: topicReducer
+  topic: topicReducer,
+  lesson: lessonReducer, // Placeholder for lesson reducer
 });
 
 

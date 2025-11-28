@@ -12,19 +12,25 @@ import {
 } from '@/components/ui/dropdown-menu' // dùng shadcn ui, không dùng radix thô
 import { useTranslation } from 'react-i18next'
 import KeycloakClient from '@/features/keycloak/keycloak'
+import { useMemo } from "react"
 
 const defaultavatars = [
-  "defaultavatars/Cat_owl.webp",
-  "defaultavatars/Deer_dogs.webp",
-  "defaultavatars/Frog_squirrel.webp",
-  "defaultavatars/Polar_bear_dog_in_the_snow.webp",
-  "defaultavatars/Snow_leopard_caribou.webp",
+  "/defaultavatars/Cat_owl.webp",
+  "/defaultavatars/Deer_dogs.webp",
+  "/defaultavatars/Frog_squirrel.webp",
+  "/defaultavatars/Polar_bear_dog_in_the_snow.webp",
+  "/defaultavatars/Snow_leopard_caribou.webp",
 ]
 
 const ProfileNav = () => {
   const { profile } = useAuth();
     const {t} = useTranslation();
     const keycloak = KeycloakClient.getInstance().keycloak;
+  const indexImage = useMemo(() => {
+    return getIndexFromChar(profile?.firstName?.[0] || '', defaultavatars.length)
+  }, [profile?.keyCloakId]);
+
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -34,7 +40,7 @@ const ProfileNav = () => {
               
               src={
                 defaultavatars[
-                  getIndexFromChar(profile?.firstName?.[0] || '', defaultavatars.length)
+                  indexImage
                 ]
               }
               alt="avatar"

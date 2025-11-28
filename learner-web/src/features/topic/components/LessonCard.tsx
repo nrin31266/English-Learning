@@ -1,6 +1,7 @@
 // src/pages/Topics.tsx
 
 import AudioFileTag from "@/components/AudioFileTag"
+import LanguageLevelBadge from "@/components/LanguageLevel"
 import { Badge } from "@/components/ui/badge"
 import YouTubeTag from "@/components/YouTubeTag"
 import type {
@@ -44,11 +45,7 @@ const LessonCard = ({ lesson, onClick }: LessonCardProps) => {
         </div>
 
         <div className="absolute top-1 right-1">
-            <span
-                className="text-[14px] text-black bg-white/80 px-2 py-0.5 rounded text-sm font-medium"
-          >
-            {lesson.languageLevel}
-          </span>
+           <LanguageLevelBadge level={lesson.languageLevel} hasBg={true} />
         </div>
         <div className="absolute left-1 bottom-1">
              {lesson.sourceType === "YOUTUBE" && <YouTubeTag />}

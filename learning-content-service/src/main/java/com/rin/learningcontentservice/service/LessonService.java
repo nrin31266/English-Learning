@@ -39,10 +39,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 
@@ -159,7 +156,13 @@ public class LessonService {
                 () -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND,
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(slug))
         );
-        return lessonMapper.toLessonDetailsResponse(lesson);
+        var ld = lessonMapper.toLessonDetailsResponse(lesson);
+        ld.setSentences(
+                ld.getSentences().stream()
+                        .sorted(Comparator.comparing(LessonSentenceResponse::getOrderIndex))
+                        .toList()
+        );
+        return ld;
     }
 
     public LessonMinimalResponse cancelAiProcessing(Long lessonId) {
