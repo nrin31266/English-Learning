@@ -21,12 +21,6 @@ import {
 import {
   ArrowLeft,
   Loader2,
-  Play,
-  Pause,
-  StepBack,
-  StepForward,
-  RotateCcw,
-  Mic,
   Volume2,
 } from "lucide-react"
 
@@ -37,6 +31,7 @@ import type { ShadowingPlayerRef } from "../components/ShadowingPlayer.types"
 import AudioShadowing from "../components/AudioShadowing"
 import YouTubeShadowing from "../components/YoutubeShadowing"
 import ShadowingTranscript from "../components/ShadowingTranscript"
+import ActiveSentencePanel from "../components/ActiveSentencePanel" // Import component mới
 
 const ShadowingMode = () => {
   const { slug } = useParams<{ slug: string }>()
@@ -276,7 +271,8 @@ const ShadowingMode = () => {
                     Auto Stop
                   </Label>
                 </div>
-                <div className="flex items-center gap-2">
+               {
+                lesson.sourceType === "YOUTUBE" &&  <div className="flex items-center gap-2">
                   <Switch
                     id="large-video"
                     checked={largeVideo}
@@ -286,6 +282,7 @@ const ShadowingMode = () => {
                     Large-sized video
                   </Label>
                 </div>
+               }
               </div>
 
               <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -294,84 +291,21 @@ const ShadowingMode = () => {
               </div>
             </div>
 
-            {/* Active sentence + controls */}
-            <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
-              <div className="flex min-h-[220px] flex-col items-center justify-between gap-4 px-4 py-4">
-                {/* Sentence text */}
-                <div className="space-y-2 text-center">
-                  <p className="text-lg font-semibold leading-relaxed">
-                    {currentSentence
-                      ? currentSentence.textDisplay ?? currentSentence.textRaw
-                      : "No sentence selected."}
-                  </p>
-                  {currentSentence?.phoneticUk && (
-                    <p className="text-sm italic text-muted-foreground">
-                      {currentSentence.phoneticUk}
-                    </p>
-                  )}
-                </div>
-
-                {/* Transport controls */}
-                <div className="flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      disabled={activeIndex === 0}
-                      onClick={handlePrev}
-                    >
-                      <StepBack className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={handleReplay}
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      className="shadow"
-                      onClick={handlePlay}
-                    >
-                      <Play className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={handlePause}
-                    >
-                      <Pause className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      disabled={activeIndex === sentences.length - 1}
-                      onClick={handleNext}
-                    >
-                      <StepForward className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Record buttons */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled
-                      className="gap-2"
-                    >
-                      <Volume2 className="h-4 w-4" />
-                      Play recorded audio
-                    </Button>
-                    <Button size="sm" className="gap-2">
-                      <Mic className="h-4 w-4" />
-                      Record
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
+            {/* Active sentence + controls - SỬ DỤNG COMPONENT MỚI */}
+            <ActiveSentencePanel
+              currentSentence={{
+                textRaw: currentSentence?.textRaw,
+                phoneticUk: currentSentence?.phoneticUk || undefined,
+                textDisplay: currentSentence?.textDisplay || undefined,
+              }}
+              activeIndex={activeIndex}
+              sentencesLength={sentences.length}
+              onPrev={handlePrev}
+              onNext={handleNext}
+              onReplay={handleReplay}
+              onPlay={handlePlay}
+              onPause={handlePause}
+            />
           </div>
 
           {/* RIGHT: Transcript panel */}

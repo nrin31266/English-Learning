@@ -7,7 +7,7 @@ import { createBrowserRouter } from "react-router-dom"
 const HomePage = () => <div>Home Page</div>
 const TopicsPage = lazy(() => import('@/features/topic/pages/Topics'))
 const TopicsDetailsPage = lazy(() => import('@/features/topic/pages/TopicDetails'))
-const ShadowingModePage = lazy(() => import('@/features/learn/pages/ShadowingMode'))
+const ShadowingModePage = lazy(() => import('@/features/learnshadowing/pages/ShadowingMode'))
 const DictionaryPage = () => <div>Dictionary Page</div>
 const ReviewPage = () => <div>Review Page</div>
 const SettingsPage = () => <div>Settings Page</div>
