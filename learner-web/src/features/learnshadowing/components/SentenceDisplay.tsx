@@ -25,15 +25,23 @@ const SentenceDisplay = ({
     )
   }
 
+  // Tạo bản copy của array để sort, không sort trực tiếp props
+  const sortedWords = [...words].sort(
+    (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)
+  )
+
   return (
     <div className={`flex flex-wrap justify-center gap-2 leading-relaxed ${className}`}>
-      {words.map((word, index) => (
+      {sortedWords.map((word, index) => (
         <button
           key={index}
           className="
            underline  
             text-lg
             font-semibold
+            hover:text-primary
+            transition-colors
+            duration-200
           "
           onClick={() => onWordClick?.(word)}
           title={`Click để xem chi tiết từ: ${word.wordText}`}

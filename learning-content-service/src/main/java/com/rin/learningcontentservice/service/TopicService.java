@@ -82,7 +82,16 @@ public class TopicService {
                 .orElseThrow(() -> new BaseException(LearningContentErrorCode.TOPIC_NOT_FOUND,
                         LearningContentErrorCode.TOPIC_NOT_FOUND.formatMessage(slug)));
 
-        return topicMapper.toLTopicResponse(topic);
+        // Only get published lessons
+        topic.setLessons(
+                topic.getLessons().stream()
+                        .filter(l -> l.getPublishedAt() != null)
+                        .collect(Collectors.toList())
+        );
+
+        return  topicMapper.toLTopicResponse(topic);
+
+
     }
 
     @Transactional(readOnly = true)

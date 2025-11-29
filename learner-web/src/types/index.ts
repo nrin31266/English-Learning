@@ -1,3 +1,52 @@
+export interface ITranscriptionResponse {
+  id: string
+  filename: string
+  duration: number
+  language: string
+  segments: ITranscriptionSegment[]
+  full_text: string
+  created_at: string
+  shadowingResult: IShadowingResult
+}
+
+export interface ITranscriptionSegment {
+  start: number
+  end: number
+  text: string
+  words: IShadowingWord[]
+}
+
+export interface IShadowingWord {
+  word: string
+  start: number
+  end: number
+  score: number
+}
+
+export interface IShadowingResult {
+  sentenceId: number
+  expectedText: string
+  recognizedText: string
+  totalWords: number
+  correctWords: number
+  accuracy: number
+  weightedAccuracy: number
+  recognizedWordCount: number
+  lastRecognizedPosition: number
+  compares: IShadowingWordCompare[]
+}
+
+export interface IShadowingWordCompare {
+  position: number
+  expectedWord: string
+  recognizedWord: string
+  expectedNormalized: string
+  recognizedNormalized: string
+  status: "CORRECT" | "NEAR" | "WRONG" | "MISSING" | "EXTRA"
+  score: number
+}
+
+
 export interface ILLessonSentence {
   id: number;
   lessonId: number;

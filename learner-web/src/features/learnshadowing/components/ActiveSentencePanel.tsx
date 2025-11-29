@@ -13,8 +13,17 @@ import {
   X,      // icon cancel (hủy)
 } from "lucide-react"
 import handleAPI from "@/apis/handleAPI"
-import type { ILLessonDetailsDto } from "@/types"
+import type {
+  ILLessonDetailsDto,
+  ITranscriptionResponse,
+  IShadowingWordCompare,
+} from "@/types"
 import SentenceDisplay from "./SentenceDisplay"
+import { Spinner2 } from "@/components/ui/spinner2"
+import Alert from "@/components/Alert"
+import { cn } from "@/lib/utils"
+import CircularProgressWithLabel from "@/components/CircularProgressWithLabelProps"
+import ShadowingResultPanel from "./ShadowingResultPanel"
 
 interface ActiveSentencePanelProps {
   lesson: ILLessonDetailsDto
@@ -49,6 +58,62 @@ const ActiveSentencePanel = ({
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
   const cancelRecordingRef = useRef(false)
 
+  const [transcription, setTranscription] =
+    useState<ITranscriptionResponse | null>(null)
+  // Check thẳng trên transcription
+  const shouldShowNextButton = transcription && transcription?.shadowingResult?.weightedAccuracy >= 85
+  const shouldShowSkipButton = transcription && !shouldShowNextButton
+  const currentSentence = lesson.sentences[activeIndex]
+
+  // Helper: màu cho từng status
+  const getWordChipClasses = (
+    compare: IShadowingWordCompare,
+    lastRecognizedPosition: number
+  ) => {
+    const attempted = compare.position <= lastRecognizedPosition
+
+    if (!attempted) {
+      // Chưa đọc tới
+      return "border border-dashed border-muted-foreground/30 text-muted-foreground/70 bg-muted/40"
+    }
+
+    switch (compare.status) {
+      case "CORRECT":
+        return "bg-emerald-50 text-emerald-800 border border-emerald-200"
+      case "NEAR":
+        return "bg-amber-50 text-amber-800 border border-amber-200"
+      case "WRONG":
+        return "bg-red-50 text-red-800 border border-red-200"
+      case "MISSING":
+        return "bg-slate-50 text-slate-500 border border-slate-200 italic"
+      case "EXTRA":
+        return "bg-blue-50 text-blue-800 border border-blue-200"
+      default:
+        return "bg-muted text-muted-foreground border border-muted"
+    }
+  }
+
+  // Helper: chọn variant alert theo điểm
+  const getAlertVariant = (score: number) => {
+    if (score >= 85) return "success" as const
+    if (score >= 60) return "warning" as const
+    return "destructive" as const
+  }
+
+  useEffect(() => {
+    // Reset khi đổi câu
+    setIsRecording(false)
+    setHasRecordedAudio(false)
+    setIsPlayingRecorded(false)
+    setIsUploading(false)
+    setRecordError(null)
+    setRecordedUrl((old) => {
+      if (old) URL.revokeObjectURL(old)
+      return null
+    })
+    setTranscription(null)
+  }, [activeIndex]);
+
   // Bắt đầu ghi
   const startRecording = useCallback(async () => {
     setRecordError(null)
@@ -71,6 +136,8 @@ const ActiveSentencePanel = ({
         if (old) URL.revokeObjectURL(old)
         return null
       })
+      // mỗi lần ghi mới => clear kết quả cũ để UI đỡ rối
+      setTranscription(null)
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -113,17 +180,30 @@ const ActiveSentencePanel = ({
         // Upload lên server
         try {
           setIsUploading(true)
+          const expectedWords = currentSentence.lessonWords.map((w) => ({
+            id: w.id,
+            wordText: w.wordText,
+            wordLower: w.wordLower,
+            wordNormalized: w.wordNormalized,
+            wordSlug: w.wordSlug,
+            orderIndex: w.orderIndex,
+          }))
+          expectedWords.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+
           const formData = new FormData()
           formData.append("file", blob, "recording.webm")
+          formData.append("expectedWords", JSON.stringify(expectedWords))
+          formData.append("sentenceId", String(currentSentence.id))
 
-          const data = await handleAPI({
+          const data = await handleAPI<ITranscriptionResponse>({
             endpoint: "/lp/speech-to-text/transcribe",
             method: "POST",
             body: formData,
             isAuth: true,
             contentType: "multipart/form-data",
           })
-          console.log("Transcribe response:", data)
+
+          setTranscription(data)
         } catch (error) {
           console.log(error)
           setRecordError("Upload hoặc chuyển đổi audio thất bại.")
@@ -143,7 +223,7 @@ const ActiveSentencePanel = ({
       }
       setIsRecording(false)
     }
-  }, [])
+  }, [currentSentence])
 
   // Dừng ghi (lưu & upload)
   const stopRecording = useCallback(() => {
@@ -171,6 +251,8 @@ const ActiveSentencePanel = ({
   // Toggle record (start / stop-save)
   const handleToggleRecord = () => {
     if (!isRecording) {
+      // Pause audio gốc nếu đang phát
+      onPause()
       void startRecording()
     } else {
       stopRecording()
@@ -228,31 +310,33 @@ const ActiveSentencePanel = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  console.log(lesson.sentences[activeIndex].lessonWords.map((w) => w.wordText))
+
+  const shadowing = transcription?.shadowingResult
+
   return (
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
-      <div className="flex min-h-[220px] flex-col items-center justify-between gap-4 px-4 py-4">
+      <div className="flex min-h-[260px] flex-col items-center justify-between gap-4 px-4 py-4">
         {/* Sentence text */}
-        <div className="space-y-2 text-center">
+        <div className="space-y-2 text-center w-full">
           <SentenceDisplay
-            words={lesson.sentences[activeIndex]?.lessonWords}
-            fallbackText={lesson.sentences[activeIndex]?.textDisplay || "No sentence available."}
+            words={currentSentence?.lessonWords}
+            fallbackText={
+              currentSentence?.textDisplay || "No sentence available."
+            }
             onWordClick={(word) => {
               console.log("Word clicked:", word)
-              // Có thể mở modal, hiển thị definition, v.v.
             }}
             className="items-center"
           />
-          {lesson.sentences.length > 0 &&
-            lesson.sentences[activeIndex].phoneticUk && (
-              <p className="text-sm italic text-muted-foreground">
-                {lesson.sentences[activeIndex].phoneticUk}
-              </p>
-            )}
+          {lesson.sentences.length > 0 && currentSentence.phoneticUk && (
+            <p className="text-sm italic text-muted-foreground">
+              {currentSentence.phoneticUk}
+            </p>
+          )}
         </div>
 
         {/* Transport controls */}
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-3 w-full">
           <div className="flex items-center gap-2">
             <Button
               size="icon"
@@ -305,6 +389,7 @@ const ActiveSentencePanel = ({
               onClick={handleToggleRecord}
               disabled={isUploading}
             >
+              {isUploading && <Spinner2 className="h-4 w-4" />}
               {isRecording ? (
                 <>
                   <Square className="h-4 w-4" />
@@ -313,10 +398,43 @@ const ActiveSentencePanel = ({
               ) : (
                 <>
                   <Mic className="h-4 w-4" />
-                  Record
+                  {
+                    transcription
+                      ? "Re-record"
+                      : "Start Recording"
+                  }
                 </>
               )}
             </Button>
+
+            {/* Skip/Next buttons - chỉ hiện khi có kết quả */}
+            {shouldShowSkipButton && (
+              <Button
+                variant="secondary"
+                className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800 "
+                onClick={() => {
+                  void onNext()
+                }}
+                size={"sm"}
+              >
+                <X />
+                Skip this sentence
+              </Button>
+            )}
+
+            {shouldShowNextButton && (
+              <Button
+                className="gap-2 bg-green-600 hover:bg-green-700 text-white "
+                onClick={() => {
+                  void onNext()
+                }}
+                size={"sm"}
+              >
+                <StepForward />
+                Next sentence
+              </Button>
+            )}
+
 
             {/* Nút CANCEL: chỉ hiện khi đang thu */}
             {isRecording && (
@@ -340,14 +458,20 @@ const ActiveSentencePanel = ({
             {!isRecording &&
               !isPlayingRecorded &&
               hasRecordedAudio &&
+              !isUploading &&
               "Recorded audio ready to play."}
-            {isUploading && " Uploading recorded audio..."}
+            {isUploading && " Uploading & analyzing your recording..."}
             {recordError && (
               <div className="mt-1 text-xs text-destructive">
                 {recordError}
               </div>
             )}
           </div>
+        </div>
+
+        {/* Shadowing result UI */}
+        <div className="w-full">
+         {shadowing && <ShadowingResultPanel result={shadowing} />}
         </div>
 
         {/* Hidden audio element để play bản ghi */}
