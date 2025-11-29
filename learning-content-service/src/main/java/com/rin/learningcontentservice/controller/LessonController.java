@@ -110,7 +110,7 @@ public class LessonController {
     public ApiResponse<LessonDetailsResponse> getLessonDetailsForLearner(
             @PathVariable String slug
     ) {
-        return ApiResponse.success(lessonService.getLessonDetails(slug));
+        return ApiResponse.success(lessonService.getLLessonDetails(slug));
     }
 
 }

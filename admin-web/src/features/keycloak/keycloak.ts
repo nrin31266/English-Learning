@@ -53,6 +53,7 @@ export default class KeycloakClient {
       const buffer = 30; // refresh trước 30s
       const delay = Math.max((expireTime - now - buffer) * 1000, 0);
 
+      
       console.log(`Next token refresh in ${delay / 1000}s`);
 
       setTimeout(async () => {

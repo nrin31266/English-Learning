@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -9,16 +9,16 @@ import {
   RotateCcw,
   Mic,
   Volume2,
+  Square, // icon stop (lưu)
+  X,      // icon cancel (hủy)
 } from "lucide-react"
+import handleAPI from "@/apis/handleAPI"
+import type { ILLessonDetailsDto } from "@/types"
+import SentenceDisplay from "./SentenceDisplay"
 
 interface ActiveSentencePanelProps {
-  currentSentence?: {
-    textDisplay?: string
-    textRaw: string
-    phoneticUk?: string
-  }
+  lesson: ILLessonDetailsDto
   activeIndex: number
-  sentencesLength: number
   onPrev: () => void
   onNext: () => void
   onReplay: () => void
@@ -27,30 +27,228 @@ interface ActiveSentencePanelProps {
 }
 
 const ActiveSentencePanel = ({
-  currentSentence,
-  activeIndex,
-  sentencesLength,
   onPrev,
   onNext,
   onReplay,
+  activeIndex,
   onPlay,
   onPause,
+  lesson,
 }: ActiveSentencePanelProps) => {
+  // ─────────────── Recorder state ───────────────
+  const [isRecording, setIsRecording] = useState(false)
+  const [hasRecordedAudio, setHasRecordedAudio] = useState(false)
+  const [isPlayingRecorded, setIsPlayingRecorded] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [recordError, setRecordError] = useState<string | null>(null)
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null)
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
+  const cancelRecordingRef = useRef(false)
+
+  // Bắt đầu ghi
+  const startRecording = useCallback(async () => {
+    setRecordError(null)
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setRecordError("Trình duyệt không hỗ trợ ghi âm.")
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      chunksRef.current = []
+      cancelRecordingRef.current = false
+      setHasRecordedAudio(false)
+      setRecordedUrl((old) => {
+        if (old) URL.revokeObjectURL(old)
+        return null
+      })
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        // dừng stream
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop())
+          streamRef.current = null
+        }
+
+        setIsRecording(false)
+
+        const wasCancelled = cancelRecordingRef.current
+        cancelRecordingRef.current = false
+
+        // Nếu user bấm Cancel → không tạo blob, không upload, không giữ audio
+        if (wasCancelled) {
+          chunksRef.current = []
+          setHasRecordedAudio(false)
+          setRecordedUrl((old) => {
+            if (old) URL.revokeObjectURL(old)
+            return null
+          })
+          return
+        }
+
+        // ghép chunk -> blob
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" })
+        const url = URL.createObjectURL(blob)
+        setRecordedUrl((old) => {
+          if (old) URL.revokeObjectURL(old)
+          return url
+        })
+        setHasRecordedAudio(true)
+
+        // Upload lên server
+        try {
+          setIsUploading(true)
+          const formData = new FormData()
+          formData.append("file", blob, "recording.webm")
+
+          const data = await handleAPI({
+            endpoint: "/lp/speech-to-text/transcribe",
+            method: "POST",
+            body: formData,
+            isAuth: true,
+            contentType: "multipart/form-data",
+          })
+          console.log("Transcribe response:", data)
+        } catch (error) {
+          console.log(error)
+          setRecordError("Upload hoặc chuyển đổi audio thất bại.")
+        } finally {
+          setIsUploading(false)
+        }
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (error) {
+      console.error(error)
+      setRecordError("Không thể truy cập micro. Vui lòng kiểm tra quyền.")
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+      }
+      setIsRecording(false)
+    }
+  }, [])
+
+  // Dừng ghi (lưu & upload)
+  const stopRecording = useCallback(() => {
+    const mediaRecorder = mediaRecorderRef.current
+    if (!mediaRecorder) return
+
+    cancelRecordingRef.current = false
+    if (mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop()
+    }
+  }, [])
+
+  // Hủy ghi (dừng & KHÔNG lưu, KHÔNG upload)
+  const cancelRecording = useCallback(() => {
+    const mediaRecorder = mediaRecorderRef.current
+    if (!mediaRecorder) return
+
+    cancelRecordingRef.current = true
+    chunksRef.current = []
+    if (mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop()
+    }
+  }, [])
+
+  // Toggle record (start / stop-save)
+  const handleToggleRecord = () => {
+    if (!isRecording) {
+      void startRecording()
+    } else {
+      stopRecording()
+    }
+  }
+
+  // Nghe lại bản ghi
+  const handleTogglePlayRecorded = () => {
+    if (!hasRecordedAudio || !recordedUrl) return
+    const player = audioPlayerRef.current
+    if (!player) return
+
+    if (!isPlayingRecorded) {
+      player
+        .play()
+        .then(() => setIsPlayingRecorded(true))
+        .catch((e) => {
+          console.error("Play recorded audio error:", e)
+          setRecordError("Không thể phát audio đã ghi.")
+        })
+    } else {
+      player.pause()
+      player.currentTime = 0
+      setIsPlayingRecorded(false)
+    }
+  }
+
+  // Khi audio recorded play xong → reset state
+  useEffect(() => {
+    const player = audioPlayerRef.current
+    if (!player) return
+    const onEnded = () => setIsPlayingRecorded(false)
+    player.addEventListener("ended", onEnded)
+    return () => {
+      player.removeEventListener("ended", onEnded)
+    }
+  }, [])
+
+  // Cleanup khi unmount
+  useEffect(() => {
+    return () => {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop()
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+      }
+      if (recordedUrl) {
+        URL.revokeObjectURL(recordedUrl)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  console.log(lesson.sentences[activeIndex].lessonWords.map((w) => w.wordText))
   return (
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
       <div className="flex min-h-[220px] flex-col items-center justify-between gap-4 px-4 py-4">
         {/* Sentence text */}
         <div className="space-y-2 text-center">
-          <p className="text-lg font-semibold leading-relaxed">
-            {currentSentence
-              ? currentSentence.textDisplay ?? currentSentence.textRaw
-              : "No sentence selected."}
-          </p>
-          {currentSentence?.phoneticUk && (
-            <p className="text-sm italic text-muted-foreground">
-              {currentSentence.phoneticUk}
-            </p>
-          )}
+          <SentenceDisplay
+            words={lesson.sentences[activeIndex]?.lessonWords}
+            fallbackText={lesson.sentences[activeIndex]?.textDisplay || "No sentence available."}
+            onWordClick={(word) => {
+              console.log("Word clicked:", word)
+              // Có thể mở modal, hiển thị definition, v.v.
+            }}
+            className="items-center"
+          />
+          {lesson.sentences.length > 0 &&
+            lesson.sentences[activeIndex].phoneticUk && (
+              <p className="text-sm italic text-muted-foreground">
+                {lesson.sentences[activeIndex].phoneticUk}
+              </p>
+            )}
         </div>
 
         {/* Transport controls */}
@@ -64,54 +262,96 @@ const ActiveSentencePanel = ({
             >
               <StepBack className="h-4 w-4" />
             </Button>
-            <Button
-              size="icon"
-              variant="outline"
-              onClick={onReplay}
-            >
+            <Button size="icon" variant="outline" onClick={onReplay}>
               <RotateCcw className="h-4 w-4" />
             </Button>
-            <Button
-              size="icon"
-              className="shadow"
-              onClick={onPlay}
-            >
+            <Button size="icon" className="shadow" onClick={onPlay}>
               <Play className="h-4 w-4" />
             </Button>
-            <Button
-              size="icon"
-              variant="outline"
-              onClick={onPause}
-            >
+            <Button size="icon" variant="outline" onClick={onPause}>
               <Pause className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
               variant="outline"
-              disabled={activeIndex === sentencesLength - 1}
+              disabled={activeIndex === lesson.sentences.length - 1}
               onClick={onNext}
             >
               <StepForward className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Record buttons */}
+          {/* Record & playback recorded audio */}
           <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
-              variant="outline"
-              disabled
+              variant={isPlayingRecorded ? "default" : "outline"}
+              disabled={!hasRecordedAudio || isRecording}
               className="gap-2"
+              onClick={handleTogglePlayRecorded}
             >
               <Volume2 className="h-4 w-4" />
-              Play recorded audio
+              {isPlayingRecorded
+                ? "Stop recorded audio"
+                : hasRecordedAudio
+                  ? "Play recorded audio"
+                  : "No recorded audio"}
             </Button>
-            <Button size="sm" className="gap-2">
-              <Mic className="h-4 w-4" />
-              Record
+
+            <Button
+              size="sm"
+              variant={isRecording ? "destructive" : "default"}
+              className="gap-2"
+              onClick={handleToggleRecord}
+              disabled={isUploading}
+            >
+              {isRecording ? (
+                <>
+                  <Square className="h-4 w-4" />
+                  Stop & Save
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4" />
+                  Record
+                </>
+              )}
             </Button>
+
+            {/* Nút CANCEL: chỉ hiện khi đang thu */}
+            {isRecording && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                onClick={cancelRecording}
+                disabled={isUploading}
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </Button>
+            )}
+          </div>
+
+          {/* Status text */}
+          <div className="min-h-[1rem] text-center text-xs text-muted-foreground">
+            {isRecording && "Recording..."}
+            {!isRecording && isPlayingRecorded && "Playing recorded audio..."}
+            {!isRecording &&
+              !isPlayingRecorded &&
+              hasRecordedAudio &&
+              "Recorded audio ready to play."}
+            {isUploading && " Uploading recorded audio..."}
+            {recordError && (
+              <div className="mt-1 text-xs text-destructive">
+                {recordError}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Hidden audio element để play bản ghi */}
+        <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
       </div>
     </ScrollArea>
   )

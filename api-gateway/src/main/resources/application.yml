@@ -48,6 +48,12 @@ spring:
             - Path=/api/learning-contents/**
           filters:
             - StripPrefix=2
+        - id: lp-service
+          uri: http://localhost:8089
+          predicates:
+            - Path=/api/lp/**
+          filters:
+            - StripPrefix=2
 
         - id: notification-service
           uri: lb://notification-service

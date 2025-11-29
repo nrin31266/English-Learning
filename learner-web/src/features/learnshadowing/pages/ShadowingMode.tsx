@@ -6,7 +6,14 @@ import { fetchLessonBySlug } from "@/store/lessonSlide"
 import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
 
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import {
@@ -20,6 +27,7 @@ import {
 
 import {
   ArrowLeft,
+  Keyboard,
   Loader2,
   Volume2,
 } from "lucide-react"
@@ -32,12 +40,14 @@ import AudioShadowing from "../components/AudioShadowing"
 import YouTubeShadowing from "../components/YoutubeShadowing"
 import ShadowingTranscript from "../components/ShadowingTranscript"
 import ActiveSentencePanel from "../components/ActiveSentencePanel" // Import component mới
+import KeyboardShortcutsHelp from "../components/KeyboardShortcutsHelp"
+import { Badge } from "@/components/ui/badge"
 
 const ShadowingMode = () => {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-
+  const [showHelp, setShowHelp] = useState(false)
   const lessonState = useAppSelector((state) => state.lesson.lesson)
   const { data: lesson, status, error } = lessonState
 
@@ -115,12 +125,15 @@ const ShadowingMode = () => {
 
       if (isEditable) return
 
-      if (e.code === "Space") {
+      if (e.code === "ControlLeft" || e.code === "ControlRight") {
         e.preventDefault()
         playerRef.current?.playCurrentSegment()
-      } else if (e.key === "Tab") {
+      } else if (e.key === "PageDown" || e.key === "Tab") {
         e.preventDefault()
         handleNext()
+      } else if (e.key === "PageUp") {
+        e.preventDefault()
+        handlePrev()
       }
     }
 
@@ -271,21 +284,32 @@ const ShadowingMode = () => {
                     Auto Stop
                   </Label>
                 </div>
-               {
-                lesson.sourceType === "YOUTUBE" &&  <div className="flex items-center gap-2">
-                  <Switch
-                    id="large-video"
-                    checked={largeVideo}
-                    onCheckedChange={setLargeVideo}
-                  />
-                  <Label htmlFor="large-video" className="text-xs">
-                    Large-sized video
-                  </Label>
-                </div>
-               }
+                {
+                  lesson.sourceType === "YOUTUBE" && <div className="flex items-center gap-2">
+                    <Switch
+                      id="large-video"
+                      checked={largeVideo}
+                      onCheckedChange={setLargeVideo}
+                    />
+                    <Label htmlFor="large-video" className="text-xs">
+                      Large-sized video
+                    </Label>
+                  </div>
+                }
               </div>
 
               <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+
+                {/* Nút shortcuts với badge */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-2 px-2 text-xs"
+                  onClick={() => setShowHelp(true)}
+                >
+                  <Keyboard className=""/>
+                  Shortcuts
+                </Button>
                 <Volume2 className="h-4 w-4" />
                 <span>1x</span>
               </div>
@@ -293,18 +317,18 @@ const ShadowingMode = () => {
 
             {/* Active sentence + controls - SỬ DỤNG COMPONENT MỚI */}
             <ActiveSentencePanel
-              currentSentence={{
-                textRaw: currentSentence?.textRaw,
-                phoneticUk: currentSentence?.phoneticUk || undefined,
-                textDisplay: currentSentence?.textDisplay || undefined,
-              }}
+              lesson={lesson}
               activeIndex={activeIndex}
-              sentencesLength={sentences.length}
               onPrev={handlePrev}
               onNext={handleNext}
               onReplay={handleReplay}
               onPlay={handlePlay}
               onPause={handlePause}
+            />
+            {/* Keyboard Shortcuts Dialog */}
+            <KeyboardShortcutsHelp
+              open={showHelp}
+              onClose={() => setShowHelp(false)}
             />
           </div>
 
@@ -315,7 +339,7 @@ const ShadowingMode = () => {
                 sentences={sentences}
                 activeIndex={activeIndex}
                 onSelectSentence={handleSelectSentence}
-                 visible={showTranscript}
+                visible={showTranscript}
               />
             </div>
           )}

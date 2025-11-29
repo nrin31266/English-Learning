@@ -12,6 +12,7 @@ interface RequestParams<B = unknown> {
   params?: Record<string, any>;
   withCredentials?: boolean;
   timeout?: number; // in milliseconds
+  contentType?: string;
 }
 
 
@@ -23,7 +24,8 @@ const handleAPI = async <T, B = unknown>({
   isAuth = true,
   params,
   withCredentials = false,
-  timeout
+  timeout,
+  contentType
 }: RequestParams<B>): Promise<T> => {
   try {
     const headers: Record<string, string> = {};
@@ -31,6 +33,11 @@ const handleAPI = async <T, B = unknown>({
     if (isAuth) {
       //headers: { "X-Auth": "true" }
         headers["X-Auth"] = "true";
+    }
+    if (contentType) {
+      headers["Content-Type"] = contentType;
+    }else{
+      headers["Content-Type"] = "application/json";
     }
 
     const axiosResponse = await axiosInstance({

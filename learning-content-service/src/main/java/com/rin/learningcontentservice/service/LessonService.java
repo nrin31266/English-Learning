@@ -164,6 +164,29 @@ public class LessonService {
         );
         return ld;
     }
+    @Transactional
+    public LessonDetailsResponse getLLessonDetails(String slug) {
+        Lesson lesson = lessonRepository.findBySlug(slug).orElseThrow(
+                () -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND,
+                        LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(slug))
+        );
+        var ld = lessonMapper.toLessonDetailsResponse(lesson);
+        ld.setSentences(
+                ld.getSentences().stream()
+                        .sorted(Comparator.comparing(LessonSentenceResponse::getOrderIndex))
+                        .toList()
+        );
+
+        // Remove sentence isActive = false
+        ld.setSentences(
+                ld.getSentences().stream().filter(
+                        s -> s.getIsActive() != null && s.getIsActive()
+                )
+                        .toList()
+        );
+
+        return ld;
+    }
 
     public LessonMinimalResponse cancelAiProcessing(Long lessonId) {
         Lesson lesson = lessonRepository.findById(lessonId).orElseThrow(

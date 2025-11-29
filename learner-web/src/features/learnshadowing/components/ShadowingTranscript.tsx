@@ -126,7 +126,7 @@ const ShadowingTranscript = ({
                 ].join(" ")}
               >
                 <div className="mb-1 flex items-center justify-between text-[12px] text-muted-foreground">
-                  <span>#{s.orderIndex + 1}</span>
+                  <span>#{index+1}</span>
                   {s.audioSegmentUrl && (
                     <Badge
                       variant="outline"

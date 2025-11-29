@@ -23,7 +23,7 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
     const [isReady, setIsReady] = useState(false)
     const intervalRef = useRef<number | null>(null)
 
-    console.log("YouTubeShadowing - autoStop:", autoStop) // DEBUG
+    // console.log("YouTubeShadowing - autoStop:", autoStop) // DEBUG
 
     const videoId = useMemo(() => {
       if (!lesson.sourceUrl) return ""
