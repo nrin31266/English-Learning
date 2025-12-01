@@ -4,6 +4,7 @@ import SwitchingLanguage from '../SwitchingLanguage'
 import Notification from './Notification'
 import HeadNav from './HeadNav'
 import { Link } from 'react-router-dom'
+import ThemeToggle from './ThemeToggle'
 
 const AppHeader = () => {
   return (
@@ -14,7 +15,7 @@ const AppHeader = () => {
     
       <HeadNav/>
       <div className='flex justify-end px-4 items-center gap-4'>
-        
+        <ThemeToggle/>
         <SwitchingLanguage/>
         <Notification />
         

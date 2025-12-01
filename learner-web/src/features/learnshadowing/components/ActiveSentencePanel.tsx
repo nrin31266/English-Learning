@@ -65,40 +65,33 @@ const ActiveSentencePanel = ({
   const shouldShowSkipButton = transcription && !shouldShowNextButton
   const currentSentence = lesson.sentences[activeIndex]
 
-  // Helper: màu cho từng status
-  const getWordChipClasses = (
-    compare: IShadowingWordCompare,
-    lastRecognizedPosition: number
-  ) => {
-    const attempted = compare.position <= lastRecognizedPosition
-
-    if (!attempted) {
-      // Chưa đọc tới
-      return "border border-dashed border-muted-foreground/30 text-muted-foreground/70 bg-muted/40"
-    }
-
-    switch (compare.status) {
-      case "CORRECT":
-        return "bg-emerald-50 text-emerald-800 border border-emerald-200"
-      case "NEAR":
-        return "bg-amber-50 text-amber-800 border border-amber-200"
-      case "WRONG":
-        return "bg-red-50 text-red-800 border border-red-200"
-      case "MISSING":
-        return "bg-slate-50 text-slate-500 border border-slate-200 italic"
-      case "EXTRA":
-        return "bg-blue-50 text-blue-800 border border-blue-200"
-      default:
-        return "bg-muted text-muted-foreground border border-muted"
+  // Thêm state và hàm phát audio
+  const [audio] = useState({
+    success: new Audio('/sounds/correct.wav'),
+    fail: new Audio('/sounds/not_correct.ogg')
+  })
+  // Preload audio
+  useEffect(() => {
+    audio.success.load()
+    audio.fail.load()
+  }, [audio])
+  const playFeedbackSound = (isGoodScore: boolean) => {
+    if (isGoodScore) {
+      audio.success.currentTime = 0
+      audio.success.play()
+    } else {
+      audio.fail.currentTime = 0
+      audio.fail.play()
     }
   }
-
-  // Helper: chọn variant alert theo điểm
-  const getAlertVariant = (score: number) => {
-    if (score >= 85) return "success" as const
-    if (score >= 60) return "warning" as const
-    return "destructive" as const
-  }
+  // Sử dụng
+  useEffect(() => {
+    if (transcription?.shadowingResult) {
+      const score = transcription.shadowingResult.weightedAccuracy
+      const isGoodScore = score >= 85
+      playFeedbackSound(isGoodScore)
+    }
+  }, [transcription])
 
   useEffect(() => {
     // Reset khi đổi câu
@@ -471,7 +464,7 @@ const ActiveSentencePanel = ({
 
         {/* Shadowing result UI */}
         <div className="w-full">
-         {shadowing && <ShadowingResultPanel result={shadowing} />}
+          {shadowing && <ShadowingResultPanel result={shadowing} />}
         </div>
 
         {/* Hidden audio element để play bản ghi */}
