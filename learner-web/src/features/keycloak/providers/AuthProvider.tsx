@@ -18,7 +18,6 @@ const AuthContext = createContext<AuthContextType>({
 let initFlag = false;
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const { t } = useTranslation();
   const [profile, setProfile] = useState<IUserProfile | null>(null);
 
   const [loadingKC, setLoadingKC] = useState(true);
@@ -81,12 +80,11 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // 3️⃣ UI STATE RENDER
   // ───────────────────────────────────────────
 
-  if (loadingKC) return <FullScreenSpinner label={t("auth.checkingSession")} />;
+  if (loadingKC) return <FullScreenSpinner label="Checking session..." />;
 
-  if (!keycloak.authenticated) return <FullScreenSpinner label={t("auth.redirecting")} />;
+  if (!keycloak.authenticated) return <FullScreenSpinner label="Redirecting..." />;
 
-  if (loadingProfile) return <FullScreenSpinner label={t("auth.loadingProfile")} />;
-
+  if (loadingProfile) return <FullScreenSpinner label="Loading profile..." />;
   
   
 

@@ -65,33 +65,39 @@ const ActiveSentencePanel = ({
   const shouldShowSkipButton = transcription && !shouldShowNextButton
   const currentSentence = lesson.sentences[activeIndex]
 
-  // Thêm state và hàm phát audio
-  const [audio] = useState({
-    success: new Audio('/sounds/correct.wav'),
-    fail: new Audio('/sounds/not_correct.ogg')
-  })
-  // Preload audio
+  // Feedback audio dùng ref, không dính đến re-render
+  const successAudioRef = useRef<HTMLAudioElement | null>(null)
+  const failAudioRef = useRef<HTMLAudioElement | null>(null)
+  const lastTranscriptionRef = useRef<string | null>(null)
   useEffect(() => {
-    audio.success.load()
-    audio.fail.load()
-  }, [audio])
+    // init 1 lần
+    if (!successAudioRef.current) {
+      successAudioRef.current = new Audio("/sounds/correct.wav")
+    }
+    if (!failAudioRef.current) {
+      failAudioRef.current = new Audio("/sounds/not_correct.ogg")
+    }
+  }, [])
+
   const playFeedbackSound = (isGoodScore: boolean) => {
-    if (isGoodScore) {
-      audio.success.currentTime = 0
-      audio.success.play()
-    } else {
-      audio.fail.currentTime = 0
-      audio.fail.play()
-    }
+    const audioEl = isGoodScore ? successAudioRef.current : failAudioRef.current
+    if (!audioEl) return
+    audioEl.currentTime = 0
+    void audioEl.play().catch((e) => {
+      console.warn("Feedback sound play error", e)
+    })
   }
-  // Sử dụng
+  // chỉ listen theo score, không phải toàn transcription object
   useEffect(() => {
-    if (transcription?.shadowingResult) {
-      const score = transcription.shadowingResult.weightedAccuracy
-      const isGoodScore = score >= 85
-      playFeedbackSound(isGoodScore)
-    }
-  }, [transcription])
+    const score = transcription?.shadowingResult?.weightedAccuracy
+    if (score == null) return
+
+    if (lastTranscriptionRef.current === currentSentence.id.toString() + "-" + score.toString()) return // tránh play lại cùng score
+    lastTranscriptionRef.current = currentSentence.id.toString() + "-" + score.toString()
+
+    const isGoodScore = score >= 85
+    playFeedbackSound(isGoodScore)
+  }, [transcription?.id])
 
   useEffect(() => {
     // Reset khi đổi câu
