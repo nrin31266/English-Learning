@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react"
 import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
-import type { ShadowingPlayerRef } from "./ShadowingPlayer.types"
+import type { ShadowingPlayerRef } from "../types/types"
 import { Button } from "@/components/ui/button"
 import { Volume2, Play, Pause } from "lucide-react"
 

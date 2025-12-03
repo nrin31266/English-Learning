@@ -1,21 +1,10 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react"
-import { useNavigate, useParams } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { fetchLessonBySlug } from "@/store/lessonSlide"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 
 import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
 
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -24,6 +13,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 
 import {
   ArrowLeft,
@@ -32,16 +24,15 @@ import {
   Volume2,
 } from "lucide-react"
 
-import YouTubeTag from "@/components/YouTubeTag"
 import AudioFileTag from "@/components/AudioFileTag"
 import LanguageLevelBadge from "@/components/LanguageLevel"
-import type { ShadowingPlayerRef } from "../components/ShadowingPlayer.types"
+import YouTubeTag from "@/components/YouTubeTag"
+import ActiveSentencePanel from "../components/ActiveSentencePanel"; // Import component mới
 import AudioShadowing from "../components/AudioShadowing"
-import YouTubeShadowing from "../components/YoutubeShadowing"
-import ShadowingTranscript from "../components/ShadowingTranscript"
-import ActiveSentencePanel from "../components/ActiveSentencePanel" // Import component mới
 import KeyboardShortcutsHelp from "../components/KeyboardShortcutsHelp"
-import { Badge } from "@/components/ui/badge"
+import type { ShadowingPlayerRef } from "../types/types"
+import ShadowingTranscript from "../components/ShadowingTranscript"
+import YouTubeShadowing from "../components/YoutubeShadowing"
 
 const ShadowingMode = () => {
   const { slug } = useParams<{ slug: string }>()

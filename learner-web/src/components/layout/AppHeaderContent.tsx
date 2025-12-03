@@ -1,9 +1,7 @@
-import ProfileNav from './ProfileNav'
-import LogoName from '../LogoName'
 import SwitchingLanguage from '../SwitchingLanguage'
-import Notification from './Notification'
 import HeadNav from './HeadNav'
-import { Link } from 'react-router-dom'
+import Notification from './Notification'
+import ProfileNav from './ProfileNav'
 import ThemeToggle from './ThemeToggle'
 
 const AppHeader = () => {

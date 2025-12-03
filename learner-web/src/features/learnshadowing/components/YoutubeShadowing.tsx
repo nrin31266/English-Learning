@@ -8,7 +8,7 @@ import React, {
 } from "react"
 import YouTube, { type YouTubeProps } from "react-youtube"
 import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
-import type { ShadowingPlayerRef } from "./ShadowingPlayer.types"
+import type { ShadowingPlayerRef } from "../types/types"
 
 type YouTubeShadowingProps = {
   lesson: ILLessonDetailsDto
