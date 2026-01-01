@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useMemo } from "react"
 import { cn } from "@/lib/utils"
 import Alert from "@/components/Alert"
 import CircularProgressWithLabel from "@/components/CircularProgressWithLabelProps"
@@ -8,6 +8,41 @@ import type { IShadowingResult, IShadowingWordCompare } from "@/types"
 interface ShadowingResultPanelProps {
   result: IShadowingResult
   className?: string
+}
+
+// Helper: màu cho từng status - pure function outside component
+const getWordChipClasses = (
+  compare: IShadowingWordCompare,
+  lastPos: number
+) => {
+  const attempted = compare.position <= lastPos
+
+  if (!attempted) {
+    // Chưa đọc tới
+    return "border border-dashed border-muted-foreground/30 text-muted-foreground/70 bg-muted/40"
+  }
+
+  switch (compare.status) {
+    case "CORRECT":
+      return "bg-emerald-50 text-emerald-800 border border-emerald-200"
+    case "NEAR":
+      return "bg-amber-50 text-amber-800 border border-amber-200"
+    case "WRONG":
+      return "bg-red-50 text-red-800 border border-red-200"
+    case "MISSING":
+      return "bg-slate-50 text-slate-500 border border-slate-200 italic"
+    case "EXTRA":
+      return "bg-blue-50 text-blue-800 border border-blue-200"
+    default:
+      return "bg-muted text-muted-foreground border border-muted"
+  }
+}
+
+// Helper: chọn variant alert theo điểm
+const getAlertVariant = (score: number) => {
+  if (score >= 85) return "success" as const
+  if (score >= 60) return "warning" as const
+  return "destructive" as const
 }
 
 const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
@@ -22,40 +57,41 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
     lastRecognizedPosition,
   } = result
 
-  // Helper: màu cho từng status
-  const getWordChipClasses = (
-    compare: IShadowingWordCompare,
-    lastPos: number
-  ) => {
-    const attempted = compare.position <= lastPos
+  // Pre-calculate all classes once and memoize
+  const expectedWordsWithClasses = useMemo(
+    () =>
+      compares
+        .filter((c) => c.expectedWord)
+        .map((c) => ({
+          ...c,
+          chipClasses: getWordChipClasses(c, lastRecognizedPosition),
+        })),
+    [compares, lastRecognizedPosition]
+  )
 
-    if (!attempted) {
-      // Chưa đọc tới
-      return "border border-dashed border-muted-foreground/30 text-muted-foreground/70 bg-muted/40"
-    }
+  const recognizedWordsWithClasses = useMemo(
+    () =>
+      compares
+        .filter((c) => c.recognizedWord)
+        .map((c) => ({
+          ...c,
+          chipClasses: getWordChipClasses(c, lastRecognizedPosition),
+        })),
+    [compares, lastRecognizedPosition]
+  )
 
-    switch (compare.status) {
-      case "CORRECT":
-        return "bg-emerald-50 text-emerald-800 border border-emerald-200"
-      case "NEAR":
-        return "bg-amber-50 text-amber-800 border border-amber-200"
-      case "WRONG":
-        return "bg-red-50 text-red-800 border border-red-200"
-      case "MISSING":
-        return "bg-slate-50 text-slate-500 border border-slate-200 italic"
-      case "EXTRA":
-        return "bg-blue-50 text-blue-800 border border-blue-200"
-      default:
-        return "bg-muted text-muted-foreground border border-muted"
-    }
-  }
+  const alertVariant = useMemo(
+    () => getAlertVariant(weightedAccuracy),
+    [weightedAccuracy]
+  )
 
-  // Helper: chọn variant alert theo điểm
-  const getAlertVariant = (score: number) => {
-    if (score >= 85) return "success" as const
-    if (score >= 60) return "warning" as const
-    return "destructive" as const
-  }
+  const alertDescription = useMemo(() => {
+    if (weightedAccuracy >= 85)
+      return "Very natural! You're matching this sentence really well."
+    if (weightedAccuracy >= 60)
+      return "Good job! A few words can be improved."
+    return "Keep practicing this sentence — focus on the highlighted words."
+  }, [weightedAccuracy])
 
   return (
     <div
@@ -88,16 +124,10 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
         />
 
         <Alert
-          variant={getAlertVariant(weightedAccuracy)}
+          variant={alertVariant}
           size="sm"
           showIcon
-          description={
-            weightedAccuracy >= 85
-              ? "Very natural! You’re matching this sentence really well."
-              : weightedAccuracy >= 60
-              ? "Good job! A few words can be improved."
-              : "Keep practicing this sentence — focus on the highlighted words."
-          }
+          description={alertDescription}
           className="sm:max-w-[320px]"
         />
       </div>
@@ -110,19 +140,17 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
             Target sentence
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {compares
-              .filter((c) => c.expectedWord)
-              .map((c) => (
-                <span
-                  key={`exp-${c.position}`}
-                  className={cn(
-                    "rounded-full px-2.5 py-1 text-[11px] font-medium transition-all",
-                    getWordChipClasses(c, lastRecognizedPosition)
-                  )}
-                >
-                  {c.expectedWord}
-                </span>
-              ))}
+            {expectedWordsWithClasses.map((c) => (
+              <span
+                key={`exp-${c.position}`}
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-[11px] font-medium transition-all",
+                  c.chipClasses
+                )}
+              >
+                {c.expectedWord}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -132,19 +160,17 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
             You said
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {compares
-              .filter((c) => c.recognizedWord)
-              .map((c) => (
-                <span
-                  key={`rec-${c.position}-${c.recognizedWord}`}
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[11px]",
-                    getWordChipClasses(c, lastRecognizedPosition)
-                  )}
-                >
-                  {c.recognizedWord}
-                </span>
-              ))}
+            {recognizedWordsWithClasses.map((c) => (
+              <span
+                key={`rec-${c.position}-${c.recognizedWord}`}
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[11px]",
+                  c.chipClasses
+                )}
+              >
+                {c.recognizedWord}
+              </span>
+            ))}
           </div>
         </div>
       </div>
@@ -152,4 +178,4 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
   )
 }
 
-export default ShadowingResultPanel
+export default React.memo(ShadowingResultPanel)

@@ -180,10 +180,45 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
       }
     }, [autoStop, isReady, currentSentence, clearAutoStopTimeout, startAutoStop])
 
-    // Cleanup khi unmount
+    // Cleanup khi unmount - CRITICAL for memory leak
     useEffect(() => {
       return () => {
         clearAutoStopTimeout()
+        // IMPORTANT: Destroy player instance completely
+        if (playerRef.current) {
+          try {
+            playerRef.current.pauseVideo()
+            // Call destroy to remove iframe and all event listeners
+            if (typeof playerRef.current.destroy === 'function') {
+              playerRef.current.destroy()
+            }
+          } catch (e) {
+            console.warn('Error destroying YouTube player:', e)
+          }
+          playerRef.current = null
+        }
+      }
+    }, [clearAutoStopTimeout])
+    
+    // Cleanup on page hide/visibility change - force cleanup
+    useEffect(() => {
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          // Page is hidden, pause and cleanup
+          if (playerRef.current) {
+            try {
+              playerRef.current.pauseVideo()
+            } catch (e) {
+              // ignore
+            }
+          }
+          clearAutoStopTimeout()
+        }
+      }
+      
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
       }
     }, [clearAutoStopTimeout])
 
@@ -205,19 +240,39 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
         {!userInteracted && isReady && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/40 via-black/60 to-black/80 backdrop-blur-[1px]">
             <div className="text-center space-y-3">
-              
+             
               <Button
                 size="lg"
                 onClick={() => {
                   setUserInteracted(true)
                   onUserInteracted?.(true)
+                  
+                  // Play ngay lập tức mà không đợi useEffect
+                  if (playerRef.current && currentSentence) {
+                    setTimeout(() => {
+                      clearAutoStopTimeout()
+                      
+                      const rawStartSec = (currentSentence.audioStartMs ?? 0) / 1000
+                      const startSec = Math.max(rawStartSec - PADDING_SEC, 0)
+                      
+                      playerRef.current.seekTo(startSec, true)
+                      playerRef.current.playVideo()
+                      
+                      // Delay auto-stop để player kịp seek và lấy currentTime chính xác
+                      if (autoStop) {
+                        setTimeout(() => {
+                          startAutoStop() // Không truyền startFrom, để nó tự lấy getCurrentTime()
+                        }, 200) // Đợi player kịp seek và play
+                      }
+                    }, 100)
+                  }
                 }}
                 className="gap-2 text-lg shadow-2xl px-8"
               >
                 <Play className="h-5 w-5" />
                 Bắt đầu
               </Button>
-              <p className="text-xs text-white/70 mt-2">Click to start shadowing</p>
+              <p className="text-xs text-white/70 mt-2">Click để bắt đầu học shadowing</p>
             </div>
           </div>
         )}

@@ -17,7 +17,7 @@ import {
   Volume2, // icon stop (lưu)
   X, // icon cancel (hủy)
 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
 
@@ -58,10 +58,22 @@ const ActiveSentencePanel = ({
 
   const [transcription, setTranscription] =
     useState<ITranscriptionResponse | null>(null)
-  // Check thẳng trên transcription
-  const shouldShowNextButton = transcription && transcription?.shadowingResult?.weightedAccuracy >= 85
-  const shouldShowSkipButton = transcription && !shouldShowNextButton
-  const currentSentence = lesson.sentences[activeIndex]
+  
+  // Memoize current sentence to prevent unnecessary re-renders
+  const currentSentence = useMemo(
+    () => lesson.sentences[activeIndex],
+    [lesson.sentences, activeIndex]
+  )
+  
+  // Memoize derived states
+  const shouldShowNextButton = useMemo(
+    () => transcription && transcription?.shadowingResult?.weightedAccuracy >= 85,
+    [transcription]
+  )
+  const shouldShowSkipButton = useMemo(
+    () => transcription && !shouldShowNextButton,
+    [transcription, shouldShowNextButton]
+  )
 
   // Feedback audio dùng ref, không dính đến re-render
   const successAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -195,6 +207,9 @@ const ActiveSentencePanel = ({
           return url
         })
         setHasRecordedAudio(true)
+        
+        // CRITICAL: Clear chunks immediately to free memory
+        chunksRef.current = []
 
         // Upload lên server
         try {
@@ -310,42 +325,103 @@ const ActiveSentencePanel = ({
     }
   }, [])
 
-  // Cleanup khi unmount hoặc khi component bị destroy
+  // Cleanup khi unmount - CRITICAL
   useEffect(() => {
     return () => {
-      // Stop và cleanup MediaRecorder
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
-      ) {
-        mediaRecorderRef.current.stop()
+      // Stop và cleanup MediaRecorder AGGRESSIVELY
+      if (mediaRecorderRef.current) {
+        try {
+          if (mediaRecorderRef.current.state !== "inactive") {
+            mediaRecorderRef.current.stop()
+          }
+          // Remove event handlers to prevent memory leaks
+          mediaRecorderRef.current.ondataavailable = null
+          mediaRecorderRef.current.onstop = null
+          mediaRecorderRef.current.onerror = null
+        } catch (e) {
+          console.warn('MediaRecorder cleanup error:', e)
+        }
+        mediaRecorderRef.current = null
       }
-      mediaRecorderRef.current = null
 
-      // Stop stream tracks
+      // Stop ALL stream tracks forcefully
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current.getTracks().forEach((track) => {
+          track.stop()
+          track.enabled = false
+        })
         streamRef.current = null
       }
 
-      // Stop và cleanup audio player
+      // Stop và cleanup audio player completely
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause()
+        audioPlayerRef.current.removeAttribute('src')
+        audioPlayerRef.current.load()
         audioPlayerRef.current.src = ""
         audioPlayerRef.current = null
       }
 
-      // Revoke object URL
+      // Force clear ALL chunks
+      chunksRef.current = []
+      cancelRecordingRef.current = false
+    }
+  }, [])
+  
+  // Force cleanup on page visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Stop recording if in progress
+        if (isRecording) {
+          cancelRecording()
+        }
+        // Pause recorded audio if playing
+        if (audioPlayerRef.current) {
+          audioPlayerRef.current.pause()
+        }
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isRecording, cancelRecording])
+  
+  // Cleanup recordedUrl separately để revoke đúng
+  useEffect(() => {
+    return () => {
       if (recordedUrl) {
         URL.revokeObjectURL(recordedUrl)
       }
-
-      // Clear chunks
-      chunksRef.current = []
     }
-  }, [])
+  }, [recordedUrl])
+  
+  // CRITICAL: Force cleanup on page unload/F5
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Force stop everything
+      if (mediaRecorderRef.current?.state !== 'inactive') {
+        mediaRecorderRef.current?.stop()
+      }
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      audioPlayerRef.current?.pause()
+      if (recordedUrl) {
+        URL.revokeObjectURL(recordedUrl)
+      }
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [recordedUrl])
 
-  const shadowing = transcription?.shadowingResult
+  const shadowing = useMemo(
+    () => transcription?.shadowingResult,
+    [transcription]
+  )
 
   return (
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
@@ -518,7 +594,7 @@ const ActiveSentencePanel = ({
           </div>
         </div>
 
-        {/* Shadowing result UI */}
+        {/* Shadowing result UI - memoized */}
         <div className="w-full">
           {shadowing && <ShadowingResultPanel result={shadowing} />}
         </div>

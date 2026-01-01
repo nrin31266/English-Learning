@@ -30,6 +30,7 @@ const formatTime = (secs: number) => {
 const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
   ({ lesson, currentSentence, autoStop, shouldAutoPlay = false, onUserInteracted }, ref) => {
     const audioRef = useRef<HTMLAudioElement | null>(null)
+    const isPlayingRef = useRef(false)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
     const [isPlaying, setIsPlaying] = useState(false)
@@ -62,9 +63,18 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
         }
       }
 
-      const onPlay = () => setIsPlaying(true)
-      const onPause = () => setIsPlaying(false)
-      const onEnded = () => setIsPlaying(false)
+      const onPlay = () => {
+        isPlayingRef.current = true
+        setIsPlaying(true)
+      }
+      const onPause = () => {
+        isPlayingRef.current = false
+        setIsPlaying(false)
+      }
+      const onEnded = () => {
+        isPlayingRef.current = false
+        setIsPlaying(false)
+      }
 
       audio.addEventListener("loadedmetadata", onLoaded)
       audio.addEventListener("timeupdate", onTimeUpdate)
@@ -100,10 +110,24 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
 
       try {
         const startSec = currentSentence.audioStartMs / 1000
-        audio.currentTime = startSec
         
         // Chỉ play nếu user đã tương tác
         if (userInteracted) {
+          // Đợi audio load metadata trước khi seek
+          if (audio.readyState < 2) {
+            await new Promise((resolve) => {
+              const onLoadedData = () => {
+                audio.removeEventListener('loadeddata', onLoadedData)
+                resolve(true)
+              }
+              audio.addEventListener('loadeddata', onLoadedData)
+              audio.load()
+            })
+          }
+          
+          audio.currentTime = startSec
+          // Delay ngắn để buffer kịp chuẩn bị
+          await new Promise(resolve => setTimeout(resolve, 50))
           await audio.play()
           setIsPlaying(true)
         }
@@ -114,15 +138,17 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
 
     const play = useCallback(async () => {
       const audio = audioRef.current
-      if (!audio) return
+      if (!audio || isPlayingRef.current) return
 
       try {
         if (userInteracted) {
+          isPlayingRef.current = true
           await audio.play()
           setIsPlaying(true)
         }
       } catch (error) {
         console.error("Play failed:", error)
+        isPlayingRef.current = false
       }
     }, [userInteracted])
 
@@ -130,6 +156,7 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
       const audio = audioRef.current
       if (!audio) return
       audio.pause()
+      isPlayingRef.current = false
       setIsPlaying(false)
     }, [])
 
@@ -181,14 +208,57 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
       autoPlaySegment()
     }, [currentSentence?.id, userInteracted, shouldAutoPlay, playCurrentSegment])
 
-    // Cleanup audio khi unmount
+    // Cleanup audio khi unmount - CRITICAL
     useEffect(() => {
       return () => {
         const audio = audioRef.current
         if (audio) {
           audio.pause()
+          // Remove all event listeners
+          audio.onloadedmetadata = null
+          audio.ontimeupdate = null
+          audio.onplay = null
+          audio.onpause = null
+          audio.onended = null
+          audio.onerror = null
+          // Clear source completely
+          audio.removeAttribute('src')
+          audio.load() // Reset audio element
           audio.src = ""
         }
+        isPlayingRef.current = false
+      }
+    }, [])
+    
+    // Force cleanup on page visibility change
+    useEffect(() => {
+      const handleVisibilityChange = () => {
+        if (document.hidden && audioRef.current) {
+          audioRef.current.pause()
+          isPlayingRef.current = false
+          setIsPlaying(false)
+        }
+      }
+      
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+      }
+    }, [])
+    
+    // CRITICAL: Force cleanup on page unload/F5
+    useEffect(() => {
+      const handleBeforeUnload = () => {
+        const audio = audioRef.current
+        if (audio) {
+          audio.pause()
+          audio.src = ""
+        }
+      }
+      
+      window.addEventListener('beforeunload', handleBeforeUnload)
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
       }
     }, [])
 
@@ -267,13 +337,30 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
           <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[0.8px]  rounded-xl">
             <Button
               size="default"
-              onClick={() => {
+              onClick={async () => {
                 handleFirstInteraction()
-                // Auto play first segment
+                // Đợi audio load và buffer trước khi play
                 if (currentSentence) {
-                  setTimeout(() => {
-                    void playCurrentSegment()
-                  }, 100)
+                  const audio = audioRef.current
+                  if (audio) {
+                    // Preload audio
+                    audio.load()
+                    // Đợi metadata load
+                    await new Promise((resolve) => {
+                      if (audio.readyState >= 2) {
+                        resolve(true)
+                      } else {
+                        const onCanPlay = () => {
+                          audio.removeEventListener('canplay', onCanPlay)
+                          resolve(true)
+                        }
+                        audio.addEventListener('canplay', onCanPlay)
+                      }
+                    })
+                  }
+                  // Delay ngắn để đảm bảo buffer sẵn sàng
+                  await new Promise(resolve => setTimeout(resolve, 150))
+                  void playCurrentSegment()
                 }
               }}
               className="gap-2 shadow-lg"
