@@ -34,9 +34,9 @@ const HeadNav = () => {
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
             <Link to="/topics" className={`flex flex-wrap ${
-                pn.startsWith('/topics') ? 'font-bold! text-white! bg-primary!' : ''
+                pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'font-bold! text-white! bg-primary!' : ''
             }`}><div><Notebook className={`
-                ${pn.startsWith('/topics') ? 'text-white' : 'text-muted-foreground'}
+                ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'text-white' : 'text-muted-foreground'}
             `}/></div> Topics</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>

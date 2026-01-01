@@ -1,28 +1,24 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import handleAPI from "@/apis/handleAPI"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Play,
-  Pause,
-  StepBack,
-  StepForward,
-  RotateCcw,
-  Mic,
-  Volume2,
-  Square, // icon stop (lưu)
-  X,      // icon cancel (hủy)
-} from "lucide-react"
-import handleAPI from "@/apis/handleAPI"
+import { Spinner2 } from "@/components/ui/spinner2"
 import type {
   ILLessonDetailsDto,
-  ITranscriptionResponse,
-  IShadowingWordCompare,
+  ITranscriptionResponse
 } from "@/types"
+import {
+  Mic,
+  Pause,
+  Play,
+  RotateCcw,
+  Square,
+  StepBack,
+  StepForward,
+  Volume2, // icon stop (lưu)
+  X, // icon cancel (hủy)
+} from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import SentenceDisplay from "./SentenceDisplay"
-import { Spinner2 } from "@/components/ui/spinner2"
-import Alert from "@/components/Alert"
-import { cn } from "@/lib/utils"
-import CircularProgressWithLabel from "@/components/CircularProgressWithLabelProps"
 import ShadowingResultPanel from "./ShadowingResultPanel"
 
 interface ActiveSentencePanelProps {
@@ -73,9 +69,25 @@ const ActiveSentencePanel = ({
     // init 1 lần
     if (!successAudioRef.current) {
       successAudioRef.current = new Audio("/sounds/correct.wav")
+      successAudioRef.current.preload = "auto"
     }
     if (!failAudioRef.current) {
       failAudioRef.current = new Audio("/sounds/not_correct.ogg")
+      failAudioRef.current.preload = "auto"
+    }
+
+    // Cleanup khi unmount
+    return () => {
+      if (successAudioRef.current) {
+        successAudioRef.current.pause()
+        successAudioRef.current.src = ""
+        successAudioRef.current = null
+      }
+      if (failAudioRef.current) {
+        failAudioRef.current.pause()
+        failAudioRef.current.src = ""
+        failAudioRef.current = null
+      }
     }
   }, [])
 
@@ -87,13 +99,17 @@ const ActiveSentencePanel = ({
       console.warn("Feedback sound play error", e)
     })
   }
-  // chỉ listen theo score, không phải toàn transcription object
+  
+  // Chỉ listen theo transcription ID - chỉ play khi có kết quả MỚI
   useEffect(() => {
-    const score = transcription?.shadowingResult?.weightedAccuracy
-    if (score == null) return
+    if (!transcription?.id) return
+    
+    const transcriptionKey = transcription.id.toString()
+    if (lastTranscriptionRef.current === transcriptionKey) return // Tránh play lại
+    lastTranscriptionRef.current = transcriptionKey
 
-    if (lastTranscriptionRef.current === currentSentence.id.toString() + "-" + score.toString()) return // tránh play lại cùng score
-    lastTranscriptionRef.current = currentSentence.id.toString() + "-" + score.toString()
+    const score = transcription.shadowingResult?.weightedAccuracy
+    if (score == null) return
 
     const isGoodScore = score >= 85
     playFeedbackSound(isGoodScore)
@@ -132,7 +148,9 @@ const ActiveSentencePanel = ({
       cancelRecordingRef.current = false
       setHasRecordedAudio(false)
       setRecordedUrl((old) => {
-        if (old) URL.revokeObjectURL(old)
+        if (old) {
+          URL.revokeObjectURL(old)
+        }
         return null
       })
       // mỗi lần ghi mới => clear kết quả cũ để UI đỡ rối
@@ -290,24 +308,39 @@ const ActiveSentencePanel = ({
     }
   }, [])
 
-  // Cleanup khi unmount
+  // Cleanup khi unmount hoặc khi component bị destroy
   useEffect(() => {
     return () => {
+      // Stop và cleanup MediaRecorder
       if (
         mediaRecorderRef.current &&
         mediaRecorderRef.current.state !== "inactive"
       ) {
         mediaRecorderRef.current.stop()
       }
+      mediaRecorderRef.current = null
+
+      // Stop stream tracks
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop())
         streamRef.current = null
       }
+
+      // Stop và cleanup audio player
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause()
+        audioPlayerRef.current.src = ""
+        audioPlayerRef.current = null
+      }
+
+      // Revoke object URL
       if (recordedUrl) {
         URL.revokeObjectURL(recordedUrl)
       }
+
+      // Clear chunks
+      chunksRef.current = []
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const shadowing = transcription?.shadowingResult

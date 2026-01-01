@@ -1,5 +1,6 @@
 import React, {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -14,6 +15,7 @@ type AudioShadowingProps = {
   lesson: ILLessonDetailsDto
   currentSentence?: ILLessonSentence
   autoStop: boolean
+  shouldAutoPlay?: boolean
 }
 
 const formatTime = (secs: number) => {
@@ -24,7 +26,7 @@ const formatTime = (secs: number) => {
 }
 
 const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
-  ({ lesson, currentSentence, autoStop }, ref) => {
+  ({ lesson, currentSentence, autoStop, shouldAutoPlay = false }, ref) => {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
@@ -75,7 +77,7 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
         audio.removeEventListener("pause", onPause)
         audio.removeEventListener("ended", onEnded)
       }
-    }, [autoStop, currentSentence?.id])
+    }, [autoStop, currentSentence])
 
     // Hàm để user tương tác lần đầu
     const handleFirstInteraction = () => {
@@ -89,7 +91,7 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
       }
     }
 
-    const playCurrentSegment = async () => {
+    const playCurrentSegment = useCallback(async () => {
       const audio = audioRef.current
       if (!audio || !currentSentence) return
 
@@ -105,9 +107,9 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
       } catch (error) {
         console.error("Play failed:", error)
       }
-    }
+    }, [currentSentence, userInteracted])
 
-    const play = async () => {
+    const play = useCallback(async () => {
       const audio = audioRef.current
       if (!audio) return
 
@@ -119,14 +121,14 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
       } catch (error) {
         console.error("Play failed:", error)
       }
-    }
+    }, [userInteracted])
 
-    const pause = () => {
+    const pause = useCallback(() => {
       const audio = audioRef.current
       if (!audio) return
       audio.pause()
       setIsPlaying(false)
-    }
+    }, [])
 
     const togglePlay = async () => {
       handleFirstInteraction()
@@ -157,12 +159,12 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
         play,
         pause,
       }),
-      [currentSentence, userInteracted]
+      [playCurrentSegment, play, pause]
     )
 
-    // Auto play khi đổi câu - CHỈ KHI USER ĐÃ TƯƠNG TÁC
+    // Auto play khi đổi câu - CHỈ KHI USER ĐÃ TƯƠNG TÁC VÀ shouldAutoPlay = true
     useEffect(() => {
-      if (!currentSentence || !userInteracted) return
+      if (!currentSentence || !userInteracted || !shouldAutoPlay) return
       
       const autoPlaySegment = async () => {
         try {
@@ -173,7 +175,18 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
       }
 
       autoPlaySegment()
-    }, [currentSentence?.id, userInteracted])
+    }, [currentSentence?.id, userInteracted, shouldAutoPlay, playCurrentSegment])
+
+    // Cleanup audio khi unmount
+    useEffect(() => {
+      return () => {
+        const audio = audioRef.current
+        if (audio) {
+          audio.pause()
+          audio.src = ""
+        }
+      }
+    }, [])
 
     const progress =
       duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0

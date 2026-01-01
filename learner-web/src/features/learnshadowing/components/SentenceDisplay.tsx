@@ -1,6 +1,6 @@
 // components/SentenceDisplay.tsx
 import type { ILLessonWord } from "@/types"
-import React from "react"
+import React, { useMemo } from "react"
 
 interface SentenceDisplayProps {
   words?: ILLessonWord[]
@@ -17,6 +17,14 @@ const SentenceDisplay = ({
 }: SentenceDisplayProps) => {
   const hasWords = words && Array.isArray(words) && words.length > 0
 
+  // Memoize sorted words để tránh sort lại mỗi lần render
+  const sortedWords = useMemo(() => {
+    if (!hasWords) return []
+    return [...words].sort(
+      (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)
+    )
+  }, [words, hasWords])
+
   if (!hasWords) {
     return (
       <p className={`text-lg font-semibold leading-relaxed text-center ${className}`}>
@@ -24,11 +32,6 @@ const SentenceDisplay = ({
       </p>
     )
   }
-
-  // Tạo bản copy của array để sort, không sort trực tiếp props
-  const sortedWords = [...words].sort(
-    (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)
-  )
 
   return (
     <div className={`flex flex-wrap justify-center gap-2 leading-relaxed ${className}`}>
@@ -53,4 +56,4 @@ const SentenceDisplay = ({
   )
 }
 
-export default SentenceDisplay
+export default React.memo(SentenceDisplay)

@@ -47,6 +47,7 @@ const ShadowingMode = () => {
   const [showTranscript, setShowTranscript] = useState(true)
 
   const [activeIndex, setActiveIndex] = useState(0)
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false)
 
   const playerRef = useRef<ShadowingPlayerRef | null>(null)
 
@@ -58,6 +59,7 @@ const ShadowingMode = () => {
 
   useEffect(() => {
     setActiveIndex(0)
+    setShouldAutoPlay(true) // Auto-play cho câu đầu tiên khi load lesson mới
   }, [lesson?.id])
 
   const isLoading = status === "idle" || status === "loading"
@@ -71,10 +73,12 @@ const ShadowingMode = () => {
 
   // prev/next với guard
   const handlePrev = useCallback(() => {
+    setShouldAutoPlay(false) // Không tự động phát khi prev
     setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev))
   }, [])
 
   const handleNext = useCallback(() => {
+    setShouldAutoPlay(true) // Tự động phát khi next
     setActiveIndex((prev) =>
       prev < sentences.length - 1 ? prev + 1 : prev
     )
@@ -93,6 +97,7 @@ const ShadowingMode = () => {
   }
 
   const handleSelectSentence = (index: number) => {
+    setShouldAutoPlay(false) // Không tự động phát khi user click chọn câu từ transcript
     setActiveIndex(index)
   }
 
@@ -130,7 +135,7 @@ const ShadowingMode = () => {
 
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [handleNext])
+  }, [handleNext, handlePrev])
 
   return (
     <div className="flex min-h-[calc(100vh-64px)] flex-col gap-4 py-4 px-1">
@@ -252,6 +257,7 @@ const ShadowingMode = () => {
                 currentSentence={currentSentence}
                 autoStop={autoStop}
                 largeVideo={largeVideo}
+                shouldAutoPlay={shouldAutoPlay}
               />
             ) : (
               <AudioShadowing
@@ -259,6 +265,7 @@ const ShadowingMode = () => {
                 lesson={lesson as ILLessonDetailsDto}
                 currentSentence={currentSentence}
                 autoStop={autoStop}
+                shouldAutoPlay={shouldAutoPlay}
               />
             )}
 

@@ -1,5 +1,6 @@
 import React, {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -9,20 +10,24 @@ import React, {
 import YouTube, { type YouTubeProps } from "react-youtube"
 import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
 import type { ShadowingPlayerRef } from "../types/types"
+import { Button } from "@/components/ui/button"
+import { Play } from "lucide-react"
 
-const PADDING_SEC = 0.3 // 300ms mỗi bên
+const PADDING_SEC = 0.1 // 100ms mỗi bên
 
 type YouTubeShadowingProps = {
   lesson: ILLessonDetailsDto
   currentSentence?: ILLessonSentence
   autoStop: boolean
   largeVideo: boolean
+  shouldAutoPlay?: boolean
 }
 
 const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
-  ({ lesson, currentSentence, autoStop, largeVideo }, ref) => {
+  ({ lesson, currentSentence, autoStop, largeVideo, shouldAutoPlay = false }, ref) => {
     const playerRef = useRef<any>(null)
     const [isReady, setIsReady] = useState(false)
+    const [userInteracted, setUserInteracted] = useState(false)
 
     // Dùng timeout thay vì interval để tránh spam getCurrentTime
     const timeoutRef = useRef<number | null>(null)
@@ -57,33 +62,29 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
       setIsReady(true)
     }
 
-    const clearAutoStopTimeout = () => {
+    const clearAutoStopTimeout = useCallback(() => {
       if (timeoutRef.current !== null) {
-        // console.log("Clearing auto-stop timeout")
         clearTimeout(timeoutRef.current)
         timeoutRef.current = null
       }
-    }
+    }, [])
 
     /**
      * Đặt hẹn giờ để dừng video tại endSec (có padding).
      * - Nếu truyền startFrom: giả định currentTime chính là startFrom.
      * - Nếu không, sẽ hỏi player.getCurrentTime() 1 lần.
      */
-    const startAutoStop = (startFrom?: number) => {
+    const startAutoStop = useCallback((startFrom?: number) => {
       if (!autoStop) {
-        // console.log("Auto-stop is disabled, not starting")
         return
       }
 
       if (!currentSentence) {
-        // console.log("No current sentence, not starting auto-stop")
         return
       }
 
       const player = playerRef.current
       if (!player) {
-        // console.log("Player not ready, not starting auto-stop")
         return
       }
 
@@ -101,21 +102,19 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
       }
 
       const remainingMs = Math.max((endSec - now) * 1000, 0)
-      // console.log("Setting up auto-stop timeout after", remainingMs, "ms")
 
       clearAutoStopTimeout()
 
       timeoutRef.current = window.setTimeout(() => {
         const p = playerRef.current
         if (!p) return
-        // console.log("Auto-stop timeout fired")
         p.pauseVideo()
         clearAutoStopTimeout()
       }, remainingMs)
-    }
+    }, [autoStop, currentSentence, clearAutoStopTimeout])
 
-    const playCurrentSegment = () => {
-      if (!playerRef.current || !currentSentence) return
+    const playCurrentSegment = useCallback(() => {
+      if (!playerRef.current || !currentSentence || !userInteracted) return
 
       clearAutoStopTimeout()
 
@@ -126,30 +125,26 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
       playerRef.current.playVideo()
 
       if (autoStop) {
-        // console.log("Starting auto-stop for segment")
         startAutoStop(startSec)
-      } else {
-        // console.log("Auto-stop is disabled, skipping")
       }
-    }
+    }, [currentSentence, autoStop, userInteracted, clearAutoStopTimeout, startAutoStop])
 
-    const play = () => {
-      if (!playerRef.current) return
+    const play = useCallback(() => {
+      if (!playerRef.current || !userInteracted) return
 
       clearAutoStopTimeout()
       playerRef.current.playVideo()
 
       if (autoStop && currentSentence) {
-        // console.log("Starting auto-stop for play")
         startAutoStop() // dùng currentTime hiện tại
       }
-    }
+    }, [autoStop, currentSentence, userInteracted, clearAutoStopTimeout, startAutoStop])
 
-    const pause = () => {
+    const pause = useCallback(() => {
       if (!playerRef.current) return
       playerRef.current.pauseVideo()
       clearAutoStopTimeout()
-    }
+    }, [clearAutoStopTimeout])
 
     useImperativeHandle(
       ref,
@@ -158,22 +153,18 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
         play,
         pause,
       }),
-      [currentSentence, autoStop]
+      [playCurrentSegment, play, pause]
     )
 
-    // Auto play segment khi đổi câu
+    // Auto play segment khi đổi câu - CHỈ KHI USER ĐÃ TƯƠNG TÁC VÀ shouldAutoPlay = true
     useEffect(() => {
-      if (!isReady || !currentSentence) return
+      if (!isReady || !currentSentence || !userInteracted || !shouldAutoPlay) return
 
-      // console.log("Auto-playing segment, autoStop:", autoStop)
       playCurrentSegment()
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isReady, currentSentence?.id])
+    }, [isReady, currentSentence?.id, userInteracted, shouldAutoPlay, playCurrentSegment])
 
     // Cleanup khi autoStop thay đổi
     useEffect(() => {
-      // console.log("autoStop changed to:", autoStop)
-
       if (!autoStop) {
         clearAutoStopTimeout()
       } else if (
@@ -184,19 +175,34 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
         // Nếu autoStop được bật và video đang playing, đặt lại auto-stop từ currentTime
         startAutoStop()
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [autoStop])
+    }, [autoStop, isReady, currentSentence, clearAutoStopTimeout, startAutoStop])
 
     // Cleanup khi unmount
     useEffect(() => {
       return () => {
         clearAutoStopTimeout()
       }
-    }, [])
+    }, [clearAutoStopTimeout])
 
     return (
-      <div className="w-full overflow-hidden rounded-xl border bg-black">
+      <div className="w-full overflow-hidden rounded-xl border bg-black relative">
         <YouTube videoId={videoId} opts={opts} onReady={onReady} />
+        
+        {/* Overlay Start Button */}
+        {!userInteracted && isReady && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+            <Button
+              size="lg"
+              onClick={() => {
+                setUserInteracted(true)
+              }}
+              className="gap-2 text-lg shadow-2xl"
+            >
+              <Play className="h-6 w-6" />
+              Bắt đầu shadowing
+            </Button>
+          </div>
+        )}
       </div>
     )
   }
