@@ -8,6 +8,8 @@ import {
   MessageSquare,
   Languages,
   Quote,
+  CheckCircle2,
+  Circle,
 } from "lucide-react"
 
 type ShadowingTranscriptProps = {
@@ -63,13 +65,18 @@ const ShadowingTranscript = ({
   }, [activeIndex, sentences.length, visible])
 
   return (
-    <div className="flex h-[calc(100vh-17vh)] min-h-[260px] flex-col rounded-xl border bg-card shadow-sm">
-      {/* Header */}
-      <div className="flex flex-col gap-2 border-b px-3 py-2">
+    <div className="flex h-[calc(100vh-17vh)] min-h-[260px] flex-col rounded-xl border bg-gradient-to-b from-card to-card/50 shadow-md">
+      {/* Header with gradient */}
+      <div className="flex flex-col gap-2 border-b bg-gradient-to-r from-primary/5 to-primary/10 px-3 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            <span className="text-base font-semibold">Transcript</span>
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <MessageSquare className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <span className="text-base font-semibold">Transcript</span>
+              <p className="text-[10px] text-muted-foreground">{sentences.length} sentences</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -118,19 +125,28 @@ const ShadowingTranscript = ({
                 }}
                 onClick={() => onSelectSentence(index)}
                 className={[
-                  "w-full rounded-lg border px-3 py-2.5 text-left text-sm shadow-sm transition",
-                  "hover:bg-muted/70",
+                  "w-full rounded-lg border px-3 py-2.5 text-left text-sm shadow-sm transition-all duration-200",
+                  "hover:shadow-md hover:scale-[1.01]",
                   isActive
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-background",
+                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-primary/20"
+                    : "border-border bg-background hover:bg-muted/50",
                 ].join(" ")}
               >
-                <div className="mb-1 flex items-center justify-between text-[12px] text-muted-foreground">
-                  <span>#{index+1}</span>
+                <div className="mb-1 flex items-center justify-between text-[12px]">
+                  <div className="flex items-center gap-1.5">
+                    {index < activeIndex ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                    ) : isActive ? (
+                      <Circle className="h-3.5 w-3.5 text-primary fill-primary" />
+                    ) : (
+                      <Circle className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                    <span className={isActive ? "text-primary font-medium" : "text-muted-foreground"}>#{index+1}</span>
+                  </div>
                   {s.audioSegmentUrl && (
                     <Badge
                       variant="outline"
-                      className="px-1.5 py-0 text-[11px]"
+                      className="px-1.5 py-0 text-[11px] bg-primary/5 border-primary/20"
                     >
                       audio
                     </Badge>

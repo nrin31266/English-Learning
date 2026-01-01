@@ -11,7 +11,8 @@ import YouTube, { type YouTubeProps } from "react-youtube"
 import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
 import type { ShadowingPlayerRef } from "../types/types"
 import { Button } from "@/components/ui/button"
-import { Play } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Play, Video } from "lucide-react"
 
 const PADDING_SEC = 0.1 // 100ms mỗi bên
 
@@ -187,23 +188,37 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
     }, [clearAutoStopTimeout])
 
     return (
-      <div className="w-full overflow-hidden rounded-xl border bg-black relative">
+      <div className="w-full overflow-hidden rounded-xl border bg-black relative shadow-lg">
         <YouTube videoId={videoId} opts={opts} onReady={onReady} />
         
-        {/* Overlay Start Button */}
+        {/* Video badge indicator */}
         {!userInteracted && isReady && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-            <Button
-              size="lg"
-              onClick={() => {
-                setUserInteracted(true)
-                onUserInteracted?.(true)
-              }}
-              className="gap-2 text-lg shadow-2xl"
-            >
-              <Play className="h-6 w-6" />
-              Bắt đầu
-            </Button>
+          <div className="absolute top-3 right-3 z-10">
+            <Badge variant="secondary" className="gap-1 text-xs bg-black/60 backdrop-blur-sm">
+              <Video className="h-3 w-3" />
+              YouTube
+            </Badge>
+          </div>
+        )}
+        
+        {/* Overlay Start Button with gradient */}
+        {!userInteracted && isReady && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/40 via-black/60 to-black/80 backdrop-blur-[1px]">
+            <div className="text-center space-y-3">
+              
+              <Button
+                size="lg"
+                onClick={() => {
+                  setUserInteracted(true)
+                  onUserInteracted?.(true)
+                }}
+                className="gap-2 text-lg shadow-2xl px-8"
+              >
+                <Play className="h-5 w-5" />
+                Bắt đầu
+              </Button>
+              <p className="text-xs text-white/70 mt-2">Click to start shadowing</p>
+            </div>
           </div>
         )}
       </div>

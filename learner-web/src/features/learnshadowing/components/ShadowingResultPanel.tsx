@@ -2,6 +2,7 @@ import React from "react"
 import { cn } from "@/lib/utils"
 import Alert from "@/components/Alert"
 import CircularProgressWithLabel from "@/components/CircularProgressWithLabelProps"
+import { Sparkles, Target } from "lucide-react"
 import type { IShadowingResult, IShadowingWordCompare } from "@/types"
 
 interface ShadowingResultPanelProps {
@@ -59,10 +60,22 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
   return (
     <div
       className={cn(
-        "mt-2 space-y-3 rounded-xl border bg-muted/40 p-3",
+        "mt-2 space-y-3 rounded-xl border bg-gradient-to-br from-muted/40 via-muted/20 to-primary/5 p-4 shadow-md",
         className
       )}
     >
+      {/* Header with icon */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className="p-1.5 rounded-lg bg-primary/10">
+          {weightedAccuracy >= 85 ? (
+            <Sparkles className="h-4 w-4 text-green-600" />
+          ) : (
+            <Target className="h-4 w-4 text-primary" />
+          )}
+        </div>
+        <span className="text-sm font-semibold">Pronunciation Analysis</span>
+      </div>
+
       {/* Top: score + summary */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CircularProgressWithLabel
@@ -90,19 +103,20 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
       </div>
 
       {/* Expected vs recognized by word */}
-      <div className="space-y-2 text-xs">
-        <div>
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="space-y-3 text-xs">
+        <div className="p-3 rounded-lg bg-background/50">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <Target className="h-3 w-3" />
             Target sentence
           </p>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {compares
               .filter((c) => c.expectedWord)
               .map((c) => (
                 <span
                   key={`exp-${c.position}`}
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-[11px]",
+                    "rounded-full px-2.5 py-1 text-[11px] font-medium transition-all",
                     getWordChipClasses(c, lastRecognizedPosition)
                   )}
                 >
@@ -112,11 +126,12 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
           </div>
         </div>
 
-        <div>
-          <p className="mt-2 mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <div className="p-3 rounded-lg bg-background/50">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3" />
             You said
           </p>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {compares
               .filter((c) => c.recognizedWord)
               .map((c) => (

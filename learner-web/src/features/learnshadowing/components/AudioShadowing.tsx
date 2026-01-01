@@ -9,7 +9,8 @@ import React, {
 import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
 import type { ShadowingPlayerRef } from "../types/types"
 import { Button } from "@/components/ui/button"
-import { Volume2, Play, Pause } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Volume2, Play, Pause, Music2 } from "lucide-react"
 
 type AudioShadowingProps = {
   lesson: ILLessonDetailsDto
@@ -206,24 +207,43 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
     }
 
     return (
-      <div className="w-full rounded-xl border bg-card px-4 py-3 relative">
+      <div className="w-full rounded-xl border bg-gradient-to-br from-card via-card to-primary/5 px-4 py-3 relative shadow-sm">
         {/* hidden native audio */}
         <audio ref={audioRef} src={src} preload="metadata" />
 
+        {/* Header with icon */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Music2 className="h-4 w-4 text-primary" />
+          </div>
+          <span className="text-xs font-medium text-muted-foreground">Audio Player</span>
+          {isPlaying && (
+            <Badge variant="secondary" className="ml-auto text-[10px] animate-pulse">
+              ● Playing
+            </Badge>
+          )}
+        </div>
+
         <div className="flex items-center gap-3 text-xs">
-          <span className="w-[70px] text-right tabular-nums">
+          <span className="w-max text-right tabular-nums font-semibold ">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
 
-          {/* progress bar */}
+          {/* progress bar with glow effect */}
           <div
-            className="relative flex-1 cursor-pointer rounded-full bg-muted/70"
+            className="relative flex-1 cursor-pointer rounded-full bg-muted/70 hover:bg-muted transition-colors"
             onClick={handleSeek}
           >
             <div
-              className="h-1.5 rounded-full bg-primary transition-all"
+              className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all shadow-sm"
               style={{ width: `${progress}%` }}
             />
+            {isPlaying && (
+              <div
+                className="absolute top-0 h-1.5 rounded-full bg-primary/30 animate-pulse"
+                style={{ width: `${progress}%` }}
+              />
+            )}
           </div>
 
           <Button
