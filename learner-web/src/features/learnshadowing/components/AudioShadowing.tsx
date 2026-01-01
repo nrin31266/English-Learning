@@ -16,6 +16,7 @@ type AudioShadowingProps = {
   currentSentence?: ILLessonSentence
   autoStop: boolean
   shouldAutoPlay?: boolean
+  onUserInteracted?: (interacted: boolean) => void
 }
 
 const formatTime = (secs: number) => {
@@ -26,7 +27,7 @@ const formatTime = (secs: number) => {
 }
 
 const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
-  ({ lesson, currentSentence, autoStop, shouldAutoPlay = false }, ref) => {
+  ({ lesson, currentSentence, autoStop, shouldAutoPlay = false, onUserInteracted }, ref) => {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
@@ -83,6 +84,7 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
     const handleFirstInteraction = () => {
       if (!userInteracted) {
         setUserInteracted(true)
+        onUserInteracted?.(true)
         // Có thể preload hoặc chuẩn bị audio ở đây
         const audio = audioRef.current
         if (audio) {
@@ -158,8 +160,9 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
         playCurrentSegment,
         play,
         pause,
+        getUserInteracted: () => userInteracted,
       }),
-      [playCurrentSegment, play, pause]
+      [playCurrentSegment, play, pause, userInteracted]
     )
 
     // Auto play khi đổi câu - CHỈ KHI USER ĐÃ TƯƠNG TÁC VÀ shouldAutoPlay = true
@@ -203,7 +206,7 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
     }
 
     return (
-      <div className="w-full rounded-xl border bg-card px-4 py-3">
+      <div className="w-full rounded-xl border bg-card px-4 py-3 relative">
         {/* hidden native audio */}
         <audio ref={audioRef} src={src} preload="metadata" />
 
@@ -239,10 +242,25 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
           </Button>
         </div>
 
-        {/* Hiển thị trạng thái nếu chưa có tương tác */}
+        {/* Overlay Start Button - Nhẹ nhàng hơn, không che thông tin */}
         {!userInteracted && (
-          <div className="mt-2 text-center text-xs text-muted-foreground">
-            Click play để bắt đầu
+          <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[0.8px]  rounded-xl">
+            <Button
+              size="default"
+              onClick={() => {
+                handleFirstInteraction()
+                // Auto play first segment
+                if (currentSentence) {
+                  setTimeout(() => {
+                    void playCurrentSegment()
+                  }, 100)
+                }
+              }}
+              className="gap-2 shadow-lg"
+            >
+              <Play className="h-5 w-5" />
+              Bắt đầu
+            </Button>
           </div>
         )}
       </div>

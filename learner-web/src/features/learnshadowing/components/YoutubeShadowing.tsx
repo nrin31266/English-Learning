@@ -21,10 +21,11 @@ type YouTubeShadowingProps = {
   autoStop: boolean
   largeVideo: boolean
   shouldAutoPlay?: boolean
+  onUserInteracted?: (interacted: boolean) => void
 }
 
 const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
-  ({ lesson, currentSentence, autoStop, largeVideo, shouldAutoPlay = false }, ref) => {
+  ({ lesson, currentSentence, autoStop, largeVideo, shouldAutoPlay = false, onUserInteracted }, ref) => {
     const playerRef = useRef<any>(null)
     const [isReady, setIsReady] = useState(false)
     const [userInteracted, setUserInteracted] = useState(false)
@@ -152,8 +153,9 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
         playCurrentSegment,
         play,
         pause,
+        getUserInteracted: () => userInteracted,
       }),
-      [playCurrentSegment, play, pause]
+      [playCurrentSegment, play, pause, userInteracted]
     )
 
     // Auto play segment khi đổi câu - CHỈ KHI USER ĐÃ TƯƠNG TÁC VÀ shouldAutoPlay = true
@@ -195,11 +197,12 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
               size="lg"
               onClick={() => {
                 setUserInteracted(true)
+                onUserInteracted?.(true)
               }}
               className="gap-2 text-lg shadow-2xl"
             >
               <Play className="h-6 w-6" />
-              Bắt đầu shadowing
+              Bắt đầu
             </Button>
           </div>
         )}

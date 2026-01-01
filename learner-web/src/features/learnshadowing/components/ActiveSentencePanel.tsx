@@ -29,6 +29,7 @@ interface ActiveSentencePanelProps {
   onReplay: () => void
   onPlay: () => void
   onPause: () => void
+  userInteracted?: boolean
 }
 
 const ActiveSentencePanel = ({
@@ -39,6 +40,7 @@ const ActiveSentencePanel = ({
   onPlay,
   onPause,
   lesson,
+  userInteracted = false,
 }: ActiveSentencePanelProps) => {
   // ─────────────── Recorder state ───────────────
   const [isRecording, setIsRecording] = useState(false)
@@ -373,24 +375,39 @@ const ActiveSentencePanel = ({
             <Button
               size="icon"
               variant="outline"
-              disabled={activeIndex === 0}
+              disabled={activeIndex === 0 || !userInteracted}
               onClick={onPrev}
             >
               <StepBack className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="outline" onClick={onReplay}>
+            <Button 
+              size="icon" 
+              variant="outline" 
+              onClick={onReplay}
+              disabled={!userInteracted}
+            >
               <RotateCcw className="h-4 w-4" />
             </Button>
-            <Button size="icon" className="shadow" onClick={onPlay}>
+            <Button 
+              size="icon" 
+              className="shadow" 
+              onClick={onPlay}
+              disabled={!userInteracted}
+            >
               <Play className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="outline" onClick={onPause}>
+            <Button 
+              size="icon" 
+              variant="outline" 
+              onClick={onPause}
+              disabled={!userInteracted}
+            >
               <Pause className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
               variant="outline"
-              disabled={activeIndex === lesson.sentences.length - 1}
+              disabled={activeIndex === lesson.sentences.length - 1 || !userInteracted}
               onClick={onNext}
             >
               <StepForward className="h-4 w-4" />
@@ -402,7 +419,7 @@ const ActiveSentencePanel = ({
             <Button
               size="sm"
               variant={isPlayingRecorded ? "default" : "outline"}
-              disabled={!hasRecordedAudio || isRecording}
+              disabled={!hasRecordedAudio || isRecording || !userInteracted}
               className="gap-2"
               onClick={handleTogglePlayRecorded}
             >
@@ -419,7 +436,7 @@ const ActiveSentencePanel = ({
               variant={isRecording ? "destructive" : "default"}
               className="gap-2"
               onClick={handleToggleRecord}
-              disabled={isUploading}
+              disabled={isUploading || !userInteracted}
             >
               {isUploading && <Spinner2 className="h-4 w-4" />}
               {isRecording ? (

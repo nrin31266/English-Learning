@@ -6,4 +6,6 @@ export interface ShadowingPlayerRef {
   play: () => void;
   /** Pause player */
   pause: () => void;
+  /** Lấy trạng thái user đã tương tác chưa */
+  getUserInteracted: () => boolean;
 }

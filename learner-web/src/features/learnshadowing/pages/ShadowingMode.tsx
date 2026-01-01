@@ -48,6 +48,7 @@ const ShadowingMode = () => {
 
   const [activeIndex, setActiveIndex] = useState(0)
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false)
+  const [userInteracted, setUserInteracted] = useState(false)
 
   const playerRef = useRef<ShadowingPlayerRef | null>(null)
 
@@ -60,6 +61,7 @@ const ShadowingMode = () => {
   useEffect(() => {
     setActiveIndex(0)
     setShouldAutoPlay(true) // Auto-play cho câu đầu tiên khi load lesson mới
+    setUserInteracted(false) // Reset user interaction khi load lesson mới
   }, [lesson?.id])
 
   const isLoading = status === "idle" || status === "loading"
@@ -258,6 +260,7 @@ const ShadowingMode = () => {
                 autoStop={autoStop}
                 largeVideo={largeVideo}
                 shouldAutoPlay={shouldAutoPlay}
+                onUserInteracted={setUserInteracted}
               />
             ) : (
               <AudioShadowing
@@ -266,6 +269,7 @@ const ShadowingMode = () => {
                 currentSentence={currentSentence}
                 autoStop={autoStop}
                 shouldAutoPlay={shouldAutoPlay}
+                onUserInteracted={setUserInteracted}
               />
             )}
 
@@ -322,6 +326,7 @@ const ShadowingMode = () => {
               onReplay={handleReplay}
               onPlay={handlePlay}
               onPause={handlePause}
+              userInteracted={userInteracted}
             />
             {/* Keyboard Shortcuts Dialog */}
             <KeyboardShortcutsHelp
