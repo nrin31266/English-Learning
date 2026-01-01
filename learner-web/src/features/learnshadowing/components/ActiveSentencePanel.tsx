@@ -1,3 +1,79 @@
+/**
+ * Component ActiveSentencePanel.tsx
+ * 
+ * Mục đích:
+ * - Panel chính hiển thị câu đang practice và tất cả controls
+ * - Quản lý recording logic (ghi âm microphone)
+ * - Upload và hiển thị kết quả phân tích pronunciation
+ * - Transport controls (Prev, Next, Replay, Play, Pause)
+ * 
+ * Tính năng chính:
+ * 1. Hiển thị câu hiện tại (SentenceDisplay component)
+ * 2. Transport controls: điều hướng và phát audio
+ * 3. Recording controls:
+ *    - Start Recording: bắt đầu ghi âm
+ *    - Stop & Save: dừng và upload lên server
+ *    - Cancel: hủy bỏ ghi âm
+ *    - Play recorded audio: nghe lại bản ghi
+ * 4. Hiển thị kết quả (ShadowingResultPanel)
+ * 5. Smart buttons:
+ *    - "Next sentence" (xanh) nếu điểm >= 85
+ *    - "Skip this sentence" (vàng) nếu điểm < 85
+ * 6. Feedback âm thanh:
+ *    - success.wav: điểm >= 85
+ *    - not_correct.ogg: điểm < 85
+ * 
+ * Recording Flow:
+ * ```
+ * User click "Start Recording"
+ *   ↓
+ * getUserMedia() -> MediaRecorder.start()
+ *   ↓
+ * User đọc theo câu
+ *   ↓
+ * User click "Stop & Save"
+ *   ↓
+ * MediaRecorder.stop() -> ondataavailable -> onstop
+ *   ↓
+ * Tạo Blob từ chunks
+ *   ↓
+ * Upload FormData lên /lp/speech-to-text/transcribe
+ *   ↓
+ * Nhận ITranscriptionResponse
+ *   ↓
+ * Hiển thị ShadowingResultPanel + Play feedback sound
+ * ```
+ * 
+ * Cancel Flow:
+ * ```
+ * User click "Cancel" (chỉ hiện khi đang recording)
+ *   ↓
+ * Set cancelRecordingRef.current = true
+ *   ↓
+ * MediaRecorder.stop() trigger onstop
+ *   ↓
+ * onstop check cancelRecordingRef
+ *   ↓
+ * Không tạo Blob, không upload, clear chunks
+ * ```
+ * 
+ * State Management:
+ * - isRecording: Đang ghi âm
+ * - hasRecordedAudio: Có audio đã ghi sẵn
+ * - isPlayingRecorded: Đang phát lại audio đã ghi
+ * - isUploading: Đang upload lên server
+ * - recordError: Lỗi khi ghi/upload
+ * - recordedUrl: Object URL của audio blob (để play)
+ * - transcription: Kết quả từ server
+ * 
+ * Critical Cleanup:
+ * - Stop MediaRecorder khi unmount
+ * - Stop tất cả media tracks (microphone)
+ * - Pause và cleanup audio players
+ * - Revoke object URLs
+ * - Cleanup khi tab hidden
+ * - Cleanup khi F5/navigate
+ */
 import handleAPI from "@/apis/handleAPI"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -21,17 +97,31 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
 
+/**
+ * Props cho ActiveSentencePanel
+ */
 interface ActiveSentencePanelProps {
+  /** Lesson data chứa sentences */
   lesson: ILLessonDetailsDto
+  /** Index của câu đang active */
   activeIndex: number
+  /** Callback khi click Prev button */
   onPrev: () => void
+  /** Callback khi click Next button */
   onNext: () => void
+  /** Callback khi click Replay button */
   onReplay: () => void
+  /** Callback khi click Play button */
   onPlay: () => void
+  /** Callback khi click Pause button */
   onPause: () => void
+  /** User đã tương tác với media player chưa */
   userInteracted?: boolean
 }
 
+/**
+ * Component chính - ActiveSentencePanel
+ */
 const ActiveSentencePanel = ({
   onPrev,
   onNext,
@@ -42,30 +132,51 @@ const ActiveSentencePanel = ({
   lesson,
   userInteracted = false,
 }: ActiveSentencePanelProps) => {
-  // ─────────────── Recorder state ───────────────
+  // ========== RECORDING STATE ==========
+  /** Đang ghi âm */
   const [isRecording, setIsRecording] = useState(false)
+  /** Đã có audio ghi sẵn (chưa upload hoặc đã upload) */
   const [hasRecordedAudio, setHasRecordedAudio] = useState(false)
+  /** Đang phát lại audio đã ghi */
   const [isPlayingRecorded, setIsPlayingRecorded] = useState(false)
+  /** Đang upload lên server */
   const [isUploading, setIsUploading] = useState(false)
+  /** Lỗi khi ghi âm hoặc upload */
   const [recordError, setRecordError] = useState<string | null>(null)
+  /** Object URL của audio blob (để play lại) */
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null)
 
+  // ========== RECORDING REFS ==========
+  /** Ref tới MediaRecorder instance */
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  /** Mảng chunks audio data từ MediaRecorder */
   const chunksRef = useRef<Blob[]>([])
+  /** Ref tới MediaStream (microphone stream) */
   const streamRef = useRef<MediaStream | null>(null)
+  /** Ref tới audio element để play recorded audio */
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
+  /** Flag để đánh dấu user đã cancel recording */
   const cancelRecordingRef = useRef(false)
 
+  // ========== TRANSCRIPTION STATE ==========
+  /** Kết quả phân tích từ server */
   const [transcription, setTranscription] =
     useState<ITranscriptionResponse | null>(null)
   
-  // Memoize current sentence to prevent unnecessary re-renders
+  /**
+   * Memoize currentSentence để tránh re-render không cần thiết
+   * Chỉ recalculate khi lesson.sentences hoặc activeIndex thay đổi
+   */
   const currentSentence = useMemo(
     () => lesson.sentences[activeIndex],
     [lesson.sentences, activeIndex]
   )
   
-  // Memoize derived states
+  /**
+   * Memoize derived states - conditions để hiện buttons
+   * shouldShowNextButton: điểm >= 85 -> hiện "Next sentence" (xanh)
+   * shouldShowSkipButton: có kết quả nhưng điểm < 85 -> hiện "Skip" (vàng)
+   */
   const shouldShowNextButton = useMemo(
     () => transcription && transcription?.shadowingResult?.weightedAccuracy >= 85,
     [transcription]
@@ -75,12 +186,25 @@ const ActiveSentencePanel = ({
     [transcription, shouldShowNextButton]
   )
 
-  // Feedback audio dùng ref, không dính đến re-render
+  // ========== FEEDBACK AUDIO REFS ==========
+  /**
+   * Feedback audio players (không trigger re-render)
+   * - successAudioRef: phát khi điểm >= 85
+   * - failAudioRef: phát khi điểm < 85
+   * - lastTranscriptionRef: track transcription đã play để tránh play lại
+   */
   const successAudioRef = useRef<HTMLAudioElement | null>(null)
   const failAudioRef = useRef<HTMLAudioElement | null>(null)
   const lastTranscriptionRef = useRef<string | null>(null)
+  
+  /**
+   * Effect: Setup feedback audio players (1 lần khi mount)
+   * 
+   * Preload audio files để phát ngay khi cần
+   * Cleanup khi unmount để tránh memory leak
+   */
   useEffect(() => {
-    // init 1 lần
+    // Init 1 lần
     if (!successAudioRef.current) {
       successAudioRef.current = new Audio("/sounds/correct.wav")
       successAudioRef.current.preload = "auto"
@@ -105,16 +229,32 @@ const ActiveSentencePanel = ({
     }
   }, [])
 
+  /**
+   * Helper function: Play feedback sound
+   * @param isGoodScore - true nếu điểm >= 85 (play success), false (play fail)
+   */
   const playFeedbackSound = (isGoodScore: boolean) => {
     const audioEl = isGoodScore ? successAudioRef.current : failAudioRef.current
     if (!audioEl) return
-    audioEl.currentTime = 0
+    audioEl.currentTime = 0  // Reset về đầu
     void audioEl.play().catch((e) => {
       console.warn("Feedback sound play error", e)
     })
   }
   
-  // Chỉ listen theo transcription ID - chỉ play khi có kết quả MỚI
+  /**
+   * Effect: Play feedback sound khi có transcription MỚI
+   * 
+   * Logic:
+   * - Chỉ play khi transcription.id thay đổi
+   * - Track bằng lastTranscriptionRef để tránh play lại
+   * - Điểm >= 85: success sound
+   * - Điểm < 85: fail sound
+   * 
+   * Dependencies: [transcription?.id]
+   * - Chỉ listen theo ID, không theo toàn bộ object
+   * - Tránh trigger khi transcription object re-create nhưng data giống nhau
+   */
   useEffect(() => {
     if (!transcription?.id) return
     
@@ -129,6 +269,18 @@ const ActiveSentencePanel = ({
     playFeedbackSound(isGoodScore)
   }, [transcription?.id])
 
+  /**
+   * Effect: Reset state khi đổi câu
+   * 
+   * Reset:
+   * - Recording states
+   * - Recorded audio
+   * - Upload state
+   * - Errors
+   * - Transcription
+   * 
+   * Revoke object URL để free memory
+   */
   useEffect(() => {
     // Reset khi đổi câu
     setIsRecording(false)
@@ -143,10 +295,32 @@ const ActiveSentencePanel = ({
     setTranscription(null)
   }, [activeIndex]);
 
+  /**
+   * Function: Bắt đầu ghi âm
+   * 
+   * Flow:
+   * 1. Request microphone permission: getUserMedia({ audio: true })
+   * 2. Tạo MediaRecorder instance từ stream
+   * 3. Setup event handlers:
+   *    - ondataavailable: lưu chunks vào chunksRef
+   *    - onstop: xử lý khi dừng (tạo blob, upload)
+   * 4. Start recording
+   * 
+   * Error handling:
+   * - Browser không support: setRecordError
+   * - Permission denied: setRecordError
+   * - Other errors: setRecordError + cleanup stream
+   * 
+   * Cancel logic:
+   * - cancelRecordingRef = false (mặc định là save)
+   * - Nếu user click Cancel, set = true
+   * - onstop check ref này để quyết định save hay discard
+   */
   // Bắt đầu ghi
   const startRecording = useCallback(async () => {
     setRecordError(null)
 
+    // Check browser support
     if (!navigator.mediaDevices?.getUserMedia) {
       setRecordError("Trình duyệt không hỗ trợ ghi âm.")
       return

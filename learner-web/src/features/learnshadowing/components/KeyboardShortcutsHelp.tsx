@@ -1,3 +1,21 @@
+/**
+ * Component KeyboardShortcutsHelp.tsx
+ * 
+ * Mục đích:
+ * - Hiển thị danh sách các phím tắt trong chế độ Shadowing
+ * - Giúp user biết cách sử dụng keyboard để điều khiển nhanh hơn
+ * 
+ * Tính năng:
+ * - Hiển thị trong Dialog (modal)
+ * - Phân loại shortcuts theo category (playback, navigation, recording...)
+ * - UI đẹp với màu sắc phân biệt từng category
+ * - Có thể đóng bằng ESC hoặc click outside
+ * 
+ * Shortcuts hiện tại:
+ * - Ctrl: Replay đoạn hiện tại
+ * - Tab/PageDown: Câu tiếp theo
+ * - PageUp: Câu trước đó
+ */
 import React from "react"
 import {
   Dialog,
@@ -10,18 +28,34 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Keyboard } from "lucide-react"
 
+/**
+ * Props cho KeyboardShortcutsHelp component
+ */
 interface KeyboardShortcutsHelpProps {
+  /** Dialog có đang mở không */
   open: boolean
+  /** Callback khi đóng dialog */
   onClose: () => void
 }
 
+/**
+ * Component chính để hiển thị keyboard shortcuts
+ */
 const KeyboardShortcutsHelp = ({ open, onClose }: KeyboardShortcutsHelpProps) => {
+  /**
+   * Danh sách tất cả shortcuts được support
+   * Có thể thêm shortcuts mới vào đây khi cần
+   */
   const shortcuts = [
     { key: "Ctrl", action: "Replay current segment", category: "playback" },
     { key: "Tab or PageDown", action: "Next sentence", category: "navigation" },
     { key: "PageUp", action: "Previous sentence", category: "navigation" },
   ]
 
+  /**
+   * Định nghĩa các category với màu sắc tương ứng
+   * Mỗi category có label và color scheme riêng để dễ phân biệt
+   */
   const categories = {
     playback: { label: "Playback", color: "bg-blue-100 text-blue-800 border-blue-200" },
     navigation: { label: "Navigation", color: "bg-green-100 text-green-800 border-green-200" },
@@ -47,11 +81,17 @@ const KeyboardShortcutsHelp = ({ open, onClose }: KeyboardShortcutsHelpProps) =>
 
         <ScrollArea className="max-h-[60vh]">
           <div className="space-y-4 pr-4">
+            {/* Lặp qua từng category và hiển thị shortcuts thuộc category đó */}
             {Object.entries(categories).map(([categoryKey, category]) => {
+              // Lọc shortcuts thuộc category hiện tại
               const categoryShortcuts = shortcuts.filter(s => s.category === categoryKey)
+              
+              // Chỉ render nếu category có shortcuts
+              if (categoryShortcuts.length === 0) return null
               
               return (
                 <div key={categoryKey} className="space-y-2">
+                  {/* Header của category với line separator */}
                   <div className="flex items-center gap-2">
                     <Badge 
                       variant="outline" 
@@ -62,13 +102,16 @@ const KeyboardShortcutsHelp = ({ open, onClose }: KeyboardShortcutsHelpProps) =>
                     <div className="h-px flex-1 bg-border" />
                   </div>
                   
+                  {/* Danh sách shortcuts trong category */}
                   <div className="space-y-2">
                     {categoryShortcuts.map((shortcut, index) => (
                       <div
                         key={index}
                         className="flex items-center justify-between rounded-lg border bg-card/50 p-3 transition-colors hover:bg-card"
                       >
+                        {/* Mô tả action */}
                         <span className="text-sm font-medium">{shortcut.action}</span>
+                        {/* Key hiển thị dạng keyboard key */}
                         <kbd className="rounded border bg-background px-2 py-1 text-xs font-mono shadow-sm">
                           {shortcut.key}
                         </kbd>
@@ -81,6 +124,7 @@ const KeyboardShortcutsHelp = ({ open, onClose }: KeyboardShortcutsHelpProps) =>
           </div>
         </ScrollArea>
 
+        {/* Footer với gợi ý */}
         <div className="flex items-center justify-between border-t pt-4 text-xs text-muted-foreground">
           <span>Focus must be outside input fields</span>
           <span>Press ESC to close</span>
