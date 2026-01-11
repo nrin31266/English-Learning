@@ -276,7 +276,7 @@ public class LessonService {
                         .lesson(lesson)
                         .orderIndex(idx)
                         .textRaw(textRaw)
-                        .textDisplay(textRaw) // Sau này nếu muốn chuẩn hoá thì sửa ở đây
+                        .textDisplay(textRaw)
                         .translationVi(nlpSentence != null ? nlpSentence.getTranslationVi() : null)
                         .phoneticUk(nlpSentence != null ? nlpSentence.getPhoneticUk() : null)
                         .phoneticUs(nlpSentence != null ? nlpSentence.getPhoneticUs() : null)
@@ -363,21 +363,13 @@ public class LessonService {
         }
 
         // ───────────────────────────────────────────
-        // 3. Cập nhật trạng thái Lesson
+        // Cập nhật trạng thái Lesson
         lesson.setProcessingStep(LessonProcessingStep.COMPLETED);
         lesson.setStatus(LessonStatus.READY);
         lesson.setAiMessage("Lesson generation completed successfully from AI metadata.");
 
         lessonRepository.save(lesson);
 
-        //Push notification to UI
-//        kafkaProducer.publishLessonProcessingStepNotify(
-//                LessonProcessingStepNotifyEvent.builder()
-//                        .lessonId(lesson.getId())
-//                        .processingStep(LessonProcessingStep.COMPLETED)
-//                        .aiMessage("Lesson generation completed successfully.")
-//                        .build()
-//        );
         eventPublisher.publishEvent(
                 LessonProcessingStepNotifyEvent.builder()
                         .lessonId(lesson.getId())

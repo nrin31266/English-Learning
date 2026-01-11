@@ -1,30 +1,4 @@
-/**
- * Component ShadowingResultPanel.tsx
- * 
- * Mục đích:
- * - Hiển thị kết quả phân tích pronunciation sau khi user ghi âm
- * - So sánh từng từ giữa câu mẫu (expected) và câu user đọc (recognized)
- * - Hiển thị điểm số tổng thể và feedback chi tiết
- * 
- * Tính năng:
- * - Circular progress bar hiển thị điểm (0-100%)
- * - Alert với màu sắc tùy theo mức độ chính xác (success/warning/destructive)
- * - Hiển thị 2 hàng từ: Target sentence và You said
- * - Mỗi từ có màu sắc riêng theo status (CORRECT, NEAR, WRONG, MISSING, EXTRA)
- * - Từ chưa đọc tới được hiển thị mờ với border dashed
- * 
- * Các status của từ:
- * - CORRECT: Đọc đúng hoàn toàn (màu xanh lá)
- * - NEAR: Gần đúng, có thể nhận diện (màu vàng)
- * - WRONG: Sai hoàn toàn (màu đỏ)
- * - MISSING: Thiếu từ (màu xám, italic)
- * - EXTRA: Thêm từ không cần thiết (màu xanh dương)
- * 
- * Optimization:
- * - Sử dụng React.memo để tránh re-render không cần thiết
- * - useMemo để cache các class names đã tính toán
- * - Pure functions bên ngoài component để tránh tạo lại functions
- */
+
 import React, { useMemo } from "react"
 import { cn } from "@/lib/utils"
 import Alert from "@/components/Alert"

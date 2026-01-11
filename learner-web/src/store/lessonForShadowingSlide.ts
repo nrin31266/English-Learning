@@ -26,7 +26,7 @@ const initialState: ILessonReducer = {
 
 // GET /learning-contents/learner/lessons/{slug}
 export const fetchLessonBySlug = createAsyncThunk(
-  "lesson/fetchLessonBySlug",
+  "lessonForShadowing/fetchLessonBySlug",
   async (slug: string, { rejectWithValue }) => {
     try {
       const data = await handleAPI<ILLessonDetailsDto>({
@@ -41,8 +41,8 @@ export const fetchLessonBySlug = createAsyncThunk(
   }
 );
 
-export const lessonSlide = createSlice({
-  name: "lesson",
+export const lessonForShadowingSlice = createSlice({
+  name: "lessonForShadowing",
   initialState,
   reducers: {
     // optional: tiện cho việc clear khi unmount page
@@ -67,6 +67,6 @@ export const lessonSlide = createSlice({
   },
 });
 
-export const { resetLessonState } = lessonSlide.actions;
+export const { resetLessonState } = lessonForShadowingSlice.actions;
 
-export default lessonSlide.reducer;
+export default lessonForShadowingSlice.reducer;

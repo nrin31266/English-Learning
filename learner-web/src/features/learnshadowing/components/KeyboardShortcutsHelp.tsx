@@ -1,22 +1,4 @@
-/**
- * Component KeyboardShortcutsHelp.tsx
- * 
- * Mục đích:
- * - Hiển thị danh sách các phím tắt trong chế độ Shadowing
- * - Giúp user biết cách sử dụng keyboard để điều khiển nhanh hơn
- * 
- * Tính năng:
- * - Hiển thị trong Dialog (modal)
- * - Phân loại shortcuts theo category (playback, navigation, recording...)
- * - UI đẹp với màu sắc phân biệt từng category
- * - Có thể đóng bằng ESC hoặc click outside
- * 
- * Shortcuts hiện tại:
- * - Ctrl: Replay đoạn hiện tại
- * - Tab/PageDown: Câu tiếp theo
- * - PageUp: Câu trước đó
- */
-import React from "react"
+
 import {
   Dialog,
   DialogContent,

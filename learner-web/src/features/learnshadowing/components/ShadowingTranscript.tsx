@@ -1,30 +1,4 @@
-/**
- * Component ShadowingTranscript.tsx
- * 
- * Mục đích:
- * - Hiển thị danh sách tất cả các câu trong bài học (transcript)
- * - Cho phép user jump tới bất kỳ câu nào bằng cách click
- * - Highlight câu đang active (đang practice)
- * - Auto scroll để câu active luôn visible
- * 
- * Tính năng:
- * - Progress bar hiển thị tiến độ học (đã học bao nhiêu câu)
- * - Toggle hiển thị IPA (phiên âm)
- * - Toggle hiển thị translation (dịch nghĩa)
- * - Visual indicator: CheckCircle cho câu đã học, Circle fill cho câu đang học
- * - Badge "audio" cho câu có audio segment riêng
- * 
- * UX:
- * - Smooth scroll animation khi chuyển câu
- * - Hover effect để user biết có thể click
- * - Gradient border cho câu active
- * - Responsive: các controls ẩn/hiện theo màn hình
- * 
- * Performance:
- * - useMemo để cache progress calculation
- * - useRef để tránh re-render không cần thiết khi scroll
- * - useEffect với dependency chính xác để tránh infinite loop
- */
+
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { ILLessonSentence } from "@/types"
 import { ScrollArea } from "@/components/ui/scroll-area"

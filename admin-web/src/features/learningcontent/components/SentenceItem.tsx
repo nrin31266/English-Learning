@@ -112,7 +112,12 @@ const SentenceItem = ({ sentence, mode = "view", onSave, viewMode = "minimal" }:
   return (
     <div className={`flex gap-3 py-3`}>
       {/* Time column */}
+      <div className="mt-0.5 w-12 shrink-0 text-[14px] text-muted-foreground font-semibold">
+        
+        #{s.orderIndex + 1}
+      </div>
       <div className="mt-0.5 w-12 shrink-0 text-[14px] text-muted-foreground">
+        
         {formatTimeMs(s.audioStartMs)}
       </div>
 

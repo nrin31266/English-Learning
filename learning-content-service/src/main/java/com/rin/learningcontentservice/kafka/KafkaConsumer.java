@@ -40,9 +40,7 @@ public class KafkaConsumer {
             return;
         }
 
-        // ================================
-        //     ALWAYS UPDATE DB
-        // ================================
+        // Always update lesson based on processing step
         switch (event.getProcessingStep()) {
 
             case SOURCE_FETCHED -> {
@@ -83,9 +81,8 @@ public class KafkaConsumer {
         // Lưu DB cho mọi trường hợp
         lessonRepository.save(lesson);
 
-        // ================================
-        //     ALWAYS NOTIFY UI
-        // ================================
+
+        // Always notify UI
         var notify = new LessonProcessingStepNotifyEvent();
         notify.setAiJobId(event.getAiJobId());
         notify.setLessonId(lesson.getId());

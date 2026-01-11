@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu' // dùng shadcn ui, không dùng radix thô
-import { useTranslation } from 'react-i18next'
+
 import KeycloakClient from '@/features/keycloak/keycloak'
 import { useMemo } from "react"
 
@@ -24,7 +24,6 @@ const defaultavatars = [
 
 const ProfileNav = () => {
   const { profile } = useAuth();
-    const {t} = useTranslation();
     const keycloak = KeycloakClient.getInstance().keycloak;
   const indexImage = useMemo(() => {
     return getIndexFromChar(profile?.firstName?.[0] || '', defaultavatars.length)
@@ -55,10 +54,10 @@ const ProfileNav = () => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="w-56" align="start">
-        <DropdownMenuLabel>{t('common.myAccount')}</DropdownMenuLabel>
+        <DropdownMenuLabel>My Account</DropdownMenuLabel>
         <DropdownMenuGroup>
           <DropdownMenuItem>
-            {t('common.myProfile')}
+            My Profile
             
           </DropdownMenuItem>
          
@@ -70,14 +69,14 @@ const ProfileNav = () => {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem>GitHub</DropdownMenuItem>
-        <DropdownMenuItem >{t('common.support')}</DropdownMenuItem>
-        <DropdownMenuItem>{t('common.feedback')}</DropdownMenuItem>
+        <DropdownMenuItem >Support</DropdownMenuItem>
+        <DropdownMenuItem>Feedback</DropdownMenuItem>
         <DropdownMenuItem disabled>API</DropdownMenuItem>
 
         <DropdownMenuSeparator />
 
         <DropdownMenuItem   onClick={() => keycloak.logout()} className='text-red-500 hover:text-red-700!' >
-          {t('common.logout')}
+          Logout
         
         </DropdownMenuItem>
       </DropdownMenuContent>

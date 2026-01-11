@@ -1,19 +1,4 @@
-/**
- * Component SentenceDisplay.tsx
- * 
- * Mục đích:
- * - Hiển thị câu văn dưới dạng các từ riêng biệt có thể click
- * - Cho phép user click vào từng từ để xem chi tiết (ý nghĩa, phiên âm, ví dụ...)
- * - Sắp xếp các từ theo thứ tự đúng (orderIndex)
- * 
- * Kỹ thuật:
- * - Sử dụng React.memo để tránh re-render không cần thiết
- * - Sử dụng useMemo để cache danh sách từ đã sort
- * - Mỗi từ là một button để có thể click và có accessibility tốt
- * 
- * Sử dụng trong:
- * - ActiveSentencePanel: hiển thị câu đang practice
- */
+
 import type { ILLessonWord } from "@/types"
 import React, { useMemo } from "react"
 

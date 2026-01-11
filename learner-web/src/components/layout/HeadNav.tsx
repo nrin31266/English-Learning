@@ -17,11 +17,8 @@ const HeadNav = () => {
     const isMobile = useIsMobile();
     const pn = useLocation().pathname;
   return (
-    <NavigationMenu viewport={isMobile}>
-      <NavigationMenuList className="flex-wrap">
-        <NavigationMenuItem className="mr-4">
-
-              {/* Logo / Brand */}
+    <NavigationMenu viewport={isMobile} className="relative flex gap-2">
+             {/* Logo / Brand */}
         <Link to="/" className="flex items-center gap-2">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
             EN
@@ -30,7 +27,7 @@ const HeadNav = () => {
             English Learning
           </span>
         </Link>
-        </NavigationMenuItem>
+      <NavigationMenuList className={`${isMobile ? 'p-4 top-6 absolute flex flex-wrap border rounded-md shadow bg-background z-20 justify-start ' : ''} `}>
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
             <Link to="/topics" className={`flex flex-wrap ${
@@ -56,7 +53,7 @@ const HeadNav = () => {
             }`}>Review</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
-        <NavigationMenuItem className="hidden md:block">
+        <NavigationMenuItem >
           <NavigationMenuTrigger className={
             pn.startsWith('/settings') ? 'font-bold! text-white! bg-primary!' : ''
           }>More</NavigationMenuTrigger>
@@ -97,23 +94,3 @@ const HeadNav = () => {
 }
 
 export default HeadNav
-
-function ListItem({
-  title,
-  children,
-  href,
-  ...props
-}: React.ComponentPropsWithoutRef<"li"> & { href: string }) {
-  return (
-    <li {...props}>
-      <NavigationMenuLink asChild>
-        <Link to={href}>
-          <div className="text-sm leading-none font-medium">{title}</div>
-          <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
-            {children}
-          </p>
-        </Link>
-      </NavigationMenuLink>
-    </li>
-  )
-}

@@ -1,36 +1,4 @@
-/**
- * Component YouTubeShadowing.tsx
- * 
- * Mục đích:
- * - Media player cho YouTube videos (sử dụng react-youtube library)
- * - Hỗ trợ phát từng đoạn video của câu (seek to audioStartMs -> audioEndMs)
- * - Auto-stop tại audioEndMs với padding (tránh cắt đứt)
- * - Expose ref để component cha điều khiển (play/pause/seek)
- * 
- * Khác biệt so với AudioShadowing:
- * - Sử dụng YouTube IFrame API thay vì <audio> element
- * - Có PADDING_SEC để lùi/tiến một chút (100ms) cho smooth hơn
- * - Dùng setTimeout thay vì timeupdate event (hiệu quả hơn)
- * - Có option largeVideo để adjust kích thước
- * 
- * YouTube Player States:
- * - -1: unstarted
- * - 0: ended
- * - 1: playing
- * - 2: paused
- * - 3: buffering
- * - 5: video cued
- * 
- * Auto-stop Strategy:
- * - Tính remainingMs = (audioEndMs + padding - currentTime) * 1000
- * - Dùng setTimeout để pause video sau remainingMs
- * - Clear timeout khi user tương tác hoặc đổi câu
- * 
- * Critical cleanup:
- * - Destroy YouTube player instance khi unmount
- * - Clear timeout để tránh memory leak
- * - Pause khi tab bị ẩn
- */
+
 import React, {
   forwardRef,
   useCallback,
@@ -168,27 +136,7 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
       }
     }, [])
 
-    /**
-     * Đặt timeout để auto-stop video tại audioEndMs
-     * 
-     * Strategy:
-     * 1. Tính endSec = audioEndMs + PADDING_SEC (thêm 0.1s)
-     * 2. Lấy currentTime (từ startFrom param hoặc getCurrentTime())
-     * 3. Tính remainingMs = (endSec - currentTime) * 1000
-     * 4. Set timeout sau remainingMs milliseconds
-     * 5. Khi timeout trigger: pause video
-     * 
-     * @param startFrom - Optional: thời gian hiện tại (dùng khi vừa seek)
-     *                    Nếu không truyền, sẽ gọi player.getCurrentTime()
-     * 
-     * Lý do có param startFrom:
-     * - Sau khi seekTo(), getCurrentTime() có thể chưa update ngay
-     * - Truyền startFrom để tính chính xác hơn
-     * 
-     * Lý do dùng timeout thay vì timeupdate:
-     * - timeupdate fire rất nhiều lần (mỗi ~250ms)
-     * - Timeout chỉ fire 1 lần, chính xác, ít tốn tài nguyên
-     */
+    
     const startAutoStop = useCallback((startFrom?: number) => {
       // Guard: chỉ chạy nếu autoStop được bật
       if (!autoStop) {
@@ -352,22 +300,7 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
       }
     }, [autoStop, isReady, currentSentence, clearAutoStopTimeout, startAutoStop])
 
-    /**
-     * CRITICAL CLEANUP - Cleanup YouTube player khi unmount
-     * 
-     * Vấn đề nếu không cleanup:
-     * - YouTube iframe vẫn còn trong DOM (memory leak)
-     * - Event listeners vẫn hoạt động
-     * - Video có thể vẫn chạy ở background
-     * 
-     * Solution:
-     * 1. Clear timeout
-     * 2. Pause video
-     * 3. Gọi player.destroy() để remove iframe và cleanup event listeners
-     * 4. Set ref = null
-     * 
-     * Note: destroy() là method của YouTube IFrame API
-     */
+   
     useEffect(() => {
       return () => {
         clearAutoStopTimeout()
@@ -386,19 +319,7 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
         }
       }
     }, [clearAutoStopTimeout])
-    
-    /**
-     * Force cleanup khi tab bị ẩn (user chuyển tab hoặc minimize browser)
-     * 
-     * Lý do:
-     * - Tiết kiệm tài nguyên
-     * - Tránh video chạy khi user không xem
-     * - Clear timeout để không có surprise auto-stop khi quay lại
-     * 
-     * Event: visibilitychange
-     * - document.hidden = true: tab bị ẩn
-     * - document.hidden = false: tab được focus lại
-     */
+   
     useEffect(() => {
       const handleVisibilityChange = () => {
         if (document.hidden) {
@@ -436,20 +357,7 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
           </div>
         )}
         
-        {/* 
-          Overlay "Bắt đầu" Button
-          
-          Mục đích:
-          - Comply với browser autoplay policy (user phải tương tác trước)
-          - User-friendly: clear call-to-action
-          
-          Hiển thị khi:
-          - !userInteracted: user chưa click
-          - isReady: player đã load xong
-          
-          Ẩn sau khi:
-          - User click "Bắt đầu"
-        */}
+      
         {!userInteracted && isReady && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/40 via-black/60 to-black/80 backdrop-blur-[1px]">
             <div className="text-center space-y-3">
@@ -460,25 +368,7 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
                   // 1. Set user interaction flags
                   setUserInteracted(true)
                   onUserInteracted?.(true)
-                  
-                  /**
-                   * 2. Play ngay lập tức mà không đợi useEffect
-                   * 
-                   * Lý do không đợi useEffect:
-                   * - UX tốt hơn (responsive ngay)
-                   * - Tránh race condition với useEffect
-                   * 
-                   * setTimeout 100ms:
-                   * - Đợi React re-render xong
-                   * - Đợi userInteracted state update
-                   * 
-                   * Flow:
-                   * 1. Clear timeout cũ
-                   * 2. Tính startSec với padding
-                   * 3. Seek và play
-                   * 4. Sau 200ms: start auto-stop
-                   *    (delay để player kịp seek và getCurrentTime chính xác)
-                   */
+                  // 2. Play current segment
                   if (playerRef.current && currentSentence) {
                     setTimeout(() => {
                       clearAutoStopTimeout()

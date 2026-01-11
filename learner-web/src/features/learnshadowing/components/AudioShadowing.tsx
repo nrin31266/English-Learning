@@ -1,37 +1,4 @@
-/**
- * Component AudioShadowing.tsx
- * 
- * Mục đích:
- * - Media player cho audio files (không phải YouTube)
- * - Hỗ trợ phát từng đoạn audio của câu (audio segment)
- * - Auto-stop khi hết đoạn audio của câu hiện tại
- * - Expose ref để component cha điều khiển (play/pause/seek)
- * 
- * Tính năng chính:
- * - Play/Pause audio
- * - Seek to specific time (click vào progress bar)
- * - Auto-play khi chuyển câu (nếu user đã tương tác)
- * - Auto-stop tại audioEndMs của câu (nếu autoStop = true)
- * - Progress bar với animation
- * - Time display (current / duration)
- * - Overlay "Bắt đầu" để user tương tác lần đầu (yêu cầu của browser)
- * 
- * Browser Autoplay Policy:
- * - Browser không cho phép auto-play audio/video cho đến khi user tương tác
- * - Component này yêu cầu user click "Bắt đầu" trước
- * - Sau đó mới có thể auto-play khi chuyển câu
- * 
- * Ref Interface (ShadowingPlayerRef):
- * - playCurrentSegment(): seek về đầu câu và play
- * - play(): tiếp tục play từ vị trí hiện tại
- * - pause(): pause audio
- * - getUserInteracted(): kiểm tra user đã click "Bắt đầu" chưa
- * 
- * Critical cleanup:
- * - Cleanup audio element khi unmount để tránh memory leak
- * - Pause khi tab bị ẩn (visibilitychange)
- * - Cleanup khi F5 hoặc navigate (beforeunload)
- */
+
 import React, {
   forwardRef,
   useCallback,

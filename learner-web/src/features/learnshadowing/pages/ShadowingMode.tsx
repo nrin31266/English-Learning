@@ -1,5 +1,5 @@
 import { useAppDispatch, useAppSelector } from "@/store"
-import { fetchLessonBySlug } from "@/store/lessonSlide"
+import { fetchLessonBySlug } from "@/store/lessonForShadowingSlide"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
@@ -39,7 +39,7 @@ const ShadowingMode = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const [showHelp, setShowHelp] = useState(false)
-  const lessonState = useAppSelector((state) => state.lesson.lesson)
+  const lessonState = useAppSelector((state) => state.lessonForShadowing.lesson)
   const { data: lesson, status, error } = lessonState
 
   const [autoStop, setAutoStop] = useState(true)
