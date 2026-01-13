@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,16 +21,13 @@ import java.util.List;
 @ToString
 @EqualsAndHashCode
 @Document(collection = "dictionary_words")
-public class DictionaryWord {
+public class DictionaryWord implements Serializable {
 
     @Id
     String id;
 
-    // Base word, lowercase, for lookup
-    String word;
-
-    // Original formatted word
-    String originWord;
+    
+    String displayWord;
 
     Boolean isValidWord = true;
     String wordType = "normal";
@@ -41,8 +39,7 @@ public class DictionaryWord {
     // JSON array → list of objects
     List<Definition> definitions;
 
-    String audioUs;
-    String audioUk;
+
 
     @CreatedDate
     LocalDateTime createdAt;

@@ -9,15 +9,32 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI}
+    redis:
+      url: ${REDIS_URL}
+      ssl:
+        enabled: true # Enable SSL if REDIS_URL uses rediss://
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: dictionary-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
 
-
+worker:
+  api-key: ${WORKER_API_KEY}
 
 server:
   port: 8082
   servlet:
     context-path: /
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
+#eureka:
+#  client:
+#    service-url:
+#      defaultZone: http://localhost:8761/eureka/
 
