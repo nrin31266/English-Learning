@@ -64,6 +64,12 @@ public class WorkerKeyFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri == null || !uri.startsWith("/api/internal/");
+    }
+
 
     private void writeJson(HttpServletResponse response,
                            HttpStatus status,

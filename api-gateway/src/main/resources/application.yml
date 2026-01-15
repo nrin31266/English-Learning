@@ -39,9 +39,11 @@ spring:
           predicates:
             - Path=/api/user-profiles/**
         - id: dictionary-service
-          uri: lb://dictionary-service
+          uri: http://localhost:8082
           predicates:
             - Path=/api/dictionaries/**
+          filters:
+            - StripPrefix=2
         - id: learning-content
           uri: http://localhost:8081
           predicates:
@@ -54,13 +56,15 @@ spring:
             - Path=/api/lp/**
           filters:
             - StripPrefix=2
-
         - id: notification-service
           uri: lb://notification-service
           predicates:
             - Path=/api/notifications/**
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials Access-Control-Allow-Methods Access-Control-Allow-Headers
+logging:
+  level:
+    org.springframework.security: DEBUG
 
 #eureka:
 #  client:

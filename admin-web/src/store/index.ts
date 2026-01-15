@@ -5,9 +5,11 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux'; 
 import learningContentReducer from './learningcontent/index';
 import systemReducer from './system/index';
+import wordReducer from './word/index';
 const rootReducer = combineReducers({
   learningContent: learningContentReducer,
-  system: systemReducer
+  system: systemReducer,
+  word: wordReducer,
 });
 
 

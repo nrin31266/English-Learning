@@ -26,4 +26,16 @@ public class RedisConfig {
         template.afterPropertiesSet();
         return template;
     }
+    @Bean
+    public RedisTemplate<String, Boolean> redisBooleanTemplate(RedisConnectionFactory factory) {
+        RedisTemplate<String, Boolean> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new org.springframework.data.redis.serializer.GenericToStringSerializer<>(Boolean.class));
+
+        template.afterPropertiesSet();
+        return template;
+    }
+
 }

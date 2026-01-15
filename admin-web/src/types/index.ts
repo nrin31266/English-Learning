@@ -259,3 +259,41 @@ export interface IEditLessonPayload {
   enableDictation: boolean;
   enableShadowing: boolean;
 }
+
+// return Map.of(
+//                 "queued", queued,
+//                 "processing", processing,
+//                 "enabled", enabled != null && enabled,
+//                 "recentlyAddedWords", getRecentlyAddedWords(10)
+//         );
+export interface IWordQueueView {
+  queued: string[];
+  processing: string[];
+  enabled: boolean;
+  recentlyAddedWords: IWord[];
+}
+export interface IWord {
+  id: string
+  displayWord: string
+  isValidWord: boolean
+  wordType: string
+  cefrLevel: string
+  phonetics: IPhonetics
+  definitions: IDefinition[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface IPhonetics {
+  us: string
+  uk: string
+    audioUs: string
+    audioUk: string
+}
+
+export interface IDefinition {
+  type: string
+  definition: string
+  vietnamese: string
+  example: string
+}

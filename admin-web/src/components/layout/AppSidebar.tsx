@@ -28,7 +28,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: t("appMenu.vocabulary"),
       children: [
-        { title: t("appMenu.allWords"), url: "/all-words", icon: CaseSensitive }
+        { title: t("appMenu.allWords"), url: "/all-words", icon: CaseSensitive },
+        { title: "Word Queue", url: "/word-queue", icon: Inbox }
       ]
     },
     {
@@ -54,7 +55,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
             EN
           </span>
-          <span className="hidden sm:inline text-base font-semibold">
+          <span className="text-base font-semibold">
             English Learning
           </span>
         </Link>

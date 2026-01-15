@@ -1,5 +1,7 @@
 package com.rin.englishlearning.common.event;
 
+import com.rin.englishlearning.common.dto.DefinitionDto;
+import com.rin.englishlearning.common.dto.PhoneticsDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,25 +20,4 @@ public class WordAnalyzedEvent {
     private PhoneticsDto phonetics;
     private java.util.List<DefinitionDto> definitions;
 }
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-class PhoneticsDto{
 
-    private String us;
-    private String uk;
-    private String audioUs;
-    private String audioUk;
-}
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-class DefinitionDto{
-    private String type;
-    private String definition;
-    private String vietnamese;
-    private String example;
-
-}

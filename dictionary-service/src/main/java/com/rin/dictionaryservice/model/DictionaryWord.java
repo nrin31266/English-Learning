@@ -1,10 +1,12 @@
 package com.rin.dictionaryservice.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.rin.dictionaryservice.model.sub.Definition;
 import com.rin.dictionaryservice.model.sub.Phonetics;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.domain.Persistable;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -21,7 +23,7 @@ import java.util.List;
 @ToString
 @EqualsAndHashCode
 @Document(collection = "dictionary_words")
-public class DictionaryWord implements Serializable {
+public class DictionaryWord implements Serializable, Persistable<String> {
 
     @Id
     String id;
@@ -46,4 +48,10 @@ public class DictionaryWord implements Serializable {
 
     @LastModifiedDate
     LocalDateTime updatedAt;
+
+    @JsonIgnore
+    @Override
+    public boolean isNew() {
+        return createdAt == null;
+    }
 }

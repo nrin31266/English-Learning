@@ -6,8 +6,10 @@ import com.rin.dictionaryservice.utils.TextUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -17,7 +19,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class DictionaryWordService {
     DictionaryWordRepository dictionaryWordRepository;
-    RedisTemplate <String, String> redisQueueTemplate;
+    StringRedisTemplate redisQueueTemplate;
+    @Qualifier("redisBooleanTemplate")
     RedisTemplate <String, Boolean> redisEnableTemplate;
     private static final String QUEUE = "queue:vocab";
     private static final String PROC  = "processing:vocab";
@@ -33,22 +36,39 @@ public class DictionaryWordService {
         }
     }
 
-    @Cacheable(value = "dictionaryWordsByWordKey", key = "#wordKeys", unless = "#result == null")
+    @Cacheable(value = "dictionaryWordsByWordKey", key = "#wordKey", unless = "#result == null")
     public DictionaryWord addOrGetWord(String wordKey) {
         String w = textUtils.normalizeWordLower(wordKey);
         Optional<DictionaryWord> existing = dictionaryWordRepository.findById(w);
         if (existing.isPresent()) {
             return existing.get();
         } else {
-            Long idx = redisQueueTemplate.opsForList().indexOf(QUEUE, w);
+            Long idxInQ = redisQueueTemplate.opsForList().indexOf(QUEUE, w);
+            Long idxInP = redisQueueTemplate.opsForList().indexOf(PROC, w);
+            Long idx = idxInQ != null && idxInQ != -1 ? idxInQ : idxInP;
             if (idx == null || idx == -1) {
                 redisQueueTemplate.opsForList().leftPush(QUEUE, w);
                 System.out.println("Not present in DB, added to queue: " + w);
             }else{
                 System.out.println("Not present in DB, already in queue at index " + idx + ": " + w);
             }
+
             return null;
         }
+    }
+
+    public String addWordToQueue(String wordKey) {
+        String w = textUtils.normalizeWordLower(wordKey);
+        Long idxInQ = redisQueueTemplate.opsForList().indexOf(QUEUE, w);
+        Long idxInP = redisQueueTemplate.opsForList().indexOf(PROC, w);
+        Long idx = idxInQ != null && idxInQ != -1 ? idxInQ : idxInP;
+        if (idx == null || idx == -1) {
+            redisQueueTemplate.opsForList().leftPush(QUEUE, w);
+            System.out.println("Added to queue: " + w);
+        }else{
+            System.out.println("Already in queue at index " + idx + ": " + w);
+        }
+        return w;
     }
 
     public void pauseQueue(){
@@ -67,22 +87,19 @@ public class DictionaryWordService {
     }
 
     public Map<String, Object> queueView(int limit){
+        // Limit = 9999
         List<String> queued = redisQueueTemplate.opsForList().range(QUEUE, 0, limit - 1);
         if (queued == null) queued = List.of();
-// Collections.reverse(queued);
+        Collections.reverse(queued);
         List<String> processing = redisQueueTemplate.opsForList().range(PROC, 0, limit - 1);
         if (processing == null) processing = List.of();
-// Collections.reverse(processing);
-        Long queuedSize = redisQueueTemplate.opsForList().size(QUEUE);
-        Long processingSize = redisQueueTemplate.opsForList().size(PROC);
+        Collections.reverse(processing);
 
         Boolean enabled = redisEnableTemplate.opsForValue().get(ENABLE);
 
         return Map.of(
                 "queued", queued,
                 "processing", processing,
-                "queuedSize", queuedSize == null ? 0L : queuedSize,
-                "processingSize", processingSize == null ? 0L : processingSize,
                 "enabled", enabled != null && enabled,
                 "recentlyAddedWords", getRecentlyAddedWords(10)
         );

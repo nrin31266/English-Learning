@@ -8,6 +8,7 @@ import LessonDetails from "@/features/learningcontent/pages/LessonDetails"
 const AllTopic = lazy(() => import("@/features/learningcontent/pages/AllTopic"))
 const GenerateLessons = lazy(() => import("@/features/learningcontent/pages/GenerateLessons"))
 const AllLesson = lazy(() => import("@/features/learningcontent/pages/AllLesson"))
+const WordQueue = lazy(() => import("@/features/word/pages/WordQueue"))
 
 export const withSuspense = (element: ReactElement) => (
   <Suspense fallback={<SkeletonComponent/>}>
@@ -54,6 +55,10 @@ const router = createBrowserRouter([
           {
             path: "/all-words",
             element: <div>All Words Page</div>,
+          },
+          {
+            path: "/word-queue",
+            element: withSuspense(<WordQueue />),
           },
 
           // -------------------------
