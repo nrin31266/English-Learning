@@ -37,9 +37,6 @@ public class LessonController {
         return ApiResponse.success(lessonService.addLesson(addLessonRequest));
     }
 
-
-
-
     @GetMapping("/lessons")
     public ApiResponse<Page<LessonResponse>> getLessons(
             LessonFilterRequest filter,
@@ -68,7 +65,6 @@ public class LessonController {
             @PathVariable Long id
 
     ) {
-
         return ApiResponse.success(lessonService.cancelAiProcessing(id), "AI processing cancelled successfully");
     }
 

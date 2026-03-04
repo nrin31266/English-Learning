@@ -6,6 +6,7 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -14,7 +15,7 @@ public class WebSocketConnectListener  implements ApplicationListener<SessionCon
     @Override
     public void onApplicationEvent(SessionConnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        String userId = (String) accessor.getSessionAttributes().get("keyCloakId");
+        String userId = (String) accessor.getSessionAttributes().get("keycloakId");
         if(userId != null && !userId.isEmpty()){
             log.info("User connected: {}", userId);
             // TODO: Add additional logic here if needed
@@ -23,3 +24,4 @@ public class WebSocketConnectListener  implements ApplicationListener<SessionCon
         }
     }
 }
+

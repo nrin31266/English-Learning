@@ -44,7 +44,7 @@ public class KeycloakStompInterceptor implements ChannelInterceptor {
             String keyCloakId = jwt.getSubject();
 
             accessor.setUser(new StompPrincipal(keyCloakId));
-            accessor.getSessionAttributes().put("keyCloakId", keyCloakId);
+            accessor.getSessionAttributes().put("keycloakId", keyCloakId);
 
         }
 

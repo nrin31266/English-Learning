@@ -1,9 +1,8 @@
 import type { IUserProfile } from "@/types";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import FullScreenSpinner from "@/components/FullScreenSpinner";
 import KeycloakClient from "../keycloak";
 import handleAPI from "@/apis/handleAPI";
-import { useTranslation } from "react-i18next";
 
 type AuthContextType = {
   profile: IUserProfile | null;
@@ -15,81 +14,88 @@ const AuthContext = createContext<AuthContextType>({
   setProfile: () => {},
 });
 
-let initFlag = false;
-
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<IUserProfile | null>(null);
-
   const [loadingKC, setLoadingKC] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
-  const keycloak = KeycloakClient.getInstance().keycloak;
-  const roles = keycloak.realmAccess?.roles || [];
+  const kcClient = KeycloakClient.getInstance();
+  const keycloak = kcClient.keycloak;
 
   // ───────────────────────────────────────────
   // 1️⃣ INIT KEYCLOAK
   // ───────────────────────────────────────────
-  const init = async () => {
-    if (initFlag) return;
-    initFlag = true;
-
-    await keycloak.init({
-      onLoad: "check-sso",
-      pkceMethod: "S256",
-      silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
-    });
-
-    if (keycloak.authenticated) {
-      KeycloakClient.getInstance().setupTokenRefresh();
-    } else {
-      keycloak.login();
-    }
-
-    setLoadingKC(false);
-  };
-
   useEffect(() => {
+    const init = async () => {
+      const authenticated = await kcClient.init();
+
+      if (!authenticated) {
+        keycloak.login();
+        return;
+      }
+
+      setLoadingKC(false);
+    };
+
     init();
+
+    
   }, []);
 
   // ───────────────────────────────────────────
-  // 2️⃣ LOAD USER PROFILE FROM BACKEND
+  // 2️⃣ LOAD PROFILE
   // ───────────────────────────────────────────
-  const fetchProfile = async () => {
-    if (!keycloak.authenticated) return;
-
-    const backendProfile = await handleAPI<IUserProfile>({
-      method: "POST",
-      endpoint: "/user-profiles/me",
-      isAuth: true,
-    });
-
-    setProfile(backendProfile);
-    setLoadingProfile(false);
-  };
-
   useEffect(() => {
-    if (!loadingKC && keycloak.authenticated) {
+    const fetchProfile = async () => {
+      if (!keycloak.authenticated) {
+        setLoadingProfile(false);
+        return;
+      }
+
+      try {
+        const backendProfile = await handleAPI<IUserProfile>({
+          method: "POST",
+          endpoint: "/user-profiles/me",
+          isAuth: true,
+        });
+
+        setProfile(backendProfile);
+      } catch (err) {
+        console.error("Failed to load profile", err);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    if (!loadingKC) {
       fetchProfile();
     }
   }, [loadingKC]);
 
-  
+  // Hook phải nằm trước mọi return
+  const contextValue = useMemo( 
+    () => ({
+      profile,
+      setProfile,
+    }),
+    [profile]
+  );
 
   // ───────────────────────────────────────────
-  // 3️⃣ UI STATE RENDER
+  // 3️⃣ UI RENDER
   // ───────────────────────────────────────────
 
-  if (loadingKC) return <FullScreenSpinner label="Checking session..." />;
+  if (loadingKC)
+    return <FullScreenSpinner label="Checking session..." />;
 
-  if (!keycloak.authenticated) return <FullScreenSpinner label="Redirecting..." />;
+  if (!keycloak.authenticated)
+    return <FullScreenSpinner label="Redirecting..." />;
 
-  if (loadingProfile) return <FullScreenSpinner label="Loading profile..." />;
-  
-  
+  if (loadingProfile)
+    return <FullScreenSpinner label="Loading profile..." />;
 
   return (
-    <AuthContext.Provider value={{ profile, setProfile }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

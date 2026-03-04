@@ -27,7 +27,7 @@ import {
 import AudioFileTag from "@/components/AudioFileTag"
 import LanguageLevelBadge from "@/components/LanguageLevel"
 import YouTubeTag from "@/components/YouTubeTag"
-import ActiveSentencePanel from "../components/ActiveSentencePanel"; // Import component mới
+import ActiveSentencePanel from "../components/ActiveSentencePanel"; 
 import AudioShadowing from "../components/AudioShadowing"
 import KeyboardShortcutsHelp from "../components/KeyboardShortcutsHelp"
 import type { ShadowingPlayerRef } from "../types/types"

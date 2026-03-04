@@ -190,12 +190,12 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
      * Play segment của câu hiện tại từ đầu
      * 
      * Flow:
-     * 1. Guard: kiểm tra player, currentSentence, userInteracted
-     * 2. Clear timeout cũ (nếu có)
-     * 3. Tính startSec = audioStartMs - PADDING_SEC (lùi 0.1s)
-     * 4. seekTo(startSec, true) - true = allowSeekAhead
-     * 5. playVideo()
-     * 6. Nếu autoStop: start auto-stop timeout từ startSec
+     * Guard: kiểm tra player, currentSentence, userInteracted
+     * Clear timeout cũ (nếu có)
+     * Tính startSec = audioStartMs - PADDING_SEC 
+     * seekTo(startSec, true) - true = allowSeekAhead
+     * playVideo()
+     * Nếu autoStop: start auto-stop timeout từ startSec
      * 
      * Lý do lùi PADDING_SEC:
      * - Tránh miss phần đầu của câu

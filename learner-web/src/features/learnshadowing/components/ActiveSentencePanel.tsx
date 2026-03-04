@@ -15,16 +15,14 @@ import {
   Square,
   StepBack,
   StepForward,
-  Volume2, // icon stop (lưu)
-  X, // icon cancel (hủy)
+  Volume2, 
+  X,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
 
-/**
- * Props cho ActiveSentencePanel
- */
+
 interface ActiveSentencePanelProps {
   /** Lesson data chứa sentences */
   lesson: ILLessonDetailsDto
@@ -45,7 +43,7 @@ interface ActiveSentencePanelProps {
 }
 
 /**
- * Component chính - ActiveSentencePanel
+ * Component chính
  */
 const ActiveSentencePanel = ({
   onPrev,
@@ -70,7 +68,10 @@ const ActiveSentencePanel = ({
   const [recordError, setRecordError] = useState<string | null>(null)
   /** Object URL của audio blob (để play lại) */
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null)
-
+  /** Kết quả phân tích từ server */
+  const [transcription, setTranscription] =
+    useState<ITranscriptionResponse | null>(null)
+  
   // ========== RECORDING REFS ==========
   /** Ref tới MediaRecorder instance */
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -83,10 +84,7 @@ const ActiveSentencePanel = ({
   /** Flag để đánh dấu user đã cancel recording */
   const cancelRecordingRef = useRef(false)
 
-  // ========== TRANSCRIPTION STATE ==========
-  /** Kết quả phân tích từ server */
-  const [transcription, setTranscription] =
-    useState<ITranscriptionResponse | null>(null)
+  
   
   /**
    * Memoize currentSentence để tránh re-render không cần thiết
@@ -124,7 +122,6 @@ const ActiveSentencePanel = ({
   
   /**
    * Effect: Setup feedback audio players (1 lần khi mount)
-   * 
    * Preload audio files để phát ngay khi cần
    * Cleanup khi unmount để tránh memory leak
    */
@@ -169,7 +166,6 @@ const ActiveSentencePanel = ({
   
   /**
    * Effect: Play feedback sound khi có transcription MỚI
-   * 
    * Logic:
    * - Chỉ play khi transcription.id thay đổi
    * - Track bằng lastTranscriptionRef để tránh play lại
@@ -196,7 +192,6 @@ const ActiveSentencePanel = ({
 
   /**
    * Effect: Reset state khi đổi câu
-   * 
    * Reset:
    * - Recording states
    * - Recorded audio
@@ -220,27 +215,6 @@ const ActiveSentencePanel = ({
     setTranscription(null)
   }, [activeIndex]);
 
-  /**
-   * Function: Bắt đầu ghi âm
-   * 
-   * Flow:
-   * 1. Request microphone permission: getUserMedia({ audio: true })
-   * 2. Tạo MediaRecorder instance từ stream
-   * 3. Setup event handlers:
-   *    - ondataavailable: lưu chunks vào chunksRef
-   *    - onstop: xử lý khi dừng (tạo blob, upload)
-   * 4. Start recording
-   * 
-   * Error handling:
-   * - Browser không support: setRecordError
-   * - Permission denied: setRecordError
-   * - Other errors: setRecordError + cleanup stream
-   * 
-   * Cancel logic:
-   * - cancelRecordingRef = false (mặc định là save)
-   * - Nếu user click Cancel, set = true
-   * - onstop check ref này để quyết định save hay discard
-   */
   // Bắt đầu ghi
   const startRecording = useCallback(async () => {
     setRecordError(null)

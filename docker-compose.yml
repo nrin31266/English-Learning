@@ -60,20 +60,20 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     networks:
       - english-learning-network
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka_ui_english_learning
-    ports:
-      - "9082:8080"
-    environment:
-      DYNAMIC_CONFIG_ENABLED: 'true'
-    volumes:
-      - ./kui/config.yml:/etc/kafkaui/dynamic_config.yaml
-    depends_on:
-      - kafka
-    #      - schema-registry
-    networks:
-      - english-learning-network
+#  kafka-ui:
+#    image: provectuslabs/kafka-ui:latest
+#    container_name: kafka_ui_english_learning
+#    ports:
+#      - "9082:8080"
+#    environment:
+#      DYNAMIC_CONFIG_ENABLED: 'true'
+#    volumes:
+#      - ./kui/config.yml:/etc/kafkaui/dynamic_config.yaml
+#    depends_on:
+#      - kafka
+#    #      - schema-registry
+#    networks:
+#      - english-learning-network
 
 volumes:
   postgres_data:

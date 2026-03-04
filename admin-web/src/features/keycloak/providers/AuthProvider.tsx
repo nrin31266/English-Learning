@@ -1,5 +1,11 @@
 import type { IUserProfile } from "@/types";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import FullScreenSpinner from "@/components/FullScreenSpinner";
 import AccessDenied from "@/components/AccessDenied";
 import KeycloakClient from "../keycloak";
@@ -13,10 +19,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>({
   profile: null,
-  setProfile: () => {},
+  setProfile: () => { },
 });
-
-let initFlag = false;
 
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
@@ -25,79 +29,88 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loadingKC, setLoadingKC] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
-  const keycloak = KeycloakClient.getInstance().keycloak;
-  const roles = keycloak.realmAccess?.roles || [];
-
-  const isAdmin = roles.includes("ADMIN");
+  const kcClient = KeycloakClient.getInstance(); 
+  const keycloak = kcClient.keycloak;
+  const value = useMemo(
+    () => ({
+      profile,
+      setProfile,
+  }),[profile]);
   // ───────────────────────────────────────────
   // 1️⃣ INIT KEYCLOAK
   // ───────────────────────────────────────────
-  const init = async () => {
-    if (initFlag) return;
-    initFlag = true;
-
-    await keycloak.init({
-      onLoad: "check-sso",
-      pkceMethod: "S256",
-      silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
-    });
-
-    if (keycloak.authenticated) {
-      KeycloakClient.getInstance().setupTokenRefresh();
-    } else {
-      keycloak.login();
-    }
-
-    setLoadingKC(false);
-  };
-
   useEffect(() => {
+    const init = async () => {
+      const authenticated = await kcClient.init();
+
+      if (!authenticated) {
+        keycloak.login();
+        return;
+      }
+
+      setLoadingKC(false);
+    };
+
     init();
+
   }, []);
 
+
+
   // ───────────────────────────────────────────
-  // 2️⃣ LOAD USER PROFILE FROM BACKEND
+  // 2️⃣ LOAD USER PROFILE
   // ───────────────────────────────────────────
-  const fetchProfile = async () => {
-    if (!keycloak.authenticated || !isAdmin) return;
-
-    const backendProfile = await handleAPI<IUserProfile>({
-      method: "POST",
-      endpoint: "/user-profiles/me",
-      isAuth: true,
-    });
-
-    setProfile(backendProfile);
-    setLoadingProfile(false);
-  };
-
   useEffect(() => {
-    if (!loadingKC && keycloak.authenticated) {
+    const fetchProfile = async () => {
+      const roles = keycloak.realmAccess?.roles || [];
+      const isAdmin = roles.includes("ADMIN");
+
+      if (!keycloak.authenticated || !isAdmin) {
+        setLoadingProfile(false);
+        return;
+      }
+
+      try {
+        const backendProfile = await handleAPI<IUserProfile>({
+          method: "POST",
+          endpoint: "/user-profiles/me",
+          isAuth: true,
+        });
+
+        setProfile(backendProfile);
+      } catch (err) {
+        console.error("Failed to load profile", err);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    if (!loadingKC) {
       fetchProfile();
     }
   }, [loadingKC]);
 
-  
-
   // ───────────────────────────────────────────
-  // 3️⃣ UI STATE RENDER
+  // 3️⃣ UI RENDER
   // ───────────────────────────────────────────
 
-  if (loadingKC) return <FullScreenSpinner label={t("auth.checkingSession")} />;
+  if (loadingKC)
+    return <FullScreenSpinner label={t("auth.checkingSession")} />;
 
-  if (!keycloak.authenticated) return <FullScreenSpinner label={t("auth.redirecting")} />;
+  if (!keycloak.authenticated)
+    return <FullScreenSpinner label={t("auth.redirecting")} />;
+
+  const roles = keycloak.realmAccess?.roles || [];
+  const isAdmin = roles.includes("ADMIN");
+
   if (!isAdmin) return <AccessDenied />;
 
-  if (loadingProfile) return <FullScreenSpinner label={t("auth.loadingProfile")} />;
+  if (loadingProfile)
+    return <FullScreenSpinner label={t("auth.loadingProfile")} />;
 
-  
-  
+ 
 
-  return (
-    <AuthContext.Provider value={{ profile, setProfile }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);

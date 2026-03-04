@@ -17,7 +17,7 @@ let refreshPromise: Promise<void> | null = null;
 const inspectOrRefreshTokenSafely = async (): Promise<void> => {
   const now = Math.floor(Date.now() / 1000);
   const tokenExp = keycloak.tokenParsed?.exp || 0;
-  const bufferTime = 10; // giây
+  const bufferTime = 30; // giây
 
   // Nếu token vẫn còn hạn đủ lâu, không cần refresh, tranh refresh thừa
   if (tokenExp - now > bufferTime) {
@@ -27,7 +27,7 @@ const inspectOrRefreshTokenSafely = async (): Promise<void> => {
     isRefreshing = true;
     refreshPromise = new Promise<void>(async (resolve, reject) => {
       try {
-        await keycloak.updateToken(10); // còn <10s thì refresh
+        await keycloak.updateToken(30); // còn <30s thì refresh
         isRefreshing = false;
         console.log("Interceptor refres token!!!");
         resolve();

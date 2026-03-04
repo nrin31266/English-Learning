@@ -20,7 +20,7 @@ public class WebSocketDisconnectListener implements ApplicationListener<SessionD
         String userId = (String) accessor.getSessionAttributes().get("keyCloakId");
 
         if (userId != null && !userId.isEmpty()) {
-            log.info("User {} disconnected", userId);
+            log.info("User disconnected: {} ", userId);
             // TODO: Add additional logic here if needed
         }else{
             log.warn("⚠️ SessionDisconnectEvent triggered but keyCloakId is null");

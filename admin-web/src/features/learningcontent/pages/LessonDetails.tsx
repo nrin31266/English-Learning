@@ -386,11 +386,6 @@ const LessonDetails: React.FC = () => {
             {t("lessonDetails.tabs.transcript")}
           </TabsTrigger>
           <TabsTrigger onClick={() => {
-            handleChangeTab("meta");
-          }} value="meta" className="h-7 px-3 text-xs">
-            {t("lessonDetails.tabs.metadata")}
-          </TabsTrigger>
-          <TabsTrigger onClick={() => {
             handleChangeTab("sitting");
           }} value="sitting" className="h-7 px-3 text-xs">
             {t("lessonDetails.tabs.settings")}
@@ -580,25 +575,11 @@ const LessonDetails: React.FC = () => {
         <TabsContent value="transcript" className="mt-0">
           <SentencesTab lesson={data} />
         </TabsContent>
-
-        <TabsContent value="meta" className="mt-0">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">{t("lessonDetails.metadata.title")}</CardTitle>
-              <CardDescription className="text-xs">
-                {t("lessonDetails.metadata.description")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <pre className="max-h-[480px] overflow-auto rounded bg-slate-950/95 p-3 text-[11px] text-slate-100">
-                {JSON.stringify(lesson, null, 2)}
-              </pre>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="sitting" className="mt-0">
+        <TabsContent value="sitting" className="mt-0">  
           <LessonSitting lesson={data} />
         </TabsContent>
+
+     
       </Tabs>
     </div>
   )

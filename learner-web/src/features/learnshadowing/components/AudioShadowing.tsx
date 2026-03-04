@@ -11,11 +11,9 @@ import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
 import type { ShadowingPlayerRef } from "../types/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Volume2, Play, Pause, Music2 } from "lucide-react"
+import { Play, Pause, Music2 } from "lucide-react"
 
-/**
- * Props cho AudioShadowing component
- */
+
 type AudioShadowingProps = {
   /** Lesson data chứa audioUrl và sentences */
   lesson: ILLessonDetailsDto
@@ -153,15 +151,6 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
 
     /**
      * Play segment audio của câu hiện tại
-     * 
-     * Flow:
-     * 1. Kiểm tra audio element và currentSentence có tồn tại
-     * 2. Chỉ play nếu user đã tương tác (userInteracted = true)
-     * 3. Đợi audio load metadata nếu chưa sẵn sàng (readyState < 2)
-     * 4. Seek về audioStartMs của câu
-     * 5. Delay 50ms để buffer kịp chuẩn bị
-     * 6. Play audio
-     * 
      * @throws Error nếu play failed (catch và log)
      */
     const playCurrentSegment = useCallback(async () => {
@@ -370,11 +359,6 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
 
     /**
      * Handle click vào progress bar để seek
-     * 
-     * Flow:
-     * 1. Trigger first interaction nếu chưa
-     * 2. Tính ratio dựa trên vị trí click
-     * 3. Set currentTime của audio
      */
     const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
       handleFirstInteraction()
