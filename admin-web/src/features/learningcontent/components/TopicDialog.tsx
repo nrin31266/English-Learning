@@ -92,7 +92,9 @@ export function TopicDialog({ onClose, open, mode = 'add', topic }: Props) {
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-[425px] [&>button]:hidden">
+            <DialogContent onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-[425px] 
+            max-h-[90vh] overflow-auto
+            [&>button]:hidden">
                 <DialogHeader>
                     <DialogTitle>{mode === 'add' ? t("topicDialog.addTitle") : t("topicDialog.editTitle")}</DialogTitle>
                     <DialogDescription>

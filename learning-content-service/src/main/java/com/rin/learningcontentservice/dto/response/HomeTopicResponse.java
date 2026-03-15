@@ -5,17 +5,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.util.List;
 
+@Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-@Data
-public class ActiveTopicMinimalResponse {
+public class HomeTopicResponse {
     private Long id;
     private String name;
     private String slug;
-    private LocalDateTime updatedAt;
-    private Long totalLessons;
+    private List<HomeLessonResponse> lessons;
 }

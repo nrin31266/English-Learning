@@ -33,4 +33,10 @@ public class ApiResponse<T> {
                 .build();
     }
 
+    public static ApiResponse<Void> success(String message) {
+        return ApiResponse.<Void>builder()
+                .message(message)
+                .build();
+    }
+
 }

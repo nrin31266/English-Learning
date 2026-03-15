@@ -6,13 +6,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.sql.Timestamp;
+
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LHomeLessonResponse {
+public class HomeLessonResponse {
     private Long id;
     private String topicSlug;
     private String title;

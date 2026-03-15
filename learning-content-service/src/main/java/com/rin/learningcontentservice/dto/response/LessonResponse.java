@@ -1,18 +1,12 @@
 package com.rin.learningcontentservice.dto.response;
 
 import com.rin.englishlearning.common.constants.*;
-import com.rin.learningcontentservice.model.LessonSentence;
-import com.rin.learningcontentservice.model.Topic;
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.sql.Timestamp;
-import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -20,7 +14,7 @@ import java.util.List;
 @Data
 public class LessonResponse {
     private Long id;
-    private TopicMinimalResponse topic;
+    private TopicOptionResponse topic;
     private String title;
     private String thumbnailUrl;
     private String slug;

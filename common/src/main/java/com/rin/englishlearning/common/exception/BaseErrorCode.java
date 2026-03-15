@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 @AllArgsConstructor
 public enum BaseErrorCode implements ErrorCode {
-    // 🔹 Common errors
+    // Common errors
     INTERNAL_SERVER_ERROR(9000, "Internal Server Error", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_REQUEST(9001, "Invalid Request", HttpStatus.BAD_REQUEST),
     UNAUTHORIZED(9002, "UNAUTHORIZED", HttpStatus.UNAUTHORIZED),

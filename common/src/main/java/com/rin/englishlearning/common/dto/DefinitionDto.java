@@ -14,5 +14,4 @@ public class DefinitionDto{
     private String definition;
     private String vietnamese;
     private String example;
-
 }

@@ -10,6 +10,10 @@ import java.util.List;
 
 
 public class LessonSpecifications {
+    private LessonSpecifications() {
+        /* This utility class should not be instantiated */
+    }
+
 
     public static Specification<Lesson> filter(LessonFilterRequest f) {
         return (root, query, cb) -> {

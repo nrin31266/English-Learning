@@ -2,8 +2,9 @@ package com.rin.learningcontentservice.mapper;
 
 import com.rin.learningcontentservice.dto.request.AddLessonRequest;
 import com.rin.learningcontentservice.dto.request.EditLessonRequest;
+import com.rin.learningcontentservice.dto.response.HomeLessonResponse;
 import com.rin.learningcontentservice.dto.response.LessonDetailsResponse;
-import com.rin.learningcontentservice.dto.response.LessonMinimalResponse;
+import com.rin.learningcontentservice.dto.response.LessonSummaryResponse;
 import com.rin.learningcontentservice.dto.response.LessonResponse;
 import com.rin.learningcontentservice.model.Lesson;
 import org.mapstruct.Mapper;
@@ -13,9 +14,11 @@ import org.mapstruct.MappingTarget;
 public interface LessonMapper {
     Lesson toLesson(AddLessonRequest lessonRequest);
 
-    LessonMinimalResponse toLessonMinimalResponse(Lesson lesson);
+    LessonSummaryResponse toLessonSummaryResponse(Lesson lesson);
 
     LessonResponse toLessonResponse(Lesson lesson);
+
+    HomeLessonResponse  toHomeLessonResponse(Lesson lesson);
 
     LessonDetailsResponse toLessonDetailsResponse(Lesson lesson);
 

@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -20,6 +22,7 @@ public class SentenceService {
                         LearningContentErrorCode.SENTENCE_NOT_FOUND.formatMessage(sentenceId)));
         sentence.setIsActive(active);
         lessonSentenceRepository.save(sentence);
-        log.info("Sentence with id: {} marked as {}", sentenceId, active ? "active" : "inactive");
     }
+
+
 }

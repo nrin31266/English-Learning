@@ -46,7 +46,7 @@ export const fetchLessonDetails = createAsyncThunk(
   async ({ slug }: { slug: string }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonDetailsDto>({
-        endpoint: `/learning-contents/lessons/${slug}`,
+        endpoint: `/learning-contents/admin/lessons/${slug}`,
         method: "GET",
       });
       return res;
@@ -61,7 +61,7 @@ export const reloadLessonDetails = createAsyncThunk(
   async ({ slug }: { slug: string }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonDetailsDto>({
-        endpoint: `/learning-contents/lessons/${slug}`,
+        endpoint: `/learning-contents/admin/lessons/${slug}`,
         method: "GET",
       });
       return res;
@@ -76,7 +76,7 @@ export const retryLessonGeneration = createAsyncThunk(
   async ({ id , isRestart }: { id: number, isRestart: boolean }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonMinimalDto>({
-        endpoint: `/learning-contents/lessons/${id}/re-try`,
+        endpoint: `/learning-contents/admin/lessons/${id}/retrial`,
         method: "POST",
         isAuth: true,
         params: { isRestart: isRestart }
@@ -88,15 +88,13 @@ export const retryLessonGeneration = createAsyncThunk(
   }
 );
 
-/**
- * POST /learning-contents/admin/lessons/{id}/cancel-ai-processing
- */
-export const cancelAiProcessing = createAsyncThunk(
-  "lessons/cancelAiProcessing",
+
+export const cancelLessonGeneration = createAsyncThunk(
+  "lessons/cancelLessonGeneration",
   async ({ id }: { id: number }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonMinimalDto>({
-        endpoint: `/learning-contents/lessons/${id}/cancel-ai-processing`,
+        endpoint: `/learning-contents/admin/lessons/${id}/cancellation`,
         method: "POST",
         isAuth: true,
       });
@@ -111,7 +109,7 @@ export const publishLesson = createAsyncThunk(
   async ({ id }: { id: number }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonDto>({
-        endpoint: `/learning-contents/lessons/${id}/publish`,
+        endpoint: `/learning-contents/admin/lessons/${id}/publish`,
         method: "POST",
         isAuth: true,
       });
@@ -126,7 +124,7 @@ export const unpublishLesson = createAsyncThunk(
   async ({ id }: { id: number }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonDto>({
-        endpoint: `/learning-contents/lessons/${id}/unpublish`,
+        endpoint: `/learning-contents/admin/lessons/${id}/unpublish`,
         method: "POST",
         isAuth: true,
       });
@@ -141,7 +139,7 @@ export const deleteLesson = createAsyncThunk(
   async ({ id }: { id: number }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<null>({
-        endpoint: `/learning-contents/lessons/${id}`,
+        endpoint: `/learning-contents/admin/lessons/${id}`,
         method: "DELETE",
         isAuth: true,
       });
@@ -156,7 +154,7 @@ export const updateLesson = createAsyncThunk(
   async ({ id, data }: { id: number, data: IEditLessonPayload }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonDto>({
-        endpoint: `/learning-contents/lessons/${id}`,
+        endpoint: `/learning-contents/admin/lessons/${id}`,
         method: "PUT",
         isAuth: true,
         body: data,
@@ -173,7 +171,7 @@ export const markSentenceActiveInactive = createAsyncThunk(
   async ({ id, active }: { id: number, active: boolean }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<null>({
-        endpoint: `/learning-contents/sentences/${id}/mark-active-inactive`,
+        endpoint: `/learning-contents/admin/sentences/${id}/mark-active-inactive`,
         method: "POST",
         isAuth: true,
         params: { active: active }
@@ -254,12 +252,12 @@ export const lessonDetailsSlice = createSlice({
         state.lessonDetailsMutation.status = "failed";
         state.lessonDetailsMutation.error = action.payload as IErrorState;
       })
-      .addCase(cancelAiProcessing.pending, (state) => {
+      .addCase(cancelLessonGeneration.pending, (state) => {
         state.lessonDetailsMutation.status = "loading";
         state.lessonDetailsMutation.error = { code: null, message: null };
         state.lessonDetailsMutation.type = "stop-ai-processing";
       })
-      .addCase(cancelAiProcessing.fulfilled, (state, action) => {
+      .addCase(cancelLessonGeneration.fulfilled, (state, action) => {
         state.lessonDetailsMutation.status = "succeeded";
         if(state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id){
           // state.lessonDetails.data.processingStep = "NONE";
@@ -267,7 +265,7 @@ export const lessonDetailsSlice = createSlice({
           state.lessonDetails.data.aiMessage = "AI generation has been cancelled.";
         }
       })
-      .addCase(cancelAiProcessing.rejected, (state, action) => {
+      .addCase(cancelLessonGeneration.rejected, (state, action) => {
         state.lessonDetailsMutation.status = "failed";
         state.lessonDetailsMutation.error = action.payload as IErrorState;
       })

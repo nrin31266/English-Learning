@@ -18,7 +18,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { useAppDispatch, useAppSelector } from "@/store"
-import { fetchTopicOptions, fetchTopics } from "@/store/learningcontent/topicSlide"
+import { fetchTopics } from "@/store/learningcontent/topicSlide"
 import { getTextColorForHex } from "@/utils/colorUtils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
 import { BadgeCheckIcon, CircleX, SettingsIcon, SquarePlus } from "lucide-react"
@@ -78,7 +78,6 @@ const AllTopic = () => {
             </div>
             <div className="border p-2 rounded-md">
                 <Table>
-                    <TableCaption>{t("allTopics.table.caption")}</TableCaption>
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-4 max-w-8">{t("allTopics.table.columns.index")}</TableHead>

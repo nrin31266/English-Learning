@@ -50,7 +50,7 @@ export const fetchLessons = createAsyncThunk(
   async (filters: LessonFilterParams, { rejectWithValue }) => {
     try {
       const res = await handleAPI<IPageResponse<ILessonDto>>({
-        endpoint: "/learning-contents/lessons",
+        endpoint: "/learning-contents/admin/lessons",
         method: "GET",
         params: filters,
       });

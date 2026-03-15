@@ -1,13 +1,21 @@
 package com.rin.englishlearning.common.constants;
 
-public enum LessonProcessingStep {
-    NONE,
-    PROCESSING_STARTED,
-    SOURCE_FETCHED,        // downloaded file / youtube content fetched
-    TRANSCRIBED,           // speech-to-text completed
-    NLP_ANALYZED,          // NLP analysis done (language, CEFR…)
-//    POST_PROCESSED,        // alignment and cleanup finished
+import lombok.Getter;
 
-    COMPLETED,
-    FAILED
+@Getter
+public enum LessonProcessingStep {
+    NONE(0),
+    PROCESSING_STARTED(1),
+    SOURCE_FETCHED(2),        // downloaded file / youtube content fetched
+    TRANSCRIBED(3),           // speech-to-text completed
+    NLP_ANALYZED(4),          // NLP
+    COMPLETED(5),
+    FAILED(999);
+
+    private final int order;
+
+    LessonProcessingStep(int order){
+        this.order = order;
+    }
+
 }

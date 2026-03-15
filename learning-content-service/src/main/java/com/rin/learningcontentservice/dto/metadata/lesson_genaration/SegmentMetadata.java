@@ -1,4 +1,5 @@
-package com.rin.learningcontentservice.dto.metadata;
+package com.rin.learningcontentservice.dto.metadata.lesson_genaration;
+
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,9 +8,9 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class WordMetadata {
-    private String word;
+public class SegmentMetadata {
     private Double start;
     private Double end;
-    private Double score;
+    private String text;
+    private java.util.List<WordMetadata> words;
 }

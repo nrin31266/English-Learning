@@ -32,7 +32,7 @@ import DictationBadge from "../components/DictationBadge"
 import ProcessingSection from "../components/ProcessingSection"
 import ShadowingBadge from "../components/ShadowingBadge"
 import { useAppDispatch, useAppSelector } from "@/store"
-import { cancelAiProcessing, fetchLessonDetails, publishLesson, reloadLessonDetails, retryLessonGeneration, unpublishLesson, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
+import { cancelLessonGeneration, fetchLessonDetails, publishLesson, reloadLessonDetails, retryLessonGeneration, unpublishLesson, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
 import SkeletonComponent from "@/components/SkeletonComponent"
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
 import SentencesTab from "../components/SentencesTab"
@@ -558,7 +558,7 @@ const LessonDetails: React.FC = () => {
                   </Button>
                   {/* Red button */}
                   <Button onClick={() => {
-                    dispatch(cancelAiProcessing({ id: data.id }))
+                    dispatch(cancelLessonGeneration({ id: data.id }))
                   }} size="sm" variant="destructive" disabled={data.status !== "PROCESSING" || mutationStatus === "loading"}>
                     {
                       mutationStatus === "loading" && mutationType === "stop-ai-processing" &&

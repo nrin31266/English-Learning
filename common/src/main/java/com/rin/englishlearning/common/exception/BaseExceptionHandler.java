@@ -9,7 +9,7 @@ public class BaseExceptionHandler {
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiResponse> handleException(Exception e) {
         BaseErrorCode baseErrorCode = BaseErrorCode.INTERNAL_SERVER_ERROR;
-        System.err.println("Unhandled exception: " + e.getMessage());
+        System.err.println("An unexpected error occurred: " + e.getMessage());
         return ResponseEntity.status(baseErrorCode.getStatus()).body(ApiResponse.builder()
                 .code(baseErrorCode.getCode())
                 .message(e.getMessage())

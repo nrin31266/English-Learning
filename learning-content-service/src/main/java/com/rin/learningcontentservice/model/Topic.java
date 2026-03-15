@@ -27,7 +27,7 @@ public class Topic {
 
     @Column(nullable = false, unique = true)
     private String slug;
-
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Builder.Default

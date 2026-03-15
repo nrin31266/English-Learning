@@ -1,17 +1,18 @@
 package com.rin.learningcontentservice.dto.response;
 
+import com.rin.englishlearning.common.constants.LessonType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @Data
-public class TopicMinimalResponse {
+public class LessonSummaryResponse {
     private Long id;
-    private String name;
+    private String title;
     private String slug;
+    private LessonType lessonType;
 }

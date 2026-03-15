@@ -11,8 +11,8 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LHomeResponse {
-    List<ActiveTopicMinimalResponse> allTopics;
-    List<LHomeTopicResponse> topics;
+public class HomeTopicsResponse {
+    List<TopicSummaryResponse> allTopics;
+    List<HomeTopicResponse> topics;
 
 }

@@ -12,8 +12,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import {
-    Card,
-    CardAction,
+    Card,  
     CardContent,
     CardDescription,
     CardFooter,
@@ -204,7 +203,7 @@ const GenerateLessons = () => {
             }
             console.log("Prepared lesson payload", normalizedPayload)
             const data = await handleAPI<ILessonDto>({
-                endpoint: "/learning-contents/lessons",
+                endpoint: "/learning-contents/admin/lessons",
                 method: "POST",
                 isAuth: true,
                 body: normalizedPayload,

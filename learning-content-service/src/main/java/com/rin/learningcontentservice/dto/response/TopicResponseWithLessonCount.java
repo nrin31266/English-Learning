@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 @Data
-public class TopicResponse {
+public class TopicResponseWithLessonCount {
     private Long id;
     private String name;
     private String slug;

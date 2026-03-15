@@ -15,7 +15,7 @@ import java.util.List;
 @Data
 public class LessonDetailsResponse {
     private Long id;
-    private TopicMinimalResponse topic;
+    private TopicOptionResponse topic;
     private String title;
     private String thumbnailUrl;
     private String slug;
@@ -38,5 +38,5 @@ public class LessonDetailsResponse {
     private Timestamp updatedAt;
     private Timestamp publishedAt;
     private String aiMetadataUrl;
-    private List<LessonSentenceResponse> sentences;
+    private List<LessonSentenceDetailsResponse> sentences;
 }

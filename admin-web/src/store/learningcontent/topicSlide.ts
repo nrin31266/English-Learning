@@ -151,7 +151,7 @@ export const addTopic = createAsyncThunk(
   async (payload: FormData, { rejectWithValue }) => {
     try {
       const data = await handleAPI<ITopicDto>({
-        endpoint: "/learning-contents/topics",
+        endpoint: "/learning-contents/admin/topics",
         method: "POST",
         isAuth: true,
         body: payload,
@@ -168,7 +168,7 @@ export const editTopic = createAsyncThunk(
   async (payload: { slug: string; data: FormData }, { rejectWithValue }) => {
     try {
       const data = await handleAPI<ITopicDto>({
-        endpoint: `/learning-contents/topics/${payload.slug}`,
+        endpoint: `/learning-contents/admin/topics/${payload.slug}`,
         method: "PUT",
         isAuth: true,
         body: payload.data,
@@ -184,7 +184,7 @@ export const deleteTopic = createAsyncThunk(
   async (slug: string, { rejectWithValue }) => {
     try {
       const data = await handleAPI<null>({
-        endpoint: `/learning-contents/topics/${slug}`,
+        endpoint: `/learning-contents/admin/topics/${slug}`,
         method: "DELETE",
         isAuth: true,
       });
@@ -200,7 +200,7 @@ export const fetchTopicOptions = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const data = await handleAPI<ITopicOption[]>({
-        endpoint: "/learning-contents/topics/minimals",
+        endpoint: "/learning-contents/admin/topics/options",
         method: "GET",
         isAuth: true,
       });

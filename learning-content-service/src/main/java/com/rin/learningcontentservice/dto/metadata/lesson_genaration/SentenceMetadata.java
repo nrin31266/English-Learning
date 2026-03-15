@@ -1,4 +1,4 @@
-package com.rin.learningcontentservice.dto.metadata;
+package com.rin.learningcontentservice.dto.metadata.lesson_genaration;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

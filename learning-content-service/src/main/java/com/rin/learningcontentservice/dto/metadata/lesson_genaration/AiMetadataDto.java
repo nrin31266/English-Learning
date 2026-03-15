@@ -1,5 +1,4 @@
-package com.rin.learningcontentservice.dto.metadata;
-import com.fasterxml.jackson.annotation.JsonProperty;
+package com.rin.learningcontentservice.dto.metadata.lesson_genaration;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;

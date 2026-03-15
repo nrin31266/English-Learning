@@ -8,7 +8,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LessonSentenceResponse {
+public class LessonSentenceDetailsResponse {
 
     private Long id;
     private Long lessonId;

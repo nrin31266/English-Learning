@@ -4,6 +4,7 @@ import com.rin.englishlearning.common.exception.BaseException;
 import com.rin.learningcontentservice.dto.request.AddEditTopicRequest;
 import com.rin.learningcontentservice.dto.response.*;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
+import com.rin.learningcontentservice.mapper.LessonMapper;
 import com.rin.learningcontentservice.mapper.TopicMapper;
 import com.rin.learningcontentservice.model.Lesson;
 import com.rin.learningcontentservice.model.Topic;
@@ -24,11 +25,11 @@ import java.util.stream.Collectors;
 public class TopicService {
     private final TopicRepository topicRepository;
     private final TopicMapper topicMapper;
-    private final TextUtils textUtils;
     private final LessonRepository lessonRepository;
+    private final LessonMapper lessonMapper;
 
-    public TopicResponse addTopic(AddEditTopicRequest topicRequest) {
-        String slug = textUtils.toSlug(topicRequest.getName());
+    public TopicResponseWithLessonCount addTopic(AddEditTopicRequest topicRequest) {
+        String slug = TextUtils.toSlug(topicRequest.getName());
         if(topicRepository.findBySlug(slug).isPresent()) {
             throw new BaseException(LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS,
                     LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS.formatMessage(topicRequest.getName()));
@@ -41,24 +42,24 @@ public class TopicService {
         return topicMapper.toTopicResponse(newTopic);
     }
 
-    public List<TopicResponse> getAdminTopics() {
+    public List<TopicResponseWithLessonCount> getTopicsForAdmin() {
         return topicRepository.findAdminTopics();
     }
 
-    public List<TopicMinimalResponse> getTopicMinimals() {
-        return topicRepository.findTopicMinimals();
+    public List<TopicOptionResponse> getTopicOptions() {
+        return topicRepository.findTopicOptions();
     }
 
     public void deleteTopicBySlug(String slug) {
         topicRepository.deleteBySlug(slug);
     }
 
-    public TopicResponse editTopic(String slug, AddEditTopicRequest topicRequest) {
+    public TopicResponseWithLessonCount editTopic(String slug, AddEditTopicRequest topicRequest) {
         Topic existingTopic = topicRepository.findBySlug(slug)
                 .orElseThrow(() -> new BaseException(LearningContentErrorCode.TOPIC_NOT_FOUND,
                         LearningContentErrorCode.TOPIC_NOT_FOUND.formatMessage(slug)));
 
-        String newSlug = textUtils.toSlug(topicRequest.getName());
+        String newSlug = TextUtils.toSlug(topicRequest.getName());
         if(!newSlug.equals(slug) && topicRepository.findBySlug(newSlug).isPresent()) {
             throw new BaseException(LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS,
                     LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS.formatMessage(topicRequest.getName()));
@@ -77,7 +78,7 @@ public class TopicService {
 
 
     @Transactional
-    public LTopicResponse getLeanerTopicBySlug(String slug) {
+    public TopicDetailsResponse getTopicDetailsBySlug(String slug) {
         Topic topic = topicRepository.findBySlug(slug)
                 .orElseThrow(() -> new BaseException(LearningContentErrorCode.TOPIC_NOT_FOUND,
                         LearningContentErrorCode.TOPIC_NOT_FOUND.formatMessage(slug)));
@@ -89,60 +90,60 @@ public class TopicService {
                         .collect(Collectors.toList())
         );
 
-        return  topicMapper.toLTopicResponse(topic);
+        return  topicMapper.toTopicDetails(topic);
 
 
     }
 
     @Transactional(readOnly = true)
-    public LHomeResponse getTopicsForLearnerHome(int limitTopics, int limitLessonsPerTopic) {
+    public HomeTopicsResponse getTopicsForHome(int limitTopics, int limitLessonsPerTopic) {
 
         // 1) Lấy tất cả active topics minimal (để trả allTopics)
-        List<ActiveTopicMinimalResponse> allTopics = topicRepository.findActiveTopicMinimals();
+        List<TopicSummaryResponse> allTopics = topicRepository.findActiveTopics();
 
         // Nếu không có topic nào -> trả rỗng luôn
         if (allTopics.isEmpty()) {
-            return LHomeResponse.builder()
+            return HomeTopicsResponse.builder()
                     .allTopics(Collections.emptyList())
                     .topics(Collections.emptyList())
                     .build();
         }
 
         // 2) Cắt limitTopics cho phần home
-        List<ActiveTopicMinimalResponse> limitedTopics = allTopics.stream()
+        List<TopicSummaryResponse> limitedTopics = allTopics.stream()
                 .limit(limitTopics)
                 .toList();
 
         // Nếu limitTopics = 0 thì limitedTopics rỗng -> không cần query lesson
         if (limitedTopics.isEmpty()) {
-            return LHomeResponse.builder()
+            return HomeTopicsResponse.builder()
                     .allTopics(allTopics)
                     .topics(Collections.emptyList())
                     .build();
         }
 
         List<Long> limitedTopicIds = limitedTopics.stream()
-                .map(ActiveTopicMinimalResponse::getId)
+                .map(TopicSummaryResponse::getId)
                 .toList();
 
         // 3) Lấy lessons đã limit per topic trong DB
         List<Lesson> lessons = lessonRepository
-                .findLessonsByTopicIdsForHome(limitedTopicIds, limitLessonsPerTopic);
+                .findLatestLessonsByTopicIds(limitedTopicIds, limitLessonsPerTopic);
 
         // 4) Group lessons theo topicId
         Map<Long, List<Lesson>> lessonMap = lessons.stream()
                 .collect(Collectors.groupingBy(l -> l.getTopic().getId()));
 
         // 5) Build topics response
-        List<LHomeTopicResponse> topicResponses = limitedTopics.stream()
+        List<HomeTopicResponse> topicResponses = limitedTopics.stream()
                 .map(t -> {
-                    List<LHomeLessonResponse> lessonResponses =
+                    List<HomeLessonResponse> lessonResponses =
                             lessonMap.getOrDefault(t.getId(), Collections.emptyList())
                                     .stream()
-                                    .map(this::mapToHomeLessonResponse)
+                                    .map(lessonMapper::toHomeLessonResponse)
                                     .toList();
 
-                    return LHomeTopicResponse.builder()
+                    return HomeTopicResponse.builder()
                             .id(t.getId())
                             .name(t.getName())
                             .slug(t.getSlug())
@@ -152,25 +153,12 @@ public class TopicService {
                 .toList();
 
         // 6) Build final response
-        return LHomeResponse.builder()
-                .allTopics(allTopics)      // không cần stream/map(x -> x)
+        return HomeTopicsResponse.builder()
+                .allTopics(allTopics)
                 .topics(topicResponses)
                 .build();
     }
 
-    private LHomeLessonResponse mapToHomeLessonResponse(Lesson l) {
-        return LHomeLessonResponse.builder()
-                .id(l.getId())
-                .topicSlug(l.getTopic().getSlug())
-                .title(l.getTitle())
-                .thumbnailUrl(l.getThumbnailUrl())
-                .slug(l.getSlug())
-                .languageLevel(l.getLanguageLevel())
-                .sourceType(l.getSourceType())
-                .durationSeconds(l.getDurationSeconds())
-                .enableDictation(l.getEnableDictation())
-                .enableShadowing(l.getEnableShadowing())
-                .build();
-    }
+
 
 }
