@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,5 +14,5 @@ public class SegmentMetadata {
     private Double start;
     private Double end;
     private String text;
-    private java.util.List<WordMetadata> words;
+    private List<WordMetadata> words;
 }

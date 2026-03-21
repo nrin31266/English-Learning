@@ -77,7 +77,7 @@ axiosInstance.interceptors.response.use(
 
     if (error.response) {
       const { status } = error.response;
-      if (status === 401 || status === 403) {
+      if (status === 401) {
         console.warn("🔒 Unauthorized, redirecting to login...");
         try {
           await keycloak.logout();

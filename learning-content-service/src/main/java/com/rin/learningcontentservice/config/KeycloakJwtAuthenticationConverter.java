@@ -8,10 +8,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,30 +17,42 @@ import java.util.stream.Stream;
 
 public class KeycloakJwtAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
-
     @Override
     public AbstractAuthenticationToken convert(@NonNull Jwt source) {
-        return new JwtAuthenticationToken(
-                source,
-                // concat : nối 2 stream lại với nhau
-                // new JwtGrantedAuthoritiesConverter().convert(source).stream() is realm_access now
+        // Kết hợp cả Realm Roles và Resource Roles
+        Collection<GrantedAuthority> authorities = Stream.concat(
+                extractRealmRoles(source).stream(),
+                extractResourceRoles(source).stream()
+        ).collect(Collectors.toSet());
 
-                Stream.concat(
-                        new JwtGrantedAuthoritiesConverter().convert(source).stream(),
-                        extractResourceRoles(source).stream()
-                ).collect(Collectors.toSet())
-        );
+        return new JwtAuthenticationToken(source, authorities);
     }
-//? extends GrantedAuthority = collection chứa “cái gì đó là GrantedAuthority hoặc subclass”
-//    Cho phép linh hoạt truyền các collection khác nhau mà vẫn an toàn về kiểu.
-//    Cách phổ biến trong Spring Security để trả authorities từ JWT converter.
-    private Collection<? extends GrantedAuthority> extractResourceRoles(Jwt jwt) {
-        // Logic to extract roles from the JWT token
-        var resourceAccess = new HashMap<>(jwt.getClaim("resource_access"));
-        var eternal = (Map<String, List<String>>) resourceAccess.get("account");
-        var roles = eternal.get("roles");
+
+    // LẤY ROLE TỪ REALM_ACCESS
+    private Collection<GrantedAuthority> extractRealmRoles(Jwt jwt) {
+        Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+        if (realmAccess == null || realmAccess.get("roles") == null) {
+            return List.of();
+        }
+
+        List<String> roles = (List<String>) realmAccess.get("roles");
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
+                .collect(Collectors.toList());
+    }
+
+    // LẤY ROLE TỪ RESOURCE_ACCESS
+    private Collection<GrantedAuthority> extractResourceRoles(Jwt jwt) {
+        Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
+        if (resourceAccess == null || !resourceAccess.containsKey("account")) {
+            return List.of();
+        }
+
+        Map<String, Object> account = (Map<String, Object>) resourceAccess.get("account");
+        List<String> roles = (List<String>) account.get("roles");
+
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.replace("-", "_").toUpperCase()))
-                .toList();
+                .collect(Collectors.toList());
     }
 }

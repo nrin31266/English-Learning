@@ -15,7 +15,8 @@ public class SecurityConfig {
         return http
 //                .cors(cors-> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                                .anyRequest().authenticated()
+                                .requestMatchers("/admin/**").hasRole("ADMIN")
+                                .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(resource -> resource
                         .jwt(token -> token.jwtAuthenticationConverter(new KeycloakJwtAuthenticationConverter()))

@@ -108,9 +108,9 @@ export const publishLesson = createAsyncThunk(
   "lessons/publishLesson",
   async ({ id }: { id: number }, { rejectWithValue }) => {
     try {
-      const res = await handleAPI<ILessonDto>({
+      const res = await handleAPI({
         endpoint: `/learning-contents/admin/lessons/${id}/publish`,
-        method: "POST",
+        method: "PATCH",
         isAuth: true,
       });
       return res;
@@ -123,9 +123,9 @@ export const unpublishLesson = createAsyncThunk(
   "lessons/unpublishLesson",
   async ({ id }: { id: number }, { rejectWithValue }) => {
     try {
-      const res = await handleAPI<ILessonDto>({
+      const res = await handleAPI({
         endpoint: `/learning-contents/admin/lessons/${id}/unpublish`,
-        method: "POST",
+        method: "PATCH",
         isAuth: true,
       });
       return res;

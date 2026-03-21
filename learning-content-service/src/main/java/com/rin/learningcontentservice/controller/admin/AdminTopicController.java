@@ -6,7 +6,6 @@ import com.rin.learningcontentservice.dto.response.TopicOptionResponse;
 import com.rin.learningcontentservice.dto.response.TopicResponseWithLessonCount;
 import com.rin.learningcontentservice.service.TopicService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,7 +13,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/admin/topics")
-@PreAuthorize("hasRole('ADMIN')")
 public class AdminTopicController {
 
     private final TopicService topicService;

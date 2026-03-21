@@ -131,47 +131,6 @@ const renderLessonType = (type: ILessonDto["lessonType"]) => {
 
 
 
-const DictationCell = ({ enabled }: { enabled: boolean }) => {
-  return (
-    <div className="flex items-center justify-center">
-      {enabled ? (
-        <Badge
-          variant="outline"
-          className="gap-1 border-emerald-300/70 text-emerald-600 text-[11px] px-2 py-0 h-5"
-        >
-          <NotebookPen className="h-3 w-3" />
-          On
-        </Badge>
-      ) : (
-        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-          <NotebookPen className="h-3 w-3" />
-          Off
-        </span>
-      )}
-    </div>
-  )
-}
-
-const ShadowingCell = ({ enabled }: { enabled: boolean }) => {
-  return (
-    <div className="flex items-center justify-center">
-      {enabled ? (
-        <Badge
-          variant="outline"
-          className="gap-1 border-blue-300/70 text-blue-600 text-[11px] px-2 py-0 h-5"
-        >
-          <Mic className="h-3 w-3" />
-          On
-        </Badge>
-      ) : (
-        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-          <MicOff className="h-3 w-3" />
-          Off
-        </span>
-      )}
-    </div>
-  )
-}
 
 const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
   const processing = getProcessingMeta(row.processingStep)
@@ -241,12 +200,20 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
 
       {/* Dictation */}
       <TableCell className="px-3 py-1 align-middle">
-        <DictationCell enabled={row.enableDictation} />
+        <span className={`${
+          row.enableDictation ? "text-green-600" : "text-red-600"
+        }`}>
+          {row.enableDictation ? "Yes" : "No"}
+        </span>
       </TableCell>
 
       {/* Shadowing */}
       <TableCell className="px-3 py-1 align-middle">
-        <ShadowingCell enabled={row.enableShadowing} />
+        <span className={`${
+          row.enableShadowing ? "text-green-600" : "text-red-600"
+        }`}>
+          {row.enableShadowing ? "Yes" : "No"}
+        </span>
       </TableCell>
 
       {/* Status */}

@@ -1,6 +1,7 @@
 package com.rin.learningcontentservice.controller.admin;
 import com.rin.englishlearning.common.dto.ApiResponse;
 import com.rin.learningcontentservice.dto.request.AddLessonRequest;
+import com.rin.learningcontentservice.dto.request.EditLessonRequest;
 import com.rin.learningcontentservice.dto.request.LessonFilterRequest;
 import com.rin.learningcontentservice.dto.response.LessonDetailsResponse;
 import com.rin.learningcontentservice.dto.response.LessonSummaryResponse;
@@ -10,11 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/admin/lessons")
-@PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class AdminLessonController {
 
@@ -59,5 +58,32 @@ public class AdminLessonController {
             @PathVariable Long id
     ){
         return ApiResponse.success(lessonService.cancelLessonGeneration(id));
+    }
+
+    @PatchMapping("/{id}/unpublish")
+    public ApiResponse<Void> unpublishLesson(
+            @PathVariable Long id
+    ){
+        lessonService.publishOrUnpublishLesson(id, false);
+        return ApiResponse.success(
+                "Lesson unpublished successfully"
+        );
+    }
+    @PatchMapping("/{id}/publish")
+    public ApiResponse<Void> publishLesson(
+            @PathVariable Long id
+    ){
+        lessonService.publishOrUnpublishLesson(id, true);
+        return ApiResponse.success(
+                "Lesson published successfully"
+        );
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse<LessonResponse> updateLesson(
+            @PathVariable Long id,
+            @RequestBody EditLessonRequest request
+    ) {
+        return ApiResponse.success(lessonService.updateLesson(id, request), "Lesson updated successfully");
     }
 }

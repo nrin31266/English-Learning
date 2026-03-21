@@ -242,7 +242,7 @@ public class LessonService {
         );
     }
 
-    private static final int MS_IN_SECOND = 1000;
+
 
     private void updateLessonFromSourceFetched(Lesson lesson, SourceFetched sf) {
 

@@ -14,12 +14,13 @@ import { useTranslation } from 'react-i18next'
 import KeycloakClient from '@/features/keycloak/keycloak'
 
 const defaultavatars = [
-  "defaultavatars/Cat_owl.webp",
-  "defaultavatars/Deer_dogs.webp",
-  "defaultavatars/Frog_squirrel.webp",
-  "defaultavatars/Polar_bear_dog_in_the_snow.webp",
-  "defaultavatars/Snow_leopard_caribou.webp",
+  "/defaultavatars/Cat_owl.webp",
+  "/defaultavatars/Deer_dogs.webp",
+  "/defaultavatars/Frog_squirrel.webp",
+  "/defaultavatars/Polar_bear_dog_in_the_snow.webp",
+  "/defaultavatars/Snow_leopard_caribou.webp",
 ]
+
 
 const ProfileNav = () => {
   const { profile } = useAuth();

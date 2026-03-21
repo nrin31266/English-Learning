@@ -77,7 +77,7 @@ const AllTopic = () => {
                 </div>
             </div>
             <div className="border p-2 rounded-md">
-                <Table>
+                <Table className="overflow-auto">
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-4 max-w-8">{t("allTopics.table.columns.index")}</TableHead>

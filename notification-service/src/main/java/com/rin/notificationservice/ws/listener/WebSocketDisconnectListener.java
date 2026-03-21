@@ -8,6 +8,8 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import java.util.Objects;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -17,7 +19,7 @@ public class WebSocketDisconnectListener implements ApplicationListener<SessionD
     @Override
     public void onApplicationEvent(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        String userId = (String) accessor.getSessionAttributes().get("keyCloakId");
+        String userId = (String) Objects.requireNonNull(accessor.getSessionAttributes()).get("keycloakId");
 
         if (userId != null && !userId.isEmpty()) {
             log.info("User disconnected: {} ", userId);
