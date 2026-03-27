@@ -47,7 +47,7 @@ export interface IShadowingWordCompare {
 }
 
 
-export interface ILLessonSentence {
+export interface ILessonSentenceDetailsResponse {
   id: number;
   lessonId: number;
 
@@ -71,10 +71,10 @@ export interface ILLessonSentence {
   createdAt: string;
   updatedAt: string;
 
-  lessonWords: ILLessonWord[];
+  lessonWords: ILessonWordResponse[];
 }
 // ILessonWord
-export interface ILLessonWord {
+export interface ILessonWordResponse {
   id: number;
   sentenceId: number;
   orderIndex: number;
@@ -92,7 +92,7 @@ export interface ILLessonWord {
   updatedAt: string;
 }
 // LLessonDetailsDto
-export interface ILLessonDetailsDto {
+export interface ILessonDetailsResponse {
   id: number
   topic: ITopicOption
   title: string
@@ -118,22 +118,22 @@ export interface ILLessonDetailsDto {
   publishedAt: string | null
   aiMessage: string | null
   aiMetadataUrl?: string | null
-  sentences: ILLessonSentence[];
+  sentences: ILessonSentenceDetailsResponse[];
 }
 
 // LTopicResponse
-export interface ILTopicResponse{
+export interface ITopicDetailsResponse{
   id: number
   name: string
   slug: string
   updatedAt: string // ISO datetime string, ví dụ "2025-11-28T10:20:30"
   totalLessons: number
-  lessons: ILHomeLessonResponse[]
+  lessons: IHomeLessonResponse[]
 }
 
 
 // ActiveTopicMinimalResponse
-export interface IActiveTopicMinimalResponse {
+export interface ITopicSummaryResponse {
   id: number
   name: string
   slug: string
@@ -142,7 +142,7 @@ export interface IActiveTopicMinimalResponse {
 }
 
 // LHomeLessonResponse
-export interface ILHomeLessonResponse {
+export interface IHomeLessonResponse {
   id: number
   topicSlug: string
   title: string
@@ -156,17 +156,17 @@ export interface ILHomeLessonResponse {
 }
 
 // LHomeTopicResponse
-export interface ILHomeTopicResponse {
+export interface IHomeTopicResponse {
   id: number
   name: string
   slug: string
-  lessons: ILHomeLessonResponse[]
+  lessons: IHomeLessonResponse[]
 }
 
 // LHomeResponse
-export interface ILHomeResponse {
-  allTopics: IActiveTopicMinimalResponse[]
-  topics: ILHomeTopicResponse[]
+export interface IHomeTopicsResponse {
+  allTopics: ITopicSummaryResponse[]
+  topics: IHomeTopicResponse[]
 }
 
 export interface IUserProfile {

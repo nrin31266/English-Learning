@@ -18,7 +18,7 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain internalChain(HttpSecurity http, WorkerKeyFilter workerKeyFilter) throws Exception {
-        http.securityMatcher("/api/internal/**");
+        http.securityMatcher("/internal/**");
 
         http.csrf(AbstractHttpConfigurer::disable);
         http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
@@ -35,14 +35,12 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain apiChain(HttpSecurity http, CustomizeAuthenticationEntryPoint entryPoint) throws Exception {
-        http.securityMatcher("/api/**"); // match các API còn lại (không phải /api/internal/**)
+        http.securityMatcher("/**"); // match các API còn lại
 
         http.csrf(AbstractHttpConfigurer::disable);
 
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST,  "/api/dictionaries/words/add-or-get-word").permitAll()
-                // nếu endpoint thực tế là POST thì đổi POST
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
         );
 
         http.oauth2ResourceServer(oauth -> oauth
