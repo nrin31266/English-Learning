@@ -12,15 +12,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import YouTubeTag from "@/components/YouTubeTag"
-import type { ILHomeLessonResponse, ILHomeTopicResponse } from "@/types"
+import type { IHomeLessonResponse, IHomeTopicResponse } from "@/types"
 import { formatDuration } from "@/utils/timeUtils"
 import { Headphones, Tv, Wand2, Sparkles } from "lucide-react"
 
 type LessonModeDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  lesson: ILHomeLessonResponse | null
-  topic: ILHomeTopicResponse | null
+  lesson: IHomeLessonResponse | null
+  topic: IHomeTopicResponse | null
   onNavigate: (mode: "listening" | "shadowing" | "dictation") => void
 }
 

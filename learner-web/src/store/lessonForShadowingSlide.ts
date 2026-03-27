@@ -4,13 +4,13 @@ import handleAPI from "@/apis/handleAPI";
 import type {
   IAsyncState,
   IErrorState,
-  ILLessonDetailsDto,
+  ILessonDetailsResponse,
 } from "@/types";
 import { extractError } from "@/utils/reduxUtils";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 interface ILessonReducer {
-  lesson: IAsyncState<ILLessonDetailsDto | null>;
+  lesson: IAsyncState<ILessonDetailsResponse | null>;
 }
 
 const initialState: ILessonReducer = {
@@ -29,8 +29,8 @@ export const fetchLessonBySlug = createAsyncThunk(
   "lessonForShadowing/fetchLessonBySlug",
   async (slug: string, { rejectWithValue }) => {
     try {
-      const data = await handleAPI<ILLessonDetailsDto>({
-        endpoint: `/learning-contents/learner/lessons/${slug}`,
+      const data = await handleAPI<ILessonDetailsResponse>({
+        endpoint: `/learning-contents/lessons/${slug}`,
         method: "GET",
         isAuth: true,
       });

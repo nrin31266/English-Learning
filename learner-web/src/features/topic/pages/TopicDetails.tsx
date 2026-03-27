@@ -5,7 +5,7 @@ import { useParams, useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { fetchTopicBySlug } from "@/store/topicSlide"
 
-import type { ILHomeLessonResponse } from "@/types"
+import type { IHomeLessonResponse } from "@/types"
 import { cefrLevelOptions } from "@/types"
 
 import LessonCard from "../components/LessonCard"
@@ -40,7 +40,7 @@ const TopicDetails = () => {
   const { data: topic, status, error } = topicState
 
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedLesson, setSelectedLesson] = useState<ILHomeLessonResponse | null>(null)
+  const [selectedLesson, setSelectedLesson] = useState<IHomeLessonResponse | null>(null)
 
   // Filter theo CEFR level
   const [levelFilter, setLevelFilter] =
@@ -65,7 +65,7 @@ const TopicDetails = () => {
 
   const totalLessons = topic?.totalLessons ?? topic?.lessons.length ?? 0
 
-  const handleLessonClick = (lesson: ILHomeLessonResponse) => {
+  const handleLessonClick = (lesson: IHomeLessonResponse) => {
     setSelectedLesson(lesson)
     setDialogOpen(true)
   }

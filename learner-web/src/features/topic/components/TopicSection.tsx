@@ -1,16 +1,16 @@
 // src/pages/Topics.tsx
 
 import type {
-  ILHomeLessonResponse,
-  ILHomeTopicResponse
+  IHomeLessonResponse,
+  IHomeTopicResponse
 } from "@/types"
 import { Link } from "react-router-dom"
 import LessonCard from "./LessonCard"
 
 type TopicSectionProps = {
-  topic: ILHomeTopicResponse
+  topic: IHomeTopicResponse
   active: boolean
-  onLessonClick: (lesson: ILHomeLessonResponse, topic: ILHomeTopicResponse) => void
+  onLessonClick: (lesson: IHomeLessonResponse, topic: IHomeTopicResponse) => void
   totalLessons: number
 }
 

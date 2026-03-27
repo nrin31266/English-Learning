@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import type { ILLessonSentence } from "@/types"
+import type { ILessonSentenceDetailsResponse } from "@/types"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -18,7 +18,7 @@ import {
  */
 type ShadowingTranscriptProps = {
   /** Danh sách tất cả các câu trong lesson */
-  sentences: ILLessonSentence[]
+  sentences: ILessonSentenceDetailsResponse[]
   /** Index của câu đang active (đang practice) */
   activeIndex: number
   /** Callback khi user click chọn một câu */

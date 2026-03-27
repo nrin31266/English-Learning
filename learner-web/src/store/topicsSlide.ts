@@ -1,12 +1,12 @@
 import handleAPI from "@/apis/handleAPI";
-import type { IAsyncState, IErrorState, ILHomeResponse, ITopicDto, ITopicOption, MutationType } from "@/types";
+import type { IAsyncState, IErrorState, IHomeTopicsResponse, ITopicDto, ITopicOption, MutationType } from "@/types";
 import { extractError } from "@/utils/reduxUtils";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 
 
 interface ITopicsReducer {
-  topics: IAsyncState<ILHomeResponse>;
+  topics: IAsyncState<IHomeTopicsResponse>;
 }
 const initialState: ITopicsReducer = {
   topics: {
@@ -25,8 +25,8 @@ export const fetchTopics = createAsyncThunk(
   "topics/fetchTopics",
   async ({ limitLessonsPerTopic = 4, limitTopics = 10 } : { limitLessonsPerTopic?: number; limitTopics?: number }, { rejectWithValue }) => {
     try {
-      const data = await handleAPI<ILHomeResponse>({
-        endpoint: "/learning-contents/learner/home/topics",
+      const data = await handleAPI<IHomeTopicsResponse>({
+        endpoint: "/learning-contents/topics/home",
         method: "GET",
         isAuth: true,
         params: {

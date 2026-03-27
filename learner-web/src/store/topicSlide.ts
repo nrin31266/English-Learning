@@ -1,12 +1,12 @@
 
 import handleAPI from "@/apis/handleAPI";
-import type { IAsyncState, IErrorState, ILTopicResponse } from "@/types";
+import type { IAsyncState, IErrorState, ITopicDetailsResponse } from "@/types";
 import { extractError } from "@/utils/reduxUtils";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 //     }
 interface ITopicReducer {
-  topic: IAsyncState<ILTopicResponse | null>;
+  topic: IAsyncState<ITopicDetailsResponse | null>;
 }
 const initialState: ITopicReducer = {
     topic: {
@@ -23,8 +23,8 @@ export const fetchTopicBySlug = createAsyncThunk(
   "topic/fetchTopicBySlug",
   async (slug: string, { rejectWithValue }) => {
     try {
-      const data = await handleAPI<ILTopicResponse>({
-        endpoint: `/learning-contents/learner/topics/${slug}`,
+      const data = await handleAPI<ITopicDetailsResponse>({
+        endpoint: `/learning-contents/topics/${slug}`,
         method: "GET",
         isAuth: true,
       });
@@ -45,7 +45,7 @@ export const topicSlide = createSlice({
         state.topic.status = "loading";
         state.topic.error = { code: null, message: null };
       })
-      .addCase(fetchTopicBySlug.fulfilled, (state: ITopicReducer, action: { payload: ILTopicResponse }) => {
+      .addCase(fetchTopicBySlug.fulfilled, (state: ITopicReducer, action: { payload: ITopicDetailsResponse }) => {
         state.topic.status = "succeeded";
         state.topic.data = action.payload;
       })

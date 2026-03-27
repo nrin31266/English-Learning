@@ -4,9 +4,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { fetchTopics } from "@/store/topicsSlide"
 import type {
-  IActiveTopicMinimalResponse,
-  ILHomeLessonResponse,
-  ILHomeTopicResponse,
+  ITopicSummaryResponse,
+  IHomeLessonResponse,
+  IHomeTopicResponse,
 } from "@/types"
 import {
   BookOpen,
@@ -29,16 +29,16 @@ const Topics = () => {
   const { data, status } = homeState
 
   const [activeTopicSlug, setActiveTopicSlug] = useState<string | null>(null)
-  const [selectedLesson, setSelectedLesson] = useState<ILHomeLessonResponse | null>(null)
-  const [selectedTopic, setSelectedTopic] = useState<ILHomeTopicResponse | null>(null)
+  const [selectedLesson, setSelectedLesson] = useState<IHomeLessonResponse | null>(null)
+  const [selectedTopic, setSelectedTopic] = useState<IHomeTopicResponse | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
 
   useEffect(() => {
     dispatch(fetchTopics({ limitLessonsPerTopic: 4, limitTopics: 10 }))
   }, [dispatch])
 
-  const allTopics: IActiveTopicMinimalResponse[] = data?.allTopics ?? []
-  const homeTopics: ILHomeTopicResponse[] = data?.topics ?? []
+  const allTopics: ITopicSummaryResponse[] = data?.allTopics ?? []
+  const homeTopics: IHomeTopicResponse[] = data?.topics ?? []
 
   // Chỉ giữ topic có lesson
   const topicsWithLessons = useMemo(
@@ -53,7 +53,7 @@ const Topics = () => {
     }
   }, [topicsWithLessons, activeTopicSlug])
 
-  const handleLessonClick = (lesson: ILHomeLessonResponse, topic: ILHomeTopicResponse) => {
+  const handleLessonClick = (lesson: IHomeLessonResponse, topic: IHomeTopicResponse) => {
     setSelectedLesson(lesson)
     setSelectedTopic(topic)
     setDialogOpen(true)

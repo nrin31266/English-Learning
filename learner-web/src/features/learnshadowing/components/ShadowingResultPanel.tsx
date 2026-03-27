@@ -1,9 +1,8 @@
-
 import React, { useMemo } from "react"
 import { cn } from "@/lib/utils"
 import Alert from "@/components/Alert"
 import CircularProgressWithLabel from "@/components/CircularProgressWithLabelProps"
-import { Sparkles, Target } from "lucide-react"
+import { Sparkles, Target, Mic, BookOpen } from "lucide-react"
 import type { IShadowingResult, IShadowingWordCompare } from "@/types"
 
 /**
@@ -134,60 +133,61 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
   return (
     <div
       className={cn(
-        "mt-2 space-y-3 rounded-xl border bg-gradient-to-br from-muted/40 via-muted/20 to-primary/5 p-4 shadow-md",
+        "rounded-xl border bg-gradient-to-br from-muted/40 via-muted/20 to-primary/5 shadow-md",
         className
       )}
     >
-      {/* Header với icon - Thể hiện mức độ thành công */}
-      <div className="flex items-center gap-2 mb-2">
-        <div className="p-1.5 rounded-lg bg-primary/10">
-          {/* Icon thay đổi theo điểm: Sparkles nếu tốt, Target nếu cần cải thiện */}
-          {weightedAccuracy >= 85 ? (
-            <Sparkles className="h-4 w-4 text-green-600" />
-          ) : (
-            <Target className="h-4 w-4 text-primary" />
-          )}
+      {/* Header với icon - compact hơn */}
+      <div className="flex items-center justify-between border-b px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <div className="p-1 rounded-lg bg-primary/10">
+            {weightedAccuracy >= 85 ? (
+              <Sparkles className="h-3.5 w-3.5 text-green-600" />
+            ) : (
+              <Target className="h-3.5 w-3.5 text-primary" />
+            )}
+          </div>
+          <span className="text-xs font-semibold">Pronunciation Analysis</span>
         </div>
-        <span className="text-sm font-semibold">Pronunciation Analysis</span>
+        
+        {/* Score nhỏ gọn ở header */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-lg font-bold leading-none">
+            {weightedAccuracy.toFixed(0)}
+          </span>
+          <span className="text-[10px] text-muted-foreground">%</span>
+          <span className="text-[10px] text-muted-foreground mx-0.5">•</span>
+          <span className="text-[10px] text-muted-foreground">
+            {correctWords}/{totalWords}
+          </span>
+        </div>
       </div>
 
-      {/* Top section: Điểm số + Summary feedback */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Circular progress hiển thị điểm */}
-        <CircularProgressWithLabel
-          value={weightedAccuracy}
-          size="sm"
-          label="Pronunciation score"
-          helperText={`${correctWords}/${totalWords} exact · ${weightedAccuracy.toFixed(
-            1
-          )}% overall`}
-        />
-
-        {/* Alert box với feedback message */}
+      {/* Alert feedback - gọn hơn */}
+      <div className="px-4 pt-3">
         <Alert
           variant={alertVariant}
           size="sm"
           showIcon
           description={alertDescription}
-          className="sm:max-w-[320px]"
+          className="text-xs py-1.5"
         />
       </div>
 
-      {/* Chi tiết từng từ: Expected vs Recognized */}
-      <div className="space-y-3 text-xs">
-        {/* Section 1: Target sentence (câu mẫu cần đọc) */}
-        <div className="p-3 rounded-lg bg-background/50">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-            <Target className="h-3 w-3" />
-            Target sentence
+      {/* Chi tiết từng từ: Target vs Said - layout 2 cột ngang */}
+      <div className="grid grid-cols-2 gap-3 p-4 pt-2">
+        {/* Section 1: Target sentence */}
+        <div className="rounded-lg bg-background/50 p-2.5">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+            <BookOpen className="h-3 w-3" />
+            Target
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {/* Hiển thị từng từ với màu sắc theo status */}
+          <div className="flex flex-wrap gap-1">
             {expectedWordsWithClasses.map((c) => (
               <span
                 key={`exp-${c.position}`}
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-[11px] font-medium transition-all",
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium leading-relaxed transition-all",
                   c.chipClasses
                 )}
               >
@@ -197,19 +197,18 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
           </div>
         </div>
 
-        {/* Section 2: You said (những gì user thực sự đọc) */}
-        <div className="p-3 rounded-lg bg-background/50">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3" />
-            You said
+        {/* Section 2: You said */}
+        <div className="rounded-lg bg-background/50 p-2.5">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+            <Mic className="h-3 w-3" />
+            Said
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {/* Hiển thị từng từ user đọc với màu sắc theo status */}
+          <div className="flex flex-wrap gap-1">
             {recognizedWordsWithClasses.map((c) => (
               <span
                 key={`rec-${c.position}-${c.recognizedWord}`}
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[11px]",
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] leading-relaxed",
                   c.chipClasses
                 )}
               >

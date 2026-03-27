@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Spinner2 } from "@/components/ui/spinner2"
 import type {
-  ILLessonDetailsDto,
+  ILessonDetailsResponse,
   ITranscriptionResponse
 } from "@/types"
 import {
@@ -25,7 +25,7 @@ import ShadowingResultPanel from "./ShadowingResultPanel"
 
 interface ActiveSentencePanelProps {
   /** Lesson data chứa sentences */
-  lesson: ILLessonDetailsDto
+  lesson: ILessonDetailsResponse
   /** Index của câu đang active */
   activeIndex: number
   /** Callback khi click Prev button */

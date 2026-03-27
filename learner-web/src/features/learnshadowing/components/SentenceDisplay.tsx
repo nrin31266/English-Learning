@@ -1,5 +1,5 @@
 
-import type { ILLessonWord } from "@/types"
+import type { ILessonWordResponse } from "@/types"
 import React, { useMemo } from "react"
 
 /**
@@ -7,11 +7,11 @@ import React, { useMemo } from "react"
  */
 interface SentenceDisplayProps {
   /** Danh sách các từ trong câu (có orderIndex để sắp xếp) */
-  words?: ILLessonWord[]
+  words?: ILessonWordResponse[]
   /** Text hiển thị khi không có words (fallback) */
   fallbackText?: string
   /** Callback khi user click vào một từ - dùng để show modal chi tiết từ */
-  onWordClick?: (word: ILLessonWord) => void
+  onWordClick?: (word: ILessonWordResponse) => void
   /** Class CSS thêm vào cho container */
   className?: string
 }

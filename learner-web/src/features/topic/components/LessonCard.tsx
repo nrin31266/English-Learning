@@ -5,14 +5,14 @@ import LanguageLevelBadge from "@/components/LanguageLevel"
 import { Badge } from "@/components/ui/badge"
 import YouTubeTag from "@/components/YouTubeTag"
 import type {
-    ILHomeLessonResponse
+    IHomeLessonResponse
 } from "@/types"
 import { formatDuration } from "@/utils/timeUtils"
 import {
     Headphones
 } from "lucide-react"
 type LessonCardProps = {
-  lesson: ILHomeLessonResponse
+  lesson: IHomeLessonResponse
   onClick: () => void
 }
 

@@ -3,7 +3,7 @@ import { fetchLessonBySlug } from "@/store/lessonForShadowingSlide"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
-import type { ILLessonDetailsDto, ILLessonSentence } from "@/types"
+import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
 
 import {
   Breadcrumb,
@@ -66,7 +66,7 @@ const ShadowingMode = () => {
 
   const isLoading = status === "idle" || status === "loading"
 
-  const sentences: ILLessonSentence[] = useMemo(
+  const sentences: ILessonSentenceDetailsResponse[] = useMemo(
     () => lesson?.sentences ?? [],
     [lesson]
   )
@@ -255,7 +255,7 @@ const ShadowingMode = () => {
             {lesson.sourceType === "YOUTUBE" ? (
               <YouTubeShadowing
                 ref={playerRef}
-                lesson={lesson as ILLessonDetailsDto}
+                lesson={lesson as ILessonDetailsResponse}
                 currentSentence={currentSentence}
                 autoStop={autoStop}
                 largeVideo={largeVideo}
@@ -265,7 +265,7 @@ const ShadowingMode = () => {
             ) : (
               <AudioShadowing
                 ref={playerRef}
-                lesson={lesson as ILLessonDetailsDto}
+                lesson={lesson as ILessonDetailsResponse}
                 currentSentence={currentSentence}
                 autoStop={autoStop}
                 shouldAutoPlay={shouldAutoPlay}
