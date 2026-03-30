@@ -1,3 +1,4 @@
+import SkeletonComponent from "@/components/SkeletonComponent"
 import { Badge } from "@/components/ui/badge"
 import {
   Breadcrumb,
@@ -10,6 +11,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
+import { useAppDispatch, useAppSelector } from "@/store"
+import { cancelLessonGeneration, fetchLessonDetails, publishLesson, reloadLessonDetails, retryLessonGeneration, unpublishLesson, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
 import type { ILessonDetailsDto, ILessonProcessingStepNotifyEvent } from "@/types"
 import { formatDate, formatDuration } from "@/utils/timeUtils"
 import {
@@ -29,15 +33,10 @@ import React, { useEffect, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import DictationBadge from "../components/DictationBadge"
-import ProcessingSection from "../components/ProcessingSection"
-import ShadowingBadge from "../components/ShadowingBadge"
-import { useAppDispatch, useAppSelector } from "@/store"
-import { cancelLessonGeneration, fetchLessonDetails, publishLesson, reloadLessonDetails, retryLessonGeneration, unpublishLesson, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
-import SkeletonComponent from "@/components/SkeletonComponent"
-import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
-import SentencesTab from "../components/SentencesTab"
 import LessonSitting from "../components/LessonSitting"
-import { showNotification } from "@/store/system/notificationSlice"
+import ProcessingSection from "../components/ProcessingSection"
+import SentencesTab from "../components/SentencesTab"
+import ShadowingBadge from "../components/ShadowingBadge"
 
 // ───────────────────────────────────────────
 // Helpers
@@ -130,136 +129,6 @@ const renderStatusBadge = (status: ILessonDetailsDto["status"]) => {
     </Badge>
   )
 }
-
-
-
-// ───────────────────────────────────────────
-// Mock data để test UI
-// ───────────────────────────────────────────
-
-const mockLessonDetails: ILessonDetailsDto = {
-  id: 4,
-  topic: { id: 2, name: "Business English", slug: "business-english" },
-  title: "Giving a Project Status Update",
-  thumbnailUrl: "https://picsum.photos/seed/lesson-detail/640/320",
-  slug: "giving-a-project-status-update",
-  description: "Learn useful phrases and structures to give clear project status updates in English.",
-  lessonType: "AI_ASSISTED",
-  processingStep: "TRANSCRIBED",
-  languageLevel: "B2",
-  sourceType: "AUDIO_FILE",
-  sourceUrl: "https://cdn.example.com/audio/status-b2.mp3",
-  audioUrl: null,
-  sourceReferenceId: "file-4",
-  sourceLanguage: "en-UK",
-  durationSeconds: 240,
-  totalSentences: 22,
-  status: "PROCESSING",
-  aiJobId: "job-4",
-  aiMessage: null,
-  enableDictation: true,
-  enableShadowing: true,
-  createdAt: "2025-11-18T12:00:00.000Z",
-  updatedAt: "2025-11-18T12:30:00.000Z",
-  publishedAt: null,
-  sentences: [
-    {
-      id: 1,
-      lessonId: 4,
-      orderIndex: 1,
-      textRaw: "Hi everyone, thanks for joining the meeting today.",
-      textDisplay: "Hi everyone, thanks for joining the meeting today.",
-      translationVi: "Chào mọi người, cảm ơn đã tham gia buổi họp hôm nay.",
-      phoneticUk: null,
-      phoneticUs: null,
-      audioStartMs: 0,
-      audioEndMs: 3200,
-      audioSegmentUrl: null,
-      aiMetadataJson: null,
-      isActive: true,
-      createdAt: "2025-11-18T12:00:00.000Z",
-      updatedAt: "2025-11-18T12:00:00.000Z",
-      lessonWords: [
-        {
-          id: 11,
-          sentenceId: 1,
-          orderIndex: 1,
-          wordText: "Hi",
-          wordLower: "hi",
-          wordNormalized: "hi",
-          wordSlug: "hi",
-          startCharIndex: 0,
-          endCharIndex: 2,
-          audioStartMs: 0,
-          audioEndMs: 400,
-          isPunctuation: false,
-          isClickable: true,
-          createdAt: "2025-11-18T12:00:00.000Z",
-          updatedAt: "2025-11-18T12:00:00.000Z",
-        },
-        {
-          id: 12,
-          sentenceId: 1,
-          orderIndex: 2,
-          wordText: "everyone,",
-          wordLower: "everyone,",
-          wordNormalized: "everyone",
-          wordSlug: "everyone",
-          startCharIndex: 3,
-          endCharIndex: 12,
-          audioStartMs: 400,
-          audioEndMs: 1000,
-          isPunctuation: false,
-          isClickable: true,
-          createdAt: "2025-11-18T12:00:00.000Z",
-          updatedAt: "2025-11-18T12:00:00.000Z",
-        },
-      ],
-    },
-    {
-      id: 2,
-      lessonId: 4,
-      orderIndex: 2,
-      textRaw: "Today I'll give you a quick update on our marketing project.",
-      textDisplay: "Today I'll give you a quick update on our marketing project.",
-      translationVi: "Hôm nay tôi sẽ cập nhật nhanh cho mọi người về dự án marketing.",
-      phoneticUk: null,
-      phoneticUs: null,
-      audioStartMs: 3300,
-      audioEndMs: 7100,
-      audioSegmentUrl: null,
-      aiMetadataJson: null,
-      isActive: true,
-      createdAt: "2025-11-18T12:00:00.000Z",
-      updatedAt: "2025-11-18T12:00:00.000Z",
-      lessonWords: [],
-    },
-    {
-      id: 3,
-      lessonId: 4,
-      orderIndex: 3,
-      textRaw: "Overall, the project is slightly behind schedule but still on track for launch next month.",
-      textDisplay:
-        "Overall, the project is slightly behind schedule but still on track for launch next month.",
-      translationVi:
-        "Nhìn chung, dự án hơi chậm so với kế hoạch nhưng vẫn đúng tiến độ để ra mắt vào tháng sau.",
-      phoneticUk: null,
-      phoneticUs: null,
-      audioStartMs: 7200,
-      audioEndMs: 13000,
-      audioSegmentUrl: null,
-      aiMetadataJson: null,
-      isActive: true,
-      createdAt: "2025-11-18T12:00:00.000Z",
-      updatedAt: "2025-11-18T12:00:00.000Z",
-      lessonWords: [],
-    },
-  ],
-}
-
-
-
-
 
 
 // ───────────────────────────────────────────
@@ -549,7 +418,7 @@ const LessonDetails: React.FC = () => {
                   </Button>
                   <Button className="bg-orange-500 hover:bg-orange-600 text-white hover:text-white" onClick={() => {
                     dispatch(retryLessonGeneration({ id: data.id, isRestart: true }));
-                  }} disabled={(data.status !== "ERROR" && data.status !== "DRAFT") || data.publishedAt != null || mutationStatus === "loading"} size="sm" variant="outline">
+                  }} disabled={data.publishedAt != null || mutationStatus === "loading"} size="sm" variant="outline">
                     {
                       mutationStatus === "loading" && mutationType === "re-try" &&
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

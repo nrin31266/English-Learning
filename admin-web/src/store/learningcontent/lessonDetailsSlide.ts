@@ -12,6 +12,7 @@ import type {
   ILessonMinimalDto,
   ILessonDto,
   IEditLessonPayload,
+  ILessonSentence,
 } from "@/types";
 import handleAPI from "@/apis/handleAPI";
 import { extractError } from "@/utils/reduxUtils";
@@ -19,7 +20,7 @@ import { extractError } from "@/utils/reduxUtils";
 interface LessonDetailsState {
   lessonDetails: IAsyncState<ILessonDetailsDto | null>;
   lessonDetailsMutation: IAsyncState<null> & { type: "re-try" | "stop-ai-processing" | "publish" | "update" | "delete" | null };
-  sentenceMutation: IAsyncState<string | null> & { type: "mark-active-inactive" | null };
+  sentenceMutation: IAsyncState<string | null> & { type: "mark-active-inactive" | null | "split" | "concat" };
 }
 const initialState: LessonDetailsState = {
   lessonDetails: {
@@ -73,7 +74,7 @@ export const reloadLessonDetails = createAsyncThunk(
 
 export const retryLessonGeneration = createAsyncThunk(
   "lessons/retryLessonGeneration",
-  async ({ id , isRestart }: { id: number, isRestart: boolean }, { rejectWithValue }) => {
+  async ({ id, isRestart }: { id: number, isRestart: boolean }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonMinimalDto>({
         endpoint: `/learning-contents/admin/lessons/${id}/retrial`,
@@ -182,13 +183,34 @@ export const markSentenceActiveInactive = createAsyncThunk(
     }
   }
 );
+//  @PostMapping("/{id}/split")
+//     public ApiResponse<List<LessonSentenceDetailsResponse>> splitSentence(
+//             @PathVariable Long id,
+//             @RequestBody SplitSentenceRequest request) {
+//         return ApiResponse.success(sentenceService.splitSentence(id, request));
+//     }
+export const splitSentence = createAsyncThunk(
+  "lessons/splitSentence",
+  async ({ id, data }: { id: number, data: any }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<ILessonSentence[]>({
+        endpoint: `/learning-contents/admin/sentences/${id}/split`,
+        method: "POST",
+        isAuth: true,
+        body: data,
+      });
+      return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  });
 
 
 export const lessonDetailsSlice = createSlice({
   name: "lessonDetails",
   initialState,
   reducers: {
-     updateLessonDetailsFromProcessingEvent: (
+    updateLessonDetailsFromProcessingEvent: (
       state,
       action: PayloadAction<ILessonProcessingStepNotifyEvent>
     ) => {
@@ -198,8 +220,8 @@ export const lessonDetailsSlice = createSlice({
 
       const lesson = state.lessonDetails.data;
       // update core fields từ event
-      if(lesson.id !== lessonId) return;
-      if(processingStep !== "FAILED"){
+      if (lesson.id !== lessonId) return;
+      if (processingStep !== "FAILED") {
         lesson.processingStep = processingStep;
       }
       if (aiJobId) lesson.aiJobId = aiJobId;
@@ -242,7 +264,7 @@ export const lessonDetailsSlice = createSlice({
       })
       .addCase(retryLessonGeneration.fulfilled, (state, action) => {
         state.lessonDetailsMutation.status = "succeeded";
-        if(state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id){
+        if (state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id) {
           state.lessonDetails.data.processingStep = "PROCESSING_STARTED";
           state.lessonDetails.data.status = "PROCESSING";
           state.lessonDetails.data.aiMessage = "AI generation has been retried.";
@@ -259,7 +281,7 @@ export const lessonDetailsSlice = createSlice({
       })
       .addCase(cancelLessonGeneration.fulfilled, (state, action) => {
         state.lessonDetailsMutation.status = "succeeded";
-        if(state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id){
+        if (state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id) {
           // state.lessonDetails.data.processingStep = "NONE";
           state.lessonDetails.data.status = "DRAFT";
           state.lessonDetails.data.aiMessage = "AI generation has been cancelled.";
@@ -285,7 +307,7 @@ export const lessonDetailsSlice = createSlice({
       })
       .addCase(publishLesson.fulfilled, (state, action) => {
         state.lessonDetailsMutation.status = "succeeded";
-        if(state.lessonDetails.data && state.lessonDetails.data.id === action.meta.arg.id){
+        if (state.lessonDetails.data && state.lessonDetails.data.id === action.meta.arg.id) {
           state.lessonDetails.data.publishedAt = new Date().toLocaleString();
         }
       })
@@ -300,7 +322,7 @@ export const lessonDetailsSlice = createSlice({
       })
       .addCase(unpublishLesson.fulfilled, (state, action) => {
         state.lessonDetailsMutation.status = "succeeded";
-        if(state.lessonDetails.data && state.lessonDetails.data.id === action.meta.arg.id){
+        if (state.lessonDetails.data && state.lessonDetails.data.id === action.meta.arg.id) {
           state.lessonDetails.data.publishedAt = null;
         }
       })
@@ -315,7 +337,7 @@ export const lessonDetailsSlice = createSlice({
       })
       .addCase(updateLesson.fulfilled, (state, action) => {
         state.lessonDetailsMutation.status = "succeeded";
-        if(state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id){
+        if (state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id) {
           state.lessonDetails.data.title = action.payload.title;
           state.lessonDetails.data.description = action.payload.description;
           state.lessonDetails.data.languageLevel = action.payload.languageLevel;
@@ -352,9 +374,9 @@ export const lessonDetailsSlice = createSlice({
         state.sentenceMutation.status = "succeeded";
         const sentenceId = action.meta.arg.id;
         const isActive = action.meta.arg.active;
-        if(state.lessonDetails.data){
+        if (state.lessonDetails.data) {
           const sentence = state.lessonDetails.data.sentences.find(s => s.id === sentenceId);
-          if(sentence){
+          if (sentence) {
             sentence.isActive = isActive;
           }
         }
@@ -363,9 +385,35 @@ export const lessonDetailsSlice = createSlice({
         state.sentenceMutation.status = "failed";
         state.sentenceMutation.error = action.payload as IErrorState;
       })
-      ;
+      .addCase(splitSentence.pending, (state, action) => {
+        state.sentenceMutation.status = "loading";
+        state.sentenceMutation.error = { code: null, message: null };
+        state.sentenceMutation.type = "split";
+        state.sentenceMutation.data = action.meta.arg.id.toString();
+      })
+      .addCase(splitSentence.fulfilled, (state, action) => {
+        state.sentenceMutation.status = "succeeded";
+        const sentenceId = action.meta.arg.id;
+        if (state.lessonDetails.data) {
+          const sentenceIndex = state.lessonDetails.data.sentences.findIndex(s => s.id === sentenceId);
+          if (sentenceIndex !== -1) {
+            state.lessonDetails.data.sentences.splice(sentenceIndex, 1, ...action.payload);
+            // Tăng orderIndex các câu phía sau 2 câu mới insert
+            const afterIndex = sentenceIndex + action.payload.length;
+            for (let i = afterIndex; i < state.lessonDetails.data.sentences.length; i++) {
+              state.lessonDetails.data.sentences[i].orderIndex += 1;
+            }
+            
+            state.lessonDetails.data.totalSentences = (state.lessonDetails.data.totalSentences ?? 0) + 1;
+          }
+        }
+      })
+      .addCase(splitSentence.rejected, (state, action) => {
+        state.sentenceMutation.status = "failed";
+        state.sentenceMutation.error = action.payload as IErrorState;
+      })
   },
 });
 
-export const { updateLessonDetailsFromProcessingEvent} = lessonDetailsSlice.actions;
+export const { updateLessonDetailsFromProcessingEvent } = lessonDetailsSlice.actions;
 export default lessonDetailsSlice.reducer;

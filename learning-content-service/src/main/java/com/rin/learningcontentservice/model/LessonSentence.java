@@ -64,10 +64,6 @@ public class LessonSentence {
     @Column(name = "audio_segment_url", length = 500)
     private String audioSegmentUrl;
 
-    // ───────────────────────────────────────────
-    // DEBUG / RAW AI RESPONSE
-    @Column(name = "ai_metadata_json", columnDefinition = "TEXT")
-    private String aiMetadataJson;
 
     // ───────────────────────────────────────────
     // VISIBILITY

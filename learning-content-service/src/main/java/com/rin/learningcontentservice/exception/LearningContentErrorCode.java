@@ -16,7 +16,9 @@ public enum LearningContentErrorCode implements ErrorCode {
     AI_JOB_CREATION_FAILED (1006, "Failed to create AI job for lesson id: %s", HttpStatus.INTERNAL_SERVER_ERROR),
     SENTENCE_NOT_FOUND(1007, "Sentence not found with id: %s", HttpStatus.NOT_FOUND),
     AI_METADATA_FETCH_FAILED(1008, "Failed to fetch AI metadata with url: %s", HttpStatus.INTERNAL_SERVER_ERROR),
-    INVALID_STATE(1009, "Invalid state for lesson with id: %s. Expected state: %s", HttpStatus.BAD_REQUEST)
+    INVALID_STATE(1009, "Invalid state for lesson with id: %s. Expected state: %s", HttpStatus.BAD_REQUEST),
+
+    WORD_NOT_FOUND(1010, "Word not found with id: %s", HttpStatus.NOT_FOUND)
     ;
 
 

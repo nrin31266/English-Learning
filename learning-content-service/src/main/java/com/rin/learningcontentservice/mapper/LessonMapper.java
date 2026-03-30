@@ -8,6 +8,7 @@ import com.rin.learningcontentservice.dto.response.LessonSummaryResponse;
 import com.rin.learningcontentservice.dto.response.LessonResponse;
 import com.rin.learningcontentservice.model.Lesson;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
@@ -19,6 +20,7 @@ public interface LessonMapper {
     LessonResponse toLessonResponse(Lesson lesson);
 
     HomeLessonResponse  toHomeLessonResponse(Lesson lesson);
+
 
     LessonDetailsResponse toLessonDetailsResponse(Lesson lesson);
 

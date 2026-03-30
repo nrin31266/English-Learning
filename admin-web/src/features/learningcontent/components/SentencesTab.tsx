@@ -3,29 +3,34 @@ import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
-import type { ILessonDetailsDto } from "@/types"
+import type { ILessonDetailsDto, ILessonSentence } from "@/types"
 import { Headphones, Eye, Pencil, Minimize, Maximize } from "lucide-react"
 import { useMemo, useState } from "react"
 import SentenceItem from "./SentenceItem" // chỉnh path cho đúng
+import SplitSentenceDialog from "./SplitSentenceDialog"
+
 
 const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
   const { t } = useTranslation()
   const [mode, setMode] = useState<"view" | "edit">("view")
   const [viewMode, setViewMode] = useState<"minimal" | "detailed">("minimal")
+  const [openSplitDialog, setOpenSplitDialog] = useState(false)
+  const [selectedSentence, setSelectedSentence] = useState<ILessonSentence | null>(null)
 
-  const orderIndexFiltered = useMemo(() => {
-    if (!lesson.sentences) return []
-    return lesson.sentences
-      .map((s, index) => ({ ...s, originalIndex: index }))
-      .sort((a, b) => (a.audioStartMs ?? 0) - (b.audioStartMs ?? 0))
-      .map((s) => s.originalIndex)
-  }, [lesson.sentences])
+
 
   const toggleMode = () => {
     setMode((prev) => (prev === "view" ? "edit" : "view"))
   }
 
-  return (
+  const handleSplitSentence = (sentenceId: number) => {
+    const sentence = lesson.sentences?.find((s) => s.id === sentenceId) || null
+    setSelectedSentence(sentence)
+    setOpenSplitDialog(true)
+  }
+  
+
+  return (    
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
         <div>
@@ -79,10 +84,9 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
       <CardContent className="h-[480px] p-0">
         <ScrollArea className="h-full px-4">
           <div className="divide-y">
-            {orderIndexFiltered && orderIndexFiltered.length > 0 ? (
-              orderIndexFiltered.map((index) => {
-                const s = lesson.sentences[index]
-                return <SentenceItem  key={s.id} sentence={s} mode={mode} viewMode={viewMode} />
+            {lesson.sentences && lesson.sentences.length > 0 ? (
+              lesson.sentences.map((s) => {
+                return <SentenceItem  key={s.id} sentence={s} mode={mode} viewMode={viewMode} onSplitSentence={handleSplitSentence} />
               })
             ) : (
               <div className="py-6 text-center text-sm text-muted-foreground">
@@ -92,6 +96,11 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
           </div>
         </ScrollArea>
       </CardContent>
+
+      <SplitSentenceDialog open={openSplitDialog} onClose={() => {
+        setOpenSplitDialog(false);
+        setSelectedSentence(null);
+      }} sentence={selectedSentence} />
     </Card>
   )
 }

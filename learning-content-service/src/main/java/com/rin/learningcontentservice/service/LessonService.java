@@ -158,17 +158,11 @@ public class LessonService {
         var ld = lessonMapper.toLessonDetailsResponse(lesson);
         ld.setSentences(
                 ld.getSentences().stream()
+                        .filter(s -> s.getIsActive() != null && s.getIsActive())
                         .sorted(Comparator.comparing(LessonSentenceDetailsResponse::getOrderIndex))
                         .toList()
         );
 
-        // Remove sentence isActive = false
-        ld.setSentences(
-                ld.getSentences().stream().filter(
-                        s -> s.getIsActive() != null && s.getIsActive()
-                )
-                        .toList()
-        );
 
         return ld;
     }
