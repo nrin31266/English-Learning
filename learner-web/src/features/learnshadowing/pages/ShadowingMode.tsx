@@ -27,7 +27,7 @@ import {
 import AudioFileTag from "@/components/AudioFileTag"
 import LanguageLevelBadge from "@/components/LanguageLevel"
 import YouTubeTag from "@/components/YouTubeTag"
-import ActiveSentencePanel from "../components/ActiveSentencePanel"; 
+import ActiveSentencePanel from "../components/ActiveSentencePanel";
 import AudioShadowing from "../components/AudioShadowing"
 import KeyboardShortcutsHelp from "../components/KeyboardShortcutsHelp"
 import type { ShadowingPlayerRef } from "../types/types"
@@ -53,6 +53,7 @@ const ShadowingMode = () => {
 
   const playerRef = useRef<ShadowingPlayerRef | null>(null)
   const [playbackRate, setPlaybackRate] = useState<number>(1.0)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   useEffect(() => {
     if (slug) {
@@ -274,6 +275,8 @@ const ShadowingMode = () => {
                 shouldAutoPlay={shouldAutoPlay}
                 onUserInteracted={setUserInteracted}
                 playbackRate={playbackRate}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
               />
             )}
 
@@ -313,7 +316,7 @@ const ShadowingMode = () => {
                   className="h-7 gap-2 px-2 text-xs"
                   onClick={() => setShowHelp(true)}
                 >
-                  <Keyboard className=""/>
+                  <Keyboard className="" />
                   Shortcuts
                 </Button>
                 {/* <Button
@@ -325,25 +328,25 @@ const ShadowingMode = () => {
                 <span>{playbackRate?.toFixed(1) || "1.0"}x</span>
                 </Button> */}
                 <DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button variant="outline" className="h-7 text-[14px]"><Volume2 className="h-4 w-4" />
-                <span>{playbackRate?.toFixed(2) || "1.0"}x</span></Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuGroup>
-      <DropdownMenuLabel>Playback Speed</DropdownMenuLabel>
-      <DropdownMenuItem onSelect={() => setPlaybackRate(1)}>
-        Normal (1.0x)
-      </DropdownMenuItem>
-      {[0.5, 0.75, 1.25, 1.5, 2].map((speed) => (
-        <DropdownMenuItem key={speed} onSelect={() => setPlaybackRate(speed)}>
-          {speed.toFixed(2)}x
-        </DropdownMenuItem>
-      ))}
-      
-    </DropdownMenuGroup>
-  </DropdownMenuContent>
-</DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-7 text-[14px]"><Volume2 className="h-4 w-4" />
+                      <span>{playbackRate?.toFixed(2) || "1.0"}x</span></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel>Playback Speed</DropdownMenuLabel>
+                      <DropdownMenuItem onSelect={() => setPlaybackRate(1)}>
+                        Normal (1.0x)
+                      </DropdownMenuItem>
+                      {[0.5, 0.75, 1.25, 1.5, 2].map((speed) => (
+                        <DropdownMenuItem key={speed} onSelect={() => setPlaybackRate(speed)}>
+                          {speed.toFixed(2)}x
+                        </DropdownMenuItem>
+                      ))}
+
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
@@ -357,6 +360,7 @@ const ShadowingMode = () => {
               onPlay={handlePlay}
               onPause={handlePause}
               userInteracted={userInteracted}
+              isPlaying={isPlaying}
             />
             {/* Keyboard Shortcuts Dialog */}
             <KeyboardShortcutsHelp

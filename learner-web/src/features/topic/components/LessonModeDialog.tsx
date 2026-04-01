@@ -135,36 +135,7 @@ const LessonModeDialog = ({
                   </button>
                 )}
 
-                {/* Listening (always) */}
-                <button
-                  type="button"
-                  onClick={() => onNavigate("listening")}
-                  className={[
-                    "w-full rounded-xl border p-4 text-left transition",
-                    "bg-gradient-to-r from-sky-500/15 via-cyan-500/10 to-transparent",
-                    "hover:border-sky-500/40 hover:shadow-sm",
-                  ].join(" ")}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/15 text-sky-700">
-                      <Headphones className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-semibold">Listening</div>
-                        <Badge
-                          variant="outline"
-                          className="border-sky-500/30 bg-sky-500/10 text-sky-800"
-                        >
-                          Classic
-                        </Badge>
-                      </div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        Standard listening with transcript.
-                      </div>
-                    </div>
-                  </div>
-                </button>
+               
               </div>
             </div>
 

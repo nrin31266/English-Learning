@@ -39,7 +39,9 @@ interface ActiveSentencePanelProps {
   /** Callback khi click Pause button */
   onPause: () => void
   /** User đã tương tác với media player chưa */
-  userInteracted?: boolean
+  userInteracted?: boolean,
+
+  isPlaying: boolean
 }
 
 /**
@@ -54,6 +56,7 @@ const ActiveSentencePanel = ({
   onPause,
   lesson,
   userInteracted = false,
+  isPlaying,
 }: ActiveSentencePanelProps) => {
   // ========== RECORDING STATE ==========
   /** Đang ghi âm */
@@ -164,18 +167,7 @@ const ActiveSentencePanel = ({
     })
   }
   
-  /**
-   * Effect: Play feedback sound khi có transcription MỚI
-   * Logic:
-   * - Chỉ play khi transcription.id thay đổi
-   * - Track bằng lastTranscriptionRef để tránh play lại
-   * - Điểm >= 85: success sound
-   * - Điểm < 85: fail sound
-   * 
-   * Dependencies: [transcription?.id]
-   * - Chỉ listen theo ID, không theo toàn bộ object
-   * - Tránh trigger khi transcription object re-create nhưng data giống nhau
-   */
+
   useEffect(() => {
     if (!transcription?.id) return
     
@@ -192,14 +184,6 @@ const ActiveSentencePanel = ({
 
   /**
    * Effect: Reset state khi đổi câu
-   * Reset:
-   * - Recording states
-   * - Recorded audio
-   * - Upload state
-   * - Errors
-   * - Transcription
-   * 
-   * Revoke object URL để free memory
    */
   useEffect(() => {
     // Reset khi đổi câu
@@ -537,21 +521,14 @@ const ActiveSentencePanel = ({
             >
               <RotateCcw className="h-4 w-4" />
             </Button>
-            <Button 
-              size="icon" 
-              className="shadow" 
-              onClick={onPlay}
-              disabled={!userInteracted}
-            >
-              <Play className="h-4 w-4" />
-            </Button>
+
             <Button 
               size="icon" 
               variant="outline" 
-              onClick={onPause}
+              onClick={isPlaying ? onPause : onPlay}
               disabled={!userInteracted}
             >
-              <Pause className="h-4 w-4" />
+              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
             <Button
               size="icon"
@@ -667,12 +644,12 @@ const ActiveSentencePanel = ({
           </div>
         </div>
 
-        {/* Shadowing result UI - memoized */}
+      
         <div className="w-full">
           {shadowing && <ShadowingResultPanel result={shadowing} />}
         </div>
 
-        {/* Hidden audio element để play bản ghi */}
+      
         <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
       </div>
     </ScrollArea>

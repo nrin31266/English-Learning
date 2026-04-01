@@ -15,6 +15,8 @@ type AudioShadowingProps = {
   shouldAutoPlay?: boolean
   onUserInteracted?: (interacted: boolean) => void,
   playbackRate?: number
+  isPlaying: boolean
+  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 const formatTime = (secs: number) => {
@@ -26,17 +28,20 @@ const formatTime = (secs: number) => {
 const START_PADDING = 0.1
 const END_PADDING = 0.05
 const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
-  ({ lesson, currentSentence, autoStop, shouldAutoPlay = false, onUserInteracted, playbackRate }, ref) => {
+  ({ lesson, currentSentence, autoStop, shouldAutoPlay = false, onUserInteracted, playbackRate, isPlaying, setIsPlaying }, ref) => {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const isPlayingRef = useRef(false)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
-    const [isPlaying, setIsPlaying] = useState(false)
+    
     const [userInteracted, setUserInteracted] = useState(false)
     const stopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Ưu tiên audioUrl của lesson, fallback về audioSegmentUrl của câu
     const src = lesson.audioUrl || currentSentence?.audioSegmentUrl || ""
+
+
+   
 
     // Setup audio event listeners + auto-stop khi đến audioEndMs
     useEffect(() => {
