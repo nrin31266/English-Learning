@@ -8,6 +8,7 @@ const HomePage = () => <div>Home Page</div>
 const TopicsPage = lazy(() => import('@/features/topic/pages/Topics'))
 const TopicsDetailsPage = lazy(() => import('@/features/topic/pages/TopicDetails'))
 const ShadowingModePage = lazy(() => import('@/features/learnshadowing/pages/ShadowingMode'))
+const DictationModePage = lazy(() => import('@/features/learndictation/pages/DictationMode'))
 const DictionaryPage = () => <div>Dictionary Page</div>
 const ReviewPage = () => <div>Review Page</div>
 const SettingsPage = () => <div>Settings Page</div>
@@ -38,6 +39,10 @@ const router = createBrowserRouter([
       {
         path: "/learn/lessons/:slug/shadowing",
         element: withSuspense(<ShadowingModePage />),
+      },
+      {
+        path: "/learn/lessons/:slug/dictation",
+        element: withSuspense(<DictationModePage />),
       },
       {
         path: "/dictionary",

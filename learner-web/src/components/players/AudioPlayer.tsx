@@ -281,7 +281,7 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
     }
 
     return (
-      <div className="w-full rounded-xl border bg-gradient-to-br from-card via-card to-primary/5 px-4 py-3 relative shadow-sm">
+      <div className="w-full rounded-xl bg-gradient-to-br from-card via-card to-primary/5 px-4 py-3 relative ">
         <audio ref={audioRef} src={src} preload="metadata" />
 
         <div className="flex items-center gap-2 mb-2">
@@ -300,11 +300,11 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
           </span>
 
           <div
-            className="relative flex-1 cursor-pointer rounded-full bg-muted/70 hover:bg-muted transition-colors"
+            className="relative flex-1 border cursor-pointer rounded-full bg-muted/70 hover:bg-muted transition-colors"
             onClick={handleSeek}
           >
             <div
-              className="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all shadow-sm"
+              className="h-1.5 rounded-full  bg-gradient-to-r from-primary to-primary/60 transition-all shadow-sm"
               style={{ width: `${progress}%` }}
             />
             {isPlaying && (

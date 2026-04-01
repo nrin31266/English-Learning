@@ -242,7 +242,7 @@ const opts: YouTubeProps["opts"] = {
     }
 
     return (
-      <div className="w-full rounded-xl border bg-black relative shadow-lg overflow-hidden">
+      <div className="w-full rounded-t-xl border bg-black relative shadow-lg overflow-hidden">
         <YouTube
           videoId={videoId}
           opts={opts}

@@ -88,7 +88,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
     }
     
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex border rounded-2xl flex-col shadow gap-3 w-full">
         {/* Media Player - tự động chọn dựa trên sourceType */}
         {lesson.sourceType === "YOUTUBE" ? (
           <YouTubePlayer

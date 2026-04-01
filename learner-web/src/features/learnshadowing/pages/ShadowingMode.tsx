@@ -3,7 +3,7 @@ import { fetchLessonBySlug } from "@/store/lessonForShadowingSlide"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
-import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
+import type { ILessonSentenceDetailsResponse } from "@/types"
 
 import {
   Breadcrumb,
@@ -16,8 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import {
   ArrowLeft,
-  Keyboard,
-  Loader2,
+  Loader2
 } from "lucide-react"
 
 import AudioFileTag from "@/components/AudioFileTag"
@@ -25,10 +24,10 @@ import LanguageLevelBadge from "@/components/LanguageLevel"
 import YouTubeTag from "@/components/YouTubeTag"
 import ActiveSentencePanel from "../components/ActiveSentencePanel"
 
+import KeyboardShortcutsHelp from "@/components/players/KeyboardShortcutsHelp"
+import Player from "@/components/players/Player"
 import type { PlayerRef } from "@/components/players/types/types"
 import ShadowingTranscript from "../components/ShadowingTranscript"
-import Player from "@/components/players/Player"
-import KeyboardShortcutsHelp from "@/components/players/KeyboardShortcutsHelp"
 
 const ShadowingMode = () => {
   const { slug } = useParams<{ slug: string }>()
@@ -40,8 +39,6 @@ const ShadowingMode = () => {
 
   const [autoStop, setAutoStop] = useState(true)
   const [largeVideo, setLargeVideo] = useState(false)
-  const [showTranscript, setShowTranscript] = useState(true)
-
   const [activeIndex, setActiveIndex] = useState(0)
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false)
   const [userInteracted, setUserInteracted] = useState(false)
@@ -49,6 +46,9 @@ const ShadowingMode = () => {
   const playerRef = useRef<PlayerRef | null>(null)
   const [playbackRate, setPlaybackRate] = useState<number>(1.0)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [showTranscript, setShowTranscript] = useState(true)
+
+  
 
   useEffect(() => {
     if (slug) {
@@ -72,7 +72,7 @@ const ShadowingMode = () => {
   const currentSentence = sentences[activeIndex]
 
   const handlePrev = useCallback(() => {
-    setShouldAutoPlay(false)
+    setShouldAutoPlay(true)
     setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev))
   }, [])
 

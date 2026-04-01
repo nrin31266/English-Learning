@@ -1,6 +1,6 @@
 
 import * as React from "react"
-import { BookA, CircleCheckIcon, CircleHelpIcon, CircleIcon, Notebook } from "lucide-react"
+import { BookA, CircleCheckIcon, CircleHelpIcon, CircleIcon, Notebook, Menu } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import {
   NavigationMenu,
@@ -10,47 +10,68 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
+
 } from "@/components/ui/navigation-menu"
 import { Link, useLocation } from "react-router-dom"
 
 const HeadNav = () => {
-    const isMobile = useIsMobile();
-    const pn = useLocation().pathname;
+  const isMobile = useIsMobile();
+  const pn = useLocation().pathname;
+  const [open, setOpen] = React.useState(false)
+
+
+
   return (
     <NavigationMenu viewport={isMobile} className="relative flex gap-2">
-             {/* Logo / Brand */}
-        <Link to="/" className="flex items-center gap-2">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
-            EN
-          </span>
-          <span className="hidden sm:inline text-base font-semibold">
-            English Learning
-          </span>
-        </Link>
-      <NavigationMenuList className={`${isMobile ? 'p-4 top-6 absolute flex flex-wrap border rounded-md shadow bg-background z-20 justify-start ' : ''} `}>
+      {/* Logo / Brand */}
+      <Link to="/" className="flex items-center gap-2">
+        <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
+          EN
+        </span>
+        <span className="hidden sm:inline text-base font-semibold">
+          English Learning
+        </span>
+      </Link>
+      {isMobile && (
+        <button
+          className="ml-auto p-2 transition-transform duration-300"
+          onClick={() => setOpen(prev => !prev)}
+        >
+          <Menu className={`${open ? 'rotate-45' : 'rotate-0'} transition-transform duration-300`} />
+        </button>
+      )}
+     <NavigationMenuList
+  className={`${isMobile
+    ? `p-4 top-6 -left-12 absolute flex flex-col min-w-16 border rounded-md shadow bg-background z-20 
+      transition-all duration-300 ease-out
+      justify-start items-start
+      ${open 
+        ? 'opacity-100 translate-y-0 pointer-events-auto' 
+        : 'opacity-0 -translate-y-2 pointer-events-none'
+      }`
+    : 'justify-start'
+  }`}
+>
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link to="/topics" className={`flex flex-wrap ${
-                pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'font-bold! text-white! bg-primary!' : ''
-            }`}><div><Notebook className={`
+            <Link onClick={() => setOpen(false)} to="/topics" className={`flex flex-wrap ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'font-bold! text-white! bg-primary!' : ''
+              }`}><div><Notebook className={`
                 ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'text-white' : 'text-muted-foreground'}
-            `}/></div> Topics</Link>
+            `} /></div> Topics</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link to="/dictionary" className={`flex flex-wrap ${
-                pn.startsWith('/dictionary') ? 'font-bold! text-white! bg-primary!' : ''
-            }`}><div><BookA className={`
+            <Link onClick={() => setOpen(false)} to="/dictionary" className={`flex flex-wrap ${pn.startsWith('/dictionary') ? 'font-bold! text-white! bg-primary!' : ''
+              }`}><div><BookA className={`
                 ${pn.startsWith('/dictionary') ? 'text-white' : 'text-muted-foreground'}
-            `}/></div> Dictionary</Link>
+            `} /></div> Dictionary</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem>
-          <NavigationMenuLink  asChild className={navigationMenuTriggerStyle()}>
-            <Link to="/review" className={`flex flex-wrap ${
-                pn.startsWith('/review') ? 'font-bold! text-white! bg-primary!' : ''
-            }`}>Review</Link>
+          <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+            <Link onClick={() => setOpen(false)} to="/review" className={`flex flex-wrap ${pn.startsWith('/review') ? 'font-bold! text-white! bg-primary!' : ''
+              }`}>Review</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem >
@@ -61,7 +82,7 @@ const HeadNav = () => {
             <ul className="grid w-[300px] gap-4">
               <li>
                 <NavigationMenuLink asChild>
-                  <Link to="/settings">
+                  <Link onClick={() => setOpen(false)} to="/settings">
                     <div className="font-medium">Settings</div>
                     <div className="text-muted-foreground">
                       Browse all settings in the library.
@@ -69,15 +90,15 @@ const HeadNav = () => {
                   </Link>
                 </NavigationMenuLink>
                 <NavigationMenuLink asChild>
-                  <Link to="/documentation">
+                  <Link onClick={() => setOpen(false)} to="/documentation">
                     <div className="font-medium">Documentation</div>
                     <div className="text-muted-foreground">
-                        Learn how to use the components in your project.
+                      Learn how to use the components in your project.
                     </div>
                   </Link>
                 </NavigationMenuLink>
                 <NavigationMenuLink asChild>
-                  <Link to="#">
+                  <Link onClick={() => setOpen(false)} to="#">
                     <div className="font-medium">Blog</div>
                     <div className="text-muted-foreground">
                       Read our latest blog posts.
