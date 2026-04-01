@@ -7,10 +7,10 @@ import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/t
 import type { ShadowingPlayerRef } from "../types/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Play, Video } from "lucide-react"
+import { Play, Pause, Video } from "lucide-react"
 
-
-const PADDING_SEC = 0
+const START_PADDING = 0.1
+const END_PADDING = 0.05
 
 type YouTubeShadowingProps = {
   lesson: ILessonDetailsResponse
@@ -19,17 +19,20 @@ type YouTubeShadowingProps = {
   largeVideo: boolean
   shouldAutoPlay?: boolean
   onUserInteracted?: (interacted: boolean) => void
+  playbackRate?: number
+  isPlaying: boolean
+  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
-  ({ lesson, currentSentence, autoStop, largeVideo, shouldAutoPlay = false, onUserInteracted }, ref) => {
-    const playerRef = useRef<any>(null)
-    // Dùng interval thay vì timeout để tránh race condition với seekTo
-    const intervalRef = useRef<number | null>(null)
-    const [isReady, setIsReady] = useState(false)
-    const [userInteracted, setUserInteracted] = useState(false)
+  ({ lesson, currentSentence, autoStop, largeVideo, shouldAutoPlay = false, onUserInteracted, playbackRate, isPlaying, setIsPlaying }, ref) => {
 
-    // Parse videoId từ youtube.com/watch?v=ID hoặc youtu.be/ID
+    const playerRef = useRef<any>(null)
+    const animationFrameRef = useRef<number | null>(null)
+    const currentSegmentRef = useRef<{ start: number; end: number } | null>(null)
+    const [userInteracted, setUserInteracted] = useState(false)
+    const [isReady, setIsReady] = useState(false)
+
     const videoId = useMemo(() => {
       if (!lesson.sourceUrl) return ""
       try {
@@ -47,151 +50,208 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
       playerVars: { controls: 1, rel: 0, modestbranding: 1 },
     }
 
+    // Hàm dừng kiểm tra animation frame
+    const stopMonitoring = useCallback(() => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+    }, [])
+
+    // Hàm bắt đầu kiểm tra thời gian để dừng video
+    const startMonitoring = useCallback(() => {
+      const player = playerRef.current
+      const segment = currentSegmentRef.current
+      
+      if (!player || !autoStop || !segment) return
+      
+      const checkAndStop = () => {
+        const currentPlayer = playerRef.current
+        const currentSegmentData = currentSegmentRef.current
+        
+        if (!currentPlayer || !currentSegmentData) {
+          stopMonitoring()
+          return
+        }
+        
+        const currentTime = currentPlayer.getCurrentTime()
+        
+        // Nếu đã qua end time, dừng video
+        if (currentTime >= currentSegmentData.end) {
+          currentPlayer.pauseVideo()
+          setIsPlaying(false)
+          stopMonitoring()
+          return
+        }
+        
+        // Tiếp tục kiểm tra
+        animationFrameRef.current = requestAnimationFrame(checkAndStop)
+      }
+      
+      stopMonitoring() // Clear cái cũ trước
+      animationFrameRef.current = requestAnimationFrame(checkAndStop)
+    }, [autoStop, stopMonitoring])
+
     const onReady: YouTubeProps["onReady"] = (event) => {
       playerRef.current = event.target
       setIsReady(true)
     }
 
-    const clearAutoStop = useCallback(() => {
-      if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-    }, [])
-
-    // Poll mỗi 100ms, dừng khi currentTime >= endSec
-    // Fix: tránh hoàn toàn việc tính remainingMs từ getCurrentTime (dễ sai sau seekTo)
-    const startAutoStop = useCallback(() => {
-      if (!autoStop || !currentSentence || !playerRef.current) return
-      clearAutoStop()
-
-      const endSec = (currentSentence.audioEndMs ?? 0) / 1000 + PADDING_SEC
-
-      intervalRef.current = window.setInterval(() => {
-        const player = playerRef.current
-        if (!player) return clearAutoStop()
-        const now = player.getCurrentTime?.() ?? 0
-        if (now >= endSec) {
-          player.pauseVideo()
-          clearAutoStop()
+    const onStateChange: YouTubeProps["onStateChange"] = (e) => {
+      const state = e.data
+      
+      if (state === 1) { // Playing
+        setIsPlaying(true)
+        // Khi video bắt đầu play, bắt đầu kiểm tra nếu autoStop đang bật
+        if (autoStop && currentSegmentRef.current) {
+          startMonitoring()
         }
-      }, 100)
-    }, [autoStop, currentSentence, clearAutoStop])
+      } else if (state === 2 || state === 0) { // Paused or ended
+        setIsPlaying(false)
+        // Khi pause, dừng kiểm tra (sẽ resume khi play lại)
+        stopMonitoring()
+      }
+    }
 
-    // Seek về đầu câu rồi play
     const playCurrentSegment = useCallback(() => {
-      if (!playerRef.current || !currentSentence || !userInteracted) return
-      clearAutoStop()
-      const startSec = Math.max((currentSentence.audioStartMs ?? 0) / 1000 - PADDING_SEC, 0)
-      playerRef.current.seekTo(startSec, true)
-      playerRef.current.playVideo()
-      if (autoStop) startAutoStop()
-    }, [currentSentence, autoStop, userInteracted, clearAutoStop, startAutoStop])
+      const player = playerRef.current
+      if (!player || !currentSentence || !userInteracted) return
 
-    // Tiếp tục play từ vị trí hiện tại
+      const start = Math.max(currentSentence.audioStartMs / 1000 - START_PADDING, 0)
+      const end = currentSentence.audioEndMs / 1000 + END_PADDING
+      
+      // Lưu segment hiện tại
+      currentSegmentRef.current = { start, end }
+      
+      // Seek và play
+      player.seekTo(start, true)
+      player.setPlaybackRate(playbackRate || 1)
+      player.playVideo()
+    }, [currentSentence, userInteracted, playbackRate])
+
     const play = useCallback(() => {
-      if (!playerRef.current || !userInteracted) return
-      clearAutoStop()
-      playerRef.current.playVideo()
-      if (autoStop && currentSentence) startAutoStop()
-    }, [autoStop, currentSentence, userInteracted, clearAutoStop, startAutoStop])
+      const player = playerRef.current
+      if (!player || !userInteracted) return
+      
+      // Nếu đã có segment (đang trong segment mode)
+      if (currentSegmentRef.current) {
+        const now = player.getCurrentTime()
+        
+        // Nếu đã qua end, replay từ đầu
+        if (now >= currentSegmentRef.current.end - END_PADDING && autoStop) {
+          console.log("ahshd")
+          playCurrentSegment()
+          return
+        }
+        
+        // Resume với segment hiện tại
+        player.playVideo()
+        // startMonitoring sẽ được gọi trong onStateChange
+      } else {
+        // Play bình thường (không segment)
+        player.playVideo()
+      }
+    }, [userInteracted, playCurrentSegment, autoStop])
 
     const pause = useCallback(() => {
-      if (!playerRef.current) return
-      playerRef.current.pauseVideo()
-      clearAutoStop()
-    }, [clearAutoStop])
+      const player = playerRef.current
+      if (!player) return
+      player.pauseVideo()
+      // stopMonitoring sẽ được gọi trong onStateChange
+    }, [])
 
     useImperativeHandle(ref, () => ({
       playCurrentSegment, play, pause,
       getUserInteracted: () => userInteracted,
     }), [playCurrentSegment, play, pause, userInteracted])
 
-    // Auto play khi đổi câu (chỉ khi shouldAutoPlay = true)
+    // Theo dõi thay đổi của autoStop
+    useEffect(() => {
+      const player = playerRef.current
+      if (!player || !autoStop) return
+      
+      // Nếu autoStop được bật và đang play segment, bắt đầu monitor
+      if (isPlaying && currentSegmentRef.current) {
+        startMonitoring()
+      }
+    }, [autoStop, isPlaying, startMonitoring])
+
+    // Theo dõi thay đổi của currentSentence - dừng ngay khi chuyển câu
+    useEffect(() => {
+      const player = playerRef.current
+      if (!player) return
+      
+      // Reset segment khi đổi câu
+      currentSegmentRef.current = null
+      stopMonitoring()
+      
+      // Dừng video ngay lập tức
+      if (isPlaying) {
+        player.pauseVideo()
+        setIsPlaying(false)
+      }
+    }, [currentSentence?.id])
+
+    // Auto play khi đổi câu
     useEffect(() => {
       if (!isReady || !currentSentence || !userInteracted || !shouldAutoPlay) return
-      playCurrentSegment()
-    }, [isReady, currentSentence?.id, userInteracted, shouldAutoPlay, playCurrentSegment])
+      
+      const timer = setTimeout(() => {
+        playCurrentSegment()
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }, [currentSentence?.id, isReady, userInteracted, shouldAutoPlay, playCurrentSegment])
 
-    // Xử lý toggle autoStop on/off
-    useEffect(() => {
-      if (!autoStop) {
-        clearAutoStop()
-      } else if (isReady && currentSentence && playerRef.current?.getPlayerState?.() === 1) {
-        startAutoStop()
-      }
-    }, [autoStop, isReady, currentSentence, clearAutoStop, startAutoStop])
-
-    // Cleanup khi unmount
+    // Cleanup
     useEffect(() => {
       return () => {
-        clearAutoStop()
+        stopMonitoring()
         if (playerRef.current) {
           try {
             playerRef.current.pauseVideo()
-            playerRef.current.destroy?.()
-          } catch (e) {
-            console.warn("Error destroying YouTube player:", e)
-          }
-          playerRef.current = null
+          } catch {}
         }
       }
-    }, [clearAutoStop])
+    }, [stopMonitoring])
 
-    // Pause khi tab ẩn
-    useEffect(() => {
-      const handleVisibilityChange = () => {
-        if (document.hidden) {
-          try { playerRef.current?.pauseVideo() } catch {}
-          clearAutoStop()
+    const togglePlay = () => {
+      if (!userInteracted) {
+        setUserInteracted(true)
+        onUserInteracted?.(true)
+        if (currentSentence) {
+          playCurrentSegment()
+        }
+        return
+      }
+      
+      if (isPlaying) {
+        pause()
+      } else {
+        if (currentSentence) {
+          play()
+        } else {
+          play()
         }
       }
-      document.addEventListener("visibilitychange", handleVisibilityChange)
-      return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
-    }, [clearAutoStop])
+    }
 
     return (
-      <div className="w-full overflow-hidden rounded-xl border bg-black relative shadow-lg">
-        <YouTube videoId={videoId} opts={opts} onReady={onReady} />
+      <div className="w-full rounded-xl border bg-black relative shadow-lg overflow-hidden">
+        <YouTube
+          videoId={videoId}
+          opts={opts}
+          onReady={onReady}
+          onStateChange={onStateChange}
+        />
 
         {!userInteracted && isReady && (
-          <>
-            <div className="absolute top-3 right-3 z-10">
-              <Badge variant="secondary" className="gap-1 text-xs bg-black/60 backdrop-blur-sm">
-                <Video className="h-3 w-3" />
-                YouTube
-              </Badge>
-            </div>
-
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/40 via-black/60 to-black/80 backdrop-blur-[1px]">
-              <div className="text-center space-y-3">
-                <Button
-                  size="lg"
-                  onClick={() => {
-                    setUserInteracted(true)
-                    onUserInteracted?.(true)
-                    if (playerRef.current && currentSentence) {
-                      // Dùng setTimeout 100ms để đợi state flush trước khi seek
-                      setTimeout(() => {
-                        const startSec = Math.max(
-                          (currentSentence.audioStartMs ?? 0) / 1000 - PADDING_SEC, 0
-                        )
-                        playerRef.current.seekTo(startSec, true)
-                        playerRef.current.playVideo()
-                        // startAutoStop dùng interval nên không cần delay thêm
-                        if (autoStop) startAutoStop()
-                      }, 100)
-                    }
-                  }}
-                  className="gap-2 text-lg shadow-2xl px-8"
-                >
-                  <Play className="h-5 w-5" />
-                  Bắt đầu
-                </Button>
-                <p className="text-xs text-white/70 mt-2">Click để bắt đầu học shadowing</p>
-              </div>
-            </div>
-          </>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+            <Button onClick={togglePlay} className="gap-2">
+              <Play className="h-5 w-5" />
+              Bắt đầu
+            </Button>
+          </div>
         )}
       </div>
     )

@@ -265,6 +265,9 @@ const ShadowingMode = () => {
                 largeVideo={largeVideo}
                 shouldAutoPlay={shouldAutoPlay}
                 onUserInteracted={setUserInteracted}
+                playbackRate={playbackRate}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
               />
             ) : (
               <AudioShadowing
