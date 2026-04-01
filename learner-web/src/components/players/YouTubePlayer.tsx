@@ -4,15 +4,14 @@ import React, {
 } from "react"
 import YouTube, { type YouTubeProps } from "react-youtube"
 import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
-import type { ShadowingPlayerRef } from "../types/types"
+import type { PlayerRef } from "./types/types"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Play, Pause, Video } from "lucide-react"
+import { Play, } from "lucide-react"
 
 const START_PADDING = 0.1
 const END_PADDING = 0.05
 
-type YouTubeShadowingProps = {
+type YouTubePlayerProps = {
   lesson: ILessonDetailsResponse
   currentSentence?: ILessonSentenceDetailsResponse
   autoStop: boolean
@@ -24,7 +23,7 @@ type YouTubeShadowingProps = {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
 }
 
-const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
+const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
   ({ lesson, currentSentence, autoStop, largeVideo, shouldAutoPlay = false, onUserInteracted, playbackRate, isPlaying, setIsPlaying }, ref) => {
 
     const playerRef = useRef<any>(null)
@@ -44,11 +43,17 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
       }
     }, [lesson.sourceUrl])
 
-    const opts: YouTubeProps["opts"] = {
-      width: "100%",
-      height: largeVideo ? "420" : "200",
-      playerVars: { controls: 1, rel: 0, modestbranding: 1 },
-    }
+    // YouTubePlayer.tsx - Thêm origin fix
+const opts: YouTubeProps["opts"] = {
+  width: "100%",
+  height: largeVideo ? "420" : "200",
+  playerVars: { 
+    controls: 1, 
+    rel: 0, 
+    modestbranding: 1,
+    origin: window.location.origin, // Fix postMessage error
+  },
+}
 
     // Hàm dừng kiểm tra animation frame
     const stopMonitoring = useCallback(() => {
@@ -258,5 +263,5 @@ const YouTubeShadowing = forwardRef<ShadowingPlayerRef, YouTubeShadowingProps>(
   }
 )
 
-YouTubeShadowing.displayName = "YouTubeShadowing"
-export default YouTubeShadowing
+YouTubePlayer.displayName = "YouTubeShadowing"
+export default YouTubePlayer

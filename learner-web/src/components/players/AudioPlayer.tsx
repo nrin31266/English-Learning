@@ -3,12 +3,12 @@ import React, {
   useImperativeHandle, useRef, useState,
 } from "react"
 import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
-import type { ShadowingPlayerRef } from "../types/types"
+import type { PlayerRef } from "./types/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Play, Pause, Music2 } from "lucide-react"
 
-type AudioShadowingProps = {
+type AudioPlayerProps = {
   lesson: ILessonDetailsResponse
   currentSentence?: ILessonSentenceDetailsResponse
   autoStop: boolean
@@ -27,7 +27,7 @@ const formatTime = (secs: number) => {
 }
 const START_PADDING = 0.1
 const END_PADDING = 0.05
-const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
+const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
   ({ lesson, currentSentence, autoStop, shouldAutoPlay = false, onUserInteracted, playbackRate, isPlaying, setIsPlaying }, ref) => {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const isPlayingRef = useRef(false)
@@ -353,5 +353,5 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
   }
 )
 
-AudioShadowing.displayName = "AudioShadowing"
-export default AudioShadowing
+AudioPlayer.displayName = "AudioShadowing"
+export default AudioPlayer

@@ -1,4 +1,3 @@
-
 import handleAPI from "@/apis/handleAPI"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -9,13 +8,8 @@ import type {
 } from "@/types"
 import {
   Mic,
-  Pause,
-  Play,
-  RotateCcw,
   Square,
-  StepBack,
-  StepForward,
-  Volume2, 
+  Volume2,
   X,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -24,85 +18,41 @@ import ShadowingResultPanel from "./ShadowingResultPanel"
 
 
 interface ActiveSentencePanelProps {
-  /** Lesson data chứa sentences */
   lesson: ILessonDetailsResponse
-  /** Index của câu đang active */
   activeIndex: number
-  /** Callback khi click Prev button */
-  onPrev: () => void
-  /** Callback khi click Next button */
+  handlePause: () => void
   onNext: () => void
-  /** Callback khi click Replay button */
-  onReplay: () => void
-  /** Callback khi click Play button */
-  onPlay: () => void
-  /** Callback khi click Pause button */
-  onPause: () => void
-  /** User đã tương tác với media player chưa */
-  userInteracted?: boolean,
-
-  isPlaying: boolean
+  userInteracted?: boolean
 }
 
-/**
- * Component chính
- */
 const ActiveSentencePanel = ({
-  onPrev,
   onNext,
-  onReplay,
   activeIndex,
-  onPlay,
-  onPause,
   lesson,
   userInteracted = false,
-  isPlaying,
+  handlePause
 }: ActiveSentencePanelProps) => {
   // ========== RECORDING STATE ==========
-  /** Đang ghi âm */
   const [isRecording, setIsRecording] = useState(false)
-  /** Đã có audio ghi sẵn (chưa upload hoặc đã upload) */
   const [hasRecordedAudio, setHasRecordedAudio] = useState(false)
-  /** Đang phát lại audio đã ghi */
   const [isPlayingRecorded, setIsPlayingRecorded] = useState(false)
-  /** Đang upload lên server */
   const [isUploading, setIsUploading] = useState(false)
-  /** Lỗi khi ghi âm hoặc upload */
   const [recordError, setRecordError] = useState<string | null>(null)
-  /** Object URL của audio blob (để play lại) */
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null)
-  /** Kết quả phân tích từ server */
-  const [transcription, setTranscription] =
-    useState<ITranscriptionResponse | null>(null)
+  const [transcription, setTranscription] = useState<ITranscriptionResponse | null>(null)
   
   // ========== RECORDING REFS ==========
-  /** Ref tới MediaRecorder instance */
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  /** Mảng chunks audio data từ MediaRecorder */
   const chunksRef = useRef<Blob[]>([])
-  /** Ref tới MediaStream (microphone stream) */
   const streamRef = useRef<MediaStream | null>(null)
-  /** Ref tới audio element để play recorded audio */
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
-  /** Flag để đánh dấu user đã cancel recording */
   const cancelRecordingRef = useRef(false)
 
-  
-  
-  /**
-   * Memoize currentSentence để tránh re-render không cần thiết
-   * Chỉ recalculate khi lesson.sentences hoặc activeIndex thay đổi
-   */
   const currentSentence = useMemo(
     () => lesson.sentences[activeIndex],
     [lesson.sentences, activeIndex]
   )
   
-  /**
-   * Memoize derived states - conditions để hiện buttons
-   * shouldShowNextButton: điểm >= 85 -> hiện "Next sentence" (xanh)
-   * shouldShowSkipButton: có kết quả nhưng điểm < 85 -> hiện "Skip" (vàng)
-   */
   const shouldShowNextButton = useMemo(
     () => transcription && transcription?.shadowingResult?.weightedAccuracy >= 85,
     [transcription]
@@ -113,23 +63,11 @@ const ActiveSentencePanel = ({
   )
 
   // ========== FEEDBACK AUDIO REFS ==========
-  /**
-   * Feedback audio players (không trigger re-render)
-   * - successAudioRef: phát khi điểm >= 85
-   * - failAudioRef: phát khi điểm < 85
-   * - lastTranscriptionRef: track transcription đã play để tránh play lại
-   */
   const successAudioRef = useRef<HTMLAudioElement | null>(null)
   const failAudioRef = useRef<HTMLAudioElement | null>(null)
   const lastTranscriptionRef = useRef<string | null>(null)
   
-  /**
-   * Effect: Setup feedback audio players (1 lần khi mount)
-   * Preload audio files để phát ngay khi cần
-   * Cleanup khi unmount để tránh memory leak
-   */
   useEffect(() => {
-    // Init 1 lần
     if (!successAudioRef.current) {
       successAudioRef.current = new Audio("/sounds/correct.wav")
       successAudioRef.current.preload = "auto"
@@ -139,7 +77,6 @@ const ActiveSentencePanel = ({
       failAudioRef.current.preload = "auto"
     }
 
-    // Cleanup khi unmount
     return () => {
       if (successAudioRef.current) {
         successAudioRef.current.pause()
@@ -154,39 +91,29 @@ const ActiveSentencePanel = ({
     }
   }, [])
 
-  /**
-   * Helper function: Play feedback sound
-   * @param isGoodScore - true nếu điểm >= 85 (play success), false (play fail)
-   */
   const playFeedbackSound = (isGoodScore: boolean) => {
     const audioEl = isGoodScore ? successAudioRef.current : failAudioRef.current
     if (!audioEl) return
-    audioEl.currentTime = 0  // Reset về đầu
+    audioEl.currentTime = 0
     void audioEl.play().catch((e) => {
       console.warn("Feedback sound play error", e)
     })
   }
   
-
   useEffect(() => {
     if (!transcription?.id) return
     
     const transcriptionKey = transcription.id.toString()
-    if (lastTranscriptionRef.current === transcriptionKey) return // Tránh play lại
+    if (lastTranscriptionRef.current === transcriptionKey) return
     lastTranscriptionRef.current = transcriptionKey
 
     const score = transcription.shadowingResult?.weightedAccuracy
     if (score == null) return
 
-    const isGoodScore = score >= 85
-    playFeedbackSound(isGoodScore)
+    playFeedbackSound(score >= 85)
   }, [transcription?.id])
 
-  /**
-   * Effect: Reset state khi đổi câu
-   */
   useEffect(() => {
-    // Reset khi đổi câu
     setIsRecording(false)
     setHasRecordedAudio(false)
     setIsPlayingRecorded(false)
@@ -199,11 +126,9 @@ const ActiveSentencePanel = ({
     setTranscription(null)
   }, [activeIndex]);
 
-  // Bắt đầu ghi
   const startRecording = useCallback(async () => {
     setRecordError(null)
 
-    // Check browser support
     if (!navigator.mediaDevices?.getUserMedia) {
       setRecordError("Trình duyệt không hỗ trợ ghi âm.")
       return
@@ -219,12 +144,9 @@ const ActiveSentencePanel = ({
       cancelRecordingRef.current = false
       setHasRecordedAudio(false)
       setRecordedUrl((old) => {
-        if (old) {
-          URL.revokeObjectURL(old)
-        }
+        if (old) URL.revokeObjectURL(old)
         return null
       })
-      // mỗi lần ghi mới => clear kết quả cũ để UI đỡ rối
       setTranscription(null)
 
       mediaRecorder.ondataavailable = (event) => {
@@ -234,7 +156,6 @@ const ActiveSentencePanel = ({
       }
 
       mediaRecorder.onstop = async () => {
-        // dừng stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((t) => t.stop())
           streamRef.current = null
@@ -245,7 +166,6 @@ const ActiveSentencePanel = ({
         const wasCancelled = cancelRecordingRef.current
         cancelRecordingRef.current = false
 
-        // Nếu user bấm Cancel → không tạo blob, không upload, không giữ audio
         if (wasCancelled) {
           chunksRef.current = []
           setHasRecordedAudio(false)
@@ -256,7 +176,6 @@ const ActiveSentencePanel = ({
           return
         }
 
-        // ghép chunk -> blob
         const blob = new Blob(chunksRef.current, { type: "audio/webm" })
         const url = URL.createObjectURL(blob)
         setRecordedUrl((old) => {
@@ -265,10 +184,8 @@ const ActiveSentencePanel = ({
         })
         setHasRecordedAudio(true)
         
-        // CRITICAL: Clear chunks immediately to free memory
         chunksRef.current = []
 
-        // Upload lên server
         try {
           setIsUploading(true)
           const expectedWords = currentSentence.lessonWords.map((w) => ({
@@ -316,7 +233,6 @@ const ActiveSentencePanel = ({
     }
   }, [currentSentence])
 
-  // Dừng ghi (lưu & upload)
   const stopRecording = useCallback(() => {
     const mediaRecorder = mediaRecorderRef.current
     if (!mediaRecorder) return
@@ -327,7 +243,6 @@ const ActiveSentencePanel = ({
     }
   }, [])
 
-  // Hủy ghi (dừng & KHÔNG lưu, KHÔNG upload)
   const cancelRecording = useCallback(() => {
     const mediaRecorder = mediaRecorderRef.current
     if (!mediaRecorder) return
@@ -339,18 +254,16 @@ const ActiveSentencePanel = ({
     }
   }, [])
 
-  // Toggle record (start / stop-save)
   const handleToggleRecord = () => {
     if (!isRecording) {
-      // Pause audio gốc nếu đang phát
-      onPause()
+       handlePause()
+
       void startRecording()
     } else {
       stopRecording()
     }
   }
 
-  // Nghe lại bản ghi
   const handleTogglePlayRecorded = () => {
     if (!hasRecordedAudio || !recordedUrl) return
     const player = audioPlayerRef.current
@@ -371,7 +284,6 @@ const ActiveSentencePanel = ({
     }
   }
 
-  // Khi audio recorded play xong → reset state
   useEffect(() => {
     const player = audioPlayerRef.current
     if (!player) return
@@ -382,16 +294,13 @@ const ActiveSentencePanel = ({
     }
   }, [])
 
-  // Cleanup khi unmount - CRITICAL
   useEffect(() => {
     return () => {
-      // Stop và cleanup MediaRecorder AGGRESSIVELY
       if (mediaRecorderRef.current) {
         try {
           if (mediaRecorderRef.current.state !== "inactive") {
             mediaRecorderRef.current.stop()
           }
-          // Remove event handlers to prevent memory leaks
           mediaRecorderRef.current.ondataavailable = null
           mediaRecorderRef.current.onstop = null
           mediaRecorderRef.current.onerror = null
@@ -401,7 +310,6 @@ const ActiveSentencePanel = ({
         mediaRecorderRef.current = null
       }
 
-      // Stop ALL stream tracks forcefully
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => {
           track.stop()
@@ -410,7 +318,6 @@ const ActiveSentencePanel = ({
         streamRef.current = null
       }
 
-      // Stop và cleanup audio player completely
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause()
         audioPlayerRef.current.removeAttribute('src')
@@ -419,21 +326,17 @@ const ActiveSentencePanel = ({
         audioPlayerRef.current = null
       }
 
-      // Force clear ALL chunks
       chunksRef.current = []
       cancelRecordingRef.current = false
     }
   }, [])
   
-  // Force cleanup on page visibility change
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // Stop recording if in progress
         if (isRecording) {
           cancelRecording()
         }
-        // Pause recorded audio if playing
         if (audioPlayerRef.current) {
           audioPlayerRef.current.pause()
         }
@@ -446,7 +349,6 @@ const ActiveSentencePanel = ({
     }
   }, [isRecording, cancelRecording])
   
-  // Cleanup recordedUrl separately để revoke đúng
   useEffect(() => {
     return () => {
       if (recordedUrl) {
@@ -455,10 +357,8 @@ const ActiveSentencePanel = ({
     }
   }, [recordedUrl])
   
-  // CRITICAL: Force cleanup on page unload/F5
   useEffect(() => {
     const handleBeforeUnload = () => {
-      // Force stop everything
       if (mediaRecorderRef.current?.state !== 'inactive') {
         mediaRecorderRef.current?.stop()
       }
@@ -482,65 +382,9 @@ const ActiveSentencePanel = ({
 
   return (
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
-      <div className="flex min-h-[260px] flex-col items-center justify-between gap-4 px-4 py-4">
-        {/* Sentence text */}
-        <div className="space-y-2 text-center w-full">
-          <SentenceDisplay
-            words={currentSentence?.lessonWords}
-            fallbackText={
-              currentSentence?.textDisplay || "No sentence available."
-            }
-            onWordClick={(word) => {
-              console.log("Word clicked:", word)
-            }}
-            className="items-center"
-          />
-          {lesson.sentences.length > 0 && currentSentence.phoneticUk && (
-            <p className="text-sm italic text-muted-foreground">
-              {currentSentence.phoneticUk}
-            </p>
-          )}
-        </div>
-
-        {/* Transport controls */}
-        <div className="flex flex-col items-center gap-3 w-full">
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="outline"
-              disabled={activeIndex === 0 || !userInteracted}
-              onClick={onPrev}
-            >
-              <StepBack className="h-4 w-4" />
-            </Button>
-            <Button 
-              size="icon" 
-              variant="outline" 
-              onClick={onReplay}
-              disabled={!userInteracted}
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-
-            <Button 
-              size="icon" 
-              variant="outline" 
-              onClick={isPlaying ? onPause : onPlay}
-              disabled={!userInteracted}
-            >
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </Button>
-            <Button
-              size="icon"
-              variant="outline"
-              disabled={activeIndex === lesson.sentences.length - 1 || !userInteracted}
-              onClick={onNext}
-            >
-              <StepForward className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Record & playback recorded audio */}
+      <div className="flex flex-col items-center justify-between gap-4 px-4 py-4">
+        {/* Record & playback recorded audio */}
+        <div className="flex flex-col items-center w-full">
           <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
@@ -573,23 +417,17 @@ const ActiveSentencePanel = ({
               ) : (
                 <>
                   <Mic className="h-4 w-4" />
-                  {
-                    transcription
-                      ? "Re-record"
-                      : "Start Recording"
-                  }
+                  {transcription ? "Re-record" : "Start Recording"}
                 </>
               )}
             </Button>
 
-            {/* Skip/Next buttons - chỉ hiện khi có kết quả */}
+            {/* Skip/Next buttons */}
             {shouldShowSkipButton && (
               <Button
                 variant="secondary"
-                className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800 "
-                onClick={() => {
-                  void onNext()
-                }}
+                className="gap-2 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                onClick={() => onNext()}
                 size={"sm"}
               >
                 <X />
@@ -599,19 +437,16 @@ const ActiveSentencePanel = ({
 
             {shouldShowNextButton && (
               <Button
-                className="gap-2 bg-green-600 hover:bg-green-700 text-white "
-                onClick={() => {
-                  void onNext()
-                }}
+                className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => onNext()}
                 size={"sm"}
               >
-                <StepForward />
+                <Volume2 className="h-4 w-4" />
                 Next sentence
               </Button>
             )}
 
-
-            {/* Nút CANCEL: chỉ hiện khi đang thu */}
+            {/* Cancel button */}
             {isRecording && (
               <Button
                 size="sm"
@@ -627,15 +462,11 @@ const ActiveSentencePanel = ({
           </div>
 
           {/* Status text */}
-          <div className="min-h-[1rem] text-center text-xs text-muted-foreground">
+          <div className=" text-center text-xs text-muted-foreground">
             {isRecording && "Recording..."}
             {!isRecording && isPlayingRecorded && "Playing recorded audio..."}
-            {!isRecording &&
-              !isPlayingRecorded &&
-              hasRecordedAudio &&
-              !isUploading &&
-              "Recorded audio ready to play."}
-            {isUploading && " Uploading & analyzing your recording..."}
+            {!isRecording && !isPlayingRecorded && hasRecordedAudio && !isUploading && "Recorded audio ready to play."}
+            {isUploading && "Uploading & analyzing your recording..."}
             {recordError && (
               <div className="mt-1 text-xs text-destructive">
                 {recordError}
@@ -643,15 +474,32 @@ const ActiveSentencePanel = ({
             )}
           </div>
         </div>
-
-      
-        <div className="w-full">
-          {shadowing && <ShadowingResultPanel result={shadowing} />}
+        {/* Sentence text */}
+        <div className="space-y-2 text-center w-full">
+          <SentenceDisplay
+            words={currentSentence?.lessonWords}
+            fallbackText={
+              currentSentence?.textDisplay || "No sentence available."
+            }
+            onWordClick={(word) => {
+              console.log("Word clicked:", word)
+            }}
+            className="items-center"
+          />
+          {lesson.sentences.length > 0 && currentSentence.phoneticUk && (
+            <p className="text-sm italic text-muted-foreground">
+              {currentSentence.phoneticUk}
+            </p>
+          )}
         </div>
 
-      
-        <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
+        
+
+          {shadowing && <ShadowingResultPanel result={shadowing} />}
+
+       
       </div>
+       <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
     </ScrollArea>
   )
 }

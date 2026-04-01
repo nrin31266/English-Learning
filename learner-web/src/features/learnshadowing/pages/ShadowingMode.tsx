@@ -14,26 +14,21 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-
 import {
   ArrowLeft,
   Keyboard,
   Loader2,
-  Volume2,
 } from "lucide-react"
 
 import AudioFileTag from "@/components/AudioFileTag"
 import LanguageLevelBadge from "@/components/LanguageLevel"
 import YouTubeTag from "@/components/YouTubeTag"
-import ActiveSentencePanel from "../components/ActiveSentencePanel";
-import AudioShadowing from "../components/AudioShadowing"
-import KeyboardShortcutsHelp from "../components/KeyboardShortcutsHelp"
-import type { ShadowingPlayerRef } from "../types/types"
+import ActiveSentencePanel from "../components/ActiveSentencePanel"
+
+import type { PlayerRef } from "@/components/players/types/types"
 import ShadowingTranscript from "../components/ShadowingTranscript"
-import YouTubeShadowing from "../components/YoutubeShadowing"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import Player from "@/components/players/Player"
+import KeyboardShortcutsHelp from "@/components/players/KeyboardShortcutsHelp"
 
 const ShadowingMode = () => {
   const { slug } = useParams<{ slug: string }>()
@@ -51,7 +46,7 @@ const ShadowingMode = () => {
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false)
   const [userInteracted, setUserInteracted] = useState(false)
 
-  const playerRef = useRef<ShadowingPlayerRef | null>(null)
+  const playerRef = useRef<PlayerRef | null>(null)
   const [playbackRate, setPlaybackRate] = useState<number>(1.0)
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -63,8 +58,8 @@ const ShadowingMode = () => {
 
   useEffect(() => {
     setActiveIndex(0)
-    setShouldAutoPlay(true) // Auto-play cho câu đầu tiên khi load lesson mới
-    setUserInteracted(false) // Reset user interaction khi load lesson mới
+    setShouldAutoPlay(true)
+    setUserInteracted(false)
   }, [lesson?.id])
 
   const isLoading = status === "idle" || status === "loading"
@@ -76,19 +71,17 @@ const ShadowingMode = () => {
 
   const currentSentence = sentences[activeIndex]
 
-  // prev/next với guard
   const handlePrev = useCallback(() => {
-    setShouldAutoPlay(false) // Không tự động phát khi prev
+    setShouldAutoPlay(false)
     setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev))
   }, [])
 
   const handleNext = useCallback(() => {
-    setShouldAutoPlay(true) // Tự động phát khi next
+    setShouldAutoPlay(true)
     setActiveIndex((prev) =>
       prev < sentences.length - 1 ? prev + 1 : prev
     )
   }, [sentences.length])
-
 
   const handleReplay = () => {
     playerRef.current?.playCurrentSegment()
@@ -103,7 +96,7 @@ const ShadowingMode = () => {
   }
 
   const handleSelectSentence = (index: number) => {
-    setShouldAutoPlay(false) // Không tự động phát khi user click chọn câu từ transcript
+    setShouldAutoPlay(false)
     setActiveIndex(index)
   }
 
@@ -115,7 +108,7 @@ const ShadowingMode = () => {
     }
   }
 
-  // Keyboard shortcuts: Space = replay current segment, Tab = next sentence
+  // Keyboard shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
@@ -255,116 +248,39 @@ const ShadowingMode = () => {
         <div className="flex flex-col gap-4 lg:flex-row">
           {/* LEFT: media + active sentence */}
           <div className="flex min-h-0 flex-1 flex-col gap-3">
-            {/* Media player */}
-            {lesson.sourceType === "YOUTUBE" ? (
-              <YouTubeShadowing
-                ref={playerRef}
-                lesson={lesson as ILessonDetailsResponse}
-                currentSentence={currentSentence}
-                autoStop={autoStop}
-                largeVideo={largeVideo}
-                shouldAutoPlay={shouldAutoPlay}
-                onUserInteracted={setUserInteracted}
-                playbackRate={playbackRate}
-                isPlaying={isPlaying}
-                setIsPlaying={setIsPlaying}
-              />
-            ) : (
-              <AudioShadowing
-                ref={playerRef}
-                lesson={lesson as ILessonDetailsResponse}
-                currentSentence={currentSentence}
-                autoStop={autoStop}
-                shouldAutoPlay={shouldAutoPlay}
-                onUserInteracted={setUserInteracted}
-                playbackRate={playbackRate}
-                isPlaying={isPlaying}
-                setIsPlaying={setIsPlaying}
-              />
-            )}
+            {/* Player Component - Thay thế toàn bộ media player + control panel */}
+            <Player
+              ref={playerRef}
+              lesson={lesson}
+              currentSentence={currentSentence}
+              autoStop={autoStop}
+              shouldAutoPlay={shouldAutoPlay}
+              onUserInteracted={setUserInteracted}
+              playbackRate={playbackRate}
+              isPlaying={isPlaying}
+              setIsPlaying={setIsPlaying}
+              largeVideo={largeVideo}
+              // Navigation
+              onPrev={handlePrev}
+              onNext={handleNext}
+              hasPrev={activeIndex > 0}
+              hasNext={activeIndex < sentences.length - 1}
+              // Settings
+              onAutoStopChange={setAutoStop}
+              onLargeVideoChange={setLargeVideo}
+              onPlaybackRateChange={setPlaybackRate}
+              onShowShortcuts={() => setShowHelp(true)}
+            />
 
-            {/* Toggles row */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-3 py-2 text-xs">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="auto-stop"
-                    checked={autoStop}
-                    onCheckedChange={setAutoStop}
-                  />
-                  <Label htmlFor="auto-stop" className="text-xs">
-                    Auto Stop
-                  </Label>
-                </div>
-                {
-                  lesson.sourceType === "YOUTUBE" && <div className="flex items-center gap-2">
-                    <Switch
-                      id="large-video"
-                      checked={largeVideo}
-                      onCheckedChange={setLargeVideo}
-                    />
-                    <Label htmlFor="large-video" className="text-xs">
-                      Large-sized video
-                    </Label>
-                  </div>
-                }
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-
-                {/* Nút shortcuts với badge */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 gap-2 px-2 text-xs"
-                  onClick={() => setShowHelp(true)}
-                >
-                  <Keyboard className="" />
-                  Shortcuts
-                </Button>
-                {/* <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 gap-2 px-2 text-xs"
-                  onClick={handleChangePlaybackRate}>
-                  <Volume2 className="h-4 w-4" />
-                <span>{playbackRate?.toFixed(1) || "1.0"}x</span>
-                </Button> */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-7 text-[14px]"><Volume2 className="h-4 w-4" />
-                      <span>{playbackRate?.toFixed(2) || "1.0"}x</span></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>Playback Speed</DropdownMenuLabel>
-                      <DropdownMenuItem onSelect={() => setPlaybackRate(1)}>
-                        Normal (1.0x)
-                      </DropdownMenuItem>
-                      {[0.5, 0.75, 1.25, 1.5, 2].map((speed) => (
-                        <DropdownMenuItem key={speed} onSelect={() => setPlaybackRate(speed)}>
-                          {speed.toFixed(2)}x
-                        </DropdownMenuItem>
-                      ))}
-
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            {/* Active sentence + controls - SỬ DỤNG COMPONENT MỚI */}
+            {/* Active sentence panel */}
             <ActiveSentencePanel
               lesson={lesson}
               activeIndex={activeIndex}
-              onPrev={handlePrev}
+              handlePause={handlePause}
               onNext={handleNext}
-              onReplay={handleReplay}
-              onPlay={handlePlay}
-              onPause={handlePause}
               userInteracted={userInteracted}
-              isPlaying={isPlaying}
             />
+
             {/* Keyboard Shortcuts Dialog */}
             <KeyboardShortcutsHelp
               open={showHelp}
