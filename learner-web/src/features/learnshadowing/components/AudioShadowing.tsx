@@ -14,7 +14,7 @@ type AudioShadowingProps = {
   autoStop: boolean
   shouldAutoPlay?: boolean
   onUserInteracted?: (interacted: boolean) => void,
-   playbackRate?: number
+  playbackRate?: number
 }
 
 const formatTime = (secs: number) => {
@@ -33,7 +33,8 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
     const [duration, setDuration] = useState(0)
     const [isPlaying, setIsPlaying] = useState(false)
     const [userInteracted, setUserInteracted] = useState(false)
-    
+    const stopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
     // Ưu tiên audioUrl của lesson, fallback về audioSegmentUrl của câu
     const src = lesson.audioUrl || currentSentence?.audioSegmentUrl || ""
 
@@ -46,7 +47,7 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
 
       const onTimeUpdate = () => {
         setCurrentTime(audio.currentTime)
-        if (autoStop && currentSentence && audio.currentTime >= currentSentence.audioEndMs / 1000  + END_PADDING) {
+        if (autoStop && currentSentence && audio.currentTime >= currentSentence.audioEndMs / 1000 + END_PADDING) {
           audio.pause()
           setIsPlaying(false)
         }
@@ -83,23 +84,52 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
     // Seek về audioStartMs rồi play, đợi readyState nếu chưa load xong
     const playCurrentSegment = useCallback(async () => {
       const audio = audioRef.current
+
       if (!audio || !currentSentence || !userInteracted) return
       try {
+        // 🔥 clear timeout cũ
+        if (stopTimeoutRef.current) {
+          clearTimeout(stopTimeoutRef.current)
+        }
+
+        // 🔥 luôn pause trước để tránh bug "nhích"
+        audio.pause()
+
+        // 🔥 đảm bảo audio đã load
         if (audio.readyState < 2) {
           await new Promise((resolve) => {
-            const onLoadedData = () => { audio.removeEventListener("loadeddata", onLoadedData); resolve(true) }
+            const onLoadedData = () => {
+              audio.removeEventListener("loadeddata", onLoadedData)
+              resolve(true)
+            }
             audio.addEventListener("loadeddata", onLoadedData)
             audio.load()
           })
         }
-        audio.currentTime = Math.max(currentSentence.audioStartMs / 1000 - START_PADDING, 0)
 
+        const start = Math.max(currentSentence.audioStartMs / 1000 - START_PADDING, 0)
+        const end = currentSentence.audioEndMs / 1000 + END_PADDING
+
+        // 🔥 set time + speed
+        audio.currentTime = start
         audio.playbackRate = playbackRate || 1
-     
 
-        await new Promise(resolve => setTimeout(resolve, 50)) // nhường buffer
+        await new Promise(resolve => setTimeout(resolve, 30)) // nhẹ thôi 
+
         await audio.play()
         setIsPlaying(true)
+
+        // 🔥 tính duration CHUẨN theo speed
+        const duration = (end - start) / (playbackRate || 1)
+
+        stopTimeoutRef.current = setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = end // clamp
+            audioRef.current.pause()
+            setIsPlaying(false)
+          }
+        }, duration * 1000)
+
       } catch (error) {
         console.error("Play failed:", error)
       }
@@ -109,16 +139,55 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
     const play = useCallback(async () => {
       const audio = audioRef.current
       if (!audio || isPlayingRef.current || !userInteracted) return
+
       try {
         isPlayingRef.current = true
         audio.playbackRate = playbackRate || 1
+
+        if (autoStop && currentSentence) {
+
+          const end = currentSentence.audioEndMs / 1000 + END_PADDING
+
+          // nếu đã qua end → replay
+          if (audio.currentTime >= end) {
+            isPlayingRef.current = false
+            return playCurrentSegment()
+          }
+
+          // clear timeout cũ
+          if (stopTimeoutRef.current) {
+            clearTimeout(stopTimeoutRef.current)
+          }
+
+          // tính thời gian còn lại
+          const remaining = (end - audio.currentTime) / (playbackRate || 1)
+
+          stopTimeoutRef.current = setTimeout(() => {
+            const audio = audioRef.current
+            if (!audio) return
+
+            audio.pause()
+            audio.currentTime = end // clamp
+
+            setIsPlaying(false)
+            isPlayingRef.current = false
+          }, remaining * 1000)
+        }
+
         await audio.play()
         setIsPlaying(true)
+
       } catch (error) {
         console.error("Play failed:", error)
         isPlayingRef.current = false
       }
-    }, [userInteracted])
+    }, [userInteracted, currentSentence, playbackRate, playCurrentSegment, autoStop])
+    useEffect(() => {
+      if (!autoStop && stopTimeoutRef.current) {
+        clearTimeout(stopTimeoutRef.current)
+        stopTimeoutRef.current = null
+      }
+    }, [autoStop])
 
     const pause = useCallback(() => {
       const audio = audioRef.current
@@ -168,6 +237,9 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
           audio.src = ""
         }
         isPlayingRef.current = false
+        if (stopTimeoutRef.current) {
+          clearTimeout(stopTimeoutRef.current)
+        }
       }
     }, [])
 

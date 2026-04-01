@@ -88,9 +88,6 @@ const ShadowingMode = () => {
     )
   }, [sentences.length])
 
-  const handleChangePlaybackRate = () => {
-
-  }
 
   const handleReplay = () => {
     playerRef.current?.playCurrentSegment()
