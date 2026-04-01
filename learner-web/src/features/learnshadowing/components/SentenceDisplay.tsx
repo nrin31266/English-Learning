@@ -51,13 +51,6 @@ const SentenceDisplay = ({
       </p>
     )
   }
-
-  /**
-   * Render danh sách các từ
-   * - Mỗi từ là một button để có thể click
-   * - Có underline để user biết có thể tương tác
-   * - Hover effect để feedback tốt hơn
-   */
   return (
     <div className={`flex flex-wrap justify-center gap-2 leading-relaxed ${className}`}>
       {sortedWords.map((word, index) => (

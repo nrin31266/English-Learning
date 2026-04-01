@@ -1,6 +1,7 @@
 package com.rin.learningcontentservice.controller.admin;
 
 import com.rin.englishlearning.common.dto.ApiResponse;
+import com.rin.learningcontentservice.dto.request.MergeSentenceRequest;
 import com.rin.learningcontentservice.dto.request.SplitSentenceRequest;
 import com.rin.learningcontentservice.dto.response.LessonSentenceDetailsResponse;
 import com.rin.learningcontentservice.model.LessonSentence;
@@ -29,5 +30,10 @@ public class AdminSentenceController {
             @PathVariable Long id,
             @RequestBody SplitSentenceRequest request) {
         return ApiResponse.success(sentenceService.splitSentence(id, request));
+    }
+    @PostMapping("/merge")
+    public ApiResponse<LessonSentenceDetailsResponse> mergeSentence(
+            @RequestBody MergeSentenceRequest request) {
+        return ApiResponse.success(sentenceService.mergeSentence(request));
     }
 }

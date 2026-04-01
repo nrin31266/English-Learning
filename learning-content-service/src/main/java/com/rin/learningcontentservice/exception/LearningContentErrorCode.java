@@ -18,7 +18,8 @@ public enum LearningContentErrorCode implements ErrorCode {
     AI_METADATA_FETCH_FAILED(1008, "Failed to fetch AI metadata with url: %s", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_STATE(1009, "Invalid state for lesson with id: %s. Expected state: %s", HttpStatus.BAD_REQUEST),
 
-    WORD_NOT_FOUND(1010, "Word not found with id: %s", HttpStatus.NOT_FOUND)
+    WORD_NOT_FOUND(1010, "Word not found with id: %s", HttpStatus.NOT_FOUND),
+    SENTENCE_NOT_IN_SAME_LESSON(1011, "Sentences with ids: %s and %s are not in the same lesson", HttpStatus.BAD_REQUEST)
     ;
 
 

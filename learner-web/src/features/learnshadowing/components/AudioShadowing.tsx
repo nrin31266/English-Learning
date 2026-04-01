@@ -13,7 +13,8 @@ type AudioShadowingProps = {
   currentSentence?: ILessonSentenceDetailsResponse
   autoStop: boolean
   shouldAutoPlay?: boolean
-  onUserInteracted?: (interacted: boolean) => void
+  onUserInteracted?: (interacted: boolean) => void,
+   playbackRate?: number
 }
 
 const formatTime = (secs: number) => {
@@ -22,16 +23,17 @@ const formatTime = (secs: number) => {
   const s = Math.floor(secs % 60)
   return `${m}:${s.toString().padStart(2, "0")}`
 }
-
+const START_PADDING = 0.1
+const END_PADDING = 0.05
 const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
-  ({ lesson, currentSentence, autoStop, shouldAutoPlay = false, onUserInteracted }, ref) => {
+  ({ lesson, currentSentence, autoStop, shouldAutoPlay = false, onUserInteracted, playbackRate }, ref) => {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const isPlayingRef = useRef(false)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
     const [isPlaying, setIsPlaying] = useState(false)
     const [userInteracted, setUserInteracted] = useState(false)
-
+    
     // Ưu tiên audioUrl của lesson, fallback về audioSegmentUrl của câu
     const src = lesson.audioUrl || currentSentence?.audioSegmentUrl || ""
 
@@ -44,7 +46,7 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
 
       const onTimeUpdate = () => {
         setCurrentTime(audio.currentTime)
-        if (autoStop && currentSentence && audio.currentTime >= currentSentence.audioEndMs / 1000) {
+        if (autoStop && currentSentence && audio.currentTime >= currentSentence.audioEndMs / 1000  + END_PADDING) {
           audio.pause()
           setIsPlaying(false)
         }
@@ -90,14 +92,18 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
             audio.load()
           })
         }
-        audio.currentTime = currentSentence.audioStartMs / 1000
+        audio.currentTime = Math.max(currentSentence.audioStartMs / 1000 - START_PADDING, 0)
+
+        audio.playbackRate = playbackRate || 1
+     
+
         await new Promise(resolve => setTimeout(resolve, 50)) // nhường buffer
         await audio.play()
         setIsPlaying(true)
       } catch (error) {
         console.error("Play failed:", error)
       }
-    }, [currentSentence, userInteracted])
+    }, [currentSentence, userInteracted, playbackRate])
 
     // Play tiếp từ vị trí hiện tại
     const play = useCallback(async () => {
@@ -105,6 +111,7 @@ const AudioShadowing = forwardRef<ShadowingPlayerRef, AudioShadowingProps>(
       if (!audio || isPlayingRef.current || !userInteracted) return
       try {
         isPlayingRef.current = true
+        audio.playbackRate = playbackRate || 1
         await audio.play()
         setIsPlaying(true)
       } catch (error) {

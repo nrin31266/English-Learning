@@ -33,6 +33,7 @@ import KeyboardShortcutsHelp from "../components/KeyboardShortcutsHelp"
 import type { ShadowingPlayerRef } from "../types/types"
 import ShadowingTranscript from "../components/ShadowingTranscript"
 import YouTubeShadowing from "../components/YoutubeShadowing"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 const ShadowingMode = () => {
   const { slug } = useParams<{ slug: string }>()
@@ -51,6 +52,7 @@ const ShadowingMode = () => {
   const [userInteracted, setUserInteracted] = useState(false)
 
   const playerRef = useRef<ShadowingPlayerRef | null>(null)
+  const [playbackRate, setPlaybackRate] = useState<number>(1.0)
 
   useEffect(() => {
     if (slug) {
@@ -85,6 +87,10 @@ const ShadowingMode = () => {
       prev < sentences.length - 1 ? prev + 1 : prev
     )
   }, [sentences.length])
+
+  const handleChangePlaybackRate = () => {
+
+  }
 
   const handleReplay = () => {
     playerRef.current?.playCurrentSegment()
@@ -270,6 +276,7 @@ const ShadowingMode = () => {
                 autoStop={autoStop}
                 shouldAutoPlay={shouldAutoPlay}
                 onUserInteracted={setUserInteracted}
+                playbackRate={playbackRate}
               />
             )}
 
@@ -312,8 +319,34 @@ const ShadowingMode = () => {
                   <Keyboard className=""/>
                   Shortcuts
                 </Button>
-                <Volume2 className="h-4 w-4" />
-                <span>1x</span>
+                {/* <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-2 px-2 text-xs"
+                  onClick={handleChangePlaybackRate}>
+                  <Volume2 className="h-4 w-4" />
+                <span>{playbackRate?.toFixed(1) || "1.0"}x</span>
+                </Button> */}
+                <DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="outline" className="h-7 text-[14px]"><Volume2 className="h-4 w-4" />
+                <span>{playbackRate?.toFixed(2) || "1.0"}x</span></Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent>
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>Playback Speed</DropdownMenuLabel>
+      <DropdownMenuItem onSelect={() => setPlaybackRate(1)}>
+        Normal (1.0x)
+      </DropdownMenuItem>
+      {[0.5, 0.75, 1.25, 1.5, 2].map((speed) => (
+        <DropdownMenuItem key={speed} onSelect={() => setPlaybackRate(speed)}>
+          {speed.toFixed(2)}x
+        </DropdownMenuItem>
+      ))}
+      
+    </DropdownMenuGroup>
+  </DropdownMenuContent>
+</DropdownMenu>
               </div>
             </div>
 

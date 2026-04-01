@@ -1,6 +1,7 @@
 package com.rin.learningcontentservice.service;
 
 import com.rin.englishlearning.common.exception.BaseException;
+import com.rin.learningcontentservice.dto.request.MergeSentenceRequest;
 import com.rin.learningcontentservice.dto.request.SplitSentenceRequest;
 import com.rin.learningcontentservice.dto.response.LessonSentenceDetailsResponse;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
@@ -123,4 +124,109 @@ public class SentenceService {
         );
     }
 
+    @Transactional
+    public LessonSentenceDetailsResponse mergeSentence(MergeSentenceRequest request) {
+
+        LessonSentence sentence1 = lessonSentenceRepository.findById(request.getSentence1Id())
+                .orElseThrow(() -> new RuntimeException("Sentence1 not found"));
+
+        LessonSentence sentence2 = lessonSentenceRepository.findById(request.getSentence2Id())
+                .orElseThrow(() -> new RuntimeException("Sentence2 not found"));
+
+        // Validate cùng lesson
+        if (!sentence1.getLesson().getId().equals(sentence2.getLesson().getId())) {
+            throw new BaseException(LearningContentErrorCode.SENTENCE_NOT_IN_SAME_LESSON,
+                    LearningContentErrorCode.SENTENCE_NOT_IN_SAME_LESSON.formatMessage(sentence1.getId(), sentence2.getId()));
+        }
+
+        // Validate liên tiếp
+        if (sentence2.getOrderIndex() != sentence1.getOrderIndex() + 1) {
+            throw new BaseException(LearningContentErrorCode.INVALID_STATE,
+                    LearningContentErrorCode.INVALID_STATE.formatMessage(sentence1.getLesson().getId(), "orderIndex of sentence2 should be exactly 1 greater than sentence1"));
+        }
+
+        // Sort words sentence2
+        List<LessonWord> wordsToMove = sentence2.getLessonWords().stream()
+                .sorted(Comparator.comparing(LessonWord::getOrderIndex))
+                .toList();
+
+        // Base index của sentence1
+        int baseIndex = sentence1.getLessonWords().size();
+
+        // Offset char index (có thêm space)
+        int offset = 0;
+
+        if (!sentence1.getLessonWords().isEmpty()) {
+            LessonWord lastWord = sentence1.getLessonWords().stream()
+                    .max(Comparator.comparing(LessonWord::getOrderIndex))
+                    .orElseThrow();
+
+            offset = lastWord.getEndCharIndex() + 1;
+        }
+
+        // Move words từ sentence2 → sentence1
+        for (LessonWord w : wordsToMove) {
+            w.setSentence(sentence1);
+            w.setOrderIndex(baseIndex++);
+            w.setStartCharIndex(w.getStartCharIndex() + offset);
+            w.setEndCharIndex(w.getEndCharIndex() + offset);
+
+            sentence1.getLessonWords().add(w);
+        }
+
+        // Auto merge text
+        String mergedText = (sentence1.getTextDisplay() != null ? sentence1.getTextDisplay().trim() : "")
+                + " "
+                + (sentence2.getTextDisplay() != null ? sentence2.getTextDisplay().trim() : "");
+
+        sentence1.setTextDisplay(mergedText.trim());
+
+        // Merge translation
+        sentence1.setTranslationVi(
+                (sentence1.getTranslationVi() != null ? sentence1.getTranslationVi() : "")
+                        + " "
+                        + (sentence2.getTranslationVi() != null ? sentence2.getTranslationVi() : "")
+        );
+
+        // Merge phonetic
+        sentence1.setPhoneticUk(
+                (sentence1.getPhoneticUk() != null ? sentence1.getPhoneticUk() : "")
+                        + " "
+                        + (sentence2.getPhoneticUk() != null ? sentence2.getPhoneticUk() : "")
+        );
+
+        sentence1.setPhoneticUs(
+                (sentence1.getPhoneticUs() != null ? sentence1.getPhoneticUs() : "")
+                        + " "
+                        + (sentence2.getPhoneticUs() != null ? sentence2.getPhoneticUs() : "")
+        );
+
+        // Audio
+        sentence1.setAudioEndMs(sentence2.getAudioEndMs());
+
+        // Xóa sentence2
+        lessonSentenceRepository.delete(sentence2);
+
+        // Shift orderIndex phía sau
+        List<LessonSentence> sentencesAfter =
+                lessonSentenceRepository.findByLessonIdAndOrderIndexGreaterThan(
+                        sentence1.getLesson().getId(),
+                        sentence2.getOrderIndex());
+
+        sentencesAfter.forEach(s -> s.setOrderIndex(s.getOrderIndex() - 1));
+
+        lessonSentenceRepository.saveAll(sentencesAfter);
+        lessonSentenceRepository.save(sentence1);
+
+        // Update lesson
+        Lesson lesson = sentence1.getLesson();
+        lesson.setTotalSentences(
+                (lesson.getTotalSentences() != null ? lesson.getTotalSentences() : 0) - 1
+        );
+        lessonRepository.save(lesson);
+
+        lessonSentenceRepository.flush();
+
+        return lessonSentenceMapper.toDetailsResponse(sentence1);
+    }
 }

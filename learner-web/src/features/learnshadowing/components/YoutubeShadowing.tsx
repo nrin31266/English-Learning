@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Play, Video } from "lucide-react"
 
-// Lùi/tiến 0.1s so với start/end để tránh cắt đột ngột
-const PADDING_SEC = 0.05
+
+const PADDING_SEC = 0
 
 type YouTubeShadowingProps = {
   lesson: ILessonDetailsResponse

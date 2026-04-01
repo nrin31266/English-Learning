@@ -8,6 +8,7 @@ import { Headphones, Eye, Pencil, Minimize, Maximize } from "lucide-react"
 import { useMemo, useState } from "react"
 import SentenceItem from "./SentenceItem" // chỉnh path cho đúng
 import SplitSentenceDialog from "./SplitSentenceDialog"
+import MergeSentenceDialog from "./MergeSentenceDialog"
 
 
 const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
@@ -16,6 +17,11 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
   const [viewMode, setViewMode] = useState<"minimal" | "detailed">("minimal")
   const [openSplitDialog, setOpenSplitDialog] = useState(false)
   const [selectedSentence, setSelectedSentence] = useState<ILessonSentence | null>(null)
+  const [openMergeDialog, setOpenMergeDialog] = useState(false)
+  const [mergePair, setMergePair] = useState<{
+    s1: ILessonSentence | null
+    s2: ILessonSentence | null
+  }>({ s1: null, s2: null })
 
 
 
@@ -28,9 +34,25 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
     setSelectedSentence(sentence)
     setOpenSplitDialog(true)
   }
-  
+  const handleMergeSentence = (sentence1: ILessonSentence) => {
+    if (!lesson.sentences) return;
 
-  return (    
+    // tìm câu liền kề để merge
+    const index = lesson.sentences.findIndex(s => s.id === sentence1.id);
+    if (index === -1) return;
+
+    const sentence2 = lesson.sentences[index + 1];
+    if (!sentence2) {
+      // không có câu nào để merge
+      console.log("Không có câu nào để merge với câu này");
+      return;
+    }
+  
+    setMergePair({ s1: sentence1, s2: sentence2 });
+    setOpenMergeDialog(true);
+  }
+
+  return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
         <div>
@@ -45,39 +67,39 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
           </CardDescription>
         </div>
 
-        
+
         <div className="flex gap-2">
           <Button
-          type="button"
-          size="sm"
-          variant={mode === "view" ? "outline" : "default"}
-          className="h-7 px-2 text-[12px]"
-          onClick={toggleMode}
-        >
-          {mode === "view" ? (
-            <>
-              <Pencil className="mr-1 h-3 w-3" />
-              {t("sentencesTab.editModeButton")}
-            </>
-          ) : (
-            <>
-              <Eye className="mr-1 h-3 w-3" />
-              {t("sentencesTab.viewModeButton")}
-            </>
-          )}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={viewMode === "minimal" ? "outline" : "default"}
-          className="h-7 px-2 text-[12px]"
-          onClick={() => setViewMode(viewMode === "minimal" ? "detailed" : "minimal")}
-        >
-          {
-            viewMode === "minimal" ? <Minimize className="mr-1 h-3 w-3" /> : <Maximize className="mr-1 h-3 w-3" />
-          }
-          {viewMode === "minimal" ? t("sentencesTab.detailedViewButton") : t("sentencesTab.minimalViewButton")}
-        </Button>
+            type="button"
+            size="sm"
+            variant={mode === "view" ? "outline" : "default"}
+            className="h-7 px-2 text-[12px]"
+            onClick={toggleMode}
+          >
+            {mode === "view" ? (
+              <>
+                <Pencil className="mr-1 h-3 w-3" />
+                {t("sentencesTab.editModeButton")}
+              </>
+            ) : (
+              <>
+                <Eye className="mr-1 h-3 w-3" />
+                {t("sentencesTab.viewModeButton")}
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={viewMode === "minimal" ? "outline" : "default"}
+            className="h-7 px-2 text-[12px]"
+            onClick={() => setViewMode(viewMode === "minimal" ? "detailed" : "minimal")}
+          >
+            {
+              viewMode === "minimal" ? <Minimize className="mr-1 h-3 w-3" /> : <Maximize className="mr-1 h-3 w-3" />
+            }
+            {viewMode === "minimal" ? t("sentencesTab.detailedViewButton") : t("sentencesTab.minimalViewButton")}
+          </Button>
         </div>
       </CardHeader>
 
@@ -86,7 +108,8 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
           <div className="divide-y">
             {lesson.sentences && lesson.sentences.length > 0 ? (
               lesson.sentences.map((s) => {
-                return <SentenceItem  key={s.id} sentence={s} mode={mode} viewMode={viewMode} onSplitSentence={handleSplitSentence} />
+                return <SentenceItem key={s.id} sentence={s} mode={mode} viewMode={viewMode} onSplitSentence={handleSplitSentence} onMergeSentence={handleMergeSentence}
+                lastSentence={s.id === lesson.sentences?.[lesson.sentences.length - 1]?.id} />
               })
             ) : (
               <div className="py-6 text-center text-sm text-muted-foreground">
@@ -101,6 +124,15 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
         setOpenSplitDialog(false);
         setSelectedSentence(null);
       }} sentence={selectedSentence} />
+      <MergeSentenceDialog
+        open={openMergeDialog}
+        onClose={() => {
+          setOpenMergeDialog(false)
+          setMergePair({ s1: null, s2: null })
+        }}
+        sentence1={mergePair.s1}
+        sentence2={mergePair.s2}
+      />
     </Card>
   )
 }

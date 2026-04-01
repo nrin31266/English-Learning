@@ -7,7 +7,8 @@ import { markSentenceActiveInactive } from "@/store/learningcontent/lessonDetail
 import { showNotification } from "@/store/system/notificationSlice"
 import type { ILessonSentence } from "@/types"
 import { formatTimeMs } from "@/utils/timeUtils"
-import { EyeOff, Loader2, Save, Scissors, ToggleRight } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@radix-ui/react-tooltip"
+import { EyeOff, GitMerge, Loader2, Save, Scissors, ToggleRight } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 
@@ -16,9 +17,11 @@ type SentenceItemProps = {
   mode?: "view" | "edit"
   viewMode?: "minimal" | "detailed",
   onSplitSentence?: (sentenceId: number) => void, // Callback khi split sentence
+  onMergeSentence?: (sentence1: ILessonSentence) => void, // Callback khi merge sentence
+  lastSentence?: boolean // để disable nút merge với câu tiếp theo nếu là câu cuối
 }
 
-const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSentence }: SentenceItemProps) => {
+const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSentence, onMergeSentence, lastSentence }: SentenceItemProps) => {
   const { type, status, data } = useAppSelector(state => state.learningContent.lessonDetails.sentenceMutation);
   const s = sentence
   const isEditMode = mode === "edit"
@@ -75,8 +78,8 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
     onSplitSentence?.(s.id);
   }
   const sortedWords = useMemo(() => {
-  return [...s.lessonWords].sort((a, b) => a.orderIndex - b.orderIndex);
-}, [s.lessonWords]);
+    return [...s.lessonWords].sort((a, b) => a.orderIndex - b.orderIndex);
+  }, [s.lessonWords]);
 
   // ───────────────────────────────────────────
   // Render
@@ -183,6 +186,28 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
                 <Save className="mr-1 h-3 w-3" />
                 Save changes
               </Button>
+              {
+                !lastSentence && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[12px]"
+                          onClick={() => onMergeSentence && onMergeSentence(sentence)}
+                        >
+                          <GitMerge className="h-4 w-4" /> Merge
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Ghép với câu tiếp theo
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )
+              }
               {
                 sentence.lessonWords.length >= 2 && <Button
                   type="button"

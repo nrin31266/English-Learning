@@ -15,6 +15,6 @@ public class LessonController {
     @GetMapping("/{slug}")
     public ApiResponse<LessonDetailsResponse> getLessonDetails(
             @PathVariable String slug) {
-        return ApiResponse.success(lessonService.getLessonDetails(slug));
+        return ApiResponse.success(lessonService.getLessonDetailsWithoutInActivateSentences(slug));
     }
 }

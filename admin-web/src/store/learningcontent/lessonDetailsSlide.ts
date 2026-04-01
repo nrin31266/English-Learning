@@ -20,7 +20,7 @@ import { extractError } from "@/utils/reduxUtils";
 interface LessonDetailsState {
   lessonDetails: IAsyncState<ILessonDetailsDto | null>;
   lessonDetailsMutation: IAsyncState<null> & { type: "re-try" | "stop-ai-processing" | "publish" | "update" | "delete" | null };
-  sentenceMutation: IAsyncState<string | null> & { type: "mark-active-inactive" | null | "split" | "concat" };
+  sentenceMutation: IAsyncState<string | null> & { type: "mark-active-inactive" | null | "split" | "merge" };
 }
 const initialState: LessonDetailsState = {
   lessonDetails: {
@@ -204,7 +204,26 @@ export const splitSentence = createAsyncThunk(
       return rejectWithValue(extractError(err));
     }
   });
-
+// @PostMapping("/merge")
+//     public ApiResponse<LessonSentenceDetailsResponse> mergeSentence(
+//             @RequestBody MergeSentenceRequest request) {
+//         return ApiResponse.success(sentenceService.mergeSentence(request));
+//     }
+export const mergeSentence = createAsyncThunk(
+  "lessons/mergeSentence",
+  async ({ data }: { data: any }, { rejectWithValue }) => {
+    try {
+      const res = await handleAPI<ILessonSentence>({
+        endpoint: `/learning-contents/admin/sentences/merge`,
+        method: "POST",
+        isAuth: true,
+        body: data,
+      });
+      return res;
+    } catch (err) {
+      return rejectWithValue(extractError(err));
+    }
+  });
 
 export const lessonDetailsSlice = createSlice({
   name: "lessonDetails",
@@ -403,7 +422,7 @@ export const lessonDetailsSlice = createSlice({
             for (let i = afterIndex; i < state.lessonDetails.data.sentences.length; i++) {
               state.lessonDetails.data.sentences[i].orderIndex += 1;
             }
-            
+
             state.lessonDetails.data.totalSentences = (state.lessonDetails.data.totalSentences ?? 0) + 1;
           }
         }
@@ -412,6 +431,55 @@ export const lessonDetailsSlice = createSlice({
         state.sentenceMutation.status = "failed";
         state.sentenceMutation.error = action.payload as IErrorState;
       })
+      .addCase(mergeSentence.pending, (state, action) => {
+        state.sentenceMutation.status = "loading";
+        state.sentenceMutation.error = { code: null, message: null };
+        state.sentenceMutation.type = "merge";
+        state.sentenceMutation.data = null;
+      })
+      .addCase(mergeSentence.fulfilled, (state, action) => {
+        state.sentenceMutation.status = "succeeded";
+
+        const mergedSentence = action.payload;
+
+        if (state.lessonDetails.data) {
+          const sentences = state.lessonDetails.data.sentences;
+
+          // tìm vị trí sentence1 cũ
+          const index1 = sentences.findIndex(
+            s => s.id === action.meta.arg.data.sentence1Id
+          );
+
+          // xóa 2 sentence cũ
+          const sentenceIdsToRemove = [
+            action.meta.arg.data.sentence1Id,
+            action.meta.arg.data.sentence2Id
+          ];
+
+          const filtered = sentences.filter(
+            s => !sentenceIdsToRemove.includes(s.id)
+          );
+
+          // insert merged sentence vào vị trí cũ
+          if (index1 !== -1) {
+            filtered.splice(index1, 0, mergedSentence);
+          } else {
+            // fallback nếu không tìm thấy
+            filtered.push(mergedSentence);
+          }
+
+          // cập nhật lại state
+          state.lessonDetails.data.sentences = filtered;
+
+          // update total
+          state.lessonDetails.data.totalSentences =
+            (state.lessonDetails.data.totalSentences ?? 0) - 1;
+        }
+      })
+      .addCase(mergeSentence.rejected, (state, action) => {
+        state.sentenceMutation.status = "failed";
+        state.sentenceMutation.error = action.payload as IErrorState;
+      });
   },
 });
 

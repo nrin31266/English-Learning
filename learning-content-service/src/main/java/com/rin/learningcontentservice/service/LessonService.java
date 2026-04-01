@@ -156,14 +156,23 @@ public class LessonService {
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(slug))
         );
         var ld = lessonMapper.toLessonDetailsResponse(lesson);
+        // sort
         ld.setSentences(
                 ld.getSentences().stream()
-                        .filter(s -> s.getIsActive() != null && s.getIsActive())
                         .sorted(Comparator.comparing(LessonSentenceDetailsResponse::getOrderIndex))
                         .toList()
         );
 
-
+        return ld;
+    }
+    @Transactional
+    public LessonDetailsResponse getLessonDetailsWithoutInActivateSentences(String slug) {
+        var ld = getLessonDetails(slug);
+        ld.setSentences(
+                ld.getSentences().stream()
+                        .filter(s -> s.getIsActive() != null && s.getIsActive())
+                        .toList()
+        );
         return ld;
     }
 
