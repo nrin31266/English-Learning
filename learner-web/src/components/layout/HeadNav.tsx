@@ -1,7 +1,4 @@
 
-import * as React from "react"
-import { BookA, CircleCheckIcon, CircleHelpIcon, CircleIcon, Notebook, Menu } from "lucide-react"
-import { useIsMobile } from "@/hooks/use-mobile"
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -10,8 +7,10 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
-
 } from "@/components/ui/navigation-menu"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { BookA, Menu, Notebook } from "lucide-react"
+import * as React from "react"
 import { Link, useLocation } from "react-router-dom"
 
 const HeadNav = () => {
@@ -40,18 +39,18 @@ const HeadNav = () => {
           <Menu className={`${open ? 'rotate-45' : 'rotate-0'} transition-transform duration-300`} />
         </button>
       )}
-     <NavigationMenuList
-  className={`${isMobile
-    ? `p-4 top-6 -left-12 absolute flex flex-col min-w-16 border rounded-md shadow bg-background z-20 
+      <NavigationMenuList
+        className={`${isMobile
+          ? `p-4 top-6 -left-12 absolute flex flex-col min-w-16 border rounded-md shadow bg-background z-20 
       transition-all duration-300 ease-out
       justify-start items-start
-      ${open 
-        ? 'opacity-100 translate-y-0 pointer-events-auto' 
-        : 'opacity-0 -translate-y-2 pointer-events-none'
-      }`
-    : 'justify-start'
-  }`}
->
+      ${open
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 -translate-y-2 pointer-events-none'
+          }`
+          : 'justify-start'
+          }`}
+      >
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
             <Link onClick={() => setOpen(false)} to="/topics" className={`flex flex-wrap ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'font-bold! text-white! bg-primary!' : ''

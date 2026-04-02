@@ -4,8 +4,6 @@ import Keycloak from "keycloak-js";
 export default class KeycloakClient {
   private static _instance: KeycloakClient | null = null;
   private _keycloak: Keycloak;
-  private _refreshTimeout: ReturnType<typeof setTimeout> | null = null;
-  private _refreshInProgress = false;
   private _initialized = false;
 
   private constructor() {
@@ -39,11 +37,16 @@ export default class KeycloakClient {
     });
 
     this._initialized = true;
-
+    const exp = this._keycloak.tokenParsed?.exp ?? 0;
+    const now = Math.floor(Date.now() / 1000);
+    console.log(
+      `Keycloak initialized. Authenticated: ${authenticated}, Token expires in ${exp - now
+      }s`
+    );
 
 
     return authenticated;
   }
 
-  
+
 }

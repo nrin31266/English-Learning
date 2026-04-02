@@ -34,6 +34,7 @@ import YouTubeTag from "@/components/YouTubeTag"
 import { useIsMobile } from "@/hooks/use-mobile"
 import DictationTranscript from "../components/DictationTranscript"
 import { cn } from "@/lib/utils"
+import DictationPanel from "../components/DictationPanel"
 
 
 const DictationMode = () => {
@@ -49,6 +50,7 @@ const DictationMode = () => {
     const [activeIndex, setActiveIndex] = useState(0)
     const [shouldAutoPlay, setShouldAutoPlay] = useState(false)
     const [userInteracted, setUserInteracted] = useState(false)
+    const [completedIds, setCompletedIds] = useState<number[]>([])
 
     const playerRef = useRef<PlayerRef | null>(null)
     const [playbackRate, setPlaybackRate] = useState<number>(1.0)
@@ -107,7 +109,6 @@ const DictationMode = () => {
             const tag = target?.tagName
             const isEditable =
                 tag === "INPUT" ||
-                tag === "TEXTAREA" ||
                 target?.isContentEditable
 
             if (isEditable) return
@@ -288,8 +289,15 @@ const DictationMode = () => {
 
                     <div className="relative">
                         <div className={cn(showTranscript && "hidden")}>
-                            <div className="flex h-full items-center justify-center p-6">
-                                <span className="font-semibold">Content</span>
+                            <div className="flex h-full w-full items-start justify-center p-1">
+                                <DictationPanel
+                                    sentence={currentSentence}
+                                    onNext={handleNext}
+                                    onSubmit={() => {
+                                        console.log("Submit clicked for sentence", currentSentence.id)
+                                        setCompletedIds((prev) => [...prev, currentSentence.id])
+                                    }}
+                                />
                             </div>
                         </div>
 
@@ -339,8 +347,14 @@ const DictationMode = () => {
                     <ResizableHandle withHandle />
 
                     <ResizablePanel defaultSize="100%" minSize={"40%"}>
-                        <div className="flex h-full items-center justify-center p-6">
-                            <span className="font-semibold">Content</span>
+                        <div className="flex h-full w-full items-start justify-center p-1">
+                            <DictationPanel
+                                sentence={currentSentence}
+                                onNext={handleNext}
+                                onSubmit={() => {
+                                    console.log("Submit clicked for sentence", currentSentence.id)
+                                }}
+                            />
                         </div>
                     </ResizablePanel>
 
@@ -355,6 +369,7 @@ const DictationMode = () => {
                                             activeIndex={activeIndex}
                                             onSelectSentence={handleSelectSentence}
                                             visible={showTranscript}
+                                            completedIds={completedIds}
                                         />
                                     </div>
                                 </div>

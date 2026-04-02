@@ -155,16 +155,6 @@ export interface ILessonDto {
   updatedAt: string
   publishedAt: string | null
 }
-export interface ILessonProcessingStepNotifyEvent {
-  lessonId: number;
-  processingStep: (typeof LessonProcessingStep)[number];
-  aiJobId: string | null;
-  aiMessage: string | null;
-  audioUrl: string | null;
-  sourceReferenceId: string | null;
-  thumbnailUrl: string | null;
-  durationSeconds: number | null;
-}
 export interface ILessonSentence {
   id: number;
   lessonId: number;

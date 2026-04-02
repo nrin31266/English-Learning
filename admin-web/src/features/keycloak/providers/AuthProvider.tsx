@@ -45,6 +45,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (!authenticated) {
         keycloak.login();
+      
         return;
       }
 
@@ -87,7 +88,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (!loadingKC) {
       fetchProfile();
-    }
+    } 
   }, [loadingKC]);
 
   // ───────────────────────────────────────────

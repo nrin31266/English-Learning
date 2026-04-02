@@ -21,17 +21,10 @@ const router = createBrowserRouter([
       {
         element: <AppLayout />, // layout bọc các route con
         children: [
-           // -------------------------
-          // Dashboard
-          // -------------------------
           {
             path: "/",
             element: <div>Dashboard</div>,
           },
-
-          // -------------------------
-          // Learning Content
-          // -------------------------
           {
             path: "/topics",
             element: withSuspense(<AllTopic />),
@@ -49,9 +42,6 @@ const router = createBrowserRouter([
             element: withSuspense(<GenerateLessons />),
           },
 
-          // -------------------------
-          // Vocabulary
-          // -------------------------
           {
             path: "/all-words",
             element: <div>All Words Page</div>,
@@ -61,9 +51,7 @@ const router = createBrowserRouter([
             element: withSuspense(<WordQueue />),
           },
 
-          // -------------------------
-          // System
-          // -------------------------
+
           {
             path: "/system/health",
             element: <div>Health Check Page</div>,
@@ -81,9 +69,6 @@ const router = createBrowserRouter([
             element: <div>Logs Page</div>,
           },
 
-          // -------------------------
-          // Profile & Settings
-          // -------------------------
           {
             path: "/profile",
             element: <div>Profile Page</div>,

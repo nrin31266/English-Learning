@@ -13,6 +13,7 @@ interface RequestParams<B = unknown> {
   withCredentials?: boolean;
   timeout?: number; // in milliseconds
   contentType?: string;
+  signal?: AbortSignal; // optional: for request cancellation
 }
 
 
@@ -25,7 +26,8 @@ const handleAPI = async <T, B = unknown>({
   params,
   withCredentials = false,
   timeout,
-  contentType
+  contentType,
+  signal, // optional: for request cancellation
 }: RequestParams<B>): Promise<T> => {
   try {
     const headers: Record<string, string> = {};
@@ -47,7 +49,8 @@ const handleAPI = async <T, B = unknown>({
       headers,
       params,
       withCredentials: withCredentials,
-      timeout: timeout || 10000
+      timeout: timeout || 10000, // default timeout 10s
+      signal, // optional: for request cancellation
     });
 
     const response: IApiResponse<T> = axiosResponse.data;

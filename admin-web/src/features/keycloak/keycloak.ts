@@ -1,11 +1,9 @@
-import { formatDate, timeAgo } from "@/utils/timeUtils";
+
 import Keycloak from "keycloak-js";
 
 export default class KeycloakClient {
   private static _instance: KeycloakClient | null = null;
   private _keycloak: Keycloak;
-  private _refreshTimeout: ReturnType<typeof setTimeout> | null = null;
-  private _refreshInProgress = false;
   private _initialized = false;
 
   private constructor() {
@@ -48,43 +46,7 @@ export default class KeycloakClient {
       }s`
     );
 
-    // if (authenticated) {
-    //   this.scheduleTokenRefresh();
-    // }
-
     return authenticated;
   }
 
-  // // ✅ SAFE TOKEN REFRESH
-  // private scheduleTokenRefresh() {
-  //   if (!this._keycloak.authenticated) return;
-
-  //   const exp = this._keycloak.tokenParsed?.exp ?? 0;
-  //   const now = Math.floor(Date.now() / 1000);
-  //   const buffer = 30;
-  //   const delay = Math.max((exp - now - buffer) * 1000, 0);
-
-  //   console.log(`Next token refresh in ${delay / 1000}s`);
-
-  //   this._refreshTimeout = setTimeout(async () => {
-  //     if (this._refreshInProgress) return;
-  //     this._refreshInProgress = true;
-
-  //     try {
-  //       const refreshed = await this._keycloak.updateToken(buffer);
-  //       if (refreshed) console.log("🔁 Token refreshed");
-  //     } catch (err) {
-  //       console.error("❌ Failed to refresh token:", err);
-  //     } finally {
-  //       this._refreshInProgress = false;
-  //       this.scheduleTokenRefresh(); // reschedule
-  //     }
-  //   }, delay);
-  // }
-
-  // public clearRefresh() {
-  //   if (this._refreshTimeout) {
-  //     clearTimeout(this._refreshTimeout);
-  //   }
-  // }
 }
