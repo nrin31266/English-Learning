@@ -50,7 +50,8 @@ const DictationMode = () => {
     const [activeIndex, setActiveIndex] = useState(0)
     const [shouldAutoPlay, setShouldAutoPlay] = useState(false)
     const [userInteracted, setUserInteracted] = useState(false)
-    const [completedIds, setCompletedIds] = useState<number[]>([])
+    const tempAnswersRef = useRef<Record<number, string>>({})
+    const [completedIds, setCompletedIds] = useState<Set<number>>(new Set())
 
     const playerRef = useRef<PlayerRef | null>(null)
     const [playbackRate, setPlaybackRate] = useState<number>(1.0)
@@ -73,7 +74,7 @@ const DictationMode = () => {
     }
 
     useEffect(() => {
-        if (slug) {
+        if (slug && slug !== lesson?.slug) {
             dispatch(fetchLessonBySlug(slug))
         }
     }, [dispatch, slug])
@@ -84,7 +85,7 @@ const DictationMode = () => {
         setUserInteracted(false)
     }, [lesson?.id])
 
-    const isLoading = status === "idle" || status === "loading"
+    const isLoading = (status === "idle" || status === "loading") 
 
     const sentences: ILessonSentenceDetailsResponse[] = useMemo(
         () => lesson?.sentences ?? [],
@@ -291,11 +292,16 @@ const DictationMode = () => {
                         <div className={cn(showTranscript && "hidden")}>
                             <div className="flex h-full w-full items-start justify-center p-1">
                                 <DictationPanel
+                                    key="dictation-panel"
                                     sentence={currentSentence}
                                     onNext={handleNext}
                                     onSubmit={() => {
                                         console.log("Submit clicked for sentence", currentSentence.id)
-                                        setCompletedIds((prev) => [...prev, currentSentence.id])
+                                        setCompletedIds((prev) => new Set(prev).add(currentSentence.id))
+                                    }}
+                                    currentTemporaryAnswer={tempAnswersRef.current[currentSentence.id]}
+                                    onTemporaryAnswerChange={(val) => {
+                                        tempAnswersRef.current[currentSentence.id] = val
                                     }}
                                 />
                             </div>
@@ -307,6 +313,7 @@ const DictationMode = () => {
                                 activeIndex={activeIndex}
                                 onSelectSentence={handleSelectSentence}
                                 visible={showTranscript}
+                                completedIds={completedIds}
                             />
                         </div>
                     </div>
@@ -349,10 +356,17 @@ const DictationMode = () => {
                     <ResizablePanel defaultSize="100%" minSize={"40%"}>
                         <div className="flex h-full w-full items-start justify-center p-1">
                             <DictationPanel
+                                key="dictation-panel"
                                 sentence={currentSentence}
                                 onNext={handleNext}
                                 onSubmit={() => {
                                     console.log("Submit clicked for sentence", currentSentence.id)
+                                    setCompletedIds((prev) => new Set(prev).add(currentSentence.id))
+                                }}
+                                completed={completedIds.has(currentSentence.id)}
+                                currentTemporaryAnswer={tempAnswersRef.current[currentSentence.id]}
+                                onTemporaryAnswerChange={(val) => {
+                                    tempAnswersRef.current[currentSentence.id] = val
                                 }}
                             />
                         </div>

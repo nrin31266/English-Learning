@@ -12,7 +12,7 @@ import {
     KeyboardIcon,
     RotateCcw
 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { WordChipStatus } from "./WordChip"
 import WordChip from "./WordChip"
 
@@ -25,6 +25,9 @@ type DictationPanelProps = {
     onNext?: () => void
     progress?: { current: number; total: number }
     loading?: boolean
+    completed?: boolean,
+    currentTemporaryAnswer?: string,
+    onTemporaryAnswerChange?: (tempAnswer: string) => void
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -34,23 +37,39 @@ const getWordDisplay = (w: ILessonWordResponse): string =>
 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false }: DictationPanelProps) => {
+const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false, completed = false, currentTemporaryAnswer, onTemporaryAnswerChange }: DictationPanelProps) => {
     const [answer, setAnswer] = useState("")
     const [revealState, setRevealState] = useState<RevealState>({})
     const textareaRef = useRef<HTMLTextAreaElement>(null)
-    const [autoSubmitted, setAutoSubmitted] = useState(false)
-
-    useEffect(() => {
-        setAnswer("")
-        setRevealState({})
-        setAutoSubmitted(false)
-        textareaRef.current?.focus()
-    }, [sentence.id])
-
     const sortedWords = useMemo(
         () => [...sentence.lessonWords].sort((a, b) => a.orderIndex - b.orderIndex),
         [sentence.lessonWords]
     )
+    useEffect(() => {
+        console.log("MOUNT")
+
+        return () => {
+            console.log("UNMOUNT")
+        }
+    }, [])
+    useEffect(() => {
+        setRevealState(prev => {
+            if (Object.keys(prev).length === 0) return prev
+            return {}
+        })
+        if (completed) {
+            setAnswer(sortedWords.map(w => getWordDisplay(w)).join(" "))
+        } else {
+            if (currentTemporaryAnswer) {
+                setAnswer(currentTemporaryAnswer)
+            } else {
+                setAnswer("")
+            }
+        }
+        textareaRef.current?.focus()
+    }, [sentence.id])
+
+
 
     const totalWords = sortedWords.length
     const revealedWordIds = useMemo(() => sortedWords.filter(w => revealState[w.id]).map(w => w.id), [sortedWords, revealState])
@@ -98,13 +117,13 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false 
 
     // Dùng ở nhiều chỗ
     useEffect(() => {
-        if (isAllCorrect && !autoSubmitted && !loading) {
-            setAutoSubmitted(true)
+        if (isAllCorrect && !completed && !loading) {
             onSubmit?.(answer.trim(), revealedWordIds)
         }
-    }, [isAllCorrect])
-
-    const handleRevealOne = (id: number) => setRevealState(p => ({ ...p, [id]: true }))
+    }, [isAllCorrect, completed])
+    const handleRevealOne = useCallback((id: number) => {
+        setRevealState(p => ({ ...p, [id]: true }))
+    }, [])
 
     const handleRevealAll = () => {
         const next: RevealState = {}
@@ -173,11 +192,14 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false 
                     <Textarea
                         ref={textareaRef}
                         value={answer}
-                        onChange={(e) => setAnswer(e.target.value)}
+                        onChange={(e) => {
+                            setAnswer(e.target.value)
+                            onTemporaryAnswerChange?.(e.target.value)
+                        }}
                         onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault()
-                                if (!loading && isAllCorrect) {
+                                if (!loading && isAllCorrect && completed) {
                                     onNext && onNext()
                                 }
                             }

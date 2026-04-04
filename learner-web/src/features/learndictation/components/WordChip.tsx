@@ -12,7 +12,7 @@ type WordChipProps = {
 
 const WordChip = ({ displayText, status, onReveal }: WordChipProps) => {
   const isInteractive = status === "untyped" || status === "wrong"
-  
+  console.log("init")
   const config = {
     correct_typed: {
       border: "border-emerald-500/40 bg-emerald-500/10",
