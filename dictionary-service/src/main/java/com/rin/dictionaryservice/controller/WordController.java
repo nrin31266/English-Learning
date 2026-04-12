@@ -2,10 +2,12 @@ package com.rin.dictionaryservice.controller;
 
 import com.rin.dictionaryservice.dto.SpaCyWordAnalysisDto;
 import com.rin.dictionaryservice.dto.SpaCyWordAnalysisRequest;
+import com.rin.dictionaryservice.dto.WordResponse;
 import com.rin.dictionaryservice.dto.WordSearchRequest;
 import com.rin.dictionaryservice.model.Word;
 import com.rin.dictionaryservice.repository.httpclient.LanguageProcessingClient;
 import com.rin.dictionaryservice.service.WordService;
+import com.rin.dictionaryservice.utils.TextUtils;
 import com.rin.englishlearning.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -20,10 +22,10 @@ public class WordController {
     LanguageProcessingClient  languageProcessingClient;
 
     @PostMapping
-    public ApiResponse<Word> addOrGetWord(@RequestBody WordSearchRequest request) {
+    public ApiResponse<WordResponse> addOrGetWord(@RequestBody WordSearchRequest request) {
         SpaCyWordAnalysisDto analysis = languageProcessingClient.analyzeWord(
                 new SpaCyWordAnalysisRequest(request.getWord(), request.getContext())
         ).getResult();
-        return ApiResponse.success(wordService.addOrGetWord(analysis.getLemma() + "_" +analysis.getPos() , analysis));
+        return ApiResponse.success(wordService.addOrGetWord(TextUtils.normalizeWordLower(request.getWord()), analysis, request.getContext()));
     }
 }

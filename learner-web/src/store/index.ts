@@ -7,11 +7,13 @@ import systemReducer from './system/index';
 import topicsReducer from './topicsSlide';
 import topicReducer from './topicSlide';
 import lessonForShadowingReducer from './lessonForShadowingSlide';
+import lessonForDictationReducer from './lessonForDictationSlide'; 
 const rootReducer = combineReducers({
   system: systemReducer,
   topics: topicsReducer,
   topic: topicReducer,
   lessonForShadowing: lessonForShadowingReducer,
+  lessonForDictation: lessonForDictationReducer,
 });
 
 

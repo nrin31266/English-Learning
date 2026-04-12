@@ -4,7 +4,7 @@ import {
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
 import { useAppDispatch, useAppSelector } from "@/store"
-import { fetchLessonBySlug } from "@/store/lessonForShadowingSlide"
+import { fetchLessonBySlug } from "@/store/lessonForDictationSlide"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
@@ -42,7 +42,7 @@ const DictationMode = () => {
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
     const [showHelp, setShowHelp] = useState(false)
-    const lessonState = useAppSelector((state) => state.lessonForShadowing.lesson)
+    const lessonState = useAppSelector((state) => state.lessonForDictation.lesson)
     const { data: lesson, status, error } = lessonState
 
     const [autoStop, setAutoStop] = useState(true)
@@ -172,7 +172,7 @@ const DictationMode = () => {
                     </Breadcrumb>
 
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                        <span>Shadowing Mode</span>
+                        <span>Dictation Mode</span>
                         {lesson && (
                             <>
                                 <span>·</span>
@@ -214,7 +214,7 @@ const DictationMode = () => {
             {isLoading ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Loading lesson for shadowing...
+                    Loading lesson for dictation...
                 </div>
             ) : status === "failed" ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm">

@@ -18,7 +18,7 @@ public class InternalWordController {
     @PutMapping("/{id}")
     public ApiResponse<Void> saveWord(@RequestBody Word updatedWord,
                                       @PathVariable String id) {
-        wordService.saveWord(updatedWord, id);
+
         return ApiResponse.success("Ok");
     }
 }

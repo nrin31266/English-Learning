@@ -1,50 +1,64 @@
 package com.rin.dictionaryservice.model;
 
-import com.rin.dictionaryservice.model.sub.Audio;
-import com.rin.dictionaryservice.model.sub.Pronunciation;
-import com.rin.dictionaryservice.model.sub.Sentence;
-import com.rin.dictionaryservice.model.sub.WordCreationStatus;
+import com.rin.dictionaryservice.constant.WordCreationStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import java.time.LocalDateTime;
 import java.util.List;
 
-
 @Document(collection = "words")
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@CompoundIndex(name = "text_pos_idx", def = "{'text': 1, 'pos': 1}", unique = true)
 public class Word {
 
     @Id
-    String id; // lemma_pos
+    String id; // "text|pos"
 
-    String lemma;
-    String pos;
+    String text;      // từ gốc
+    String pos;       // VERB, NOUN, ADJ
+    String lemma;     // dạng từ điển
+    String context;   // câu gốc
 
-    String displayWord;
+    Phonetics phonetics;
+    List<Definition> definitions;
 
-    WordCreationStatus status; // PENDING, READY, FAILED
+    WordCreationStatus status;  // "PENDING" hoặc "READY"
+    LocalDateTime pendingStartedAt;
 
-    Pronunciation pronunciation;
-
-    List<Sentence> sentences;
-
-
-    Audio audio;
-
-    String cefrLevel;
 
     @CreatedDate
     LocalDateTime createdAt;
 
     @LastModifiedDate
     LocalDateTime updatedAt;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Phonetics {
+        String uk;
+        String ukAudioUrl;
+        String us;
+        String usAudioUrl;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Definition {
+        String meaning;        // nghĩa tiếng Anh đơn giản
+        String example;        // câu ví dụ
+        String translationVi;  // nghĩa tiếng Việt
+    }
 }

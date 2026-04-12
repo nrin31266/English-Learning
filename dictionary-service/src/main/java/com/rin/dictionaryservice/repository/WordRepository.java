@@ -1,10 +1,20 @@
 package com.rin.dictionaryservice.repository;
 
 import com.rin.dictionaryservice.model.Word;
-
-
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Optional;
 
+@Repository
 public interface WordRepository extends MongoRepository<Word, String> {
 
+    // Tìm theo text + pos (unique)
+    Optional<Word> findByTextAndPos(String text, String pos);
+
+    // Lấy danh sách PENDING cho worker xử lý (lấy cũ nhất trước, giới hạn số lượng)
+    @Query("{ 'status': 'PENDING' }")
+    List<Word> findPendingWords(Pageable pageable);
 }

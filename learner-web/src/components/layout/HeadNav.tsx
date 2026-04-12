@@ -51,35 +51,35 @@ const HeadNav = () => {
           : 'justify-start'
           }`}
       >
-        <NavigationMenuItem>
+        <NavigationMenuItem className="">
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link onClick={() => setOpen(false)} to="/topics" className={`flex flex-wrap ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'font-bold! text-white! bg-primary!' : ''
+            <Link onClick={() => setOpen(false)} to="/topics" className={`flex flex-wrap ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'font-bold! text-primary-foreground bg-primary!' : ''
               }`}><div><Notebook className={`
-                ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'text-white' : 'text-muted-foreground'}
+                ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'text-primary-foreground' : 'text-muted-foreground'}
             `} /></div> Topics</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link onClick={() => setOpen(false)} to="/dictionary" className={`flex flex-wrap ${pn.startsWith('/dictionary') ? 'font-bold! text-white! bg-primary!' : ''
+            <Link onClick={() => setOpen(false)} to="/dictionary" className={`flex flex-wrap ${pn.startsWith('/dictionary') ? 'font-bold! text-primary-foreground bg-primary!' : ''
               }`}><div><BookA className={`
-                ${pn.startsWith('/dictionary') ? 'text-white' : 'text-muted-foreground'}
+                ${pn.startsWith('/dictionary') ? 'text-primary-foreground' : 'text-muted-foreground'}
             `} /></div> Dictionary</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link onClick={() => setOpen(false)} to="/review" className={`flex flex-wrap ${pn.startsWith('/review') ? 'font-bold! text-white! bg-primary!' : ''
+            <Link onClick={() => setOpen(false)} to="/review" className={`flex flex-wrap ${pn.startsWith('/review') ? 'font-bold! text-primary-foreground bg-primary!' : ''
               }`}>Review</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem >
           <NavigationMenuTrigger className={
-            pn.startsWith('/settings') ? 'font-bold! text-white! bg-primary!' : ''
+            pn.startsWith('/settings') ? 'font-bold! text-primary-foreground bg-primary!' : ''
           }>More</NavigationMenuTrigger>
           <NavigationMenuContent>
             <ul className="grid w-[300px] gap-4">
-              <li>
+              <li>      
                 <NavigationMenuLink asChild>
                   <Link onClick={() => setOpen(false)} to="/settings">
                     <div className="font-medium">Settings</div>
