@@ -13,13 +13,14 @@ import java.util.List;
 public interface DictionaryMapper {
 
     // =========================
-    // API RESPONSE → WORD RESPONSE (dùng sau khi đã lọc đúng object theo pos)
+    // API RESPONSE → WORD RESPONSE
     // =========================
     @Mapping(target = "word", source = "word")
     @Mapping(target = "phonetics", source = ".", qualifiedByName = "mapPhonetics")
     @Mapping(target = "definitions", source = ".", qualifiedByName = "mapDefinitionsByPos")
     @Mapping(target = "pos", source = ".", qualifiedByName = "extractPos")
     @Mapping(target = "isPlaceholder", constant = "false")
+    @Mapping(target = "status", constant = "FALLBACK")
     @Mapping(target = "message", ignore = true)
     WordResponse toWordResponse(DictionaryApiResponse source);
 
@@ -31,11 +32,12 @@ public interface DictionaryMapper {
     @Mapping(target = "phonetics", source = "phonetics")
     @Mapping(target = "definitions", source = "definitions")
     @Mapping(target = "isPlaceholder", constant = "false")
+    @Mapping(target = "status", constant = "READY")
     @Mapping(target = "message", ignore = true)
     WordResponse toWordResponse(Word word);
 
     // =========================
-    // PHONETICS
+    // PHONETICS (giữ nguyên)
     // =========================
     @Named("mapPhonetics")
     default WordResponse.PhoneticsDto mapPhonetics(DictionaryApiResponse source) {
@@ -64,7 +66,7 @@ public interface DictionaryMapper {
     }
 
     // =========================
-    // EXTRACT POS (lấy từ meanings đầu tiên)
+    // EXTRACT POS
     // =========================
     @Named("extractPos")
     default String extractPos(DictionaryApiResponse source) {
@@ -75,7 +77,7 @@ public interface DictionaryMapper {
     }
 
     // =========================
-    // MAP DEFINITIONS (CHỈ LẤY CỦA POS ĐÃ CHỌN)
+    // MAP DEFINITIONS
     // =========================
     @Named("mapDefinitionsByPos")
     default List<WordResponse.DefinitionDto> mapDefinitionsByPos(DictionaryApiResponse source) {
@@ -83,7 +85,6 @@ public interface DictionaryMapper {
             return List.of();
         }
 
-        // Lấy tất cả definitions từ tất cả meanings (vì object này đã đúng pos rồi)
         return source.getMeanings().stream()
                 .flatMap(m -> m.getDefinitions().stream())
                 .map(this::mapDefinition)
@@ -96,9 +97,9 @@ public interface DictionaryMapper {
     @Named("mapDefinition")
     default WordResponse.DefinitionDto mapDefinition(DictionaryApiResponse.Definition d) {
         return WordResponse.DefinitionDto.builder()
-                .meaning(d.getDefinition())
+                .definition(d.getDefinition())
                 .example(d.getExample())
-                .translationVi(null)
+                .meaningVi(null)
                 .build();
     }
 }

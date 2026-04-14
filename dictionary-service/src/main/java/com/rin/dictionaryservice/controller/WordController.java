@@ -23,9 +23,18 @@ public class WordController {
 
     @PostMapping
     public ApiResponse<WordResponse> addOrGetWord(@RequestBody WordSearchRequest request) {
+
+        String originalWord = request.getWord();
+
+        // ✅ normalize
+        String cleanedWord = TextUtils.normalizeWord(originalWord);
+
         SpaCyWordAnalysisDto analysis = languageProcessingClient.analyzeWord(
-                new SpaCyWordAnalysisRequest(request.getWord(), request.getContext())
+                new SpaCyWordAnalysisRequest(cleanedWord, request.getContext())
         ).getResult();
-        return ApiResponse.success(wordService.addOrGetWord(TextUtils.normalizeWordLower(request.getWord()), analysis, request.getContext()));
+
+        return ApiResponse.success(
+                wordService.addOrGetWord(cleanedWord.toLowerCase(), analysis, request.getContext())
+        );
     }
 }

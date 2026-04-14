@@ -21,6 +21,8 @@ public class WordResponse {
     List<DefinitionDto> definitions;
     Boolean isPlaceholder; // du lieu tam tu (dictionaryapi.dev)
     String message;
+    WordResponseStatus status; // 🔥 thêm cái này
+    String summaryVi; // nghĩa Vi tóm tắt
 
     @Data
     @Builder
@@ -40,8 +42,9 @@ public class WordResponse {
     @AllArgsConstructor
     @FieldDefaults(level = AccessLevel.PRIVATE)
     public static class DefinitionDto {
-        String meaning;
+        String definition;   // EN
+        String meaningVi;    // VI
         String example;
-        String translationVi;
     }
+
 }

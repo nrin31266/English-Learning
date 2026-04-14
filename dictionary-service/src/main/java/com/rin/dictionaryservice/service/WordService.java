@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rin.dictionaryservice.dto.DictionaryApiResponse;
 import com.rin.dictionaryservice.dto.SpaCyWordAnalysisDto;
 import com.rin.dictionaryservice.dto.WordResponse;
+import com.rin.dictionaryservice.dto.WordResponseStatus;
+import com.rin.dictionaryservice.exception.DictionaryErrorCode;
 import com.rin.dictionaryservice.mapper.DictionaryMapper;
 import com.rin.dictionaryservice.model.Word;
 import com.rin.dictionaryservice.constant.WordCreationStatus;
@@ -15,8 +17,15 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 
@@ -31,27 +40,40 @@ public class WordService {
     WordRepository wordRepository;
     MongoTemplate mongoTemplate;
     DictionaryMapper dictionaryMapper;
+    private static final int MAX_RETRY = 5;
     ObjectMapper objectMapper;
     DictionaryApiClient dictionaryApiClient;
+    private static final Map<String, String> SPACY_TO_API_POS = Map.of(
+            "VERB", "verb",
+            "NOUN", "noun",
+            "ADJ", "adjective",
+            "ADV", "adverb"
+    );
 
-
-    @PostConstruct
-    public void init() {
+    private String normalizePos(String pos) {
+        if (pos == null) return null;
+        return SPACY_TO_API_POS.getOrDefault(pos.toUpperCase(), pos.toLowerCase());
     }
 
-    private DictionaryApiResponse extractDictionaryApiResponseByPos(List<DictionaryApiResponse> responses, String targetPos) {
+    private DictionaryApiResponse extractDictionaryApiResponseByPos(
+            List<DictionaryApiResponse> responses,
+            String targetPos  // spaCy POS (VERB, NOUN, ADJ...)
+    ) {
         if (responses == null || targetPos == null) return null;
+
+        String apiTargetPos = normalizePos(targetPos);
 
         for (DictionaryApiResponse response : responses) {
             if (response.getMeanings() == null || response.getMeanings().isEmpty()) continue;
 
-            // Lọc meanings chỉ giữ đúng pos cần
             List<DictionaryApiResponse.Meaning> filteredMeanings = response.getMeanings().stream()
-                    .filter(meaning -> meaning.getPartOfSpeech().equalsIgnoreCase(targetPos))
+                    .filter(meaning -> {
+                        String apiPos = meaning.getPartOfSpeech();
+                        return apiPos != null && apiPos.equalsIgnoreCase(apiTargetPos);
+                    })
                     .toList();
 
             if (!filteredMeanings.isEmpty()) {
-                // Tạo bản sao với meanings đã lọc
                 return DictionaryApiResponse.builder()
                         .word(response.getWord())
                         .phonetic(response.getPhonetic())
@@ -62,57 +84,81 @@ public class WordService {
                         .build();
             }
         }
+
         return null;
     }
 
 
 
-    @Cacheable(value = "wordsByWordKey", key = "#textLower + '_' + #analysis.pos",
-            unless = "#result == null", condition = "#textLower != null && #analysis != null")
+    @Cacheable(value = "wordsByWordKey", key = "#textLower + '_' + #analysis.pos", unless = "#result == null || #result.status != T(com.rin.dictionaryservice.dto.WordResponseStatus).READY")
     public WordResponse addOrGetWord(String textLower, SpaCyWordAnalysisDto analysis, String context) {
         if (!isValidWord(analysis)) {
-            throw new BaseException(BaseErrorCode.INVALID_REQUEST, "Invalid word for vocabulary: " + textLower);
+            throw new BaseException(BaseErrorCode.INVALID_REQUEST, "Invalid word: " + textLower);
         }
 
-        // 1. Check word đã tồn tại trong DB chưa
+        // 1. Check DB
         Word existingWord = wordRepository.findByTextAndPos(textLower, analysis.getPos()).orElse(null);
-        if (existingWord != null && existingWord.getStatus() == WordCreationStatus.READY) {
-            return dictionaryMapper.toWordResponse(existingWord);
+
+        if (existingWord != null) {
+            if (existingWord.getStatus() == WordCreationStatus.READY) {
+                return dictionaryMapper.toWordResponse(existingWord);
+            }
+            if (existingWord.getStatus() == WordCreationStatus.FAILED) {
+                return WordResponse.builder()
+                        .word(analysis.getText())
+                        .pos(analysis.getPos())
+                        .status(WordResponseStatus.FAILED)
+                        .isPlaceholder(true)
+                        .message("Word processing failed after multiple attempts.")
+                        .definitions(List.of())
+                        .build();
+            }
         }
 
-        // 2. Tạo mới word với status PENDING
-        Word newWord = Word.builder()
-                .pos(analysis.getPos())
-                .text(textLower)
-                .lemma(analysis.getLemma())
-                .context(context)
-                .status(WordCreationStatus.PENDING)
-                .pendingStartedAt(LocalDateTime.now())
-                .build();
-
-
-        // Lưu vào DB với status PENDING
-        wordRepository.save(newWord);
-
-        // Tra tam ve bang api ben ngoai
-        List<DictionaryApiResponse> dictionaryApiResponses = dictionaryApiClient.getWord(textLower);
-        DictionaryApiResponse dictionaryApiResponse = extractDictionaryApiResponseByPos(dictionaryApiResponses, analysis.getPos());
-        if (dictionaryApiResponse != null) {
-            WordResponse wordResponse = dictionaryMapper.toWordResponse(dictionaryApiResponse);
-            wordResponse.setIsPlaceholder(true);
-            wordResponse.setMessage("Word is being processed. This is a placeholder response. Please check back later for the complete information.");
-            return wordResponse;
+        // 2. Tạo mới PENDING nếu chưa có
+        if (existingWord == null) {
+            Word newWord = Word.builder()
+                    .text(analysis.getText())
+                    .pos(analysis.getPos())
+                    .lemma(analysis.getLemma())
+                    .textLower(textLower)
+                    .context(context)
+                    .status(WordCreationStatus.PENDING)
+                    .retryCount(0)
+                    .build();
+            wordRepository.save(newWord);
         }
 
-        // Không tìm thấy từ API → trả về response thông báo lỗi, không trả newWord
+        // 3. Trả về fallback với status FALLBACK
+        return fetchFallbackResponse(analysis.getText(), analysis.getPos());
+    }
+
+    private WordResponse fetchFallbackResponse(String text, String pos) {
+        try {
+            List<DictionaryApiResponse> apiResponses = dictionaryApiClient.getWord(text);
+            DictionaryApiResponse apiResponse = extractDictionaryApiResponseByPos(apiResponses, pos);
+
+            if (apiResponse != null) {
+                WordResponse response = dictionaryMapper.toWordResponse(apiResponse);
+                response.setStatus(WordResponseStatus.FALLBACK);
+                response.setIsPlaceholder(true);
+                response.setMessage("Word is being processed. High-quality data will be available soon.");
+                return response;
+            }
+        } catch (Exception e) {
+            log.error("Dictionary API error for word: {}", text, e);
+        }
+
         return WordResponse.builder()
-                .word(textLower)
-                .pos(analysis.getPos())
+                .word(text)
+                .pos(pos)
+                .status(WordResponseStatus.FALLBACK)
                 .isPlaceholder(true)
-                .message("Cannot find word information from dictionary API")
+                .message("Word is queued for processing but no fallback data available.")
                 .definitions(List.of())
                 .build();
     }
+
 
     // ent_type: ('CARDINAL', 'DATE', 'EVENT', 'FAC', 'GPE', 'LANGUAGE',
     // 'LAW', 'LOC', 'MONEY', 'NORP', 'ORDINAL', 'ORG',
@@ -130,7 +176,7 @@ public class WordService {
         if (text.contains("@") || text.contains("http") || text.contains("www")) return false;
 
         // ký tự
-        if (!text.matches("^[a-zA-Z-]+$")) return false;
+        if (!text.matches("^[a-zA-Z]+([-''][a-zA-Z]+)*$")) return false;
 
         // loại proper noun
         if ("PROPN".equals(pos)) return false;
@@ -148,17 +194,136 @@ public class WordService {
 
         return true;
     }
+    public Word claimOne(String workerId) {
+
+        Query query = new Query(
+                Criteria.where("status").is(WordCreationStatus.PENDING)
+                        .and("retryCount").lt(MAX_RETRY)
+        );
+
+        // FIFO theo createdAt
+        query.with(Sort.by(Sort.Direction.ASC, "createdAt"));
+
+        Update update = new Update()
+                .set("status", WordCreationStatus.PROCESSING)
+                .set("processingStartedAt", LocalDateTime.now())
+                .set("lockedBy", workerId)
+                .inc("retryCount", 1);
+
+        return mongoTemplate.findAndModify(
+                query,
+                update,
+                FindAndModifyOptions.options().returnNew(true),
+                Word.class
+        );
+    }
+    public List<Word> claimBatch(int limit, String workerId) {
+        List<Word> results = new ArrayList<>();
+
+        for (int i = 0; i < limit; i++) {
+            Word word = claimOne(workerId);
+            if (word == null) break;
+            results.add(word);
+        }
+
+        return results;
+    }
+    @CacheEvict(value = "wordsByWordKey", key = "#textLower + '_' + #pos")
+    public void updateWordToReady(String textLower, String pos,
+                                  String summaryVi,
+                                  Word.Phonetics phonetics,
+                                  List<Word.Definition> definitions) {
+        Query query = new Query(
+                Criteria.where("textLower").is(textLower)
+                        .and("pos").is(pos)
+        );
+
+        Update update = new Update()
+                .set("summaryVi", summaryVi)
+                .set("phonetics", phonetics)
+                .set("definitions", definitions)
+                .set("status", WordCreationStatus.READY)
+                .set("lockedBy", null)
+                .set("updatedAt", LocalDateTime.now());
+
+        mongoTemplate.updateFirst(query, update, Word.class);
+    }
+    public void markFail(String wordId) {
+        Query query = new Query(Criteria.where("id").is(wordId));
+        Word word = mongoTemplate.findOne(query, Word.class);
+
+        if (word == null) return;
+
+        int retry = word.getRetryCount() != null ? word.getRetryCount() : 0;
+
+        Update update = new Update()
+                .set("lastRetryAt", LocalDateTime.now())
+                .set("lockedBy", null);
+
+        if (retry >= MAX_RETRY) {
+            update.set("status", WordCreationStatus.FAILED);
+            log.warn("Word {} failed after {} retries", wordId, retry);
+        } else {
+            update.set("status", WordCreationStatus.PENDING);
+        }
+
+        mongoTemplate.updateFirst(query, update, Word.class);
+    }
+
+    public void markFailImmediately(String textLower, String pos) {
+        Query query = new Query(
+                Criteria.where("textLower").is(textLower)
+                        .and("pos").is(pos)
+        );
+
+        Update update = new Update()
+                .set("status", WordCreationStatus.FAILED)
+                .set("lockedBy", null)
+                .set("updatedAt", LocalDateTime.now());
+
+        mongoTemplate.updateFirst(query, update, Word.class);
+        log.info("Word {}_{} marked as FAILED (invalid)", textLower, pos);
+    }
+
+    @Scheduled(fixedDelay = 60000)
+    public void recoverStuckJobs() {
+
+        Query query = new Query(
+                Criteria.where("status").is(WordCreationStatus.PROCESSING)
+                        .and("processingStartedAt")
+                        .lt(LocalDateTime.now().minusMinutes(10))
+        );
+
+        Update update = new Update()
+                .set("lockedBy", null)
+                .set("lastRetryAt", LocalDateTime.now());
+
+        // nếu retry >= 5 → FAILED
+        // else → PENDING
+
+        List<Word> stuckJobs = mongoTemplate.find(query, Word.class);
+
+        for (Word word : stuckJobs) {
+            Update u = new Update()
+                    .set("lockedBy", null)
+                    .set("lastRetryAt", LocalDateTime.now());
+
+            if (word.getRetryCount() >= MAX_RETRY) {
+                u.set("status", WordCreationStatus.FAILED);
+            } else {
+                u.set("status", WordCreationStatus.PENDING);
+            }
+
+            mongoTemplate.updateFirst(
+                    Query.query(Criteria.where("id").is(word.getId())),
+                    u,
+                    Word.class
+            );
+        }
+    }
 
 
-//    @CacheEvict(value = "wordsByWordKey", key = "#id")
-//    public void saveWord(Word updatedWord, String id) {
-//        Word existingWord = wordRepository.findById(id).orElseThrow(() -> new RuntimeException("Word not found with id: " + id));
-//        wordMapper.toWord(existingWord, updatedWord);
-//        existingWord.setStatus(WordCreationStatus.COMPLETED);
-//        wordRepository.save(existingWord);
-//        // publish kafka to update ui (in case user subscribe topic ws this word with status pending) OPTION
-//
-//    }
+
 
 
 }

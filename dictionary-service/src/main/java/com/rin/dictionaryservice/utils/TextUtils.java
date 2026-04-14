@@ -21,16 +21,15 @@ public class TextUtils {
         return false;
     }
 
-    // Chuẩn hóa từ: chữ thường, bỏ dấu nháy, chỉ giữ a-z0-9
-    public static String normalizeWordLower(String token) {
-        if (token == null) return null;
+    public static String normalizeWord(String word) {
+        if (word == null) return null;
 
-        return token
-                .toLowerCase()
-                .replace("'", "")
-                .replaceAll("[^a-z0-9]", "");
+        // remove punctuation ở đầu + cuối, giữ ' và -
+        return word
+                .trim()
+                .replaceAll("^[^a-zA-Z'-]+", "")   // đầu
+                .replaceAll("[^a-zA-Z'-]+$", "");  // cuối
     }
-
     // Tạo slug từ chuỗi (bỏ dấu, thay space bằng -)
     public static String toSlug(String input) {
         if (input == null) return null;

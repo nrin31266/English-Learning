@@ -14,7 +14,5 @@ public interface WordRepository extends MongoRepository<Word, String> {
     // Tìm theo text + pos (unique)
     Optional<Word> findByTextAndPos(String text, String pos);
 
-    // Lấy danh sách PENDING cho worker xử lý (lấy cũ nhất trước, giới hạn số lượng)
-    @Query("{ 'status': 'PENDING' }")
-    List<Word> findPendingWords(Pageable pageable);
+
 }

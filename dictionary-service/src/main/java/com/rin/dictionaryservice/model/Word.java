@@ -17,7 +17,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@CompoundIndex(name = "text_pos_idx", def = "{'text': 1, 'pos': 1}", unique = true)
+@CompoundIndex(name = "text_pos_idx", def = "{'textLower': 1, 'pos': 1}", unique = true)
+@CompoundIndex(name = "processing_idx", def = "{'status': 1, 'retryCount': 1, 'createdAt': 1}")
+@CompoundIndex(
+        name = "recover_idx",
+        def = "{'status': 1, 'processingStartedAt': 1}"
+)
 public class Word {
 
     @Id
@@ -25,15 +30,23 @@ public class Word {
 
     String text;      // từ gốc
     String pos;       // VERB, NOUN, ADJ
+    String textLower; // text.toLowerCase() để tìm kiếm không phân biệt hoa thường
     String lemma;     // dạng từ điển
     String context;   // câu gốc
-
+    String summaryVi; // nghĩa Vi tóm tắt
     Phonetics phonetics;
     List<Definition> definitions;
 
-    WordCreationStatus status;  // "PENDING" hoặc "READY"
-    LocalDateTime pendingStartedAt;
+    @Builder.Default
+    WordCreationStatus status = WordCreationStatus.PENDING;
+    // PENDING, PROCESSING, READY, FAILED
 
+    // 🔥 PROCESSING INFO
+    private LocalDateTime processingStartedAt; // đổi tên từ pendingStartedAt
+    @Builder.Default
+    Integer retryCount = 0;
+    private LocalDateTime lastRetryAt;
+    private String lockedBy;
 
     @CreatedDate
     LocalDateTime createdAt;
@@ -57,8 +70,8 @@ public class Word {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Definition {
-        String meaning;        // nghĩa tiếng Anh đơn giản
-        String example;        // câu ví dụ
-        String translationVi;  // nghĩa tiếng Việt
+        String definition;   // EN
+        String meaningVi;    // VI
+        String example;
     }
 }
