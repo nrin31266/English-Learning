@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { WordChipStatus } from "./WordChip"
 import WordChip from "./WordChip"
+import WordPopup from "@/components/WordPopup"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type RevealState = Record<number, boolean>
@@ -41,6 +42,8 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
     const [answer, setAnswer] = useState("")
     const [revealState, setRevealState] = useState<RevealState>({})
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+    const [activeWord, setActiveWord] = useState<ILessonWordResponse | null>(null)
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
     const sortedWords = useMemo(
         () => [...sentence.lessonWords].sort((a, b) => a.orderIndex - b.orderIndex),
         [sentence.lessonWords]
@@ -52,7 +55,12 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
             console.log("UNMOUNT")
         }
     }, [])
+
     useEffect(() => {
+        // 👉 mỗi lần sentence thay đổi, reset toàn bộ state liên quan đến answer và reveal
+        setActiveWord(null)
+        setAnchorEl(null)
+
         setRevealState(prev => {
             if (Object.keys(prev).length === 0) return prev
             return {}
@@ -242,9 +250,14 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                                 return (
                                     <WordChip
                                         key={word.id}
+                                        word={word}
                                         displayText={display}
                                         status={status}
                                         onReveal={() => handleRevealOne(word.id)}
+                                        onClickWord={(w: ILessonWordResponse, el: HTMLElement) => {
+                                            setActiveWord(w)
+                                            setAnchorEl(el)
+                                        }}
                                     />
                                 )
                             })}
@@ -292,6 +305,14 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                     <kbd className="rounded border bg-muted/30 px-1.5 py-0.5 font-mono text-[10px] shadow-sm">Ctrl</kbd> to replay audio
                 </div>
             </div>
+            <WordPopup
+                word={activeWord}
+                anchorEl={anchorEl}
+                onClose={() => {
+                    setActiveWord(null)
+                    setAnchorEl(null)
+                }}
+            />
         </div>
     )
 }

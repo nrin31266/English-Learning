@@ -35,6 +35,7 @@ public class Word {
     String context;   // câu gốc
     String summaryVi; // nghĩa Vi tóm tắt
     Phonetics phonetics;
+    CefrLevel cefrLevel; // CEFR level (A1, A2, B1, B2, C1, C2)
     List<Definition> definitions;
 
     @Builder.Default

@@ -11,7 +11,7 @@ interface SentenceDisplayProps {
   /** Text hiển thị khi không có words (fallback) */
   fallbackText?: string
   /** Callback khi user click vào một từ - dùng để show modal chi tiết từ */
-  onWordClick?: (word: ILessonWordResponse) => void
+  onWordClick?: (word: ILessonWordResponse, el: HTMLElement) => void
   /** Class CSS thêm vào cho container */
   className?: string
 }
@@ -64,7 +64,7 @@ const SentenceDisplay = ({
             transition-colors
             duration-200
           "
-          onClick={() => onWordClick?.(word)}
+          onClick={(e) => onWordClick?.(word, e.currentTarget)}
           title={`Click để xem chi tiết từ: ${word.wordText}`}
         >
           {word.wordText}

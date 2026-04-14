@@ -7,6 +7,7 @@ import com.rin.dictionaryservice.dto.WordResponse;
 import com.rin.dictionaryservice.dto.WordResponseStatus;
 import com.rin.dictionaryservice.exception.DictionaryErrorCode;
 import com.rin.dictionaryservice.mapper.DictionaryMapper;
+import com.rin.dictionaryservice.model.CefrLevel;
 import com.rin.dictionaryservice.model.Word;
 import com.rin.dictionaryservice.constant.WordCreationStatus;
 import com.rin.dictionaryservice.repository.WordRepository;
@@ -232,6 +233,7 @@ public class WordService {
     public void updateWordToReady(String textLower, String pos,
                                   String summaryVi,
                                   Word.Phonetics phonetics,
+                                  CefrLevel cefrLevel, // CEFR level (A1, A2, B1, B2, C1, C2)
                                   List<Word.Definition> definitions) {
         Query query = new Query(
                 Criteria.where("textLower").is(textLower)
@@ -240,6 +242,7 @@ public class WordService {
 
         Update update = new Update()
                 .set("summaryVi", summaryVi)
+                .set("cefrLevel", cefrLevel)
                 .set("phonetics", phonetics)
                 .set("definitions", definitions)
                 .set("status", WordCreationStatus.READY)

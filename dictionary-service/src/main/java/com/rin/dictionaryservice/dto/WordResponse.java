@@ -1,5 +1,7 @@
 package com.rin.dictionaryservice.dto;
 
+
+import com.rin.dictionaryservice.model.CefrLevel;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,6 +25,7 @@ public class WordResponse {
     String message;
     WordResponseStatus status; // 🔥 thêm cái này
     String summaryVi; // nghĩa Vi tóm tắt
+    CefrLevel cefrLevel;
 
     @Data
     @Builder

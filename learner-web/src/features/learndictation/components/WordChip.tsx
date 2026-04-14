@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import type { ILessonWordResponse } from "@/types"
 import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
 
 // ─── Sub-component: WordChip ──────────────────────────────────────────────────
@@ -8,11 +9,24 @@ type WordChipProps = {
   displayText: string
   status: WordChipStatus
   onReveal?: () => void
+  onClickWord?: (word: ILessonWordResponse, el: HTMLElement) => void
+  word?: ILessonWordResponse
 }
 
-const WordChip = ({ displayText, status, onReveal }: WordChipProps) => {
-  const isInteractive = status === "untyped" || status === "wrong"
-  console.log("init")
+const WordChip = ({
+  displayText,
+  status,
+  onReveal,
+  onClickWord,
+  word
+}: WordChipProps) => {
+
+  // 👉 chỉ reveal khi chưa đúng
+  const isRevealable = status === "untyped" || status === "wrong"
+
+  // 👉 chỉ click mở popup khi đúng hoặc revealed
+  const isClickable = status === "correct_typed" || status === "revealed"
+
   const config = {
     correct_typed: {
       border: "border-emerald-500/40 bg-emerald-500/10",
@@ -41,20 +55,28 @@ const WordChip = ({ displayText, status, onReveal }: WordChipProps) => {
   return (
     <button
       type="button"
-      onClick={isInteractive ? onReveal : undefined}
-      disabled={!isInteractive}
+      onClick={(e) => {
+        if (isRevealable) {
+          onReveal?.()
+        } else if (isClickable && word) {
+          onClickWord?.(word, e.currentTarget)
+        }
+      }}
       className={cn(
         "group relative inline-flex flex-col items-center justify-center",
         "rounded-lg border px-3 pt-4 pb-2 min-w-[3.5rem] min-h-[3rem] text-center",
-        "transition-all duration-200",
-        "hover:scale-105 active:scale-95",
+        "transition-all duration-150",
         current.border,
-        isInteractive && "cursor-pointer"
+
+        // 👉 hover nhẹ thôi (đã tối giản)
+        isClickable && "cursor-pointer hover:bg-primary/10",
+        isRevealable && "cursor-pointer"
       )}
     >
-      <span className="absolute top-1 right-1.5 opacity-60 transition-opacity group-hover:opacity-100">
+      <span className="absolute top-1 right-1.5 opacity-60 group-hover:opacity-100">
         {current.icon}
       </span>
+
       <span className={cn("font-mono text-sm font-bold tracking-wider", current.text)}>
         {displayText}
       </span>

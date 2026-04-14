@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
+import WordPopup from "@/components/WordPopup"
 
 
 interface ActiveSentencePanelProps {
@@ -40,7 +41,7 @@ const ActiveSentencePanel = ({
   const [recordError, setRecordError] = useState<string | null>(null)
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null)
   const [transcription, setTranscription] = useState<ITranscriptionResponse | null>(null)
-  
+
   // ========== RECORDING REFS ==========
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -48,11 +49,16 @@ const ActiveSentencePanel = ({
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
   const cancelRecordingRef = useRef(false)
 
+
+  //
+  const [activeWord, setActiveWord] = useState<ILessonDetailsResponse["sentences"][number]["lessonWords"][number] | null>(null)
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+
   const currentSentence = useMemo(
     () => lesson.sentences[activeIndex],
     [lesson.sentences, activeIndex]
   )
-  
+
   const shouldShowNextButton = useMemo(
     () => transcription && transcription?.shadowingResult?.weightedAccuracy >= 85,
     [transcription]
@@ -66,7 +72,7 @@ const ActiveSentencePanel = ({
   const successAudioRef = useRef<HTMLAudioElement | null>(null)
   const failAudioRef = useRef<HTMLAudioElement | null>(null)
   const lastTranscriptionRef = useRef<string | null>(null)
-  
+
   useEffect(() => {
     if (!successAudioRef.current) {
       successAudioRef.current = new Audio("/sounds/correct.wav")
@@ -99,10 +105,10 @@ const ActiveSentencePanel = ({
       console.warn("Feedback sound play error", e)
     })
   }
-  
+
   useEffect(() => {
     if (!transcription?.id) return
-    
+
     const transcriptionKey = transcription.id.toString()
     if (lastTranscriptionRef.current === transcriptionKey) return
     lastTranscriptionRef.current = transcriptionKey
@@ -183,7 +189,7 @@ const ActiveSentencePanel = ({
           return url
         })
         setHasRecordedAudio(true)
-        
+
         chunksRef.current = []
 
         try {
@@ -256,7 +262,7 @@ const ActiveSentencePanel = ({
 
   const handleToggleRecord = () => {
     if (!isRecording) {
-       handlePause()
+      handlePause()
 
       void startRecording()
     } else {
@@ -330,7 +336,7 @@ const ActiveSentencePanel = ({
       cancelRecordingRef.current = false
     }
   }, [])
-  
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -342,13 +348,13 @@ const ActiveSentencePanel = ({
         }
       }
     }
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [isRecording, cancelRecording])
-  
+
   useEffect(() => {
     return () => {
       if (recordedUrl) {
@@ -356,7 +362,7 @@ const ActiveSentencePanel = ({
       }
     }
   }, [recordedUrl])
-  
+
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (mediaRecorderRef.current?.state !== 'inactive') {
@@ -368,7 +374,7 @@ const ActiveSentencePanel = ({
         URL.revokeObjectURL(recordedUrl)
       }
     }
-    
+
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
@@ -481,8 +487,9 @@ const ActiveSentencePanel = ({
             fallbackText={
               currentSentence?.textDisplay || "No sentence available."
             }
-            onWordClick={(word) => {
-              console.log("Word clicked:", word)
+            onWordClick={(word, el) => {
+              setActiveWord(word)
+              setAnchorEl(el)
             }}
             className="items-center"
           />
@@ -493,13 +500,21 @@ const ActiveSentencePanel = ({
           )}
         </div>
 
-        
 
-          {shadowing && <ShadowingResultPanel result={shadowing} />}
 
-       
+        {shadowing && <ShadowingResultPanel result={shadowing} />}
+
+
       </div>
-       <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
+      <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
+      <WordPopup
+        word={activeWord}
+        anchorEl={anchorEl}
+        onClose={() => {
+          setActiveWord(null)
+          setAnchorEl(null)
+        }}
+      />
     </ScrollArea>
   )
 }

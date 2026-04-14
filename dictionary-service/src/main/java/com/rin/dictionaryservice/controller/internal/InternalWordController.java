@@ -44,6 +44,7 @@ public class InternalWordController {
                     pos,
                     request.getSummaryVi(),
                     request.getPhonetics(),
+                    request.getCefrLevel(),
                     request.getDefinitions()
             );
         }
