@@ -12,11 +12,14 @@ type AudioPlayerProps = {
   lesson: ILessonDetailsResponse
   currentSentence?: ILessonSentenceDetailsResponse
   autoStop: boolean
-  shouldAutoPlay?: boolean
-  onUserInteracted?: (interacted: boolean) => void,
+  autoPlayOnSentenceChange: boolean
+
   playbackRate?: number
   isPlaying: boolean
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
+
+  userInteracted: boolean                // 👈 thêm
+
 }
 
 const formatTime = (secs: number) => {
@@ -28,20 +31,20 @@ const formatTime = (secs: number) => {
 const START_PADDING = 0.1
 const END_PADDING = 0.05
 const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
-  ({ lesson, currentSentence, autoStop, shouldAutoPlay = false, onUserInteracted, playbackRate, isPlaying, setIsPlaying }, ref) => {
+  ({ lesson, currentSentence, autoStop, autoPlayOnSentenceChange,
+    playbackRate, isPlaying, setIsPlaying, userInteracted }, ref) => {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const isPlayingRef = useRef(false)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
-    
-    const [userInteracted, setUserInteracted] = useState(false)
+
     const stopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Ưu tiên audioUrl của lesson, fallback về audioSegmentUrl của câu
     const src = lesson.audioUrl || currentSentence?.audioSegmentUrl || ""
 
 
-   
+
 
     // Setup audio event listeners + auto-stop khi đến audioEndMs
     useEffect(() => {
@@ -75,26 +78,39 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
         audio.removeEventListener("pause", onPause)
         audio.removeEventListener("ended", onEnded)
       }
-    }, [autoStop, currentSentence])
+    }, [currentSentence, autoStop])
 
-    // Browser policy: phải có user gesture trước khi play
-    const handleFirstInteraction = () => {
-      if (!userInteracted) {
-        setUserInteracted(true)
-        onUserInteracted?.(true)
-        audioRef.current?.load()
-      }
-    }
+    // // Browser policy: phải có user gesture trước khi play
+    // const handleFirstInteraction = () => {
+    //   if (!userInteracted) {
+    //     setUserInteracted(true)
+    //     onUserInteracted?.(true)
+    //     audioRef.current?.load()
+    //   }
+    // }
 
     // Seek về audioStartMs rồi play, đợi readyState nếu chưa load xong
     const playCurrentSegment = useCallback(async () => {
       const audio = audioRef.current
 
+      // 🔥 Thêm log để debug
+      console.log("playCurrentSegment called:", {
+        userInteracted, hasAudio: !!audio, hasSentence: !!currentSentence,
+        autoStop, autoPlayOnSentenceChange
+      })
+
       if (!audio || !currentSentence || !userInteracted) return
+
+      if (!autoStop && !isPlayingRef.current) {
+        console.log("Auto-stop disabled, playing without segment control")
+        play().catch(console.error)
+        return
+      }
       try {
         // 🔥 clear timeout cũ
         if (stopTimeoutRef.current) {
           clearTimeout(stopTimeoutRef.current)
+          stopTimeoutRef.current = null
         }
 
         // 🔥 luôn pause trước để tránh bug "nhích"
@@ -138,7 +154,7 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
       } catch (error) {
         console.error("Play failed:", error)
       }
-    }, [currentSentence, userInteracted, playbackRate])
+    }, [currentSentence, playbackRate, userInteracted, autoStop,])
 
     // Play tiếp từ vị trí hiện tại
     const play = useCallback(async () => {
@@ -159,9 +175,10 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
             return playCurrentSegment()
           }
 
-          // clear timeout cũ
+          // Clear timeout cũ
           if (stopTimeoutRef.current) {
             clearTimeout(stopTimeoutRef.current)
+            stopTimeoutRef.current = null
           }
 
           // tính thời gian còn lại
@@ -187,6 +204,7 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
         isPlayingRef.current = false
       }
     }, [userInteracted, currentSentence, playbackRate, playCurrentSegment, autoStop])
+
     useEffect(() => {
       if (!autoStop && stopTimeoutRef.current) {
         clearTimeout(stopTimeoutRef.current)
@@ -197,22 +215,27 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
     const pause = useCallback(() => {
       const audio = audioRef.current
       if (!audio) return
+
+      // 🔥 Clear timeout khi pause để tránh auto-stop sau khi đã dừng
+      if (stopTimeoutRef.current) {
+        clearTimeout(stopTimeoutRef.current)
+        stopTimeoutRef.current = null
+      }
+
       audio.pause()
       isPlayingRef.current = false
       setIsPlaying(false)
     }, [])
 
-    const togglePlay = async () => {
-      handleFirstInteraction()
-      if (!audioRef.current) return
-      try {
-        if (isPlaying) pause()
-        else if (currentSentence) await playCurrentSegment()
-        else await play()
-      } catch (error) {
-        console.error("Toggle play failed:", error)
-      }
-    }
+    // const togglePlay = async () => {
+    //   if (!audioRef.current) return
+    //   try {
+    //     if (isPlaying) pause()
+    //     else await play()
+    //   } catch (error) {
+    //     console.error("Toggle play failed:", error)
+    //   }
+    // }
 
     useImperativeHandle(ref, () => ({
       playCurrentSegment, play, pause,
@@ -221,9 +244,11 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
 
     // Auto play khi đổi câu (chỉ khi userInteracted + shouldAutoPlay)
     useEffect(() => {
-      if (!currentSentence || !userInteracted || !shouldAutoPlay) return
+      console.log("CurrentS Id:", currentSentence?.id, "User Interacted:", userInteracted,
+        "AutoPlayOnSentenceChange:", autoPlayOnSentenceChange)
+      if (!currentSentence || !userInteracted || !autoPlayOnSentenceChange) return
       playCurrentSegment().catch(console.error)
-    }, [currentSentence?.id, userInteracted, shouldAutoPlay, playCurrentSegment])
+    }, [currentSentence?.id, userInteracted, autoPlayOnSentenceChange])
 
     // Cleanup khi unmount: pause + clear source
     useEffect(() => {
@@ -273,7 +298,7 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
     const progress = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0
 
     const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-      handleFirstInteraction()
+      // handleFirstInteraction()
       const audio = audioRef.current
       if (!audio || !duration) return
       const rect = e.currentTarget.getBoundingClientRect()
@@ -294,60 +319,33 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
           )}
         </div>
 
-        <div className="flex items-center gap-3 text-xs">
-          <span className="w-max text-right tabular-nums font-semibold">
+        <div className="flex flex-nowrap gap-3 text-xs items-center">
+          <p className="w-max text-nowrap text-left tabular-nums font-semibold">
             {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
+          </p>
 
-          <div
-            className="relative flex-1 border cursor-pointer rounded-full bg-muted/70 hover:bg-muted transition-colors"
-            onClick={handleSeek}
-          >
+          <div className="flex items-center text-xs w-full relative">
             <div
-              className="h-1.5 rounded-full  bg-gradient-to-r from-primary to-primary/60 transition-all shadow-sm"
-              style={{ width: `${progress}%` }}
-            />
-            {isPlaying && (
+              className="relative flex-1 border cursor-pointer rounded-full bg-muted/70 hover:bg-muted transition-colors"
+              onClick={handleSeek}
+            >
               <div
-                className="absolute top-0 h-1.5 rounded-full bg-primary/30 animate-pulse"
+                className="h-1.5 rounded-full  bg-gradient-to-r from-primary to-primary/60 transition-all shadow-sm"
                 style={{ width: `${progress}%` }}
               />
-            )}
-          </div>
+              {isPlaying && (
+                <div
+                  className="absolute top-0 h-1.5 rounded-full bg-primary/30 animate-pulse"
+                  style={{ width: `${progress}%` }}
+                />
+              )}
+            </div>
 
-          <Button size="icon" variant="ghost" className="ml-1" type="button" onClick={togglePlay} disabled={!src}>
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          </Button>
+  
+            {!userInteracted && <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[0.8px] rounded-xl" />}
+          </div>
         </div>
 
-        {!userInteracted && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[0.8px] rounded-xl">
-            <Button
-              size="default"
-              onClick={async () => {
-                handleFirstInteraction()
-                if (currentSentence) {
-                  const audio = audioRef.current
-                  if (audio) {
-                    audio.load()
-                    // Đợi canplay trước khi seek (tránh seek vào lúc chưa có data)
-                    await new Promise((resolve) => {
-                      if (audio.readyState >= 2) return resolve(true)
-                      const onCanPlay = () => { audio.removeEventListener("canplay", onCanPlay); resolve(true) }
-                      audio.addEventListener("canplay", onCanPlay)
-                    })
-                  }
-                  await new Promise(resolve => setTimeout(resolve, 150))
-                  void playCurrentSegment()
-                }
-              }}
-              className="gap-2 shadow-lg"
-            >
-              <Play className="h-5 w-5" />
-              Bắt đầu
-            </Button>
-          </div>
-        )}
       </div>
     )
   }

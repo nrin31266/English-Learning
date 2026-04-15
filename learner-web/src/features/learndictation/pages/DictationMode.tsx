@@ -48,7 +48,7 @@ const DictationMode = () => {
     const [autoStop, setAutoStop] = useState(true)
     const [largeVideo, setLargeVideo] = useState(false)
     const [activeIndex, setActiveIndex] = useState(0)
-    const [shouldAutoPlay, setShouldAutoPlay] = useState(false)
+    const [autoPlayOnSentenceChange, setAutoPlayOnSentenceChange] = useState(true)
     const [userInteracted, setUserInteracted] = useState(false)
     const tempAnswersRef = useRef<Record<number, string>>({})
     const [completedIds, setCompletedIds] = useState<Set<number>>(new Set())
@@ -59,7 +59,7 @@ const DictationMode = () => {
     const [showTranscript, setShowTranscript] = useState(true)
 
     const handleSelectSentence = (index: number) => {
-        setShouldAutoPlay(false)
+        setAutoPlayOnSentenceChange(true)
         setActiveIndex(index)
     }
 
@@ -81,7 +81,7 @@ const DictationMode = () => {
 
     useEffect(() => {
         setActiveIndex(0)
-        setShouldAutoPlay(true)
+        setAutoPlayOnSentenceChange(true)
         setUserInteracted(false)
     }, [lesson?.id])
 
@@ -93,12 +93,12 @@ const DictationMode = () => {
     )
 
     const handlePrev = useCallback(() => {
-        setShouldAutoPlay(true)
+        setAutoPlayOnSentenceChange(true)
         setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev))
     }, [])
 
     const handleNext = useCallback(() => {
-        setShouldAutoPlay(true)
+        setAutoPlayOnSentenceChange(true)
         setActiveIndex((prev) =>
             prev < sentences.length - 1 ? prev + 1 : prev
         )
@@ -249,7 +249,7 @@ const DictationMode = () => {
                             lesson={lesson}
                             currentSentence={currentSentence}
                             autoStop={autoStop}
-                            shouldAutoPlay={shouldAutoPlay}
+                            autoPlayOnSentenceChange={autoPlayOnSentenceChange}
                             onUserInteracted={setUserInteracted}
                             playbackRate={playbackRate}
                             isPlaying={isPlaying}
@@ -306,7 +306,7 @@ const DictationMode = () => {
                                 lesson={lesson}
                                 currentSentence={currentSentence}
                                 autoStop={autoStop}
-                                shouldAutoPlay={shouldAutoPlay}
+                                autoPlayOnSentenceChange={autoPlayOnSentenceChange}
                                 onUserInteracted={setUserInteracted}
                                 playbackRate={playbackRate}
                                 isPlaying={isPlaying}

@@ -1,10 +1,12 @@
 // src/components/players/Player.tsx
-import { forwardRef } from "react"
+import { forwardRef, useState } from "react"
 import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
 import type { PlayerRef } from "./types/types"
 import AudioPlayer from "./AudioPlayer"
 import YouTubePlayer from "./YouTubePlayer"
 import PlayerControlPanel from "./PlayerControlPanel"
+import { useAppDispatch } from "@/store"
+import { showNotification } from "@/store/system/notificationSlice"
 
 interface PlayerProps {
   // Core data
@@ -13,7 +15,7 @@ interface PlayerProps {
   
   // Playback controls
   autoStop?: boolean
-  shouldAutoPlay?: boolean
+  autoPlayOnSentenceChange: boolean
   playbackRate?: number
   isPlaying: boolean
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
@@ -50,7 +52,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
     
     // Playback controls
     autoStop = true, 
-    shouldAutoPlay = false, 
+    autoPlayOnSentenceChange, 
     playbackRate = 1.0, 
     isPlaying, 
     setIsPlaying,
@@ -78,7 +80,10 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
     onPlaybackRateChange,
     onShowShortcuts,
   }, ref) => {
-    
+    // State to track if user has interacted with the player (for auto-play logic)
+    const [userInteracted, setUserInteracted] = useState(false)
+    // State to force fallback to audio player if YouTube fails (optional enhancement)
+    const [forceAudioFallback, setForceAudioFallback] = useState(false)
     // Xử lý playback rate change
     const handlePlaybackRateChange = (rate: number) => {
       if (onPlaybackRateChange) {
@@ -86,22 +91,31 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
       }
       // Playback rate sẽ được áp dụng bởi AudioPlayer/YouTubePlayer thông qua props
     }
-    
+    const dispatch = useAppDispatch()
     return (
       <div className="flex border rounded-2xl flex-col shadow gap-3 w-full">
         {/* Media Player - tự động chọn dựa trên sourceType */}
-        {lesson.sourceType === "YOUTUBE" ? (
+        {lesson.sourceType === "YOUTUBE" && !forceAudioFallback ? (
           <YouTubePlayer
             ref={ref}
             lesson={lesson}
             currentSentence={currentSentence}
             autoStop={autoStop}
             largeVideo={largeVideo}
-            shouldAutoPlay={shouldAutoPlay}
-            onUserInteracted={onUserInteracted}
+            autoPlayOnSentenceChange={autoPlayOnSentenceChange}
             playbackRate={playbackRate}
             isPlaying={isPlaying}
             setIsPlaying={setIsPlaying}
+            userInteracted={userInteracted}
+            onError={() => {
+              setForceAudioFallback(true)
+              dispatch(showNotification({
+                variant: "error",
+                title: "YouTube Playback Error",
+                message: "Failed to load YouTube video. Switching to audio player.",
+                durationMs: 5000,
+              }))
+            }} 
           />
         ) : (
           <AudioPlayer
@@ -109,16 +123,22 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
             lesson={lesson}
             currentSentence={currentSentence}
             autoStop={autoStop}
-            shouldAutoPlay={shouldAutoPlay}
-            onUserInteracted={onUserInteracted}
+            autoPlayOnSentenceChange={autoPlayOnSentenceChange}
+            
             playbackRate={playbackRate}
             isPlaying={isPlaying}
             setIsPlaying={setIsPlaying}
+            userInteracted={userInteracted}
           />
         )}
         
         {/* Control Panel */}
         <PlayerControlPanel
+          userInteracted={userInteracted}
+          onUserInteracted={()=>{
+            setUserInteracted(true)
+            onUserInteracted?.(true)
+          }}
           // Transport controls
           onPrev={onPrev || (() => {})}
           onNext={onNext || (() => {})}
@@ -148,6 +168,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
           sourceType={lesson.sourceType === "YOUTUBE" ? "YOUTUBE" : "AUDIO"}
           largeVideo={largeVideo}
           onLargeVideoChange={onLargeVideoChange}
+          visableLargeVideoOption={lesson.sourceType === "YOUTUBE" && !forceAudioFallback}
           
           // Playback speed
           playbackRate={playbackRate}

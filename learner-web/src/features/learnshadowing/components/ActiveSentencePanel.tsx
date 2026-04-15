@@ -152,7 +152,7 @@ const ActiveSentencePanel = ({
 
     playFeedbackSound(score >= 85)
   }, [transcription?.id])
-
+  
   useEffect(() => {
     setIsRecording(false)
     setHasRecordedAudio(false)

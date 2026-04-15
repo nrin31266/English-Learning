@@ -49,6 +49,7 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
     const [wordData, setWordData] = useState<IWordData | null>(null)
     const [loadingWordData, setLoadingWordData] = useState(false)
+    const [isTransitioning, setIsTransitioning] = useState(false) // 👈 thêm state
 
     const handleWordClick = async (word: ILessonWordResponse, el: HTMLElement) => {
         if (activeWord?.id === word.id) {
@@ -93,6 +94,7 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
 
     useEffect(() => {
         // 👉 mỗi lần sentence thay đổi, reset toàn bộ state liên quan đến answer và reveal
+        setIsTransitioning(true)
         setActiveWord(null)
         setAnchorEl(null)
 
@@ -110,6 +112,10 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
             }
         }
         textareaRef.current?.focus()
+        // 👉 kết thúc transition sau 1 frame
+        requestAnimationFrame(() => {
+            setIsTransitioning(false)
+        })
     }, [sentence.id])
 
 
@@ -166,6 +172,8 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
     }, [isAllCorrect, completed])
     const handleRevealOne = useCallback((id: number) => {
         setRevealState(p => ({ ...p, [id]: true }))
+        // focus vào textarea sau khi reveal để tối ưu trải nghiệm
+        textareaRef.current?.focus()
     }, [])
 
     const handleRevealAll = () => {
@@ -175,13 +183,19 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
         setAnswer(sortedWords.map(w => getWordDisplay(w)).join(" "))
         textareaRef && textareaRef.current?.focus()
     }
+    const handleReset = () => {
+        setRevealState({})
+        setAnswer("")
+        onTemporaryAnswerChange?.("")
+        textareaRef && textareaRef.current?.focus()
+    }
 
     const progressPercent = (correctTypedCount / totalWords) * 100
 
     return (
         <div className="flex w-full flex-col gap-0 overflow-hidden rounded-xl border bg-gradient-to-br from-card to-card/80 shadow-lg">
             {/* Header with gradient */}
-            <div className="relative overflow-hidden border-b bg-gradient-to-r from-primary/5 via-primary/8 to-primary/5 px-5 py-4">
+            <div className="relative overflow-hidden border-b  px-5 py-4">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
 
                 <div className="relative flex items-center justify-between">
@@ -200,13 +214,7 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                     </div>
 
                     <div className="flex gap-2">
-                        <Badge
-                            variant="secondary"
-                            className="gap-1.5 px-3 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                        >
-                            <CheckCircle2 className="h-3 w-3" />
-                            {correctTypedCount}/{totalWords} correct
-                        </Badge>
+
                         {hasRevealedAny && (
                             <Badge
                                 variant="outline"
@@ -218,14 +226,24 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                         )}
                     </div>
                 </div>
+                <div className="flex flex-nowrap gap-2 items-center">
 
-                {/* Progress bar */}
-                <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted/50">
-                    <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-300"
-                        style={{ width: `${progressPercent}%` }}
-                    />
+                    {/* Progress bar */}
+                    <div className="mt-3 h-2 shadow-sm border w-full overflow-hidden rounded-full bg-muted/50">
+                        <div
+                            className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-300"
+                            style={{ width: `${progressPercent}%` }}
+                        />
+                    </div>
+                    <Badge
+                        variant="secondary"
+                        className="gap-1.5 px-3 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                    >
+                        <CheckCircle2 className="h-3 w-3" />
+                        {correctTypedCount}/{totalWords}
+                    </Badge>
                 </div>
+
             </div>
 
             {/* Main content */}
@@ -249,7 +267,7 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                         }}
                         placeholder="Type what you hear..."
                         className={cn(
-                            "min-h-[110px] resize-none text-base font-mono tracking-wide",
+                            "min-h-[110px] resize-none text-lg! font-mono tracking-wide",
                             "border-muted/60 bg-background/50",
                             "focus-visible:ring-2 focus-visible:ring-primary/30",
                             "placeholder:text-muted-foreground/50",
@@ -263,10 +281,24 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                 </div>
 
                 {/* Word chips area */}
+                {/* Word chips area */}
                 <div className="rounded-xl border bg-muted/15">
-                    <ScrollArea className="max-h-56">
-                        <div className="flex flex-wrap gap-2 p-4">
-                            {sortedWords.map((word) => {
+                    <div
+                        key={sentence.id}
+                        className="flex flex-wrap gap-2 p-4 max-h-56 overflow-y-auto min-h-[120px]"
+                    >
+                        {isTransitioning ? (
+                            // Skeleton loading
+                            <div className="flex flex-wrap gap-2 w-full">
+                                {sortedWords.map((_, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="animate-pulse rounded-lg border px-3 pt-4 pb-2 min-w-[3.5rem] min-h-[3rem] bg-muted/50"
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            sortedWords.map((word) => {
                                 const isRevealed = !!revealState[word.id]
                                 const statusObj = contentWordStatuses.get(word.id)
 
@@ -294,9 +326,9 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                                         }}
                                     />
                                 )
-                            })}
-                        </div>
-                    </ScrollArea>
+                            })
+                        )}
+                    </div>
                 </div>
 
                 {/* Action buttons */}
@@ -305,7 +337,7 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => { setAnswer(""); setRevealState({}) }}
+                            onClick={handleReset}
                             className="gap-2 text-muted-foreground hover:text-foreground"
                         >
                             <RotateCcw className="h-4 w-4" />
@@ -332,6 +364,14 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
+                {/* Show nghia tieng viet khi hoan thanh */}
+                {
+                    isAllCorrect && completed && !loading && (
+                        <p>
+                            <span className="font-medium">Meaning:</span> {sentence.translationVi}
+                        </p>
+                    )
+                }
 
                 {/* Keyboard hint */}
                 <div className="text-center text-[11px] text-muted-foreground/60 pt-1">
@@ -345,6 +385,9 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                 onClose={() => {
                     setActiveWord(null)
                     setAnchorEl(null)
+                    if (textareaRef.current) {
+                        textareaRef.current.focus()
+                    }
                 }}
                 wordData={wordData}
                 isLoading={loadingWordData}

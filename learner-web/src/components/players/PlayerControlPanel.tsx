@@ -41,6 +41,9 @@ interface PlayerControlPanelProps {
 
     // Shortcuts
     onShowShortcuts?: () => void
+    userInteracted?: boolean
+    onUserInteracted?: (interacted: boolean) => void,
+    visableLargeVideoOption?: boolean
 }
 
 const PlayerControlPanel = ({
@@ -70,6 +73,9 @@ const PlayerControlPanel = ({
 
     // Shortcuts
     onShowShortcuts,
+    userInteracted,
+    onUserInteracted,
+    visableLargeVideoOption = false,
 }: PlayerControlPanelProps) => {
     const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
     const divRef = useRef<HTMLDivElement>(null)
@@ -90,7 +96,7 @@ const PlayerControlPanel = ({
         observer.observe(divRef.current)
         return () => observer.disconnect()
     }, [])
-   
+
     return (
         <div ref={divRef} className={`grid  gap-3  px-3 py-2 text-xs ${isSmall ? "" : "grid-cols-[auto_1fr]"}`}>
             <div className="flex flex-nowrap items-center gap-2">
@@ -110,7 +116,7 @@ const PlayerControlPanel = ({
                 )}
 
                 {/* Large Video toggle - chỉ hiện khi source là YouTube */}
-                {sourceType === "YOUTUBE" && onLargeVideoChange && (
+                {sourceType === "YOUTUBE" && onLargeVideoChange && visableLargeVideoOption && (
                     <div className="flex items-center gap-2">
                         <Switch
                             id="large-video"
@@ -125,51 +131,62 @@ const PlayerControlPanel = ({
 
             </div>
 
+            <div className=" items-center gap-2 grid grid-cols-2  ">
+                {/* Right side - Utility controls */}
+                {
+                    !userInteracted ? (
+                        <Button
+                            onClick={() => onUserInteracted && onUserInteracted(true)}
+                            className="w-full gap-2 h-8"
+                        >
+                            <Play className="h-4 w-4" />
+                            Bắt đầu
+                        </Button>) :
 
-            {/* Right side - Utility controls */}
-            <div className=" items-center gap-2 grid grid-cols-2 ">
-                {/* Center - Transport controls */}
-                <div className="flex w-max gap-3 border rounded-md px-2 py-1 items-center justify-center">
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        disabled={!hasPrev || disabled}
-                        onClick={onPrev}
-                    >
-                        <StepBack className="h-4 w-4" />
-                    </Button>
+                        <div className="flex w-max gap-3 border rounded-md px-2 py-1 items-center justify-center">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                disabled={!hasPrev || disabled}
+                                onClick={onPrev}
+                            >
+                                <StepBack className="h-4 w-4" />
+                            </Button>
 
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={onReplay}
-                        disabled={disabled}
-                    >
-                        <RotateCcw className="h-4 w-4" />
-                    </Button>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                onClick={onReplay}
+                                disabled={disabled}
+                            >
+                                <RotateCcw className="h-4 w-4" />
+                            </Button>
 
-                    <Button
-                        size="icon"
-                        variant="default"
-                        className="h-7 w-7"
-                        onClick={isPlaying ? onPause : onPlay}
-                        disabled={disabled}
-                    >
-                        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    </Button>
+                            <Button
+                                size="icon"
+                                variant="default"
+                                className="h-7 w-7"
+                                onClick={isPlaying ? onPause : onPlay}
+                                disabled={disabled}
+                            >
+                                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                            </Button>
 
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        disabled={!hasNext || disabled}
-                        onClick={onNext}
-                    >
-                        <StepForward className="h-4 w-4" />
-                    </Button>
-                </div>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                disabled={!hasNext || disabled}
+                                onClick={onNext}
+                            >
+                                <StepForward className="h-4 w-4" />
+                            </Button>
+                        </div>
+                }
+
+
                 <div className="justify-end gap-2 flex "> {/* Shortcuts button */}
                     {onShowShortcuts && (
                         <Button

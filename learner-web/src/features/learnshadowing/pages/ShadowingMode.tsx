@@ -40,7 +40,7 @@ const ShadowingMode = () => {
   const [autoStop, setAutoStop] = useState(true)
   const [largeVideo, setLargeVideo] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
-  const [shouldAutoPlay, setShouldAutoPlay] = useState(false)
+  const [autoPlayOnSentenceChange, setAutoPlayOnSentenceChange] = useState(true)
   const [userInteracted, setUserInteracted] = useState(false)
 
   const playerRef = useRef<PlayerRef | null>(null)
@@ -58,7 +58,7 @@ const ShadowingMode = () => {
 
   useEffect(() => {
     setActiveIndex(0)
-    setShouldAutoPlay(true)
+    setAutoPlayOnSentenceChange(true)
     setUserInteracted(false)
   }, [lesson?.id])
 
@@ -72,12 +72,12 @@ const ShadowingMode = () => {
   const currentSentence = sentences[activeIndex]
 
   const handlePrev = useCallback(() => {
-    setShouldAutoPlay(true)
+    setAutoPlayOnSentenceChange(true)
     setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev))
   }, [])
 
   const handleNext = useCallback(() => {
-    setShouldAutoPlay(true)
+    setAutoPlayOnSentenceChange(true)
     setActiveIndex((prev) =>
       prev < sentences.length - 1 ? prev + 1 : prev
     )
@@ -96,7 +96,7 @@ const ShadowingMode = () => {
   }
 
   const handleSelectSentence = (index: number) => {
-    setShouldAutoPlay(false)
+    setAutoPlayOnSentenceChange(true)
     setActiveIndex(index)
   }
 
@@ -254,7 +254,7 @@ const ShadowingMode = () => {
               lesson={lesson}
               currentSentence={currentSentence}
               autoStop={autoStop}
-              shouldAutoPlay={shouldAutoPlay}
+              autoPlayOnSentenceChange={autoPlayOnSentenceChange}
               onUserInteracted={setUserInteracted}
               playbackRate={playbackRate}
               isPlaying={isPlaying}

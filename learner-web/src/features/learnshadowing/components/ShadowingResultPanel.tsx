@@ -1,47 +1,35 @@
-import React, { useMemo } from "react"
+import React from "react"
 import { cn } from "@/lib/utils"
-import Alert from "@/components/Alert"
-import { Sparkles, Target, Mic, BookOpen } from "lucide-react"
-import type { IShadowingResult, IShadowingWordCompare } from "@/types"
+import { Sparkles, Target } from "lucide-react"
+import type { IShadowingResult } from "@/types"
 
-interface ShadowingResultPanelProps {
+interface Props {
   result: IShadowingResult
   className?: string
 }
 
-const getWordChipClasses = (compare: IShadowingWordCompare, lastPos: number) => {
-  const attempted = compare.position <= lastPos
+const getWordClass = (status: string, attempted: boolean) => {
+  if (!attempted) return "text-muted-foreground/40"
 
-  if (!attempted) {
-    return "border border-dashed border-muted-foreground/30 text-muted-foreground/70 bg-muted/40"
-  }
-
-  switch (compare.status) {
+  switch (status) {
     case "CORRECT":
-      return "bg-emerald-50 text-emerald-800 border border-emerald-200"
+      return "text-emerald-600 font-medium"
     case "NEAR":
-      return "bg-amber-50 text-amber-800 border border-amber-200"
+      // Thêm decoration-wavy cho đường lượn sóng
+      return "text-amber-500 font-medium underline decoration-wavy decoration-amber-300 decoration-1.5 underline-offset-2"
     case "WRONG":
-      return "bg-red-50 text-red-800 border border-red-200"
+      // Thêm decoration-wavy cho đường lượn sóng
+      return "text-red-500 font-semibold underline decoration-wavy decoration-red-300 decoration-1.5 underline-offset-2"
     case "MISSING":
-      return "bg-slate-50 text-slate-500 border border-slate-200 italic"
+      return "text-slate-400 italic border-b border-dashed border-slate-300"
     case "EXTRA":
-      return "bg-blue-50 text-blue-800 border border-blue-200"
+      return "text-blue-500"
     default:
-      return "bg-muted text-muted-foreground border border-muted"
+      return ""
   }
 }
 
-const getAlertVariant = (score: number) => {
-  if (score >= 85) return "success" as const
-  if (score >= 60) return "warning" as const
-  return "destructive" as const
-}
-
-const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
-  result,
-  className,
-}) => {
+const ShadowingResultPanel: React.FC<Props> = ({ result, className }) => {
   const {
     weightedAccuracy,
     correctWords,
@@ -50,129 +38,79 @@ const ShadowingResultPanel: React.FC<ShadowingResultPanelProps> = ({
     lastRecognizedPosition,
   } = result
 
-  const expectedWordsWithClasses = useMemo(
-    () =>
-      compares
-        .filter((c) => c.expectedWord)
-        .map((c) => ({
-          ...c,
-          chipClasses: getWordChipClasses(c, lastRecognizedPosition),
-        })),
-    [compares, lastRecognizedPosition]
-  )
-
-  const recognizedWordsWithClasses = useMemo(
-    () =>
-      compares
-        .filter((c) => c.recognizedWord)
-        .map((c) => ({
-          ...c,
-          chipClasses: getWordChipClasses(c, lastRecognizedPosition),
-        })),
-    [compares, lastRecognizedPosition]
-  )
-
-  const alertVariant = useMemo(
-    () => getAlertVariant(weightedAccuracy),
-    [weightedAccuracy]
-  )
-
-  const alertDescription = useMemo(() => {
-    if (weightedAccuracy >= 85)
-      return "Very natural! You're matching this sentence really well."
-    if (weightedAccuracy >= 60)
-      return "Good job! A few words can be improved."
-    return "Keep practicing this sentence — focus on the highlighted words."
-  }, [weightedAccuracy])
+  const isExcellent = weightedAccuracy >= 85
+  const isGood = weightedAccuracy >= 60
 
   return (
     <div
       className={cn(
-        "rounded-xl border bg-gradient-to-br from-muted/40 via-muted/20 to-primary/5 shadow-sm w-full",
+        "rounded-2xl border bg-card text-card-foreground shadow-sm p-4 w-full flex flex-col gap-4",
         className
       )}
     >
-      {/* Header - đồng bộ text-xs với PlayerControlPanel */}
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div className="p-1 rounded-lg bg-primary/10">
-            {weightedAccuracy >= 85 ? (
-              <Sparkles className="h-3.5 w-3.5 text-green-600" />
+      {/* HEADER GỌN NHẸ (Đã bỏ nút toggle) */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              isExcellent ? "bg-emerald-100" : isGood ? "bg-amber-100" : "bg-red-100"
+            )}
+          >
+            {isExcellent ? (
+              <Sparkles className="h-5 w-5 text-emerald-600" />
             ) : (
-              <Target className="h-3.5 w-3.5 text-primary" />
+              <Target className={cn("h-5 w-5", isGood ? "text-amber-600" : "text-red-500")} />
             )}
           </div>
-          <span className="font-medium text-muted-foreground">
-            Pronunciation Analysis
-          </span>
-        </div>
-        
-        {/* Score - đồng bộ text-xs */}
-        <div className="flex items-center gap-1">
-          <span className="text-sm font-bold leading-none">
-            {weightedAccuracy.toFixed(0)}
-          </span>
-          <span className="text-[10px] text-muted-foreground">%</span>
-          <span className="text-[10px] text-muted-foreground mx-0.5">•</span>
-          <span className="text-[10px] text-muted-foreground">
-            {correctWords}/{totalWords}
-          </span>
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-bold tracking-tight">
+                {weightedAccuracy.toFixed(0)}%
+              </span>
+              <span className="text-sm font-medium text-muted-foreground">
+                ({correctWords}/{totalWords})
+              </span>
+            </div>
+            <p className="text-xs font-medium text-muted-foreground">
+              {isExcellent
+                ? "Excellent pronunciation!"
+                : isGood
+                ? "Good, keep improving."
+                : "Focus on highlighted words."}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Alert feedback - text-xs */}
-      <div className="px-3 pt-2">
-        <Alert
-          variant={alertVariant}
-          size="md"
-          showIcon
-          description={alertDescription}
-          className="py-1.5"
-        />
-      </div>
+      <div className="h-px w-full bg-border/50" />
 
-      {/* Word chips - text-[10px] như trong PlayerControlPanel */}
-      <div className="grid grid-cols-2 gap-3 p-3">
-        {/* Target sentence */}
-        <div className="rounded-lg bg-background/50 p-2">
-          <p className="mb-1.5 text-[13px] font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            Target
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {expectedWordsWithClasses.map((c) => (
-              <span
-                key={`exp-${c.position}`}
-                className={cn(
-                  "inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-medium leading-relaxed",
-                  c.chipClasses
-                )}
-              >
-                {c.expectedWord}
-              </span>
-            ))}
-          </div>
-        </div>
+      {/* ===== VÙNG HIỂN THỊ CÂU ĐƠN GIẢN & HIỆU QUẢ ===== */}
+      <div className="pt-1 pb-2">
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-4">
+          {compares.map((c) => {
+            const attempted = c.position <= lastRecognizedPosition
+            const hasError = c.status !== "CORRECT" && attempted && c.recognizedWord
 
-        {/* You said */}
-        <div className="rounded-lg bg-background/50 p-2">
-          <p className="mb-1.5 text-[13px] font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-            <Mic className="h-3 w-3" />
-            Said
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {recognizedWordsWithClasses.map((c) => (
-              <span
-                key={`rec-${c.position}-${c.recognizedWord}`}
-                className={cn(
-                  "inline-flex items-center rounded-full px-2 py-0.5 text-[12px] leading-relaxed",
-                  c.chipClasses
+            return (
+              <div key={c.position} className="flex flex-col items-center group cursor-default">
+                {/* Chữ đọc sai */}
+                {hasError ? (
+                  <span className="font-medium text-muted-foreground line-through decoration-red-600/20 mb-0.5">
+                    {c.recognizedWord}
+                  </span>
+                ) : (
+                  // Căn lề cho mượt
+                  <span className="h-[20px]" /> 
                 )}
-              >
-                {c.recognizedWord}
-              </span>
-            ))}
-          </div>
+
+                {/* Từ gốc với gạch dưới dạng sóng */}
+                <span className={cn("text-lg", getWordClass(c.status, attempted))}>
+                  {c.expectedWord || "_"}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

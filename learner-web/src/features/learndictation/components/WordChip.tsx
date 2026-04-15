@@ -31,22 +31,22 @@ const WordChip = ({
     correct_typed: {
       border: "border-emerald-500/40 bg-emerald-500/10",
       text: "text-emerald-700 dark:text-emerald-400",
-      icon: <CheckCircle2 className="h-3 w-3 text-emerald-500" />,
+      icon: null,
     },
     revealed: {
       border: "border-sky-500/40 bg-sky-500/10",
       text: "text-sky-700 dark:text-sky-400",
-      icon: <Eye className="h-3 w-3 text-sky-500" />,
+      icon: <Eye className="h-4 w-4 text-sky-500" />,
     },
     wrong: {
       border: "border-rose-500/40 bg-rose-500/10",
       text: "text-rose-600 dark:text-rose-400",
-      icon: <AlertCircle className="h-3 w-3 text-rose-500" />,
+      icon: <EyeOff className="h-4 w-4 text-rose-500" />,
     },
     untyped: {
       border: "border-border bg-muted/30 hover:border-primary/40 hover:bg-primary/5",
       text: "text-muted-foreground",
-      icon: <EyeOff className="h-3 w-3" />,
+      icon: <EyeOff className="h-4 w-4" />,
     },
   }
 
@@ -63,21 +63,24 @@ const WordChip = ({
         }
       }}
       className={cn(
-        "group relative inline-flex flex-col items-center justify-center",
-        "rounded-lg border px-3 pt-4 pb-2 min-w-[3.5rem] min-h-[3rem] text-center",
-        "transition-all duration-150",
+        "group relative inline-flex flex-col items-center justify-center h-max",
+        // Chỉnh padding-top (pt-5) đủ chỗ cho icon tuyệt đối, viền bo tròn hơn (rounded-xl)
+        "rounded-xl border px-2 pt-1.5 pb-1.5 min-w-[2rem] text-center", 
+        "transition-all duration-200",
         current.border,
 
-        // 👉 hover nhẹ thôi (đã tối giản)
-        isClickable && "cursor-pointer hover:bg-primary/10",
-        isRevealable && "cursor-pointer"
+        // 👉 Hiệu ứng hover nhẹ nhàng, gọn gàng
+        isClickable && "cursor-pointer hover:bg-primary/10 hover:shadow-sm",
+        isRevealable && "cursor-pointer hover:shadow-sm"
       )}
     >
-      <span className="absolute top-1 right-1.5 opacity-60 group-hover:opacity-100">
+      {/* Icon đính tuyệt đối ở góc trên bên phải */}
+      {current.icon && <span className="absolute bg-background rounded-full -top-2 -right-2 opacity transition-opacity group-hover:opacity-100">
         {current.icon}
-      </span>
+      </span>}
 
-      <span className={cn("font-mono text-sm font-bold tracking-wider", current.text)}>
+      {/* Chữ to hơn (text-base hoặc text-lg tùy chọn) */}
+      <span className={cn("font-mono text-base  font-bold tracking-wider", current.text)}>
         {displayText}
       </span>
     </button>
