@@ -10,6 +10,7 @@ import {
     ChevronRight,
     Eye,
     KeyboardIcon,
+    Mic,
     RotateCcw
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -268,21 +269,32 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                         placeholder="Type what you hear..."
                         className={cn(
                             "min-h-[110px] resize-none text-lg! font-mono tracking-wide",
-                            "border-muted/60 bg-background/50",
+                            "border border-border", // 👈 thêm dòng này
+                            "bg-background/50",
                             "focus-visible:ring-2 focus-visible:ring-primary/30",
+                            "focus-visible:border-primary", // 👈 thêm luôn cho mượt
                             "placeholder:text-muted-foreground/50",
                             "transition-all duration-200"
                         )}
                         disabled={loading}
                     />
-                    <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground/50">
-                        Mic Here
-                    </div>
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                            // TODO: Voice recognition sẽ được tích hợp sau
+                            console.log("Mic clicked")
+                        }}
+                        className="absolute bottom-2 right-2 h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
+                    >
+                        <Mic className="h-4 w-4" />
+                    </Button>
                 </div>
 
                 {/* Word chips area */}
                 {/* Word chips area */}
-                <div className="rounded-xl border bg-muted/15">
+                <div className="rounded-xl border bg-muted/15 mt-3">
                     <div
                         key={sentence.id}
                         className="flex flex-wrap gap-2 p-4 max-h-56 overflow-y-auto min-h-[120px]"
