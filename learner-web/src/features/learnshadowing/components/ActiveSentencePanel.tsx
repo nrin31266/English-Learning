@@ -63,6 +63,9 @@ const ActiveSentencePanel = ({
   )
 
   const handleWordClick = async (word: ILessonWordResponse, el: HTMLElement) => {
+    if (activeWord?.id === word.id) {
+      return
+    }
     setActiveWord(word)
     setAnchorEl(el)
 
@@ -75,7 +78,8 @@ const ActiveSentencePanel = ({
         method: "POST",
         body: {
           word: word.wordText,
-          context: currentSentence.textDisplay
+          context: currentSentence.textDisplay,
+          isFallback: true,
         }
       })
 

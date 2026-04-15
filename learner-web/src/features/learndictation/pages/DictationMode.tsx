@@ -85,7 +85,7 @@ const DictationMode = () => {
         setUserInteracted(false)
     }, [lesson?.id])
 
-    const isLoading = (status === "idle" || status === "loading") 
+    const isLoading = (status === "idle" || status === "loading")
 
     const sentences: ILessonSentenceDetailsResponse[] = useMemo(
         () => lesson?.sentences ?? [],
@@ -271,51 +271,29 @@ const DictationMode = () => {
                         />
                     </div>
 
-                    <div className="flex gap-2 px-2">
-                        <Button
-                            variant={!showTranscript ? "default" : "outline"}
-                            className="flex-1"
-                            onClick={() => setShowTranscript(false)}
-                        >
-                            Content
-                        </Button>
-                        <Button
-                            variant={showTranscript ? "default" : "outline"}
-                            className="flex-1"
-                            onClick={() => setShowTranscript(true)}
-                        >
-                            Transcript
-                        </Button>
-                    </div>
+
 
                     <div className="relative">
-                        <div className={cn(showTranscript && "hidden")}>
-                            <div className="flex h-full w-full items-start justify-center p-1">
-                                <DictationPanel
-                                    key="dictation-panel"
-                                    sentence={currentSentence}
-                                    onNext={handleNext}
-                                    onSubmit={() => {
-                                        console.log("Submit clicked for sentence", currentSentence.id)
-                                        setCompletedIds((prev) => new Set(prev).add(currentSentence.id))
-                                    }}
-                                    currentTemporaryAnswer={tempAnswersRef.current[currentSentence.id]}
-                                    onTemporaryAnswerChange={(val) => {
-                                        tempAnswersRef.current[currentSentence.id] = val
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        <div className={cn(!showTranscript && "hidden")}>
-                            <DictationTranscript
+                        <DictationPanel
+                                key="dictation-panel"
+                                sentence={currentSentence}
+                                onNext={handleNext}
+                                onSubmit={() => {
+                                    console.log("Submit clicked for sentence", currentSentence.id)
+                                    setCompletedIds((prev) => new Set(prev).add(currentSentence.id))
+                                }}
+                                currentTemporaryAnswer={tempAnswersRef.current[currentSentence.id]}
+                                onTemporaryAnswerChange={(val) => {
+                                    tempAnswersRef.current[currentSentence.id] = val
+                                }}
+                            />
+                         <DictationTranscript
                                 sentences={sentences}
                                 activeIndex={activeIndex}
                                 onSelectSentence={handleSelectSentence}
                                 visible={showTranscript}
                                 completedIds={completedIds}
                             />
-                        </div>
                     </div>
                 </div>
             ) : (

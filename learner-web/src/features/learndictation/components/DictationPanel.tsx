@@ -16,6 +16,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { WordChipStatus } from "./WordChip"
 import WordChip from "./WordChip"
 import WordPopup from "@/components/WordPopup"
+import type { IWordData } from "@/types/dictionary"
+import handleAPI from "@/apis/handleAPI"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type RevealState = Record<number, boolean>
@@ -42,8 +44,41 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
     const [answer, setAnswer] = useState("")
     const [revealState, setRevealState] = useState<RevealState>({})
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+    // ========= WORD POPUP STATE ==========
     const [activeWord, setActiveWord] = useState<ILessonWordResponse | null>(null)
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+    const [wordData, setWordData] = useState<IWordData | null>(null)
+    const [loadingWordData, setLoadingWordData] = useState(false)
+
+    const handleWordClick = async (word: ILessonWordResponse, el: HTMLElement) => {
+        if (activeWord?.id === word.id) {
+            return
+        }
+        setActiveWord(word)
+        setAnchorEl(el)
+
+        setLoadingWordData(true)
+        setWordData(null)
+
+        try {
+            const res = await handleAPI<IWordData>({
+                endpoint: "/dictionaries/words",
+                method: "POST",
+                body: {
+                    word: word.wordText,
+                    context: sentence.textDisplay,
+                    isFallback: true,
+                }
+            })
+
+            setWordData(res)
+        } catch (e) {
+            setWordData(null)
+        } finally {
+            setLoadingWordData(false)
+        }
+    }
+
     const sortedWords = useMemo(
         () => [...sentence.lessonWords].sort((a, b) => a.orderIndex - b.orderIndex),
         [sentence.lessonWords]
@@ -255,8 +290,7 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                                         status={status}
                                         onReveal={() => handleRevealOne(word.id)}
                                         onClickWord={(w: ILessonWordResponse, el: HTMLElement) => {
-                                            setActiveWord(w)
-                                            setAnchorEl(el)
+                                            handleWordClick(w, el)
                                         }}
                                     />
                                 )
@@ -312,6 +346,8 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                     setActiveWord(null)
                     setAnchorEl(null)
                 }}
+                wordData={wordData}
+                isLoading={loadingWordData}
             />
         </div>
     )
