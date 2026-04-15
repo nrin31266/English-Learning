@@ -91,32 +91,45 @@ public class WordService {
 
 
 
-    @Cacheable(value = "wordsByWordKey", key = "#textLower + '_' + #analysis.pos", unless = "#result == null || #result.status != T(com.rin.dictionaryservice.dto.WordResponseStatus).READY")
-    public WordResponse addOrGetWord(String textLower, SpaCyWordAnalysisDto analysis, String context) {
+    @Cacheable(
+            value = "wordsByWordKey",
+            key = "#textLower + '_' + #analysis.pos",
+            unless = "#result == null || #result.status != T(com.rin.dictionaryservice.dto.WordResponseStatus).READY"
+    )
+    public WordResponse addOrGetWord(
+            String textLower,
+            SpaCyWordAnalysisDto analysis,
+            String context,
+            Boolean isFallback
+    ) {
+
         if (!isValidWord(analysis)) {
             throw new BaseException(BaseErrorCode.INVALID_REQUEST, "Invalid word: " + textLower);
         }
 
         // 1. Check DB
-        Word existingWord = wordRepository.findByTextAndPos(textLower, analysis.getPos()).orElse(null);
+        Word existingWord = wordRepository
+                .findByTextLowerAndPos(textLower, analysis.getPos())
+                .orElse(null);
 
-        if (existingWord != null) {
-            if (existingWord.getStatus() == WordCreationStatus.READY) {
-                return dictionaryMapper.toWordResponse(existingWord);
-            }
-            if (existingWord.getStatus() == WordCreationStatus.FAILED) {
-                return WordResponse.builder()
-                        .word(analysis.getText())
-                        .pos(analysis.getPos())
-                        .status(WordResponseStatus.FAILED)
-                        .isPlaceholder(true)
-                        .message("Word processing failed after multiple attempts.")
-                        .definitions(List.of())
-                        .build();
-            }
+        // ===================== READY =====================
+        if (existingWord != null && existingWord.getStatus() == WordCreationStatus.READY) {
+            return dictionaryMapper.toWordResponse(existingWord);
         }
 
-        // 2. Tạo mới PENDING nếu chưa có
+        // ===================== FAILED =====================
+        if (existingWord != null && existingWord.getStatus() == WordCreationStatus.FAILED) {
+            return WordResponse.builder()
+                    .word(analysis.getText())
+                    .pos(analysis.getPos())
+                    .status(WordResponseStatus.FAILED)
+                    .isPlaceholder(true)
+                    .message("Word processing failed. Please try again later.")
+                    .definitions(List.of())
+                    .build();
+        }
+
+        // ===================== CREATE PENDING =====================
         if (existingWord == null) {
             Word newWord = Word.builder()
                     .text(analysis.getText())
@@ -127,11 +140,24 @@ public class WordService {
                     .status(WordCreationStatus.PENDING)
                     .retryCount(0)
                     .build();
+
             wordRepository.save(newWord);
         }
 
-        // 3. Trả về fallback với status FALLBACK
-        return fetchFallbackResponse(analysis.getText(), analysis.getPos());
+        // ===================== FALLBACK =====================
+        if (Boolean.TRUE.equals(isFallback)) {
+            return fetchFallbackResponse(analysis.getText(), analysis.getPos());
+        }
+
+        // ===================== PROCESSING =====================
+        return WordResponse.builder()
+                .word(analysis.getText())
+                .pos(analysis.getPos())
+                .status(WordResponseStatus.PROCESSING)
+                .isPlaceholder(true)
+                .message("Word is being processed. Please wait a moment.")
+                .definitions(List.of())
+                .build();
     }
 
     private WordResponse fetchFallbackResponse(String text, String pos) {

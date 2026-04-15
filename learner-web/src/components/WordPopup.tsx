@@ -44,7 +44,7 @@ const WordPopup = ({
   const [isVisible, setIsVisible] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [activeAudio, setActiveAudio] = useState<"uk" | "us">("uk")
+  const [activeAudio, setActiveAudio] = useState<"uk" | "us">("us")
 
   const popupRef = useRef<HTMLDivElement | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)

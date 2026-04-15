@@ -14,4 +14,5 @@ import lombok.experimental.FieldDefaults;
 public class WordSearchRequest {
     String word;
     String context;
+    Boolean isFallback = true;
 }

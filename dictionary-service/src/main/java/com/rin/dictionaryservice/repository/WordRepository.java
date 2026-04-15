@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface WordRepository extends MongoRepository<Word, String> {
 
     // Tìm theo text + pos (unique)
-    Optional<Word> findByTextAndPos(String text, String pos);
+    Optional<Word> findByTextLowerAndPos(String textLower, String pos);
 
 
 }

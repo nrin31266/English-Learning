@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Spinner2 } from "@/components/ui/spinner2"
 import type {
   ILessonDetailsResponse,
+  ILessonWordResponse,
   ITranscriptionResponse
 } from "@/types"
 import {
@@ -16,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
 import WordPopup from "@/components/WordPopup"
+import type { IWordData } from "@/types/dictionary"
 
 
 interface ActiveSentencePanelProps {
@@ -50,14 +52,42 @@ const ActiveSentencePanel = ({
   const cancelRecordingRef = useRef(false)
 
 
-  //
-  const [activeWord, setActiveWord] = useState<ILessonDetailsResponse["sentences"][number]["lessonWords"][number] | null>(null)
+  // ========= WORD POPUP STATE ==========
+  const [activeWord, setActiveWord] = useState<ILessonWordResponse | null>(null)
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-
+  const [wordData, setWordData] = useState<IWordData | null>(null)
+  const [loadingWordData, setLoadingWordData] = useState(false)
   const currentSentence = useMemo(
     () => lesson.sentences[activeIndex],
     [lesson.sentences, activeIndex]
   )
+
+  const handleWordClick = async (word: ILessonWordResponse, el: HTMLElement) => {
+    setActiveWord(word)
+    setAnchorEl(el)
+
+    setLoadingWordData(true)
+    setWordData(null)
+
+    try {
+      const res = await handleAPI<IWordData>({
+        endpoint: "/dictionaries/words",
+        method: "POST",
+        body: {
+          word: word.wordText,
+          context: currentSentence.textDisplay
+        }
+      })
+
+      setWordData(res)
+    } catch (e) {
+      setWordData(null)
+    } finally {
+      setLoadingWordData(false)
+    }
+  }
+
+  
 
   const shouldShowNextButton = useMemo(
     () => transcription && transcription?.shadowingResult?.weightedAccuracy >= 85,
@@ -488,8 +518,7 @@ const ActiveSentencePanel = ({
               currentSentence?.textDisplay || "No sentence available."
             }
             onWordClick={(word, el) => {
-              setActiveWord(word)
-              setAnchorEl(el)
+              handleWordClick(word, el)
             }}
             className="items-center"
           />
@@ -514,6 +543,8 @@ const ActiveSentencePanel = ({
           setActiveWord(null)
           setAnchorEl(null)
         }}
+        wordData={wordData}
+        isLoading={loadingWordData}
       />
     </ScrollArea>
   )

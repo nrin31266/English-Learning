@@ -34,7 +34,7 @@ public class WordController {
         ).getResult();
 
         return ApiResponse.success(
-                wordService.addOrGetWord(cleanedWord.toLowerCase(), analysis, request.getContext())
+                wordService.addOrGetWord(cleanedWord.toLowerCase(), analysis, request.getContext(), request.getIsFallback())
         );
     }
 }
