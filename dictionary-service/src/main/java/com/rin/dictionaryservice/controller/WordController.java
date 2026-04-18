@@ -19,22 +19,15 @@ import org.springframework.web.bind.annotation.*;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class WordController {
     WordService wordService;
-    LanguageProcessingClient  languageProcessingClient;
+
 
     @PostMapping
     public ApiResponse<WordResponse> addOrGetWord(@RequestBody WordSearchRequest request) {
 
-        String originalWord = request.getWord();
 
-        // ✅ normalize
-        String cleanedWord = TextUtils.normalizeWord(originalWord);
-
-        SpaCyWordAnalysisDto analysis = languageProcessingClient.analyzeWord(
-                new SpaCyWordAnalysisRequest(cleanedWord, request.getContext())
-        ).getResult();
 
         return ApiResponse.success(
-                wordService.addOrGetWord(cleanedWord.toLowerCase(), analysis, request.getContext(), request.getIsFallback())
+                wordService.addOrGetWord(TextUtils.canonicalForm(request.getText()), request)
         );
     }
 }

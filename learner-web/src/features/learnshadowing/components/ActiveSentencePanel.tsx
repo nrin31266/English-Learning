@@ -18,6 +18,7 @@ import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
 import WordPopup from "@/components/WordPopup"
 import type { IWordData } from "@/types/dictionary"
+import { useWordPopup } from "@/hooks/UseWordPopupReturn"
 
 
 interface ActiveSentencePanelProps {
@@ -50,48 +51,23 @@ const ActiveSentencePanel = ({
   const streamRef = useRef<MediaStream | null>(null)
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
   const cancelRecordingRef = useRef(false)
-
-
-  // ========= WORD POPUP STATE ==========
-  const [activeWord, setActiveWord] = useState<ILessonWordResponse | null>(null)
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const [wordData, setWordData] = useState<IWordData | null>(null)
-  const [loadingWordData, setLoadingWordData] = useState(false)
   const currentSentence = useMemo(
     () => lesson.sentences[activeIndex],
     [lesson.sentences, activeIndex]
   )
 
-  const handleWordClick = async (word: ILessonWordResponse, el: HTMLElement) => {
-    if (activeWord?.id === word.id) {
-      return
-    }
-    setActiveWord(word)
-    setAnchorEl(el)
+  // ========= WORD POPUP STATE ==========
+  // 👇 Thay thế đoạn code word popup cũ bằng hook
+  const {
+    activeWord,
+    anchorEl,
+    wordData,
+    loadingWordData,
+    handleWordClick,
+    closePopup,
+  } = useWordPopup();
 
-    setLoadingWordData(true)
-    setWordData(null)
 
-    try {
-      const res = await handleAPI<IWordData>({
-        endpoint: "/dictionaries/words",
-        method: "POST",
-        body: {
-          word: word.wordText,
-          context: currentSentence.textDisplay,
-          isFallback: true,
-        }
-      })
-
-      setWordData(res)
-    } catch (e) {
-      setWordData(null)
-    } finally {
-      setLoadingWordData(false)
-    }
-  }
-
-  
 
   const shouldShowNextButton = useMemo(
     () => transcription && transcription?.shadowingResult?.weightedAccuracy >= 85,
@@ -152,7 +128,7 @@ const ActiveSentencePanel = ({
 
     playFeedbackSound(score >= 85)
   }, [transcription?.id])
-  
+
   useEffect(() => {
     setIsRecording(false)
     setHasRecordedAudio(false)
@@ -522,7 +498,7 @@ const ActiveSentencePanel = ({
               currentSentence?.textDisplay || "No sentence available."
             }
             onWordClick={(word, el) => {
-              handleWordClick(word, el)
+              handleWordClick(word, el, currentSentence.textDisplay || "");
             }}
             className="items-center"
           />
@@ -540,13 +516,11 @@ const ActiveSentencePanel = ({
 
       </div>
       <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
+      
       <WordPopup
         word={activeWord}
         anchorEl={anchorEl}
-        onClose={() => {
-          setActiveWord(null)
-          setAnchorEl(null)
-        }}
+        onClose={closePopup}
         wordData={wordData}
         isLoading={loadingWordData}
       />

@@ -12,7 +12,10 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 @Builder
 public class WordSearchRequest {
-    String word;
+    String text;
+    String posTag;
+    String entityType;
+    String lemma;
     String context;
     Boolean isFallback = true;
 }

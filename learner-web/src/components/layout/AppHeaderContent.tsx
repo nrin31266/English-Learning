@@ -7,17 +7,16 @@ import ThemeToggle from "./ThemeToggle"
 
 const AppHeader = () => {
   return (
-    <>
-     <div className="container mx-auto flex h-full items-center justify-between px-2 sm:px-0">
-        <HeadNav />
+    <div className="container mx-auto flex h-full items-center justify-between px-2 sm:px-0">
+      <HeadNav />
 
-        <div className="flex items-center gap-2 sm:gap-4">
-          <ThemeToggle />
-          <SwitchingLanguage />
-          <Notification />
-          <ProfileNav />
-        </div>
-      </div></>
+      <div className="flex items-center gap-2 sm:gap-4">
+        <ThemeToggle />
+        <SwitchingLanguage />
+        <Notification />
+        <ProfileNav />
+      </div>
+    </div>
   )
 }
 

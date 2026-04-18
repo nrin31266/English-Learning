@@ -29,7 +29,7 @@ public class TopicService {
     private final LessonMapper lessonMapper;
 
     public TopicResponseWithLessonCount addTopic(AddEditTopicRequest topicRequest) {
-        String slug = TextUtils.toSlug(topicRequest.getName());
+        String slug = TextUtils.createSlug(topicRequest.getName());
         if(topicRepository.findBySlug(slug).isPresent()) {
             throw new BaseException(LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS,
                     LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS.formatMessage(topicRequest.getName()));
@@ -59,7 +59,7 @@ public class TopicService {
                 .orElseThrow(() -> new BaseException(LearningContentErrorCode.TOPIC_NOT_FOUND,
                         LearningContentErrorCode.TOPIC_NOT_FOUND.formatMessage(slug)));
 
-        String newSlug = TextUtils.toSlug(topicRequest.getName());
+        String newSlug = TextUtils.createSlug(topicRequest.getName());
         if(!newSlug.equals(slug) && topicRepository.findBySlug(newSlug).isPresent()) {
             throw new BaseException(LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS,
                     LearningContentErrorCode.TOPIC_WITH_NAME_EXISTS.formatMessage(topicRequest.getName()));

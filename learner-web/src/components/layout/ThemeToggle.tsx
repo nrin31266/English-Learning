@@ -6,6 +6,7 @@ const ThemeToggle = () => {
 
   return (
     <button
+      type="button"
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
       className="p-2 rounded-md border"
       aria-label="Toggle Theme"

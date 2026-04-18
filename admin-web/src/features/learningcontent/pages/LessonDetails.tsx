@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { cancelLessonGeneration, fetchLessonDetails, publishLesson, reloadLessonDetails, retryLessonGeneration, unpublishLesson, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
-import type { ILessonDetailsDto, ILessonProcessingStepNotifyEvent } from "@/types"
+import type { ILessonDetailsDto } from "@/types"
 import { formatDate, formatDuration } from "@/utils/timeUtils"
 import {
   AlertTriangle,
@@ -166,7 +166,7 @@ const LessonDetails: React.FC = () => {
 
     const subscription = stompClient.subscribe(destination, (msg) => {
       try {
-        const event: ILessonProcessingStepNotifyEvent = JSON.parse(msg.body);
+        const event: any = JSON.parse(msg.body);
         console.log("LessonDetailsPage received event:", event);
 
         // If completed, reload full lesson details
@@ -409,7 +409,7 @@ const LessonDetails: React.FC = () => {
                   </Button>
                   <Button onClick={() => {
                     dispatch(retryLessonGeneration({ id: data.id, isRestart: false }));
-                  }} disabled={(data.status !== "ERROR" && data.status !== "DRAFT") || data.publishedAt != null || mutationStatus === "loading"} size="sm" variant="outline">
+                  }} disabled={data.publishedAt != null || mutationStatus === "loading"} size="sm" variant="outline">
                     {
                       mutationStatus === "loading" && mutationType === "re-try" &&
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

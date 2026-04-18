@@ -3,6 +3,7 @@ import logging
 import uuid
 from src.client.dictionary_client import DictionaryClient
 from src.services.word_processor import process_word_logic
+from src.utils.text_utils import normalize_word_soft
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger("WordWorker")
@@ -15,20 +16,19 @@ class WordWorker:
     async def handle_job(self, job: dict):
         word_id = job["id"]  # ✅ nên lấy sẵn
         text = job["text"]
-        text_lower = job["textLower"]
+        key = job["key"]
         pos = job["pos"]
 
         try:
             result = await process_word_logic(
-                text=text,
+                text=normalize_word_soft(text),  # ✅ normalize nhẹ trước khi xử lý
                 pos=pos,
                 context=job.get("context", ""),
-                text_lower=text_lower
             )
 
-            await self.client.report_success(text_lower, pos, result)
+            await self.client.report_success(key, pos, result)
 
-            logger.info(f"✅ {text_lower}_{pos}")
+            logger.info(f"✅ Successfully processed {key}_{pos}")
 
         except Exception as e:
             msg = str(e)
@@ -37,7 +37,7 @@ class WordWorker:
                 logger.warning("⏳ Rate limit → sleep 10s")
                 await asyncio.sleep(10)
 
-            await self.client.report_fail(word_id)
+            await self.client.report_fail(key, pos)
 
     async def run(self):
         logger.info(f"🚀 {self.worker_id} is starting...")

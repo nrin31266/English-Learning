@@ -82,11 +82,14 @@ export interface ILessonWordResponse {
   wordLower: string | null;
   wordNormalized: string | null;
   wordSlug: string | null;
+  lemma: string | null;
+  posTag: string | null;
+  entityType: string | null;
   startCharIndex: number | null;
   endCharIndex: number | null;
   audioStartMs: number | null;
   audioEndMs: number | null;
-  isPunctuation: boolean;
+  hasPunctuation: boolean;
   isClickable: boolean;
   createdAt: string;
   updatedAt: string;

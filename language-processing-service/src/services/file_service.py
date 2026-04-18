@@ -49,6 +49,7 @@ async def fetch_json_from_url(url: str):
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(url)
             response.raise_for_status()
+            
             return response.json()
     except Exception as e:
         print(f"Lỗi khi tải JSON từ {url}: {e}")

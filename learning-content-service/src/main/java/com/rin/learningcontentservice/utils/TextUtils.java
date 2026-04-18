@@ -20,19 +20,28 @@ public class TextUtils {
         }
         return false;
     }
+    public static String normalizeWordLower(String word) {
+        if (word == null) return null;
 
-    // Chuẩn hóa từ: chữ thường, bỏ dấu nháy, chỉ giữ a-z0-9
-    public static String normalizeWordLower(String token) {
-        if (token == null) return null;
+        return word.toLowerCase().trim();
+    }
 
-        return token
-                .toLowerCase()
-                .replace("'", "")
-                .replaceAll("[^a-z0-9]", "");
+    public static String normalizeWordSoft(String word) {
+        if (word == null) return null;
+
+        word = word.trim();
+
+        // remove ký tự không hợp lệ ở đầu
+        word = word.replaceAll("^[^a-zA-Z'-]+", "");
+
+        // remove ký tự không hợp lệ ở cuối
+        word = word.replaceAll("[^a-zA-Z'-]+$", "");
+
+        return word;
     }
 
     // Tạo slug từ chuỗi (bỏ dấu, thay space bằng -)
-    public static String toSlug(String input) {
+    public static String createSlug(String input) {
         if (input == null) return null;
 
         // Bỏ dấu tiếng Việt

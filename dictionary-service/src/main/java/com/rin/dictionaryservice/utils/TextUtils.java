@@ -1,47 +1,38 @@
 package com.rin.dictionaryservice.utils;
 
-import java.text.Normalizer;
+
 
 public class TextUtils {
     private TextUtils() {
         /* This utility class should not be instantiated */
     }
+    public static String canonicalForm(String text) {
+        if (text == null) return null;
 
+        text = text.trim();
 
-    // Kiểm tra token có chứa dấu câu không
-    public static boolean hasPunctuation(String token) {
-        if (token == null || token.isEmpty()) return false;
+        // remove noise đầu/cuối trực tiếp
+        text = text.replaceAll("^[^a-zA-Z'-]+", "");
+        text = text.replaceAll("[^a-zA-Z'-]+$", "");
 
-        String punctuationMarks = ".,!?;:\"()[]{}…—–-";
-        for (char c : token.toCharArray()) {
-            if (punctuationMarks.indexOf(c) >= 0) {
-                return true;
-            }
-        }
-        return false;
-    }
+        // normalize apostrophe + lowercase
+        text = text.replace('’', '\'').toLowerCase();
 
-    public static String normalizeWord(String word) {
+        // remove toàn bộ ký tự không phải a-z0-9 (final cleanup)
+        text = text.replaceAll("[^a-z0-9]", "");
+
+        return text.isEmpty() ? null : text;
+    }public static String normalizeWordSoft(String word) {
         if (word == null) return null;
 
-        // remove punctuation ở đầu + cuối, giữ ' và -
-        return word
-                .trim()
-                .replaceAll("^[^a-zA-Z'-]+", "")   // đầu
-                .replaceAll("[^a-zA-Z'-]+$", "");  // cuối
-    }
-    // Tạo slug từ chuỗi (bỏ dấu, thay space bằng -)
-    public static String toSlug(String input) {
-        if (input == null) return null;
+        word = word.trim();
 
-        // Bỏ dấu tiếng Việt
-        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
-        String withoutAccents = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        // remove ký tự không hợp lệ ở đầu
+        word = word.replaceAll("^[^a-zA-Z'-]+", "");
 
-        // Xóa ký tự đặc biệt, thay space bằng -
-        String cleaned = withoutAccents.toLowerCase().replaceAll("[^a-z0-9\\s-]", "");
-        String dashed = cleaned.trim().replaceAll("\\s+", "-");
+        // remove ký tự không hợp lệ ở cuối
+        word = word.replaceAll("[^a-zA-Z'-]+$", "");
 
-        return dashed.replaceAll("-{2,}", "-");
+        return word;
     }
 }

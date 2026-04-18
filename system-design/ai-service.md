@@ -96,3 +96,19 @@
 | Kafka | Tách xử lý nặng khỏi request đồng bộ |
 | Redis | Kiểm soát trạng thái hủy job tức thời |
 | Cloudinary | Lưu trữ media/metadata tập trung, dễ tích hợp |
+
+##Quản lý worker logs
+# Xem realtime
+tail -f logs/word_worker_1.log
+
+# Xem toàn bộ log
+cat logs/word_worker_1.log
+
+# Xem 50 dòng cuối
+tail -n 50 logs/word_worker_1.log
+
+# Kiểm tra worker đang chạy
+pgrep -af word_worker
+
+# Dừng tất cả worker
+pkill -f word_worker

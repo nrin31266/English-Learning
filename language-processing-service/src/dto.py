@@ -121,6 +121,9 @@ class WordDto(BaseModel):
     start: float
     end: float
     score: float
+    posTag: Optional[str] = None
+    entityType: Optional[str] = None
+    lemma: Optional[str] = None
     class Config:
         from_attributes = True
 

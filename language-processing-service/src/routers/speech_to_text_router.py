@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 import uuid
 from fastapi import Depends, Form, UploadFile, File, HTTPException, APIRouter, status
 from src.services.shadowing_service import build_shadowing_result
@@ -104,8 +105,9 @@ async def transcribe_audio(
         # Giữ nguyên HTTPException đã raise ở trên (file type, ...)
         raise
     except Exception as e:
-        # Bọc mọi lỗi khác thành 500
+        print("JSON ERROR:", expectedWords)
+        traceback.print_exc()
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Transcription failed: {str(e)}",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid expectedWords payload: {e}",
         )

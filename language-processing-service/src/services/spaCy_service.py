@@ -1,3 +1,4 @@
+# src/services/spaCy_service.py
 import spacy
 import asyncio
 import re
@@ -16,22 +17,9 @@ def _ensure_spacy_model_loaded():
     global _spacy_model
 
     if _spacy_model is None:
-        print(f"[spaCy] Loading model ' {SPACY_MODEL_NAME}'...")
+        print(f"[spaCy] Loading model '{SPACY_MODEL_NAME}'...")
         _spacy_model = spacy.load(SPACY_MODEL_NAME)
         print("✅ [spaCy] Model loaded successfully!")
-
-
-# 🔥 NORMALIZE WORD (handle -, ', space)
-def _normalize_text(text: str) -> str:
-    if not text:
-        return ""
-
-    text = text.lower().strip()
-
-    # remove hyphen, apostrophe, space
-    text = re.sub(r"[-'\s]", "", text)
-
-    return text
 
 
 def _word_analysis_sync(word: str, context: str | None = None) -> dict:
@@ -45,46 +33,44 @@ def _word_analysis_sync(word: str, context: str | None = None) -> dict:
 
     try:
         doc = _spacy_model(text)
-
-        normalized_target = _normalize_text(word)
-
-        # 🔥 tìm span thay vì token
-        for i in range(len(doc)):
-            for j in range(i + 1, min(i + 6, len(doc) + 1)):  # max 5 tokens
-                span = doc[i:j]
-                span_text = _normalize_text(span.text)
-
-                if span_text == normalized_target:
-                    token = span[0]  # lấy token đầu làm đại diện
-
-                    return {
-                        "text": word,
-                        "lemma": token.lemma_,
-                        "pos": token.pos_,
-                        "tag": token.tag_,
-                        "dep": token.dep_,
-                        "ent_type": token.ent_type_,
-                    }
-
-        # 🔥 fallback: analyze riêng word
+        
+        # Tìm token match với word (đã được clean từ bên ngoài)
+        for token in doc:
+            # Bỏ qua token space
+            if token.is_space:
+                continue
+            
+            # So sánh trực tiếp (word đã được clean từ bên ngoài rồi)
+            if token.text.lower() == word.lower():
+                return {
+                    "text": word,
+                    "lemma": token.lemma_,
+                    "pos": token.pos_,
+                    "tag": token.tag_,
+                    "dep": token.dep_,
+                    "ent_type": token.ent_type_,
+                }
+        
+        # Fallback: analyze riêng word
         doc_single = _spacy_model(word)
-
-        if len(doc_single) > 0:
-            token = doc_single[0]
+        tokens = [t for t in doc_single if not t.is_space]
+        
+        if tokens:
+            token = tokens[0]
             return {
                 "text": word,
                 "lemma": token.lemma_,
-                "pos": token.pos_,
-                "tag": token.tag_,
+                "pos": token.pos_ if token.pos_ != "SPACE" else "PUNCT",
+                "tag": token.tag_ if token.tag_ != "SPACE" else "PUNCT",
                 "dep": token.dep_,
                 "ent_type": token.ent_type_,
             }
 
-        # fallback cuối cùng
+        # Fallback cuối cùng
         return {
             "text": word,
             "lemma": word,
-            "pos": "UNKNOWN",
+            "pos": "NOUN",
             "tag": "",
             "dep": "",
             "ent_type": "",

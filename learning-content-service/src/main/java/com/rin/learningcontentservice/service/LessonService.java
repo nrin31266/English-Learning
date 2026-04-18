@@ -63,7 +63,7 @@ public class LessonService {
                 () -> new BaseException(LearningContentErrorCode.TOPIC_NOT_FOUND,
                         LearningContentErrorCode.TOPIC_NOT_FOUND.formatMessage(request.getTopicSlug()))
         );
-        String lessonSlug = TextUtils.toSlug(request.getTitle());
+        String lessonSlug = TextUtils.createSlug(request.getTitle());
         if (lessonRepository.findBySlug(lessonSlug).isPresent()) {
             throw new BaseException(LearningContentErrorCode.LESSON_WITH_NAME_EXISTS,
                     LearningContentErrorCode.LESSON_WITH_NAME_EXISTS.formatMessage(request.getTitle()));
@@ -351,26 +351,26 @@ public class LessonService {
                 }
             }
 
-            boolean isPunct = TextUtils.hasPunctuation(wordText);
+            boolean hasPunctuation = TextUtils.hasPunctuation(wordText);
 
-            String normalizedLower = TextUtils.normalizeWordLower(wordText);
 
-            String slug = !normalizedLower.isEmpty()
-                    ? TextUtils.toSlug(normalizedLower)
-                    : null;
+
 
             LessonWord lessonWord = LessonWord.builder()
                     .sentence(lessonSentence)
                     .orderIndex(wIdx)
                     .wordText(wordText)
-                    .wordLower(normalizedLower)
-                    .wordNormalized(normalizedLower)
-                    .wordSlug(slug)
+                    .posTag(w.getPosTag())
+                    .lemma(w.getLemma())
+                    .entityType(w.getEntityType())
+                    .wordLower(TextUtils.normalizeWordLower(wordText))
+                    .wordNormalized(TextUtils.normalizeWordLower(TextUtils.normalizeWordSoft(wordText)))
+                    .wordSlug(TextUtils.createSlug(wordText))
                     .startCharIndex(startChar >= 0 ? startChar : null)
                     .endCharIndex(endChar >= 0 ? endChar : null)
                     .audioStartMs(TimeUtils.toMs(w.getStart()))
                     .audioEndMs(TimeUtils.toMs(w.getEnd()))
-                    .isPunctuation(isPunct)
+                    .hasPunctuation(hasPunctuation)
                     .isClickable(true)
                     .build();
 

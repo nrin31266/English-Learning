@@ -11,6 +11,9 @@ export type TWordResponseStatus =
 export interface IWordData {
   word: string
   pos: string
+  key: string
+  entityType: string
+  context: string
 
   phonetics: {
     uk: string

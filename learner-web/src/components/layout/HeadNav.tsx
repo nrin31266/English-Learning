@@ -33,15 +33,20 @@ const HeadNav = () => {
       </Link>
       {isMobile && (
         <button
+          type="button"
           className="ml-auto p-2 transition-transform duration-300"
           onClick={() => setOpen(prev => !prev)}
+          aria-label="Toggle navigation menu"
+          aria-expanded={open}
+          aria-controls="mobile-nav-menu"
         >
           <Menu className={`${open ? 'rotate-45' : 'rotate-0'} transition-transform duration-300`} />
         </button>
       )}
       <NavigationMenuList
+        id="mobile-nav-menu"
         className={`${isMobile
-          ? `p-4 top-6 -left-12 absolute flex flex-col min-w-16 border rounded-md shadow bg-background z-20 
+          ? `p-4 top-full -left-8 mt-2 absolute flex flex-col min-w-40 border rounded-md shadow bg-background z-20 
       transition-all duration-300 ease-out
       justify-start items-start
       ${open
@@ -53,7 +58,7 @@ const HeadNav = () => {
       >
         <NavigationMenuItem className="">
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link onClick={() => setOpen(false)} to="/topics" className={`flex flex-wrap ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'font-bold! text-primary-foreground bg-primary!' : ''
+            <Link onClick={() => setOpen(false)} to="/topics" className={`flex flex-wrap ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'font-bold! text-primary-foreground! bg-primary!' : ''
               }`}><div><Notebook className={`
                 ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'text-primary-foreground' : 'text-muted-foreground'}
             `} /></div> Topics</Link>
@@ -61,7 +66,7 @@ const HeadNav = () => {
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link onClick={() => setOpen(false)} to="/dictionary" className={`flex flex-wrap ${pn.startsWith('/dictionary') ? 'font-bold! text-primary-foreground bg-primary!' : ''
+            <Link onClick={() => setOpen(false)} to="/dictionary" className={`flex flex-wrap ${pn.startsWith('/dictionary') ? 'font-bold! text-primary-foreground! bg-primary!' : ''
               }`}><div><BookA className={`
                 ${pn.startsWith('/dictionary') ? 'text-primary-foreground' : 'text-muted-foreground'}
             `} /></div> Dictionary</Link>
@@ -69,13 +74,13 @@ const HeadNav = () => {
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link onClick={() => setOpen(false)} to="/review" className={`flex flex-wrap ${pn.startsWith('/review') ? 'font-bold! text-primary-foreground bg-primary!' : ''
+            <Link onClick={() => setOpen(false)} to="/review" className={`flex flex-wrap ${pn.startsWith('/review') ? 'font-bold! text-primary-foreground! bg-primary!' : ''
               }`}>Review</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem >
           <NavigationMenuTrigger className={
-            pn.startsWith('/settings') ? 'font-bold! text-primary-foreground bg-primary!' : ''
+            pn.startsWith('/settings') ? 'font-bold! text-primary-foreground! bg-primary!' : ''
           }>More</NavigationMenuTrigger>
           <NavigationMenuContent>
             <ul className="grid w-[300px] gap-4">

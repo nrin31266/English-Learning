@@ -198,7 +198,7 @@ export interface ILessonWord {
   audioStartMs: number | null;
   audioEndMs: number | null;
 
-  isPunctuation: boolean;
+  hasPunctuation: boolean;
   isClickable: boolean;
 
   createdAt: string;

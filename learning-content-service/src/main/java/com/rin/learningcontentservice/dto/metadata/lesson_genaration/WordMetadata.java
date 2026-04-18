@@ -12,4 +12,8 @@ public class WordMetadata {
     private Double start;
     private Double end;
     private Double score;
+    // spacy
+    private String posTag;
+    private String entityType;
+    private String lemma;
 }

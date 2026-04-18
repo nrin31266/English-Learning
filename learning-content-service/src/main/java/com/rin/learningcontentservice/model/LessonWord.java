@@ -32,10 +32,10 @@ public class LessonWord {
 
     // ───────────────────────────────────────────
     @Column(name = "word_text", nullable = false, length = 255)
-    private String wordText;     // gốc
+    private String wordText;     // gốc từ wisperx trả về
 
     @Column(name = "word_lower", length = 255)
-    private String wordLower;    // lowercase để UI search
+    private String wordLower;    // lowercase đơn giản
 
     @Column(name = "word_normalized", length = 255)
     private String wordNormalized; // dùng tra từ điển
@@ -43,9 +43,13 @@ public class LessonWord {
     @Column(name = "word_slug", length = 255)
     private String wordSlug;      // slug
 
+    private String lemma;          // dạng từ điển, VD: "running" -> "run"
 
-//    @Column(length = 255)
-//    private String lemma;        // run, go, eat — nếu có
+
+    @Column(name = "pos_tag", length = 50)
+    private String posTag;       // VD: VERB, NOUN, ADJ...
+    @Column(name = "entity_type", length = 50)
+    private String entityType;   // VD: PERSON, GPE, ORG
 
     // ───────────────────────────────────────────
     // CHAR POSITIONING IN DISPLAY SENTENCE
@@ -65,8 +69,8 @@ public class LessonWord {
     // ───────────────────────────────────────────
     // FLAGS
     @Builder.Default
-    @Column(name = "is_punctuation", nullable = false)
-    private Boolean isPunctuation = false; // dấu câu
+    @Column(name = "has_punctuation", nullable = false)
+    private Boolean hasPunctuation = false; // dấu câu
 
     @Builder.Default
     @Column(name = "is_clickable", nullable = false)

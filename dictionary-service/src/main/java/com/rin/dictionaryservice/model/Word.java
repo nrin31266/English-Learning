@@ -17,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@CompoundIndex(name = "text_pos_idx", def = "{'textLower': 1, 'pos': 1}", unique = true)
+@CompoundIndex(name = "text_pos_idx", def = "{'key': 1, 'pos': 1}", unique = true)
 @CompoundIndex(name = "processing_idx", def = "{'status': 1, 'retryCount': 1, 'createdAt': 1}")
 @CompoundIndex(
         name = "recover_idx",
@@ -30,8 +30,9 @@ public class Word {
 
     String text;      // từ gốc
     String pos;       // VERB, NOUN, ADJ
-    String textLower; // text.toLowerCase() để tìm kiếm không phân biệt hoa thường
+    String key;       // don't, -> dont
     String lemma;     // dạng từ điển
+    String entityType; // PERSON, GPE, ORG, ...
     String context;   // câu gốc
     String summaryVi; // nghĩa Vi tóm tắt
     Phonetics phonetics;

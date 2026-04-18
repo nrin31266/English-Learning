@@ -8,6 +8,7 @@ interface Props {
 
 const FullScreenSpinner = ({ label}: Props) => {
   const [opacity, setOpacity] = useState(0);
+  const darkMode = localStorage.getItem('theme') === 'dark';
 
   useEffect(() => {
     // Fade in effect cho mượt
@@ -27,7 +28,7 @@ const FullScreenSpinner = ({ label}: Props) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)',
         opacity,
         transition: 'opacity 200ms ease-in-out',
         zIndex: 9999,

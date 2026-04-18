@@ -242,8 +242,8 @@
       "description": "Các nút mô phỏng cho các hành động trong tương lai (xuất bản, tạo lại, v.v.).",
       "publishLesson": "Xuất bản bài học",
       "unpublishLesson": "Hủy xuất bản",
-      "regenerate": "Tiếp tục tạo",
-      "restart": "Khởi động lại xử lý AI",
+      "regenerate": "Tạo lại với Cache",
+      "restart": "Đặt lại quá trình tạo",
       "stopProcessing": "Dừng xử lý"
     },
     "tabs": {

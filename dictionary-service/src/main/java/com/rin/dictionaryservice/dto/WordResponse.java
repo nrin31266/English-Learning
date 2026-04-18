@@ -19,6 +19,8 @@ public class WordResponse {
 
     String word;
     String pos;
+    String lemma;
+    String entityType;
     PhoneticsDto phonetics;
     List<DefinitionDto> definitions;
     Boolean isPlaceholder; // du lieu tam tu (dictionaryapi.dev)

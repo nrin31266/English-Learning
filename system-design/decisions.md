@@ -18,7 +18,8 @@ Sử dụng **Kafka** làm event backbone cho các luồng bất đồng bộ:
 - Bắt buộc xử lý idempotency để tránh update lặp.
 - Chấp nhận độ trễ do eventual consistency.
 
-## 2. ⚡ Vì sao chọn Redis
+## 2. ⚡ Vì sao chọn Redi# Run FastAPI app on port 8089
+exec uvicorn src.main:app --host 0.0.0.0 --port 8089s
 
 ### Quyết định
 Sử dụng **Redis** cho dữ liệu tạm thời:

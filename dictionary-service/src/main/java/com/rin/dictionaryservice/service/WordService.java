@@ -1,10 +1,7 @@
 package com.rin.dictionaryservice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rin.dictionaryservice.dto.DictionaryApiResponse;
-import com.rin.dictionaryservice.dto.SpaCyWordAnalysisDto;
-import com.rin.dictionaryservice.dto.WordResponse;
-import com.rin.dictionaryservice.dto.WordResponseStatus;
+import com.rin.dictionaryservice.dto.*;
 import com.rin.dictionaryservice.exception.DictionaryErrorCode;
 import com.rin.dictionaryservice.mapper.DictionaryMapper;
 import com.rin.dictionaryservice.model.CefrLevel;
@@ -12,6 +9,7 @@ import com.rin.dictionaryservice.model.Word;
 import com.rin.dictionaryservice.constant.WordCreationStatus;
 import com.rin.dictionaryservice.repository.WordRepository;
 import com.rin.dictionaryservice.repository.httpclient.DictionaryApiClient;
+import com.rin.dictionaryservice.utils.TextUtils;
 import com.rin.englishlearning.common.exception.BaseErrorCode;
 import com.rin.englishlearning.common.exception.BaseException;
 import jakarta.annotation.PostConstruct;
@@ -93,23 +91,22 @@ public class WordService {
 
     @Cacheable(
             value = "wordsByWordKey",
-            key = "#textLower + '_' + #analysis.pos",
+            key = "#key + '_' + #request.posTag",
             unless = "#result == null || #result.status != T(com.rin.dictionaryservice.dto.WordResponseStatus).READY"
     )
     public WordResponse addOrGetWord(
-            String textLower,
-            SpaCyWordAnalysisDto analysis,
-            String context,
-            Boolean isFallback
-    ) {
+            String key ,
+            WordSearchRequest request
 
-        if (!isValidWord(analysis)) {
-            throw new BaseException(BaseErrorCode.INVALID_REQUEST, "Invalid word: " + textLower);
+    ) {
+        String wordSoft = TextUtils.normalizeWordSoft(request.getText());
+        if (!isValidWord(wordSoft, request.getPosTag(), request.getEntityType())) {
+            throw new BaseException(BaseErrorCode.INVALID_REQUEST, "Invalid word: " + request.getText());
         }
 
         // 1. Check DB
         Word existingWord = wordRepository
-                .findByTextLowerAndPos(textLower, analysis.getPos())
+                .findByKeyAndPos(key, request.getPosTag())
                 .orElse(null);
 
         // ===================== READY =====================
@@ -120,9 +117,11 @@ public class WordService {
         // ===================== FAILED =====================
         if (existingWord != null && existingWord.getStatus() == WordCreationStatus.FAILED) {
             return WordResponse.builder()
-                    .word(analysis.getText())
-                    .pos(analysis.getPos())
+                    .word(wordSoft)
+                    .pos(request.getPosTag())
                     .status(WordResponseStatus.FAILED)
+                    .entityType(request.getEntityType())
+                    .lemma(request.getLemma())
                     .isPlaceholder(true)
                     .message("Word processing failed. Please try again later.")
                     .definitions(List.of())
@@ -132,11 +131,12 @@ public class WordService {
         // ===================== CREATE PENDING =====================
         if (existingWord == null) {
             Word newWord = Word.builder()
-                    .text(analysis.getText())
-                    .pos(analysis.getPos())
-                    .lemma(analysis.getLemma())
-                    .textLower(textLower)
-                    .context(context)
+                    .text(wordSoft)
+                    .key(key)
+                    .entityType(request.getEntityType())
+                    .pos(request.getPosTag())
+                    .lemma(request.getLemma())
+                    .context(request.getContext())
                     .status(WordCreationStatus.PENDING)
                     .retryCount(0)
                     .build();
@@ -145,22 +145,24 @@ public class WordService {
         }
 
         // ===================== FALLBACK =====================
-        if (Boolean.TRUE.equals(isFallback)) {
-            return fetchFallbackResponse(analysis.getText(), analysis.getPos());
+        if (Boolean.TRUE.equals(request.getIsFallback())) {
+            return fetchFallbackResponse(wordSoft, request.getPosTag(), request.getEntityType(), request.getLemma());
         }
 
         // ===================== PROCESSING =====================
         return WordResponse.builder()
-                .word(analysis.getText())
-                .pos(analysis.getPos())
+                .word(wordSoft)
+                .pos(request.getPosTag())
+                .entityType(request.getEntityType())
+                .lemma(request.getLemma())
                 .status(WordResponseStatus.PROCESSING)
                 .isPlaceholder(true)
-                .message("Word is being processed. Please wait a moment.")
+                .message("Word is being processed. Please check back later for high-quality data.")
                 .definitions(List.of())
                 .build();
     }
 
-    private WordResponse fetchFallbackResponse(String text, String pos) {
+    private WordResponse fetchFallbackResponse(String text, String pos, String entityType,  String lemma) {
         try {
             List<DictionaryApiResponse> apiResponses = dictionaryApiClient.getWord(text);
             DictionaryApiResponse apiResponse = extractDictionaryApiResponseByPos(apiResponses, pos);
@@ -180,6 +182,8 @@ public class WordService {
                 .word(text)
                 .pos(pos)
                 .status(WordResponseStatus.FALLBACK)
+                .entityType(entityType)
+                .lemma(lemma)
                 .isPlaceholder(true)
                 .message("Word is queued for processing but no fallback data available.")
                 .definitions(List.of())
@@ -191,10 +195,8 @@ public class WordService {
     // 'LAW', 'LOC', 'MONEY', 'NORP', 'ORDINAL', 'ORG',
     // 'PERCENT', 'PERSON', 'PRODUCT', 'QUANTITY',
     // 'TIME', 'WORK_OF_ART')
-    private boolean isValidWord(SpaCyWordAnalysisDto analysisDto) {
-        String text = analysisDto.getText();
-        String pos = analysisDto.getPos();
-        String entType = analysisDto.getEntType();
+    private boolean isValidWord(String text, String pos, String entType) {
+
 
         // số
         if (text.matches("\\d+")) return false;
@@ -262,7 +264,7 @@ public class WordService {
                                   CefrLevel cefrLevel, // CEFR level (A1, A2, B1, B2, C1, C2)
                                   List<Word.Definition> definitions) {
         Query query = new Query(
-                Criteria.where("textLower").is(textLower)
+                Criteria.where("key").is(textLower)
                         .and("pos").is(pos)
         );
 
@@ -277,8 +279,11 @@ public class WordService {
 
         mongoTemplate.updateFirst(query, update, Word.class);
     }
-    public void markFail(String wordId) {
-        Query query = new Query(Criteria.where("id").is(wordId));
+    public void markFail(String textLower, String pos) {
+        Query query = new Query(
+                Criteria.where("key").is(textLower)
+                        .and("pos").is(pos)
+        );
         Word word = mongoTemplate.findOne(query, Word.class);
 
         if (word == null) return;
@@ -291,7 +296,7 @@ public class WordService {
 
         if (retry >= MAX_RETRY) {
             update.set("status", WordCreationStatus.FAILED);
-            log.warn("Word {} failed after {} retries", wordId, retry);
+            log.info("Word {}_{} marked as FAILED (retry count {})", textLower, pos, retry);
         } else {
             update.set("status", WordCreationStatus.PENDING);
         }
@@ -301,7 +306,7 @@ public class WordService {
 
     public void markFailImmediately(String textLower, String pos) {
         Query query = new Query(
-                Criteria.where("textLower").is(textLower)
+                Criteria.where("key").is(textLower)
                         .and("pos").is(pos)
         );
 

@@ -25,9 +25,14 @@ public class LessonWordResponse {
     private Integer audioStartMs;
     private Integer audioEndMs;
 
-    private Boolean isPunctuation;
+    private Boolean hasPunctuation;
     private Boolean isClickable;
+
 
     private Timestamp createdAt;
     private Timestamp updatedAt;
+
+    private String posTag;
+    private String entityType;
+    private String lemma;
 }

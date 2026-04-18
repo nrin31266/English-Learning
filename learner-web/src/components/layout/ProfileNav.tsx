@@ -33,8 +33,8 @@ const ProfileNav = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <a className="flex flex-col items-center cursor-pointer">
-          <Avatar className="h-11 w-11">
+        <button type="button" aria-label="Open profile menu" className="flex items-center gap-2 sm:flex-col sm:gap-0 cursor-pointer">
+          <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
             <AvatarImage
               
               src={
@@ -47,10 +47,10 @@ const ProfileNav = () => {
             <AvatarFallback>{profile?.firstName?.[0]}</AvatarFallback>
           </Avatar>
 
-          <span className="text-xs w-24 overflow-clip text-center line-clamp-1 text-muted-foreground">
+          <span className="hidden sm:block text-xs w-24 overflow-clip text-center line-clamp-1 text-muted-foreground">
             {profile?.firstName + " " + profile?.lastName}
           </span>
-        </a>
+        </button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="w-56" align="start">
