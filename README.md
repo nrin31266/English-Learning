@@ -1,204 +1,58 @@
-# 🚀 English Learning System
+# 🚀 English Learning Platform
 
-An advanced **AI-powered English learning platform** built with a **microservices architecture**, supporting shadowing practice, pronunciation analysis, and intelligent language processing.
+## 📌 Giới thiệu
+Đây là nền tảng học tiếng Anh theo mô hình monorepo, kết hợp:
+- **Microservices** (Java, Spring Cloud) để xử lý nghiệp vụ.
+- **AI Service** (Python, FastAPI) để xử lý NLP, speech-to-text và worker pipeline.
+- **Frontend** (React) cho học viên và quản trị nội dung.
 
----
+## ✨ Tính năng chính
+- Học theo bài với chế độ **Shadowing** và **Dictation**.
+- Tự động tạo bài học từ nguồn audio/video bằng pipeline AI.
+- Tra cứu từ vựng theo ngữ cảnh, có cơ chế fallback khi dữ liệu nâng cao đang xử lý.
+- Theo dõi tiến độ xử lý bài học theo thời gian thực trên trang Admin.
 
-## 🧠 Overview
+## 🧠 Kiến trúc tổng thể (High-level)
+Hệ thống được thiết kế theo hướng **event-driven** cho các tác vụ nặng:
+- Frontend gọi API qua **API Gateway**.
+- **Learning Content Service** điều phối vòng đời tạo lesson.
+- **Language Processing Service** xử lý audio/NLP và phản hồi qua Kafka.
+- **Notification Service** đẩy trạng thái xử lý xuống UI qua WebSocket.
 
-This system enables users to learn English effectively through:
+## ⚙️ Bảng thành phần chính
 
-* 🎧 Audio & YouTube Shadowing
-* 🗣️ Speech Recording & Pronunciation Scoring
-* 📖 Sentence-based Transcript Learning
-* 🤖 AI-powered Language Processing (STT, TTS, Translation)
-* ⚡ Scalable Microservices Architecture
+| Thành phần | Công nghệ | Vai trò |
+|---|---|---|
+| API Gateway | Spring Cloud Gateway | Điểm vào duy nhất, định tuyến REST/WS |
+| Discovery Service | Eureka | Quản lý service discovery |
+| Learning Content Service | Spring Boot + PostgreSQL | Quản lý lesson/topic, điều phối AI job |
+| Dictionary Service | Spring Boot + MongoDB | Quản lý từ vựng, hàng đợi xử lý từ |
+| Notification Service | Spring Boot + WebSocket | Đẩy cập nhật tiến độ realtime |
+| AI Service | FastAPI + WhisperX + spaCy + Gemini | STT, NLP, xử lý pipeline AI |
+| Redis | Redis | Lưu trạng thái tạm/cancel job, cache |
+| Kafka | Apache Kafka | Truyền sự kiện bất đồng bộ |
 
----
+## 🔄 Sơ đồ tổng thể (ASCII)
+```text
+ [Learner Web]                 [Admin Web]
+			|                             |
+			+----------- HTTP/WS ---------+
+										|
+							[API Gateway]
+										|
+	 +----------------+----------------+----------------+
+	 |                |                |                |
+[User Service] [Learning Content] [Dictionary] [Notification]
+										Service         Service      Service
+											|               ^            |
+											| Kafka         | Internal   | STOMP/WebSocket
+											v               | API        v
+				[Language Processing Service (FastAPI)]
+							|         |          |         |
+						Redis     Kafka    Cloudinary   Worker
 
-## 🏗️ Architecture
-
-The system follows a **microservices architecture** using Spring Cloud ecosystem.
-
-```
-Frontend (Vite + React)
-        │
-        ▼
-API Gateway (Spring Cloud Gateway)
-        │
-        ▼
-Service Discovery (Eureka)
-        │
- ┌───────────────┬───────────────┬───────────────┐
- │               │               │               │
-User Service   Content Service  Dictionary     Notification
-               (Lesson Data)     Service         Service
-        │
-        ▼
-Language Processing Service (FastAPI + AI)
-```
-
----
-
-## 🧩 Tech Stack
-
-### 🔧 Backend
-
-* Java + Spring Boot
-* Spring Cloud Gateway
-* Eureka Service Discovery
-
-### 🤖 AI Service
-
-* FastAPI (Python)
-* WhisperX (Speech-to-Text)
-* Gemini API (AI processing)
-
-### 🌐 Frontend
-
-* React (Vite)
-* TailwindCSS / UI components
-
-### 🗄️ Database
-
-* **User Service**: PostgreSQL + Redis
-* **Content Service**: PostgreSQL
-* **Dictionary Service**: MongoDB + Redis
-
-### ⚡ Messaging
-
-* Kafka (event-driven communication)
-
-### 🔐 Authentication
-
-* Keycloak (OAuth2 / Identity Management)
-
-### ☁️ Storage
-
-* Cloudinary (media storage)
-
-### 🐳 Deployment
-
-* Docker Compose (multi-service setup)
-
----
-
-## 📦 Core Services
-
-### 👤 User Service
-
-* User authentication & authorization
-* Learning progress tracking
-* Session & token management (Redis)
-
----
-
-### 📚 Content Service
-
-* Lessons & sentence management
-* Transcript segmentation
-* Shadowing data (start/end timestamps)
-
----
-
-### 📖 Dictionary Service
-
-* Word definitions & translations
-* Caching with Redis
-* Flexible schema with MongoDB
-
----
-
-### 🤖 Language Processing Service
-
-Handles AI-related features:
-
-* 🎙️ Speech-to-Text (WhisperX)
-* 🔊 Text-to-Speech
-* 🧠 Pronunciation Scoring
-* 🌐 Translation (Gemini)
-* 🔗 Sentence Alignment
-
----
-
-### 📡 Notification Service
-
-* Event-driven notifications via Kafka
-
----
-
-## 🎯 Key Features
-
-* 🎧 Shadowing with **audio & YouTube**
-* ⏱️ Precise segment playback (start/end + padding)
-* 🗣️ Voice recording & pronunciation analysis
-* 📊 Real-time feedback on speaking
-* 📖 Interactive transcript with sentence navigation
-* 🔄 Auto-play & auto-stop learning mode
-
----
-
-## ⚙️ System Highlights
-
-* 🔥 Microservices with independent scalability
-* ⚡ Real-time audio/video synchronization
-* 🧠 AI-powered language understanding
-* 📡 Event-driven architecture using Kafka
-* 🔐 Secure authentication via Keycloak
-
----
-
-## 🚀 Getting Started
-
-### 1. Clone repository
-
-```bash
-git clone <your-repo>
-cd EnglishLearning
+							 [Discovery Service (Eureka)]
 ```
 
----
-
-### 2. Run with Docker Compose
-
-```bash
-docker-compose up --build
-```
-
----
-
-### 3. Access services
-
-* Frontend: http://localhost:3000, http://localhost:3001
-* API Gateway: http://localhost:8080
-* Keycloak: http://localhost:8088
-
----
-
-## 📌 Future Improvements
-
-* Kubernetes deployment
-* Real-time transcript highlighting
-* Loop-based shadowing training
-* AI-powered speaking evaluation improvements
-
----
-
-## 👨‍💻 Author
-
-Developed as a full-stack learning platform combining:
-
-* Microservices architecture
-* AI/ML integration
-* Real-time media processing
-
----
-
-## ⭐ Notes
-
-This project demonstrates:
-
-* Advanced system design
-* AI integration in real-world applications
-* Scalable backend architecture
-* Modern frontend UX for education systems
+## 📚 Tài liệu hệ thống
+Chi tiết thiết kế nằm tại thư mục: [system-design](system-design/)

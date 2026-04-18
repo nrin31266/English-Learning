@@ -1,0 +1,29 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+
+# Environments
+venv/
+lps-env/
+
+# IDEs
+.vscode/
+.idea/
+
+data/
+src/temp/
+
+# Result files
+*.json
+*.log
+
+# Models (nếu bạn tải model thủ công)
+# models/
+*.pt
+*.bin
+
+# Mac OS
+.DS_Store
+
+
+.env

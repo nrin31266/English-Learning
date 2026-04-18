@@ -1,0 +1,55 @@
+fastapi==0.121.0
+uvicorn==0.38.0
+
+# python-jose la thu vien de xu ly JWT
+python-jose[cryptography]==3.3.0
+cryptography==41.0.3
+# httpx la thu vien de gui yeu cau HTTP
+httpx==0.23.0
+
+# python-dotenv la thu vien de doc file .env
+python-dotenv==1.0.0
+# pydantic-settings
+
+# python-multipart la thu vien de xu ly multipart/form-data
+python-multipart
+
+
+authlib==1.2.0
+
+# eureka client
+py-eureka-client==0.13.2
+
+confluent-kafka
+
+# checkout: cloudinary
+cloudinary
+
+yt-dlp
+
+whisperx==3.7.4
+
+librosa
+
+pydantic_settings
+
+redis==7.0.1
+
+google-cloud-texttospeech==2.33.0
+
+google-generativeai>=0.7.0
+
+# better json serialization
+orjson
+
+# retrying library
+tenacity
+
+
+
+numpy>=2.0.0
+spacy>=3.8.0
+thinc>=8.3.0
+
+# Link cài đặt trực tiếp Model English bản 3.8.0
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
