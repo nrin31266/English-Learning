@@ -23,7 +23,7 @@ const getWordClass = (status: string, attempted: boolean) => {
     case "MISSING":
       return "text-slate-400 italic border-b border-dashed border-slate-300"
     case "EXTRA":
-      return "text-blue-500"
+      return "text-yellow-500 font-medium"
     default:
       return ""
   }
@@ -90,23 +90,27 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className }) => {
         <div className="flex flex-wrap items-end gap-x-3 gap-y-4">
           {compares.map((c) => {
             const attempted = c.position <= lastRecognizedPosition
-            const hasError = c.status !== "CORRECT" && attempted && c.recognizedWord
+            const isExtra = c.status === "EXTRA"
+            const hasError = !isExtra && c.status !== "CORRECT" && attempted && c.recognizedWord
 
             return (
               <div key={c.position} className="flex flex-col items-center group cursor-default">
-                {/* Chữ đọc sai */}
-                {hasError ? (
+                {isExtra && c.recognizedWord ? (
+                  <span className="text-yellow-500 font-medium mb-0.5">
+                    +{c.recognizedWord}
+                  </span>
+                ) : hasError ? (
                   <span className="font-medium text-muted-foreground line-through decoration-red-600/20 mb-0.5">
                     {c.recognizedWord}
                   </span>
                 ) : (
                   // Căn lề cho mượt
-                  <span className="h-[20px]" /> 
+                  <span className="h-5" />
                 )}
 
                 {/* Từ gốc với gạch dưới dạng sóng */}
                 <span className={cn("text-lg", getWordClass(c.status, attempted))}>
-                  {c.expectedWord || "_"}
+                  {isExtra ? "" : c.expectedWord || "_"}
                 </span>
               </div>
             )

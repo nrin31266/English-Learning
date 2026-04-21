@@ -1,10 +1,11 @@
 from typing import List, Tuple
 
-from src.dto import ShadowingResult, ShadowingWordCompare, ShadowingRequest
+from src.dto import ShadowingResult, ShadowingWordCompare, ShadowingRequest, ShadowingWord
 from src.services.file_service import normalize_word_lower
 
 # Kiểu token: (raw, normalized)
 RecToken = Tuple[str, str]
+AlignedItem = Tuple[str | None, str | None, str | None, str | None, str]
 
 
 # Levenshtein distance + similarity
@@ -126,6 +127,91 @@ def _extract_recognized_tokens(transcription_result: dict) -> tuple[str, List[Re
     return recognized_text, rec_items
 
 
+def _align_words(
+    expected_words: list[ShadowingWord],
+    expected_norm: List[str | None],
+    rec_items: List[RecToken],
+) -> List[AlignedItem]:
+    """
+    Sequence alignment (DP) giữa expected words và recognized words.
+
+    Output mỗi phần tử gồm:
+    (expected_word, expected_norm, recognized_raw, recognized_norm, op)
+    op ∈ {MATCH, SUBSTITUTE, INSERT, DELETE}
+    """
+    n = len(expected_norm)
+    m = len(rec_items)
+
+    # dp[i][j] = edit distance tối thiểu để align expected[:i] và recognized[:j]
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+
+    for i in range(1, n + 1):
+        dp[i][0] = i
+    for j in range(1, m + 1):
+        dp[0][j] = j
+
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            exp_norm = expected_norm[i - 1] or ""
+            rec_norm = rec_items[j - 1][1] or ""
+            sub_cost = 0 if exp_norm == rec_norm else 1
+
+            dp[i][j] = min(
+                dp[i - 1][j - 1] + sub_cost,  # match/substitute
+                dp[i - 1][j] + 1,             # delete (missing)
+                dp[i][j - 1] + 1,             # insert (extra)
+            )
+
+    # Backtrack từ cuối để lấy alignment path
+    aligned_rev: List[AlignedItem] = []
+    i, j = n, m
+
+    while i > 0 or j > 0:
+        # Ưu tiên đi chéo trước để alignment ổn định hơn.
+        if i > 0 and j > 0:
+            exp_norm = expected_norm[i - 1] or ""
+            rec_raw, rec_norm = rec_items[j - 1]
+            sub_cost = 0 if exp_norm == (rec_norm or "") else 1
+
+            if dp[i][j] == dp[i - 1][j - 1] + sub_cost:
+                op = "MATCH" if sub_cost == 0 else "SUBSTITUTE"
+                aligned_rev.append(
+                    (
+                        expected_words[i - 1].wordText,
+                        expected_norm[i - 1],
+                        rec_raw,
+                        rec_norm,
+                        op,
+                    )
+                )
+                i -= 1
+                j -= 1
+                continue
+
+        # INSERT = recognized thừa
+        if j > 0 and dp[i][j] == dp[i][j - 1] + 1:
+            rec_raw, rec_norm = rec_items[j - 1]
+            aligned_rev.append((None, None, rec_raw, rec_norm, "INSERT"))
+            j -= 1
+            continue
+
+        # DELETE = expected bị thiếu
+        if i > 0:
+            aligned_rev.append(
+                (
+                    expected_words[i - 1].wordText,
+                    expected_norm[i - 1],
+                    None,
+                    None,
+                    "DELETE",
+                )
+            )
+            i -= 1
+
+    aligned_rev.reverse()
+    return aligned_rev
+
+
 # Main: build_shadowing_result
 def build_shadowing_result(
     rq: ShadowingRequest,
@@ -135,14 +221,17 @@ def build_shadowing_result(
 
     # Câu chuẩn để hiển thị
     expected_text = " ".join(w.wordText for w in expected_words)
-    expected_norm = [w.wordNormalized for w in expected_words]
+    # Defensive normalize: payload có thể gửi wordNormalized chưa sạch (vd: "let's").
+    # Ưu tiên wordNormalized nếu có, fallback sang wordText để tránh mismatch giả.
+    expected_norm = [
+        normalize_word_lower(w.wordNormalized) or normalize_word_lower(w.wordText)
+        for w in expected_words
+    ]
 
     # Câu recognized + tokens chuẩn hóa
     recognized_text, rec_items = _extract_recognized_tokens(transcription_result)
 
-    expected_len = len(expected_norm)
-    rec_len = len(rec_items)
-    max_len = max(expected_len, rec_len)
+    aligned_items = _align_words(expected_words, expected_norm, rec_items)
 
     compares: List[ShadowingWordCompare] = []
     correct_count = 0          # chỉ CORRECT
@@ -150,17 +239,19 @@ def build_shadowing_result(
 
     last_recognized_position = -1
 
-    for i in range(max_len):
-        exp_word = expected_words[i].wordText if i < expected_len else None
-        exp_norm = expected_norm[i] if i < expected_len else None
-
-        rec_raw = rec_items[i][0] if i < rec_len else None
-        rec_norm = rec_items[i][1] if i < rec_len else None
+    for position, aligned in enumerate(aligned_items):
+        exp_word, exp_norm, rec_raw, rec_norm, align_type = aligned
 
         if rec_norm is not None:
-            last_recognized_position = i
+            last_recognized_position = position
 
-        status, score = _classify_word(exp_norm, rec_norm)
+        if align_type == "INSERT":
+            status, score = "EXTRA", 0.0
+        elif align_type == "DELETE":
+            status, score = "MISSING", 0.0
+        else:
+            # MATCH/SUBSTITUTE đều dùng classifier cũ để giữ behavior hiện có.
+            status, score = _classify_word(exp_norm, rec_norm)
 
         if status == "CORRECT":
             correct_count += 1
@@ -171,7 +262,7 @@ def build_shadowing_result(
 
         compares.append(
             ShadowingWordCompare(
-                position=i,
+                position=position,
                 expectedWord=exp_word,
                 recognizedWord=rec_raw,
                 expectedNormalized=exp_norm,
