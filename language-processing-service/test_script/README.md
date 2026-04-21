@@ -29,3 +29,14 @@ Ket qua:
 2. Dung helper `test_script/common/mock_factory.py`.
 3. Viet assert cho output mong doi.
 4. Ghi log vao `logs/stepX_latest.log`.
+
+## Cach chay Step 2 (extra penalty)
+Tu module `language-processing-service`:
+
+```bash
+source ./lps-env/bin/activate
+PYTHONPATH=. python -u test_script/step2_extra_penalty/run_step2_mock_tests.py
+```
+
+Log ket qua:
+- `test_script/step2_extra_penalty/logs/step2_latest.log`

@@ -1,3 +1,4 @@
+import os
 from typing import List, Tuple
 
 from src.dto import ShadowingResult, ShadowingWordCompare, ShadowingRequest, ShadowingWord
@@ -6,6 +7,9 @@ from src.services.file_service import normalize_word_lower
 # Kiểu token: (raw, normalized)
 RecToken = Tuple[str, str]
 AlignedItem = Tuple[str | None, str | None, str | None, str | None, str]
+
+DEFAULT_EXTRA_PENALTY_ALPHA = 0.3
+EXTRA_PENALTY_ALPHA_ENV = "SHADOWING_EXTRA_PENALTY_ALPHA"
 
 
 # Levenshtein distance + similarity
@@ -212,6 +216,29 @@ def _align_words(
     return aligned_rev
 
 
+def _get_extra_penalty_alpha() -> float:
+    """
+    Alpha cho penalty tu EXTRA words.
+
+    - Doc tu env SHADOWING_EXTRA_PENALTY_ALPHA.
+    - Fallback ve DEFAULT_EXTRA_PENALTY_ALPHA khi env invalid.
+    - Clamp ve [0.0, 1.0] de tranh cau hinh qua cuc doan.
+
+    Backward compatibility: dat alpha=0 se ve cong thuc cu.
+    """
+    raw = os.getenv(EXTRA_PENALTY_ALPHA_ENV, str(DEFAULT_EXTRA_PENALTY_ALPHA))
+    try:
+        alpha = float(raw)
+    except (TypeError, ValueError):
+        alpha = DEFAULT_EXTRA_PENALTY_ALPHA
+
+    if alpha < 0.0:
+        return 0.0
+    if alpha > 1.0:
+        return 1.0
+    return alpha
+
+
 # Main: build_shadowing_result
 def build_shadowing_result(
     rq: ShadowingRequest,
@@ -236,6 +263,7 @@ def build_shadowing_result(
     compares: List[ShadowingWordCompare] = []
     correct_count = 0          # chỉ CORRECT
     total_score = 0.0          # sum(score) cho các từ expected có mặt
+    extra_words = 0            # số từ recognized thừa
 
     last_recognized_position = -1
 
@@ -256,6 +284,9 @@ def build_shadowing_result(
         if status == "CORRECT":
             correct_count += 1
 
+        if status == "EXTRA":
+            extra_words += 1
+
         # chỉ cộng điểm cho các từ expected (không tính EXTRA vào mẫu số)
         if exp_norm is not None:
             total_score += score
@@ -274,8 +305,12 @@ def build_shadowing_result(
 
     total_words = len(expected_norm)
     if total_words > 0:
+        alpha = _get_extra_penalty_alpha()
         accuracy = (correct_count / total_words) * 100.0
-        weighted_accuracy = (total_score / total_words) * 100.0
+        # Step 2: phạt nhẹ khi user nói thừa.
+        # alpha=0 -> giữ hành vi cũ, không phạt EXTRA (backward compatibility).
+        weighted_denominator = total_words + alpha * extra_words
+        weighted_accuracy = (total_score / weighted_denominator) * 100.0
     else:
         accuracy = 0.0
         weighted_accuracy = 0.0
