@@ -38,11 +38,10 @@ const DictationTranscript = ({
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  const progress = useMemo(() => {
-    if (!sentences.length) return 0
-    return Math.round(((activeIndex + 1) / sentences.length) * 100)
+  const progressText = useMemo(() => {
+    if (!sentences.length) return "0 / 0"
+    return `${activeIndex + 1} / ${sentences.length}`
   }, [sentences.length, activeIndex])
-
   /**
    * Xử lý text: giữ dấu câu, thay từ bằng *** theo số ký tự
    */
@@ -132,8 +131,11 @@ useEffect(() => {
         </div>
 
         <div className="hidden items-center gap-2 text-[12px] text-muted-foreground sm:flex">
-          <span>{progress}%</span>
-          <Progress value={progress} />
+          <span>{progressText}</span>
+          <Progress
+            value={(activeIndex + 1) / sentences.length * 100}
+            className="w-36"
+          />
         </div>
       </div>
 
