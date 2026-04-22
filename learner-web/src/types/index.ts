@@ -31,6 +31,9 @@ export interface IShadowingResult {
   correctWords: number
   accuracy: number
   weightedAccuracy: number
+  fluencyScore: number
+  avgPause: number
+  speechRate: number
   recognizedWordCount: number
   lastRecognizedPosition: number
   compares: IShadowingWordCompare[]

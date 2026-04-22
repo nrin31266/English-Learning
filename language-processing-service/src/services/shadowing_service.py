@@ -239,6 +239,79 @@ def _get_extra_penalty_alpha() -> float:
     return alpha
 
 
+def _extract_word_timestamps(transcription_result: dict) -> list[dict]:
+    """
+    Trích word timestamps từ WhisperX segments.
+    Output: [{"word": str, "start": float, "end": float}, ...]
+    """
+    segments = transcription_result.get("segments") or []
+    items: list[dict] = []
+
+    for seg in segments:
+        words = seg.get("words") or []
+        for w in words:
+            start = w.get("start")
+            end = w.get("end")
+            word = w.get("word")
+
+            if word is None or start is None or end is None:
+                continue
+
+            try:
+                start_f = float(start)
+                end_f = float(end)
+            except (TypeError, ValueError):
+                continue
+
+            if end_f <= start_f:
+                continue
+
+            items.append({"word": str(word), "start": start_f, "end": end_f})
+
+    return items
+
+
+def _compute_fluency_score(word_timestamps: list[dict]) -> tuple[float, float, float]:
+    """
+    Heuristic fluency score (không dùng ML):
+    - avgPause: khoảng dừng trung bình giữa các từ (giây)
+    - speechRate: số từ/giây
+    - fluencyScore: [0, 1]
+    """
+    if not word_timestamps:
+        return 0.0, 0.0, 0.0
+
+    # Đảm bảo thứ tự theo thời gian.
+    words = sorted(word_timestamps, key=lambda x: x["start"])
+
+    if len(words) == 1:
+        duration = words[0]["end"] - words[0]["start"]
+        speech_rate = 1.0 / duration if duration > 0 else 0.0
+        return round(1.0, 4), 0.0, round(speech_rate, 4)
+
+    pauses: list[float] = []
+    for i in range(1, len(words)):
+        gap = words[i]["start"] - words[i - 1]["end"]
+        pauses.append(max(0.0, gap))
+
+    avg_pause = sum(pauses) / len(pauses) if pauses else 0.0
+
+    duration = words[-1]["end"] - words[0]["start"]
+    speech_rate = len(words) / duration if duration > 0 else 0.0
+
+    # Pause càng lớn -> điểm càng thấp.
+    pause_score = max(0.0, min(1.0, 1.0 - (avg_pause / 1.2)))
+
+    # Speech rate lý tưởng xấp xỉ 2.5 w/s; càng lệch càng giảm điểm.
+    target_rate = 2.5
+    rate_score = max(0.0, min(1.0, 1.0 - abs(speech_rate - target_rate) / target_rate))
+
+    fluency_score = (0.55 * pause_score) + (0.45 * rate_score)
+    fluency_score = max(0.0, min(1.0, fluency_score))
+
+    return round(fluency_score, 4), round(avg_pause, 4), round(speech_rate, 4)
+
+
 # Main: build_shadowing_result
 def build_shadowing_result(
     rq: ShadowingRequest,
@@ -257,6 +330,8 @@ def build_shadowing_result(
 
     # Câu recognized + tokens chuẩn hóa
     recognized_text, rec_items = _extract_recognized_tokens(transcription_result)
+    word_timestamps = _extract_word_timestamps(transcription_result)
+    fluency_score, avg_pause, speech_rate = _compute_fluency_score(word_timestamps)
 
     aligned_items = _align_words(expected_words, expected_norm, rec_items)
 
@@ -323,6 +398,9 @@ def build_shadowing_result(
         correctWords=correct_count,
         accuracy=round(accuracy, 2),
         weightedAccuracy=round(weighted_accuracy, 2),
+        fluencyScore=fluency_score,
+        avgPause=avg_pause,
+        speechRate=speech_rate,
         recognizedWordCount=len(rec_items),
         lastRecognizedPosition=last_recognized_position,
         compares=compares,

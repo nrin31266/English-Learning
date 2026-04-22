@@ -90,8 +90,16 @@ async def transcribe_audio(
                 language=transcription_result.get("language", "en"),
                 segments=segments,
                 full_text=transcription_result.get("text", ""),
+                errorCode=transcription_result.get("error"),
+                errorMessage=transcription_result.get("message"),
                 shadowingResult=shadowing_result,  # gắn vào đây
             )
+
+            if response.errorCode == "NO_SPEECH":
+                return ApiResponse.success(
+                    data=response,
+                    message="Khong phat hien giong noi. Hay kiem tra microphone.",
+                )
 
             return ApiResponse.success(data=response)
 

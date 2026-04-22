@@ -22,6 +22,9 @@ class ShadowingResult(BaseModel):
     correctWords: int          # chỉ đếm CORRECT (exact)
     accuracy: float            # % (correctWords / totalWords)
     weightedAccuracy: float    # % (theo score)
+    fluencyScore: float        # 0.0 - 1.0
+    avgPause: float            # giây
+    speechRate: float          # words/second
     recognizedWordCount: int
     lastRecognizedPosition: int
     compares: List[ShadowingWordCompare]
@@ -54,6 +57,8 @@ class TranscriptionResponse(BaseModel):
     language: str
     segments: List[TranscriptionSegment]
     full_text: str
+    errorCode: str | None = None
+    errorMessage: str | None = None
     created_at: DateTime = None
     shadowingResult: ShadowingResult | None = None  #  thêm
 

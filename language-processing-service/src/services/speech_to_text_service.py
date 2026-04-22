@@ -87,12 +87,34 @@ def _get_audio_duration_sync(path: str) -> float:
 
 def _transcribe_sync(audio_path: str):
     _ensure_whisper_model_loaded()
+    try:
+        with torch.no_grad():
+            result = whisper_model.transcribe(audio_path, batch_size=4)
+    except IndexError:
+        # WhisperX đôi khi ném IndexError khi VAD không tìm thấy speech.
+        return {
+            "text": "",
+            "segments": [],
+            "language": "en",
+            "error": "NO_SPEECH",
+            "message": "Khong phat hien giong noi. Hay kiem tra microphone.",
+        }
+
+    segments = result.get("segments") or []
+    if not segments:
+        return {
+            "text": "",
+            "segments": [],
+            "language": result.get("language") or "en",
+            "error": "NO_SPEECH",
+            "message": "Khong phat hien giong noi. Hay kiem tra microphone.",
+        }
+
     with torch.no_grad():
-        result = whisper_model.transcribe(audio_path, batch_size=4)
         language_code = result.get("language") or "en"
         align_model, metadata = _get_align_model(language_code)
         aligned = whisperx.align(
-            result["segments"],
+            segments,
             align_model,
             metadata,
             audio_path,

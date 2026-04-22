@@ -30,7 +30,7 @@ const getWordClass = (status: string, attempted: boolean) => {
 
 // ===== TAB 1: UI CỦA BẠN (GIỮ NGUYÊN) =====
 const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
-  const { weightedAccuracy, correctWords, totalWords, compares, lastRecognizedPosition } = result
+  const { weightedAccuracy, fluencyScore, correctWords, totalWords, compares, lastRecognizedPosition } = result
   const isExcellent = weightedAccuracy >= 85
   const isGood = weightedAccuracy >= 60
 
@@ -55,6 +55,11 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
       </div>
 
       <div className="h-px bg-border/50" />
+
+      <div className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+        <span className="text-muted-foreground">Fluency: </span>
+        <span className="font-semibold text-primary">{Math.round((fluencyScore || 0) * 100)}%</span>
+      </div>
 
       <div className="flex flex-wrap items-end gap-x-3 gap-y-4">
         {compares.map((c) => {
@@ -83,7 +88,16 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
 
 // ===== TAB 2: DEBUG (GỌN - ĐỦ - DỄ ĐỌC) =====
 const DebugTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
-  const { weightedAccuracy, correctWords, totalWords, compares, lastRecognizedPosition, expectedText, recognizedText } = result
+  const {
+    weightedAccuracy,
+    fluencyScore,
+    avgPause,
+    speechRate,
+    totalWords,
+    compares,
+    expectedText,
+    recognizedText,
+  } = result
   const EXTRA_ALPHA = 0.3
   // Thống kê nhanh
   const correct = compares.filter(c => c.status === "CORRECT").length
@@ -176,6 +190,11 @@ const DebugTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
         <div className="font-semibold mb-1">Công thức:</div>
         <div className="font-mono text-xs">
           weightedAccuracy = ({totalScore.toFixed(2)} / ({totalWords} + {EXTRA_ALPHA} × {extra})) × 100 = <span className="font-bold text-base">{weightedAccuracy.toFixed(1)}%</span>
+        </div>
+        <div className="font-mono text-xs mt-2">
+          fluencyScore = <span className="font-bold">{(fluencyScore || 0).toFixed(2)}</span>
+          {"  "}| avgPause = <span className="font-bold">{(avgPause || 0).toFixed(2)}s</span>
+          {"  "}| speechRate = <span className="font-bold">{(speechRate || 0).toFixed(2)} w/s</span>
         </div>
         <div className="text-xs text-muted-foreground mt-2 flex flex-wrap gap-3">
           <span>✓ CORRECT: 1.0</span>

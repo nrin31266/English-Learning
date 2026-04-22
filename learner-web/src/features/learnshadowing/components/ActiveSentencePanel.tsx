@@ -1,10 +1,10 @@
 import handleAPI from "@/apis/handleAPI"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Spinner2 } from "@/components/ui/spinner2"
 import type {
   ILessonDetailsResponse,
-  ILessonWordResponse,
   ITranscriptionResponse
 } from "@/types"
 import {
@@ -17,7 +17,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
 import WordPopup from "@/components/WordPopup"
-import type { IWordData } from "@/types/dictionary"
 import { useWordPopup } from "@/hooks/UseWordPopupReturn"
 
 
@@ -44,6 +43,8 @@ const ActiveSentencePanel = ({
   const [recordError, setRecordError] = useState<string | null>(null)
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null)
   const [transcription, setTranscription] = useState<ITranscriptionResponse | null>(null)
+  const [audioInputDevices, setAudioInputDevices] = useState<MediaDeviceInfo[]>([])
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("default")
 
   // ========== RECORDING REFS ==========
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -129,6 +130,44 @@ const ActiveSentencePanel = ({
     playFeedbackSound(score >= 85)
   }, [transcription?.id])
 
+  const loadAudioInputDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return
+
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const inputs = devices.filter((d) => d.kind === "audioinput")
+      setAudioInputDevices(inputs)
+
+      if (inputs.length === 0) {
+        setSelectedDeviceId("default")
+        return
+      }
+
+      const selectedExists = inputs.some((d) => d.deviceId === selectedDeviceId)
+      if (!selectedExists) {
+        setSelectedDeviceId(inputs[0].deviceId)
+      }
+    } catch (error) {
+      console.warn("Cannot enumerate audio input devices", error)
+    }
+  }, [selectedDeviceId])
+
+  useEffect(() => {
+    void loadAudioInputDevices()
+
+    const mediaDevices = navigator.mediaDevices
+    if (!mediaDevices?.addEventListener) return
+
+    const handleDeviceChange = () => {
+      void loadAudioInputDevices()
+    }
+
+    mediaDevices.addEventListener("devicechange", handleDeviceChange)
+    return () => {
+      mediaDevices.removeEventListener("devicechange", handleDeviceChange)
+    }
+  }, [loadAudioInputDevices])
+
   useEffect(() => {
     setIsRecording(false)
     setHasRecordedAudio(false)
@@ -151,8 +190,13 @@ const ActiveSentencePanel = ({
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const audioConstraints: MediaTrackConstraints | boolean =
+        selectedDeviceId && selectedDeviceId !== "default"
+          ? { deviceId: { exact: selectedDeviceId } }
+          : true
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
       streamRef.current = stream
+      void loadAudioInputDevices()
 
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
@@ -247,7 +291,7 @@ const ActiveSentencePanel = ({
       }
       setIsRecording(false)
     }
-  }, [currentSentence])
+  }, [currentSentence, loadAudioInputDevices, selectedDeviceId])
 
   const stopRecording = useCallback(() => {
     const mediaRecorder = mediaRecorderRef.current
@@ -401,6 +445,36 @@ const ActiveSentencePanel = ({
       <div className="flex flex-col items-center justify-between gap-4 px-4 py-4">
         {/* Record & playback recorded audio */}
         <div className="flex flex-col items-center w-full">
+          <div className="mb-3 flex w-full max-w-xs items-center gap-2">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Microphone
+            </span>
+
+            <Select
+              value={selectedDeviceId}
+              onValueChange={(value) => setSelectedDeviceId(value)}
+              disabled={isRecording || isUploading || audioInputDevices.length === 0}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select microphone" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectGroup>
+                  {audioInputDevices.length === 0 && (
+                    <SelectItem value="default">Default microphone</SelectItem>
+                  )}
+
+                  {audioInputDevices.map((device, index) => (
+                    <SelectItem key={device.deviceId} value={device.deviceId}>
+                      {device.label || `Microphone ${index + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
@@ -516,7 +590,7 @@ const ActiveSentencePanel = ({
 
       </div>
       <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
-      
+
       <WordPopup
         word={activeWord}
         anchorEl={anchorEl}
