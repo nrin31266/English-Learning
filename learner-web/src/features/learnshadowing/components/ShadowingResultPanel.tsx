@@ -39,6 +39,7 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
   const { weightedAccuracy, fluencyScore, correctWords, totalWords, compares, lastRecognizedPosition } = result
   const isExcellent = weightedAccuracy >= SHADOWING_THRESHOLD.NEXT
   const isGood = weightedAccuracy >= SHADOWING_THRESHOLD.GOOD_SOUND
+  const [openPopoverPosition, setOpenPopoverPosition] = useState<number | null>(null)
 
   return (
     <div className="flex flex-col gap-4">
@@ -73,15 +74,18 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
           const isExtra = c.status === "EXTRA"
           const hasError = !isExtra && c.status !== "CORRECT" && attempted && c.recognizedWord
           const showHover = c.phonemeDiff || c.extraOrMissingIpa
-          const [open, setOpen] = useState(false)
           return (
-            <Popover open={open} key={c.position}>
+            <Popover
+              open={openPopoverPosition === c.position}
+              onOpenChange={(open) => setOpenPopoverPosition(open ? c.position : null)}
+              key={c.position}
+            >
               <div className="flex flex-col items-center">
                 <PopoverTrigger 
                   asChild
-                  onClick={() => setOpen(!open)}
-                  onMouseEnter={() => setOpen(true)}
-                  onMouseLeave={() => setOpen(false)}
+                  onClick={() => setOpenPopoverPosition((prev) => prev === c.position ? null : c.position)}
+                  onMouseEnter={() => setOpenPopoverPosition(c.position)}
+                  onMouseLeave={() => setOpenPopoverPosition((prev) => prev === c.position ? null : prev)}
                 >
                   <div className="flex flex-col items-center cursor-pointer">
                     {/* Extra / Error line - nằm TRONG trigger */}
@@ -277,11 +281,11 @@ const DebugTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div className="bg-muted/30 p-2 rounded">
           <div className="text-xs text-muted-foreground mb-1">📖 Expected</div>
-          <div className="break-words">{expectedText}</div>
+          <div className="wrap-break-word">{expectedText}</div>
         </div>
         <div className="bg-muted/30 p-2 rounded">
           <div className="text-xs text-muted-foreground mb-1">🎤 Recognized</div>
-          <div className="break-words">{recognizedText || "(empty)"}</div>
+          <div className="wrap-break-word">{recognizedText || "(empty)"}</div>
         </div>
       </div>
 

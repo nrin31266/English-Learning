@@ -87,7 +87,12 @@ def compare_phonemes_with_ipa(
     rec_phonemes = get_phonemes(recognized_word)
     
     if not exp_phonemes or not rec_phonemes:
-        return 0.0, [{"type": "NO_DATA"}]
+        return 0.0, [{
+            "type": "NO_DATA",
+            "expected_ipa": None,
+            "actual_ipa": None,
+            "position": None,
+        }]
     
     aligned_pairs, distance = levenshtein_alignment(exp_phonemes, rec_phonemes)
     
@@ -125,11 +130,13 @@ def compare_phonemes_with_ipa_and_stress(
     recognized_word: str
 ) -> Tuple[float, List[Dict], str, str]:
     """
-    So sánh phoneme (không stress) nhưng trả về IPA có stress để UI hiển thị.
-    
+    So sánh phoneme (không stress) và trả thêm IPA có stress để UI hiển thị.
+
+    Returns:
+        (score, diff_tokens, expected_ipa_with_stress, actual_ipa_with_stress)
     """
-    # So sánh trên phiên bản không stress
     score, diff_tokens = compare_phonemes_with_ipa(expected_word, recognized_word)
-    
-   
-    return score, diff_tokens
+    expected_ipa = get_ipa_string_with_stress(expected_word) or ""
+    actual_ipa = get_ipa_string_with_stress(recognized_word) or ""
+
+    return score, diff_tokens, expected_ipa, actual_ipa

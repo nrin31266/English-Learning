@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import List, Tuple
-from src.services.phoneme_ipa_service import compare_phonemes_with_ipa, get_ipa_string_with_stress
+from src.services.phoneme_ipa_service import compare_phonemes_with_ipa, compare_phonemes_with_ipa_and_stress, get_ipa_string_with_stress
 from src.dto import ShadowingResult, ShadowingWordCompare, ShadowingRequest, ShadowingWord
 from src.utils.text_normalizer import normalize_word_lower
 
@@ -12,6 +12,33 @@ AlignedItem = Tuple[str | None, str | None, str | None, str | None, str]
 DEFAULT_EXTRA_PENALTY_ALPHA = 0.3
 EXTRA_PENALTY_ALPHA_ENV = "SHADOWING_EXTRA_PENALTY_ALPHA"
 logger = logging.getLogger(__name__)
+
+
+def get_pronunciation_score(expected_word: str, recognized_word: str) -> float:
+    """
+    Compatibility helper cho test Step 4:
+    - Neu co du lieu CMU o ca hai ben -> dung phoneme score.
+    - Neu thieu du lieu -> fallback char-level score.
+    """
+    score, diff_tokens = compare_phonemes_with_ipa(expected_word, recognized_word)
+    has_cmu_data = bool(diff_tokens) and diff_tokens[0].get("type") != "NO_DATA"
+    if has_cmu_data:
+        return score
+
+    exp = normalize_word_lower(expected_word) or ""
+    rec = normalize_word_lower(recognized_word) or ""
+
+    if not exp and not rec:
+        return 1.0
+    if not exp or not rec:
+        return 0.0
+
+    dist = _levenshtein_distance(exp, rec)
+    denom = max(len(exp), len(rec))
+    if denom <= 0:
+        return 0.0
+
+    return round(max(0.0, min(1.0, 1.0 - (dist / denom))), 4)
 
 
 # Levenshtein distance + similarity
@@ -343,7 +370,6 @@ def build_shadowing_result(
 
     for position, aligned in enumerate(aligned_items):
         exp_word, exp_norm, rec_raw, rec_norm, align_type = aligned
-        phoneme_score: float | None = None
         # Thêm biến để lưu diff visualization
         phoneme_diff = None
         extra_or_missing_ipa = None
@@ -375,12 +401,15 @@ def build_shadowing_result(
             status, score = _classify_word(exp_norm, rec_norm)
             # Chỉ phân tích diff nếu là NEAR hoặc WRONG
             if status in ("NEAR", "WRONG") and exp_word and rec_raw:
-                phoneme_score, diff_tokens = compare_phonemes_with_ipa(exp_word, rec_raw)
+                phoneme_score, diff_tokens, expected_ipa, actual_ipa = compare_phonemes_with_ipa_and_stress(
+                    exp_word,
+                    rec_raw,
+                )
                 phoneme_diff = {
                     "score": phoneme_score,
                     "diff_tokens": diff_tokens,  # UI tự render highlight từ đây
-                    "expected_ipa": get_ipa_string_with_stress(exp_word),
-                    "actual_ipa": get_ipa_string_with_stress(rec_raw)
+                    "expected_ipa": expected_ipa or get_ipa_string_with_stress(exp_word),
+                    "actual_ipa": actual_ipa or get_ipa_string_with_stress(rec_raw),
                 }
 
         if status == "CORRECT":

@@ -1,349 +1,213 @@
-🚀 PROMPT 1 — FIX ALIGNMENT (BẮT BUỘC)
-🎯 Mục tiêu
+# Shadowing Pronunciation Scoring Flow (Final)
 
-Fix lỗi lệch dây chuyền khi user nói thừa/thiếu từ.
+Tai lieu nay mo ta luong chinh thuc da hoan thien trong he thong shadowing hien tai.
 
-🧠 Prompt
-Refactor build_shadowing_result trong shadowing_service.py:
+## 1) Muc tieu he thong
 
-1. Thay loop index-based bằng alignment-based:
-   - Viết hàm align_words(expected_norm, rec_items)
-   - Dùng dynamic programming (edit distance sequence alignment)
-   - Output list các cặp:
-     (expectedWord, expectedNorm, recognizedRaw, recognizedNorm, type)
+- Cham ket qua shadowing on dinh, co giai thich du de hoc vien sua loi.
+- Tach ro 2 tang:
+  - Tang quyet dinh trang thai tu: alignment + char-level classify.
+  - Tang giai thich phat am: phoneme/IPA diff visualization.
+- UI uu tien de hoc vien thay cau va loi can sua, khong spam metric.
 
-type gồm:
-- MATCH
-- SUBSTITUTE
-- INSERT (EXTRA)
-- DELETE (MISSING)
+## 2) Dau vao va dau ra
 
-2. build_shadowing_result sẽ loop trên kết quả alignment thay vì range(max_len)
+### Dau vao
 
-3. Mapping:
-- MATCH → dùng _classify_word
-- SUBSTITUTE → WRONG/NEAR
-- INSERT → EXTRA
-- DELETE → MISSING
+- `expectedWords`: danh sach tu cua cau mau (co `wordText`, `wordNormalized`, `orderIndex`, ...).
+- `transcription_result`: ket qua ASR (text + segments/words).
 
-Không thay đổi response structure hiện tại.
-🧪 TEST
-Input:
-expected: I like apples
-recognized: I really like apples
-✅ Expected output (compares)
-[
-  { "expectedWord": "I", "recognizedWord": "I", "status": "CORRECT" },
-  { "expectedWord": null, "recognizedWord": "really", "status": "EXTRA" },
-  { "expectedWord": "like", "recognizedWord": "like", "status": "CORRECT" },
-  { "expectedWord": "apples", "recognizedWord": "apples", "status": "CORRECT" }
-]
-🎨 UI cần update
-File: ShadowingResultPanel.tsx
+### Dau ra (`ShadowingResult`)
 
-👉 thêm case:
+- Sentence-level:
+  - `sentenceId`
+  - `expectedText`
+  - `recognizedText`
+  - `totalWords`
+  - `correctWords`
+  - `accuracy`
+  - `weightedAccuracy`
+  - `fluencyScore`
+  - `avgPause`
+  - `speechRate`
+  - `recognizedWordCount`
+  - `lastRecognizedPosition`
+  - `compares[]`
 
-if (status === "EXTRA") {
-  return <span className="text-yellow-500">+{word}</span>
-}
-👀 Mong đợi UI
-I +really like apples
-🚀 PROMPT 2 — PHẠT EXTRA (SCORING)
-🎯 Mục tiêu
+- Word-level (`ShadowingWordCompare`):
+  - `position`
+  - `expectedWord`
+  - `recognizedWord`
+  - `expectedNormalized`
+  - `recognizedNormalized`
+  - `status`: `CORRECT | NEAR | WRONG | MISSING | EXTRA`
+  - `score`
+  - `phonemeDiff` (chi co khi can)
+  - `extraOrMissingIpa` (chi co voi EXTRA/MISSING khi co IPA)
 
-Tránh user nói thừa mà vẫn điểm cao.
+## 3) Pipeline backend (chi tiet)
 
-🧠 Prompt
-Trong build_shadowing_result:
+### Step 1: Trich recognized tokens
 
-1. Đếm số lượng EXTRA words
-2. Thêm biến:
+- Lay `recognized_text` tu `transcription_result.text`.
+- Neu text rong, build lai tu `segments.words`.
+- Tokenize va normalize tung tu -> `rec_items = [(raw, normalized)]`.
 
-alpha = 0.3
+### Step 2: Alignment (DP)
 
-3. Update weightedAccuracy:
+- Dung dynamic programming edit-distance de can `expected` va `recognized`.
+- Tao danh sach cap alignment:
+  - `MATCH`
+  - `SUBSTITUTE`
+  - `INSERT` (EXTRA)
+  - `DELETE` (MISSING)
 
-weighted_accuracy = total_score / (total_words + alpha * extra_words)
+### Step 3: Classify trang thai tu
 
-4. Giữ nguyên accuracy cũ
+- Voi `INSERT` -> `EXTRA`, `score=0.0`.
+- Voi `DELETE` -> `MISSING`, `score=0.0`.
+- Voi `MATCH/SUBSTITUTE` -> dung `_classify_word` (char-level):
+  - exact -> `CORRECT`, `1.0`
+  - gan dung -> `NEAR`, `0.7..0.95`
+  - con lai -> `WRONG`, `0.0`
 
-5. Nếu extra_words = 0 → kết quả không đổi
-🧪 TEST
-Input:
-expected: I like apples
-recognized: I really really like apples
-✅ Expected:
-weightedAccuracy < 100
-🎨 UI update
-File: ActiveSentencePanel.tsx
+Luu y quan trong:
 
-👉 không đổi UI
-👉 nhưng logic pass:
+- `_classify_word` la bo quyet dinh trang thai chinh trong pipeline hien tai.
+- Tang phoneme khong override status, ma dung de giai thich.
 
-const pass = weightedAccuracy >= 85
+### Step 4: Phoneme/IPA enrichment theo nhanh
 
-👉 giờ sẽ fail đúng hơn
+#### Nhanh NEAR/WRONG
 
-👀 Mong đợi
-Trước: pass
-Sau: fail (đúng)
-🚀 PROMPT 3 — FLUENCY SCORE
-🎯 Mục tiêu
+- Goi `compare_phonemes_with_ipa(expected_word, recognized_word)`.
+- Nhan ve:
+  - `score` phoneme
+  - `diff_tokens` de UI highlight sai am
+  - `expected_ipa`
+  - `actual_ipa`
+- Gan vao `phonemeDiff` cua word do.
 
-Thêm điểm trôi chảy.
+#### Nhanh EXTRA/MISSING
 
-🧠 Prompt
-1. Viết hàm extract_word_timestamps(transcription_result)
+- Khong chay phoneme diff chinh.
+- Chi goi `get_ipa_string_with_stress(word)` de lay IPA phuc vu hien thi hoc tu.
+- Gan vao `extraOrMissingIpa`.
 
-Output:
-[
-  { word, start, end }
-]
+#### Nhanh CORRECT
 
-2. Viết compute_fluency_score:
+- Khong enrich them de tranh noise khong can thiet.
 
-- avgPause = khoảng cách giữa từ
-- speechRate = words / duration
+### Step 5: Tinh diem sentence-level
 
-Return:
+- `accuracy = correctWords / totalWords * 100`
+- `weightedAccuracy = total_score / (totalWords + alpha * extra_words) * 100`
+  - `alpha` doc tu env `SHADOWING_EXTRA_PENALTY_ALPHA`
+  - clamp `[0.0, 1.0]`
+  - default `0.3`
+
+### Step 6: Tinh fluency
+
+- Tu word timestamps:
+  - `avgPause`: khoang dung trung binh
+  - `speechRate`: words/second
+  - `fluencyScore`: heuristic tong hop tu pause + rate
+
+## 4) Rule tong ket hien tai
+
+- Alignment dung de tranh lech day chuyen khi user noi thua/thieu.
+- Trang thai word (`CORRECT/NEAR/WRONG/MISSING/EXTRA`) quyet dinh boi char-level classify sau alignment.
+- CMU/IPA dung de:
+  - Giai thich loi phat am (NEAR/WRONG)
+  - Ho tro IPA cho EXTRA/MISSING
+- Diem sentence van dua tren score char-level + extra penalty + fluency.
+
+## 5) Mapping UI de dong bo voi backend
+
+### Main result mode
+
+- Hien sentence va highlight theo `status`.
+- `EXTRA`: hien thi `+word`.
+- `MISSING`: hien thi ghost/faded word.
+- Word dung (`CORRECT`) de clean, khong can show chi tiet.
+
+### Hover/detail mode
+
+- Neu co `phonemeDiff`:
+  - show `%` accuracy phoneme
+  - show `expected_ipa` vs `actual_ipa`
+  - show `diff_tokens`
+- Neu co `extraOrMissingIpa`:
+  - show IPA cua tu lien quan.
+
+### Debug mode
+
+- Hien tong quan status count + cong thuc weighted accuracy.
+- Hien bang chi tiet tung tu, co thong tin phoneme/IPA khi co.
+
+## 6) Contract mau (rut gon)
+
+```json
 {
-  fluencyScore: 0-1,
-  avgPause,
-  speechRate
+  "sentenceId": 101,
+  "accuracy": 66.67,
+  "weightedAccuracy": 58.82,
+  "fluencyScore": 0.74,
+  "compares": [
+    {
+      "position": 0,
+      "expectedWord": "ship",
+      "recognizedWord": "sheep",
+      "status": "NEAR",
+      "score": 0.7,
+      "phonemeDiff": {
+        "score": 0.55,
+        "expected_ipa": "...",
+        "actual_ipa": "...",
+        "diff_tokens": []
+      },
+      "extraOrMissingIpa": null
+    },
+    {
+      "position": 1,
+      "expectedWord": null,
+      "recognizedWord": "really",
+      "status": "EXTRA",
+      "score": 0.0,
+      "phonemeDiff": null,
+      "extraOrMissingIpa": {
+        "word": "really",
+        "ipa": "...",
+        "type": "EXTRA"
+      }
+    }
+  ]
 }
+```
 
-3. Thêm vào ShadowingResult:
-- fluencyScore
-- avgPause
-- speechRate
-🧪 TEST
-Input:
-User nói ngập ngừng (pause lớn)
-✅ Expected JSON
-{
-  "fluencyScore": 0.4,
-  "avgPause": 0.8,
-  "speechRate": 1.2
-}
-🎨 UI update
-File: ShadowingResultPanel.tsx
+## 7) Checklist regression can giu
 
-👉 thêm:
+- Alignment:
+  - expected: `I like apples`
+  - recognized: `I really like apples`
+  - phai ra 1 `EXTRA` dung vi tri.
 
-<div>Fluency: {Math.round(fluencyScore * 100)}%</div>
-👀 UI mong đợi
-Fluency: 40%
-🚀 PROMPT 4 — PHONEME SCORE (CMU-FIRST + FALLBACK)
-🎯 Mục tiêu
+- Phoneme/IPA:
+  - `ship` vs `sheep` -> co `phonemeDiff`, score thap hon exact.
+  - `apple` vs `apples` -> status phu hop, score giam.
+  - contraction (`don't` vs `dont`) -> khong vo pipeline.
 
-Chấm điểm phát âm dựa trên phoneme, không dùng AI audio model.
+- Fluency:
+  - pause lon -> `fluencyScore` giam.
 
-🧠 Yêu cầu implement
-1. CMU Pronouncing Dictionary (PRIMARY)
-def get_phonemes(word: str) -> list[str] | None:
-    """
-    Return phoneme list từ CMU dict.
-    Nếu không có → return None
-    """
-normalize word:
-lowercase
-remove punctuation
-lấy pronunciation đầu tiên nếu nhiều variant
-2. Char-level fallback (SECONDARY)
-def char_level_score(expected: str, actual: str) -> float:
-    """
-    Levenshtein trên ký tự (fallback khi không có CMU)
-    """
-    distance = edit_distance(expected, actual)
-    return max(0.0, 1 - distance / max(len(expected), len(actual)))
-3. Phoneme comparison (PRIMARY LOGIC)
-def compare_phonemes(expected: list[str], actual: list[str]) -> float:
-    """
-    Levenshtein trên phoneme sequence
-    return score 0–1
-    """
-4. Wrapper scoring logic
-def get_pronunciation_score(expected_word: str, recognized_word: str) -> float:
-    """
-    Priority:
-    1. CMU both → phoneme compare
-    2. CMU missing → fallback char-level
-    """
+- UI:
+  - main mode khong bi spam thong tin.
+  - detail/hover moi show diff phat am.
 
-Logic:
+## 8) Ghi chu kien truc
 
-if cmu(expected) and cmu(recognized):
-    return phoneme_score
-else:
-    return char_level_score
-5. Integration vào build_shadowing_result
-
-Thêm:
-
-"phonemeScore": 0.0 - 1.0 | null
-
-Chỉ apply khi:
-
-status != EXTRA
-status != MISSING
-🧪 TEST
-expected: apples
-recognized: apple
-
-Expected:
-
-phonemeScore ~ 0.6 - 0.85
-🚀 PROMPT 5 — FEEDBACK SYSTEM (UI-CRITICAL VERSION)
-
-🎯 Mục tiêu
-Sinh feedback cho người học. Phải ngắn, rõ, không mơ hồ, không tự suy diễn ngoài data ta đã có kèm đã xử lí.
-
-
-
-🧠 RULE ENGINE (STRICT PRIORITY ORDER) + CÓ THỂ TỰ NGHĨ THÊM NẾU BẠN THẤY HAY
-🔴 RULE 1 — EXTRA WORD (cao nhất về UX)
-if status == "EXTRA"
-→ "bạn đang nói thừa từ"
-🔴 RULE 2 — MISSING WORD
-if status == "MISSING"
-→ "thiếu từ trong câu"
-🟠 RULE 3 — PRONUNCIATION WEAK (phoneme-based từ STEP 4)
-if status in ("WRONG", "NEAR") AND phonemeScore < 0.7
-→ "phát âm chưa rõ"
-
-👉 (KHÔNG phân tích vowel/CMU lại, chỉ dùng score)
-
-🟡 RULE 4 — NEAR WORD
-if status == "NEAR"
-→ "gần đúng, cần rõ hơn"
-🟢 RULE 5 — CORRECT (optional)
-if status == "CORRECT"
-→ null
-🧪 EDGE CASE RULE
-Nếu phonemeScore == null → bỏ qua rule phoneme
-Nếu nhiều rule match → chọn rule cao nhất theo priority
-🎯 OUTPUT CONTRACT
-feedback: string | null
-🧪 TEST CASES
-Case 1
-apples → apple
-status: MISSING
-→ "thiếu từ trong câu"
-Case 2
-sheep → ship
-phonemeScore: 0.55
-→ "phát âm chưa rõ"
-Case 3
-I really like apples
-status: EXTRA (really)
-→ "bạn đang nói thừa từ"
-Case 4
-good afternoon
-status: CORRECT
-→ null
-🎨 UI CONTRACT (GIỮ NGUYÊN)
-{c.phonemeScore != null && (
-  <div className="text-xs text-muted-foreground">
-    Pronunciation: {Math.round(c.phonemeScore * 100)}%
-  </div>
-)}
-
-{c.feedback && (
-  <div className="text-red-500 text-xs">
-    {c.feedback}
-  </div>
-)}
-💡 FINAL DESIGN (QUAN TRỌNG)
-Pipeline đúng:
-CMU phoneme → PRIMARY
-    ↓ fail
-char-level fallback
-❌ KHÔNG dùng:
-AI speech model
-neural phoneme recognition
-GPU inference
-✅ CHỈ dùng:
-CMU dict
-edit distance
-rule-based feedback
-🔥 Kết luận
-
-👉 Step 4 của bạn:
-
-nhẹ
-deterministic
-chạy tốt 4GB VRAM
-đủ “Duolingo-lite quality”
-
-
-## pipeline tách 2 tầng chấm
-1. Hoàn tất căn chỉnh (Alignment)
-
-Hệ thống thực hiện căn chỉnh (alignment) giữa chuỗi từ của câu mẫu (expected) và câu người dùng nói (recognized).
-Kết quả là một danh sách các cặp từ tương ứng hoặc các trường hợp lệch (insert/delete).
-
-2. Phân loại sơ bộ bằng _classify_word (char-level)
-
-Sau alignment, mỗi cặp từ được đưa qua hàm _classify_word để phân loại dựa trên so sánh ký tự (char-level):
-
-CORRECT: giống hoàn toàn
-NEAR: sai nhẹ (gần đúng)
-WRONG: sai rõ ràng
-MISSING: thiếu từ
-EXTRA: từ nói thừa
-
-👉 Đây là bước QUYẾT ĐỊNH NHÁNH XỬ LÝ, không phải bước chấm điểm cuối cùng.
-
-3. Routing xử lý theo loại kết quả
-✅ Trường hợp CORRECT
-Không cần CMU
-Giữ nguyên kết quả
-Chỉ hiển thị trạng thái đúng
-
-👉 CMU không tham gia
-
-⚠️ Trường hợp NEAR / WRONG
-Đây là nhóm cần phân tích phát âm
-Hệ thống gọi CMU service để lấy phoneme (ARPABET)
-Chuyển sang IPA
-So sánh từng âm vị (phoneme-level diff)
-
-👉 Mục tiêu:
-
-giải thích “sai ở âm nào”
-tạo diff trực quan (æ → ɑː, v.v.)
-⚠️ Trường hợp MISSING / EXTRA
-CMU được dùng chỉ để hỗ trợ hiển thị âm thanh của từ
-expected word → IPA
-recognized word → IPA (nếu có)
-Không thực hiện so sánh phoneme diff chính
-
-👉 Mục tiêu:
-
-giải thích “thiếu từ gì / thừa từ gì”
-có thể kèm IPA để user hiểu cách đọc từ đó
-4. Tạo phản hồi (UI Feedback Layer)
-Với NEAR / WRONG:
-Hiển thị:
-IPA expected vs actual
-bảng so sánh từng phoneme
-highlight vị trí sai
-
-Ví dụ:
-
-æ → ɑː
-k → r (missing/substitute)
-Với EXTRA / MISSING:
-Hiển thị dạng giải thích ngữ nghĩa:
-“Bạn đã nói thêm từ X”
-“Bạn đã bỏ sót từ Y”
-Có thể kèm IPA của từ liên quan để hỗ trợ học phát âm
-⚠️ Chốt kiến trúc quan trọng (điểm bạn cần giữ)
-_classify_word = quyết định nhánh xử lý
-CMU service = chỉ cung cấp phoneme/IPA + diff visualization
-CMU không tham gia quyết định NEAR/WRONG
-CMU không biết pipeline
-🧠 1 câu chốt để tránh sai kiến trúc lại
-
-_classify_word quyết định “có cần nghe kỹ không”
-CMU chỉ trả lời “âm đó đọc như thế nào”
+- He thong hien tai la hybrid rule-based + phoneme enrichment.
+- Khong dung AI model acoustic nhe/nang de cham phoneme.
+- Neu can nang cap sau:
+  - co the doi bo classify chinh sang phoneme-first,
+  - nhung can cap nhat dong bo weighted score + regression tests + UI explainability.
