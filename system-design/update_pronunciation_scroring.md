@@ -133,127 +133,119 @@ File: ShadowingResultPanel.tsx
 <div>Fluency: {Math.round(fluencyScore * 100)}%</div>
 👀 UI mong đợi
 Fluency: 40%
-🚀 PROMPT 4 — PHONEME SCORE (BASIC)
+🚀 PROMPT 4 — PHONEME SCORE (CMU-FIRST + FALLBACK)
 🎯 Mục tiêu
 
-Biết user sai âm.
+Chấm điểm phát âm dựa trên phoneme, không dùng AI audio model.
 
-🧠 Prompt
-1. Viết hàm get_phonemes(word):
-   - dùng CMU dict
-   - return list phoneme
+🧠 Yêu cầu implement
+1. CMU Pronouncing Dictionary (PRIMARY)
+def get_phonemes(word: str) -> list[str] | None:
+    """
+    Return phoneme list từ CMU dict.
+    Nếu không có → return None
+    """
+normalize word:
+lowercase
+remove punctuation
+lấy pronunciation đầu tiên nếu nhiều variant
+2. Char-level fallback (SECONDARY)
+def char_level_score(expected: str, actual: str) -> float:
+    """
+    Levenshtein trên ký tự (fallback khi không có CMU)
+    """
+    distance = edit_distance(expected, actual)
+    return max(0.0, 1 - distance / max(len(expected), len(actual)))
+3. Phoneme comparison (PRIMARY LOGIC)
+def compare_phonemes(expected: list[str], actual: list[str]) -> float:
+    """
+    Levenshtein trên phoneme sequence
+    return score 0–1
+    """
+4. Wrapper scoring logic
+def get_pronunciation_score(expected_word: str, recognized_word: str) -> float:
+    """
+    Priority:
+    1. CMU both → phoneme compare
+    2. CMU missing → fallback char-level
+    """
 
-2. Viết compare_phonemes(expected, actual):
-   - Levenshtein phoneme
-   - return score 0-1
+Logic:
 
-3. Trong build_shadowing_result:
-   - thêm phonemeScore vào từng word
+if cmu(expected) and cmu(recognized):
+    return phoneme_score
+else:
+    return char_level_score
+5. Integration vào build_shadowing_result
+
+Thêm:
+
+"phonemeScore": 0.0 - 1.0 | null
+
+Chỉ apply khi:
+
+status != EXTRA
+status != MISSING
 🧪 TEST
-Input:
 expected: apples
-user nói: apple
-✅ Expected:
-{
-  "phonemeScore": 0.7
-}
-🎨 UI update
-{phonemeScore && (
-  <div className="text-xs text-gray-500">
-    Pronunciation: {Math.round(phonemeScore * 100)}%
-  </div>
-)}
-🚀 PROMPT 5 — FEEDBACK TEXT
+recognized: apple
+
+Expected:
+
+phonemeScore ~ 0.6 - 0.85
+🚀 PROMPT 5 — FEEDBACK SYSTEM (RULE-BASED)
 🎯 Mục tiêu
 
-Hiển thị lỗi cụ thể.
+Sinh feedback ngắn, dễ hiểu, không AI.
 
-🧠 Prompt
-Trong build_shadowing_result:
-
-1. Nếu phoneme cuối bị thiếu:
-   → feedback = "thiếu âm cuối /X/"
-
-2. Nếu sai nguyên âm:
-   → "nguyên âm chưa rõ"
-
-3. Nếu NEAR:
-   → "gần đúng, cần rõ hơn"
-
-Thêm field:
-feedback: str | None
+🧠 Rules
+1. Missing ending sound
+if expected endswith phoneme Z/S but missing:
+    return "thiếu âm cuối /Z/"
+2. Vowel issue
+if vowel phoneme mismatch:
+    return "nguyên âm chưa rõ"
+3. NEAR status
+if status == "NEAR":
+    return "gần đúng, cần rõ hơn"
+4. fallback
+return None
 🧪 TEST
 apples → apple
-✅ Expected
-{
-  "feedback": "thiếu âm cuối /Z/"
-}
-🎨 UI update
-{feedback && (
-  <div className="text-red-500 text-xs">
-    {feedback}
+
+Expected:
+
+"thiếu âm cuối /Z/"
+🎨 UI UPDATE (FINAL)
+{c.phonemeScore != null && (
+  <div className="text-xs text-muted-foreground">
+    Pronunciation: {Math.round(c.phonemeScore * 100)}%
   </div>
 )}
-💥 TỔNG KẾT LUỒNG TEST
-Sau PROMPT 1
 
-👉 Fix lệch từ
-👉 UI thấy EXTRA
+{c.feedback && (
+  <div className="text-red-500 text-xs">
+    {c.feedback}
+  </div>
+)}
+💡 FINAL DESIGN (QUAN TRỌNG)
+Pipeline đúng:
+CMU phoneme → PRIMARY
+    ↓ fail
+char-level fallback
+❌ KHÔNG dùng:
+AI speech model
+neural phoneme recognition
+GPU inference
+✅ CHỈ dùng:
+CMU dict
+edit distance
+rule-based feedback
+🔥 Kết luận
 
-Sau PROMPT 2
+👉 Step 4 của bạn:
 
-👉 điểm thực tế hơn
-
-Sau PROMPT 3
-
-👉 có Fluency
-
-Sau PROMPT 4–5
-
-👉 có pronunciation thật
-
-
-## Phân tích từng bước (1–5) theo máy bạn
-👉 1–5 là hệ hybrid (rule-based + ML nhẹ), KHÔNG phải AI thuần
-👉 Và với máy bạn (A2000 4GB + i7), đây chính là hướng tối ưu nhất
-
-🟢 PROMPT 1 — Alignment
-
-👉 100% nên làm
-
-không tốn GPU
-cải thiện chất lượng ngay lập tức
-cost = 0
-
-👉 đây là best ROI
-
-🟢 PROMPT 2 — EXTRA penalty
-
-👉 nên làm
-
-logic thuần Python
-không ảnh hưởng performance
-🟢 PROMPT 3 — Fluency
-
-👉 rất hợp
-
-dùng timestamp sẵn từ WhisperX
-không cần ML thêm
-🟡 PROMPT 4 — Phoneme
-
-👉 làm được nhưng:
-
-KHÔNG dùng model nặng
-chỉ dùng dictionary (CMU)
-
-👉 tức là:
-
-❗ không phải “AI nghe âm”, mà là “ước lượng”
-
-🟡 PROMPT 5 — Feedback
-
-👉 cực kỳ nên làm
-
-rule-based
-UX tăng mạnh
-không tốn tài nguyên
+nhẹ
+deterministic
+chạy tốt 4GB VRAM
+đủ “Duolingo-lite quality”

@@ -1,4 +1,6 @@
+import logging
 import os
+import re
 from typing import List, Tuple
 
 from src.dto import ShadowingResult, ShadowingWordCompare, ShadowingRequest, ShadowingWord
@@ -10,6 +12,9 @@ AlignedItem = Tuple[str | None, str | None, str | None, str | None, str]
 
 DEFAULT_EXTRA_PENALTY_ALPHA = 0.3
 EXTRA_PENALTY_ALPHA_ENV = "SHADOWING_EXTRA_PENALTY_ALPHA"
+_CMU_DICT_CACHE: dict[str, list[list[str]]] | None = None
+_CMU_DICT_READY = False
+logger = logging.getLogger(__name__)
 
 
 # Levenshtein distance + similarity
@@ -43,6 +48,170 @@ def _levenshtein_distance(a: str, b: str) -> int:
             )
 
     return dp[la][lb]
+
+
+def _levenshtein_distance_seq(a: list[str], b: list[str]) -> int:
+    """
+    Levenshtein distance cho sequence (vd: list phoneme).
+    """
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+
+    la, lb = len(a), len(b)
+    dp = [[0] * (lb + 1) for _ in range(la + 1)]
+
+    for i in range(la + 1):
+        dp[i][0] = i
+    for j in range(lb + 1):
+        dp[0][j] = j
+
+    for i in range(1, la + 1):
+        for j in range(1, lb + 1):
+            cost = 0 if a[i - 1] == b[j - 1] else 1
+            dp[i][j] = min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + cost,
+            )
+
+    return dp[la][lb]
+
+
+def _clean_word_for_cmu(word: str | None) -> str:
+    """
+    Chuan hoa key tra cuu CMU:
+    - lowercase
+    - bo dau cau/ky tu dac biet, giu lai apostrophe
+    """
+    if not word:
+        return ""
+    return re.sub(r"[^a-z']", "", word.lower()).strip()
+
+
+def _cmu_lookup_keys(word: str | None) -> list[str]:
+    """
+    Sinh cac key tra cuu CMU theo thu tu uu tien.
+    """
+    cleaned = _clean_word_for_cmu(word)
+    if not cleaned:
+        return []
+
+    no_apostrophe = cleaned.replace("'", "")
+    keys = [cleaned]
+    if no_apostrophe and no_apostrophe != cleaned:
+        keys.append(no_apostrophe)
+    return keys
+
+
+def _load_cmu_dict() -> dict[str, list[list[str]]] | None:
+    """
+    Lazy load CMU dict tu nltk.corpus.cmudict.
+    Neu unavailable thi tra None de caller fallback char-level.
+    """
+    global _CMU_DICT_CACHE, _CMU_DICT_READY
+
+    if _CMU_DICT_READY:
+        return _CMU_DICT_CACHE
+
+    _CMU_DICT_READY = True
+    try:
+        from nltk.corpus import cmudict  # type: ignore
+
+        _CMU_DICT_CACHE = cmudict.dict()
+    except Exception:
+        _CMU_DICT_CACHE = None
+
+    return _CMU_DICT_CACHE
+
+
+def get_phonemes(word: str) -> list[str] | None:
+    """
+    Return phoneme list tu CMU dict.
+    Neu khong tim thay hoac CMU unavailable -> None.
+    """
+    keys = _cmu_lookup_keys(word)
+    if not keys:
+        return None
+
+    cmu_dict = _load_cmu_dict()
+    if not cmu_dict:
+        return None
+
+    variants = None
+    for key in keys:
+        variants = cmu_dict.get(key)
+        if variants:
+            break
+
+    if not variants:
+        return None
+
+    first = variants[0] if variants else None
+    if not first:
+        return None
+
+    return [p for p in first if p]
+
+
+def char_level_score(expected: str, actual: str) -> float:
+    """
+    Fallback score dua tren Levenshtein ky tu.
+    """
+    exp = normalize_word_lower(expected) or _clean_word_for_cmu(expected).replace("'", "")
+    rec = normalize_word_lower(actual) or _clean_word_for_cmu(actual).replace("'", "")
+
+    if not exp and not rec:
+        return 1.0
+    if not exp or not rec:
+        return 0.0
+
+    dist = _levenshtein_distance(exp, rec)
+    denom = max(len(exp), len(rec))
+    if denom <= 0:
+        return 0.0
+
+    return max(0.0, min(1.0, 1.0 - (dist / denom)))
+
+
+def compare_phonemes(expected: list[str], actual: list[str]) -> float:
+    """
+    Levenshtein tren phoneme sequence, tra score [0, 1].
+    """
+    if not expected and not actual:
+        return 1.0
+    if not expected or not actual:
+        return 0.0
+
+    dist = _levenshtein_distance_seq(expected, actual)
+    denom = max(len(expected), len(actual))
+    if denom <= 0:
+        return 0.0
+
+    return max(0.0, min(1.0, 1.0 - (dist / denom)))
+
+
+def get_pronunciation_score(expected_word: str, recognized_word: str) -> float:
+    """
+    Priority:
+    1) CMU co du ca 2 ben -> compare phonemes.
+    2) Khong du du lieu CMU -> fallback char-level.
+    """
+    exp_phonemes = get_phonemes(expected_word)
+    rec_phonemes = get_phonemes(recognized_word)
+
+    if exp_phonemes is None:
+        logger.debug("No CMU for expected word: %s", expected_word)
+    if rec_phonemes is None:
+        logger.debug("No CMU for recognized word: %s", recognized_word)
+
+    if exp_phonemes and rec_phonemes:
+        return compare_phonemes(exp_phonemes, rec_phonemes)
+
+    return char_level_score(expected_word, recognized_word)
 
 
 
@@ -344,6 +513,7 @@ def build_shadowing_result(
 
     for position, aligned in enumerate(aligned_items):
         exp_word, exp_norm, rec_raw, rec_norm, align_type = aligned
+        phoneme_score: float | None = None
 
         if rec_norm is not None:
             last_recognized_position = position
@@ -366,6 +536,9 @@ def build_shadowing_result(
         if exp_norm is not None:
             total_score += score
 
+        if exp_word and rec_raw and align_type != "INSERT":
+            phoneme_score = round(get_pronunciation_score(exp_word, rec_raw), 4)
+
         compares.append(
             ShadowingWordCompare(
                 position=position,
@@ -375,6 +548,7 @@ def build_shadowing_result(
                 recognizedNormalized=rec_norm,
                 status=status,
                 score=score,
+                phonemeScore=phoneme_score,
             )
         )
 

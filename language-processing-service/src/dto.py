@@ -13,6 +13,7 @@ class ShadowingWordCompare(BaseModel):
     recognizedNormalized: Optional[str]
     status: Literal["CORRECT", "NEAR", "WRONG", "MISSING", "EXTRA"]
     score: float  # 0.0 – 1.0
+    phonemeScore: Optional[float] = None  # 0.0 - 1.0
 
 class ShadowingResult(BaseModel):
     sentenceId: int
