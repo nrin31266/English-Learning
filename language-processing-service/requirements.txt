@@ -7,7 +7,6 @@ annotated-types==0.7.0
 antlr4-python3-runtime==4.9.3
 anyio==3.7.1
 asteroid-filterbanks==0.4.0
-# For some reason, asyncpg 0.31.0 causes a segfault when running the service in production, but not in development. Pinning to 0.30.1 for now until we can investigate further.
 asyncpg==0.31.0
 attrs==26.1.0
 audioread==3.1.0

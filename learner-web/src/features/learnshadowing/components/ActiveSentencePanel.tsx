@@ -27,7 +27,11 @@ interface ActiveSentencePanelProps {
   onNext: () => void
   userInteracted?: boolean
 }
-
+// constants/shadowing.ts
+export const SHADOWING_THRESHOLD = {
+  NEXT: 80,
+  GOOD_SOUND: 80,
+}
 const ActiveSentencePanel = ({
   onNext,
   activeIndex,
@@ -71,7 +75,7 @@ const ActiveSentencePanel = ({
 
 
   const shouldShowNextButton = useMemo(
-    () => transcription && transcription?.shadowingResult?.weightedAccuracy >= 85,
+    () => transcription && transcription?.shadowingResult?.weightedAccuracy >= SHADOWING_THRESHOLD.NEXT,
     [transcription]
   )
   const shouldShowSkipButton = useMemo(
@@ -127,7 +131,7 @@ const ActiveSentencePanel = ({
     const score = transcription.shadowingResult?.weightedAccuracy
     if (score == null) return
 
-    playFeedbackSound(score >= 85)
+    playFeedbackSound(score >= SHADOWING_THRESHOLD.GOOD_SOUND)
   }, [transcription?.id])
 
   const loadAudioInputDevices = useCallback(async () => {

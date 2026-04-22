@@ -1,8 +1,14 @@
 import React, { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Sparkles, Target, Bug } from "lucide-react"
-import type { IShadowingResult } from "@/types"
+import type { IPhonemeDiff, IShadowingResult } from "@/types"
 
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover"
+import { SHADOWING_THRESHOLD } from "./ActiveSentencePanel"
 interface Props {
   result: IShadowingResult
   className?: string
@@ -16,23 +22,23 @@ const getWordClass = (status: string, attempted: boolean) => {
     case "CORRECT":
       return "text-emerald-600 font-medium"
     case "NEAR":
-      return "text-amber-500 font-medium underline decoration-wavy decoration-amber-300 decoration-1.5 underline-offset-2"
+      return "text-blue-500 font-medium underline decoration-wavy decoration-blue-300 decoration-1.5 underline-offset-2"
     case "WRONG":
       return "text-red-500 font-semibold underline decoration-wavy decoration-red-300 decoration-1.5 underline-offset-2"
     case "MISSING":
-      return "text-slate-400 italic border-b border-dashed border-slate-300"
+      return "text-slate-400 italic border-b border-dashed border-slate-300 underline-offset-2"
     case "EXTRA":
-      return "text-yellow-500 font-medium"
+      return "text-yellow-500 font-xs italic border-b border-dashed border-yellow-300 underline-offset-2"
     default:
       return ""
   }
 }
 
-// ===== TAB 1: UI CỦA BẠN (GIỮ NGUYÊN) =====
+// ===== TAB 1: UI CỦA BẠN (SỬA HOVER) =====
 const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
   const { weightedAccuracy, fluencyScore, correctWords, totalWords, compares, lastRecognizedPosition } = result
-  const isExcellent = weightedAccuracy >= 85
-  const isGood = weightedAccuracy >= 60
+  const isExcellent = weightedAccuracy >= SHADOWING_THRESHOLD.NEXT
+  const isGood = weightedAccuracy >= SHADOWING_THRESHOLD.GOOD_SOUND
 
   return (
     <div className="flex flex-col gap-4">
@@ -66,27 +72,129 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
           const attempted = c.position <= lastRecognizedPosition
           const isExtra = c.status === "EXTRA"
           const hasError = !isExtra && c.status !== "CORRECT" && attempted && c.recognizedWord
+          const showHover = c.phonemeDiff || c.extraOrMissingIpa
+          const [open, setOpen] = useState(false)
           return (
-            <div key={c.position} className="flex flex-col items-center">
-              {isExtra && c.recognizedWord ? (
-                <span className="text-yellow-500 text-sm mb-0.5">+{c.recognizedWord}</span>
-              ) : hasError ? (
-                <span className="text-muted-foreground line-through text-sm mb-0.5">{c.recognizedWord}</span>
-              ) : (
-                <span className="h-5" />
+            <Popover open={open} key={c.position}>
+              <div className="flex flex-col items-center">
+                <PopoverTrigger 
+                  asChild
+                  onClick={() => setOpen(!open)}
+                  onMouseEnter={() => setOpen(true)}
+                  onMouseLeave={() => setOpen(false)}
+                >
+                  <div className="flex flex-col items-center cursor-pointer">
+                    {/* Extra / Error line - nằm TRONG trigger */}
+                    {isExtra && c.recognizedWord ? (
+                      <span className={cn(getWordClass(c.status, attempted), "text-sm mb-0.5")}>
+                        +{c.recognizedWord}
+                      </span>
+                    ) : hasError ? (
+                      <span className="text-muted-foreground line-through text-sm mb-0.5">
+                        {c.recognizedWord}
+                      </span>
+                    ) : (
+                      <span className="h-5" />
+                    )}
+
+                    {/* Main word */}
+                    <span className={cn("text-lg", getWordClass(c.status, attempted))}>
+                      {isExtra ? "" : c.expectedWord || "_"}
+                    </span>
+                  </div>
+                </PopoverTrigger>
+              </div>
+
+              {/* Popover Content - chi tiết */}
+              {showHover && (
+                <PopoverContent className="w-auto p-3">
+                  <div className="flex flex-col gap-2">
+
+                    {/* WORD */}
+                    <div className="text-base font-semibold">
+                      {c.expectedWord || c.recognizedWord}
+                    </div>
+
+                    {/* MISSING case */}
+                    {c.status === "MISSING" && c.extraOrMissingIpa && (
+                      <div className="text-base">
+
+                        <div className="text-muted-foreground text-xs mt-1">IPA:</div>
+                        <div className="font-mono">
+                          {c.extraOrMissingIpa.ipa}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* EXTRA case */}
+                    {c.status === "EXTRA" && c.extraOrMissingIpa && (
+                      <div className="text-base">
+
+                        <div className="text-muted-foreground text-xs mt-1">IPA:</div>
+                        <div className="font-mono">
+                          {c.extraOrMissingIpa.ipa}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* NEAR / WRONG case - có phonemeDiff */}
+                    {c.phonemeDiff && (
+                      <>
+                        {/* Score */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground text-xs">Accuracy:</span>
+                          <span className={cn(
+                            "text-xs px-1.5 py-0.5 rounded",
+                            c.phonemeDiff.score >= 0.8 ? "bg-emerald-100 text-emerald-700" :
+                              c.phonemeDiff.score >= 0.5 ? "bg-amber-100 text-amber-700" :
+                                "bg-red-100 text-red-700"
+                          )}>
+                            {Math.round(c.phonemeDiff.score * 100)}%
+                          </span>
+                        </div>
+
+                        {/* IPA comparison */}
+                        <div className="text-base">
+                          <div className="text-muted-foreground text-xs">You said:</div>
+                          <div className="font-mono text-red-500 break-all">{c.phonemeDiff.actual_ipa || "∅"}</div>
+                          <div className="text-muted-foreground text-xs mt-1">Expected:</div>
+                          <div className="font-mono text-green-600 break-all">{c.phonemeDiff.expected_ipa}</div>
+                        </div>
+
+                        {/* Diff details */}
+                        <div className="text-base">
+                          <div className="text-muted-foreground text-xs">Details:</div>
+                          <div className="flex flex-wrap gap-1">
+                            {c.phonemeDiff.diff_tokens.map((t, i) => (
+                              <span
+                                key={i}
+                                className={cn(
+                                  "px-1 py-0.5 rounded text-xs cursor-help",
+                                  t.type === "MATCH" && "bg-green-50 text-green-600",
+                                  t.type === "MISMATCH" && "bg-red-50 text-red-600",
+                                  t.type === "MISSING" && "bg-orange-50 text-orange-600 line-through",
+                                  t.type === "EXTRA" && "bg-yellow-50 text-yellow-600"
+                                )}
+                                title={`${t.type}: ${t.expected_ipa || "∅"} → ${t.actual_ipa || "∅"}`}
+                              >
+                                {t.expected_ipa || t.actual_ipa || "?"}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </PopoverContent>
               )}
-              <span className={cn("text-lg", getWordClass(c.status, attempted))}>
-                {isExtra ? "" : c.expectedWord || "_"}
-              </span>
-            </div>
+            </Popover>
           )
         })}
       </div>
     </div>
   )
 }
-
-// ===== TAB 2: DEBUG (GỌN - ĐỦ - DỄ ĐỌC) =====
+// ===== TAB 2: DEBUG (THÊM PHONEME DIFF) =====
 const DebugTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
   const {
     weightedAccuracy,
@@ -98,79 +206,180 @@ const DebugTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
     expectedText,
     recognizedText,
   } = result
+
   const EXTRA_ALPHA = 0.3
-  // Thống kê nhanh
-  const correct = compares.filter(c => c.status === "CORRECT").length
-  const near = compares.filter(c => c.status === "NEAR").length
-  const wrong = compares.filter(c => c.status === "WRONG").length
-  const missing = compares.filter(c => c.status === "MISSING").length
-  const extra = compares.filter(c => c.status === "EXTRA").length
+
+  // Thống kê
+  const stats = {
+    correct: compares.filter(c => c.status === "CORRECT").length,
+    near: compares.filter(c => c.status === "NEAR").length,
+    wrong: compares.filter(c => c.status === "WRONG").length,
+    missing: compares.filter(c => c.status === "MISSING").length,
+    extra: compares.filter(c => c.status === "EXTRA").length,
+  }
+
   const totalScore = compares.reduce((sum, c) => sum + c.score, 0)
 
-  // Tính Levenshtein đơn giản
-  const getLevenshtein = (a: string, b: string) => {
-    if (!a || !b) return null
-    if (a === b) return { dist: 0, sim: 100 }
-    let len = Math.max(a.length, b.length)
-    let dist = 0
-    for (let i = 0; i < Math.min(a.length, b.length); i++) {
-      if (a[i] !== b[i]) dist++
-    }
-    dist += Math.abs(a.length - b.length)
-    return { dist, sim: Math.round((1 - dist / len) * 100) }
+  // Render phoneme diff dạng text
+  const renderPhonemeDiffText = (diff: IPhonemeDiff | null | undefined) => {
+    if (!diff || !diff.diff_tokens) return "—"
+
+    return diff.diff_tokens.map(t => {
+      if (t.type === "MATCH") return t.expected_ipa
+      if (t.type === "MISMATCH") return `${t.expected_ipa}→${t.actual_ipa}`
+      if (t.type === "MISSING") return `+${t.expected_ipa}`
+      if (t.type === "EXTRA") return `-${t.actual_ipa}`
+      return "?"
+    }).join(" ")
   }
 
   return (
-    <div className="space-y-3">
-      {/* 5 ô thống kê */}
-      <div className="grid grid-cols-5 gap-2 text-center">
-        <div className="bg-emerald-50 p-2 rounded"><div className="text-xl font-bold text-emerald-600">{correct}</div><div className="text-xs">CORRECT</div></div>
-        <div className="bg-amber-50 p-2 rounded"><div className="text-xl font-bold text-amber-600">{near}</div><div className="text-xs">NEAR</div></div>
-        <div className="bg-red-50 p-2 rounded"><div className="text-xl font-bold text-red-600">{wrong}</div><div className="text-xs">WRONG</div></div>
-        <div className="bg-slate-100 p-2 rounded"><div className="text-xl font-bold text-slate-500">{missing}</div><div className="text-xs">MISSING</div></div>
-        <div className="bg-yellow-50 p-2 rounded"><div className="text-xl font-bold text-yellow-600">{extra}</div><div className="text-xs">EXTRA</div></div>
+    <div className="space-y-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-5 gap-2">
+        <div className="bg-emerald-50 p-3 rounded-lg text-center">
+          <div className="text-2xl font-bold text-emerald-600">{stats.correct}</div>
+          <div className="text-xs text-emerald-600">CORRECT</div>
+        </div>
+        <div className="bg-blue-50 p-3 rounded-lg text-center">
+          <div className="text-2xl font-bold text-blue-600">{stats.near}</div>
+          <div className="text-xs text-blue-600">NEAR</div>
+        </div>
+        <div className="bg-red-50 p-3 rounded-lg text-center">
+          <div className="text-2xl font-bold text-red-600">{stats.wrong}</div>
+          <div className="text-xs text-red-600">WRONG</div>
+        </div>
+        <div className="bg-slate-100 p-3 rounded-lg text-center">
+          <div className="text-2xl font-bold text-slate-500">{stats.missing}</div>
+          <div className="text-xs text-slate-500">MISSING</div>
+        </div>
+        <div className="bg-yellow-50 p-3 rounded-lg text-center">
+          <div className="text-2xl font-bold text-yellow-600">{stats.extra}</div>
+          <div className="text-xs text-yellow-600">EXTRA</div>
+        </div>
       </div>
 
-      {/* Bảng chi tiết từng từ */}
+      {/* Formula Summary */}
+      <div className="bg-slate-50 p-3 rounded-lg text-sm space-y-1">
+        <div className="font-semibold">📊 Scoring Formula</div>
+        <div className="font-mono text-xs">
+          weightedAccuracy = ({totalScore.toFixed(2)} / ({totalWords} + {EXTRA_ALPHA} × {stats.extra})) × 100
+        </div>
+        <div className="font-mono text-xs font-bold text-primary">
+          = {weightedAccuracy.toFixed(1)}%
+        </div>
+        <div className="text-xs text-muted-foreground pt-1">
+          🗣️ fluencyScore: {(fluencyScore || 0).toFixed(2)} | avgPause: {(avgPause || 0).toFixed(2)}s | speechRate: {(speechRate || 0).toFixed(2)} w/s
+        </div>
+      </div>
+
+      {/* Text Comparison */}
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="bg-muted/30 p-2 rounded">
+          <div className="text-xs text-muted-foreground mb-1">📖 Expected</div>
+          <div className="break-words">{expectedText}</div>
+        </div>
+        <div className="bg-muted/30 p-2 rounded">
+          <div className="text-xs text-muted-foreground mb-1">🎤 Recognized</div>
+          <div className="break-words">{recognizedText || "(empty)"}</div>
+        </div>
+      </div>
+
+      {/* Detailed Table - THÊM CỘT PHONEME */}
       <div className="border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr className="border-b">
-              <th className="p-2 text-left">#</th>
-              <th className="p-2 text-left">Expected → Norm</th>
-              <th className="p-2 text-left">Recognized → Norm</th>
-              <th className="p-2">Status</th>
-              <th className="p-2">Score</th>
-              <th className="p-2">Lev</th>
+              <th className="p-2 text-center w-12">#</th>
+              <th className="p-2 text-left">Expected</th>
+              <th className="p-2 text-left">Recognized</th>
+              <th className="p-2 text-center w-20">Status</th>
+              <th className="p-2 text-center w-16">Score</th>
+              <th className="p-2 text-left">Phoneme Diff</th>
             </tr>
           </thead>
           <tbody>
             {compares.map((c) => {
-              const lev = getLevenshtein(c.expectedNormalized || "", c.recognizedNormalized || "")
+              const isEven = c.position % 2 === 0
+              const phonemeText = renderPhonemeDiffText(c.phonemeDiff)
+              const hasPhonemeIssue = c.phonemeDiff && c.phonemeDiff.score < 0.8
+
               return (
-                <tr key={c.position} className="border-b hover:bg-muted/30">
-                  <td className="p-2 font-mono text-center">{c.position}</td>
+                <tr key={c.position} className={cn("border-b", isEven ? "bg-muted/5" : "")}>
+                  <td className="p-2 text-center font-mono text-xs">{c.position + 1}</td>
                   <td className="p-2">
                     <div className="font-medium">{c.expectedWord || "—"}</div>
-                    {c.expectedNormalized && <div className="text-[11px] text-muted-foreground">{c.expectedNormalized}</div>}
+                    {c.expectedNormalized && (
+                      <div className="text-[10px] text-muted-foreground">{c.expectedNormalized}</div>
+                    )}
+                    {/* Hiển thị IPA chuẩn nếu có */}
+                    {c.phonemeDiff?.expected_ipa && (
+                      <div className="text-[10px] font-mono text-green-600 mt-0.5">
+                        /{c.phonemeDiff.expected_ipa}/
+                      </div>
+                    )}
                   </td>
                   <td className="p-2">
                     <div>{c.recognizedWord || "—"}</div>
-                    {c.recognizedNormalized && <div className="text-[11px] text-muted-foreground">{c.recognizedNormalized}</div>}
+                    {c.recognizedNormalized && (
+                      <div className="text-[10px] text-muted-foreground">{c.recognizedNormalized}</div>
+                    )}
+                    {/* Hiển thị IPA user nói nếu có */}
+                    {c.phonemeDiff?.actual_ipa && (
+                      <div className="text-[10px] font-mono text-red-500 mt-0.5">
+                        /{c.phonemeDiff.actual_ipa}/
+                      </div>
+                    )}
+                    {/* Extra/Missing IPA */}
+                    {c.extraOrMissingIpa && (
+                      <div className="text-[10px] font-mono text-yellow-600 mt-0.5">
+                        /{c.extraOrMissingIpa.ipa}/
+                      </div>
+                    )}
                   </td>
                   <td className="p-2 text-center">
                     <span className={cn(
-                      "text-xs px-2 py-0.5 rounded font-medium",
+                      "text-[10px] px-2 py-0.5 rounded font-medium",
                       c.status === "CORRECT" && "bg-emerald-100 text-emerald-700",
-                      c.status === "NEAR" && "bg-amber-100 text-amber-700",
+                      c.status === "NEAR" && "bg-blue-100 text-blue-700",
                       c.status === "WRONG" && "bg-red-100 text-red-700",
                       c.status === "MISSING" && "bg-slate-100 text-slate-600",
                       c.status === "EXTRA" && "bg-yellow-100 text-yellow-700",
-                    )}>{c.status}</span>
+                    )}>
+                      {c.status}
+                    </span>
+                    {/* Hiển thị % phoneme nếu có */}
+                    {c.phonemeDiff && (
+                      <div className={cn(
+                        "text-[9px] mt-0.5",
+                        c.phonemeDiff.score >= 0.8 ? "text-emerald-500" :
+                          c.phonemeDiff.score >= 0.5 ? "text-amber-500" :
+                            "text-red-500"
+                      )}>
+                        {Math.round(c.phonemeDiff.score * 100)}%
+                      </div>
+                    )}
                   </td>
-                  <td className="p-2 text-center font-mono font-medium">{c.score.toFixed(2)}</td>
-                  <td className="p-2 text-center text-xs">
-                    {lev ? `${lev.dist} (${lev.sim}%)` : "—"}
+                  <td className="p-2 text-center font-mono font-medium">
+                    {c.score.toFixed(2)}
+                  </td>
+                  <td className="p-2">
+                    <div className={cn(
+                      "text-[11px] font-mono",
+                      hasPhonemeIssue ? "text-red-600" : "text-green-600"
+                    )}>
+                      {phonemeText !== "—" ? phonemeText : (
+                        c.extraOrMissingIpa ?
+                          (c.status === "EXTRA" ? `+${c.extraOrMissingIpa.word}` : `-${c.extraOrMissingIpa.word}`) :
+                          "—"
+                      )}
+                    </div>
+                    {/* Tooltip chi tiết khi hover vào phoneme */}
+                    {c.phonemeDiff && c.phonemeDiff.diff_tokens && (
+                      <div className="text-[9px] text-muted-foreground mt-0.5">
+                        {c.phonemeDiff.diff_tokens.filter(t => t.type !== "MATCH").length} errors
+                      </div>
+                    )}
                   </td>
                 </tr>
               )
@@ -179,35 +388,21 @@ const DebugTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
         </table>
       </div>
 
-      {/* Text so sánh */}
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="bg-muted/30 p-2 rounded"><div className="text-xs text-muted-foreground mb-1">Expected</div>{expectedText}</div>
-        <div className="bg-muted/30 p-2 rounded"><div className="text-xs text-muted-foreground mb-1">Recognized</div>{recognizedText || "(empty)"}</div>
-      </div>
-
-      {/* Công thức */}
-      <div className="bg-slate-100 p-3 rounded text-sm">
-        <div className="font-semibold mb-1">Công thức:</div>
-        <div className="font-mono text-xs">
-          weightedAccuracy = ({totalScore.toFixed(2)} / ({totalWords} + {EXTRA_ALPHA} × {extra})) × 100 = <span className="font-bold text-base">{weightedAccuracy.toFixed(1)}%</span>
-        </div>
-        <div className="font-mono text-xs mt-2">
-          fluencyScore = <span className="font-bold">{(fluencyScore || 0).toFixed(2)}</span>
-          {"  "}| avgPause = <span className="font-bold">{(avgPause || 0).toFixed(2)}s</span>
-          {"  "}| speechRate = <span className="font-bold">{(speechRate || 0).toFixed(2)} w/s</span>
-        </div>
-        <div className="text-xs text-muted-foreground mt-2 flex flex-wrap gap-3">
-          <span>✓ CORRECT: 1.0</span>
-          <span>⚠ NEAR: 0.7-0.95</span>
-          <span>✗ WRONG: 0.0</span>
-          <span>◌ MISSING: 0.0</span>
-          <span>+ EXTRA: 0.0</span>
-        </div>
+      {/* Legend */}
+      <div className="text-[10px] text-muted-foreground flex flex-wrap gap-4 pt-2 border-t">
+        <span>✅ CORRECT: 1.0</span>
+        <span>🔵 NEAR: 0.7-0.95</span>
+        <span>❌ WRONG: 0.0</span>
+        <span>◌ MISSING: 0.0</span>
+        <span>➕ EXTRA: 0.0</span>
+        <span className="text-green-600">✓ MATCH</span>
+        <span className="text-red-600">✗ MISMATCH</span>
+        <span className="text-orange-600">+ MISSING</span>
+        <span className="text-yellow-600">- EXTRA</span>
       </div>
     </div>
   )
 }
-
 // ===== MAIN =====
 const ShadowingResultPanel: React.FC<Props> = ({ result, className }) => {
   const [tab, setTab] = useState<"result" | "debug">("result")

@@ -193,30 +193,55 @@ recognized: apple
 Expected:
 
 phonemeScore ~ 0.6 - 0.85
-🚀 PROMPT 5 — FEEDBACK SYSTEM (RULE-BASED)
+🚀 PROMPT 5 — FEEDBACK SYSTEM (UI-CRITICAL VERSION)
+
 🎯 Mục tiêu
+Sinh feedback cho người học. Phải ngắn, rõ, không mơ hồ, không tự suy diễn ngoài data ta đã có kèm đã xử lí.
 
-Sinh feedback ngắn, dễ hiểu, không AI.
 
-🧠 Rules
-1. Missing ending sound
-if expected endswith phoneme Z/S but missing:
-    return "thiếu âm cuối /Z/"
-2. Vowel issue
-if vowel phoneme mismatch:
-    return "nguyên âm chưa rõ"
-3. NEAR status
-if status == "NEAR":
-    return "gần đúng, cần rõ hơn"
-4. fallback
-return None
-🧪 TEST
+
+🧠 RULE ENGINE (STRICT PRIORITY ORDER) + CÓ THỂ TỰ NGHĨ THÊM NẾU BẠN THẤY HAY
+🔴 RULE 1 — EXTRA WORD (cao nhất về UX)
+if status == "EXTRA"
+→ "bạn đang nói thừa từ"
+🔴 RULE 2 — MISSING WORD
+if status == "MISSING"
+→ "thiếu từ trong câu"
+🟠 RULE 3 — PRONUNCIATION WEAK (phoneme-based từ STEP 4)
+if status in ("WRONG", "NEAR") AND phonemeScore < 0.7
+→ "phát âm chưa rõ"
+
+👉 (KHÔNG phân tích vowel/CMU lại, chỉ dùng score)
+
+🟡 RULE 4 — NEAR WORD
+if status == "NEAR"
+→ "gần đúng, cần rõ hơn"
+🟢 RULE 5 — CORRECT (optional)
+if status == "CORRECT"
+→ null
+🧪 EDGE CASE RULE
+Nếu phonemeScore == null → bỏ qua rule phoneme
+Nếu nhiều rule match → chọn rule cao nhất theo priority
+🎯 OUTPUT CONTRACT
+feedback: string | null
+🧪 TEST CASES
+Case 1
 apples → apple
-
-Expected:
-
-"thiếu âm cuối /Z/"
-🎨 UI UPDATE (FINAL)
+status: MISSING
+→ "thiếu từ trong câu"
+Case 2
+sheep → ship
+phonemeScore: 0.55
+→ "phát âm chưa rõ"
+Case 3
+I really like apples
+status: EXTRA (really)
+→ "bạn đang nói thừa từ"
+Case 4
+good afternoon
+status: CORRECT
+→ null
+🎨 UI CONTRACT (GIỮ NGUYÊN)
 {c.phonemeScore != null && (
   <div className="text-xs text-muted-foreground">
     Pronunciation: {Math.round(c.phonemeScore * 100)}%
@@ -249,3 +274,76 @@ nhẹ
 deterministic
 chạy tốt 4GB VRAM
 đủ “Duolingo-lite quality”
+
+
+## pipeline tách 2 tầng chấm
+1. Hoàn tất căn chỉnh (Alignment)
+
+Hệ thống thực hiện căn chỉnh (alignment) giữa chuỗi từ của câu mẫu (expected) và câu người dùng nói (recognized).
+Kết quả là một danh sách các cặp từ tương ứng hoặc các trường hợp lệch (insert/delete).
+
+2. Phân loại sơ bộ bằng _classify_word (char-level)
+
+Sau alignment, mỗi cặp từ được đưa qua hàm _classify_word để phân loại dựa trên so sánh ký tự (char-level):
+
+CORRECT: giống hoàn toàn
+NEAR: sai nhẹ (gần đúng)
+WRONG: sai rõ ràng
+MISSING: thiếu từ
+EXTRA: từ nói thừa
+
+👉 Đây là bước QUYẾT ĐỊNH NHÁNH XỬ LÝ, không phải bước chấm điểm cuối cùng.
+
+3. Routing xử lý theo loại kết quả
+✅ Trường hợp CORRECT
+Không cần CMU
+Giữ nguyên kết quả
+Chỉ hiển thị trạng thái đúng
+
+👉 CMU không tham gia
+
+⚠️ Trường hợp NEAR / WRONG
+Đây là nhóm cần phân tích phát âm
+Hệ thống gọi CMU service để lấy phoneme (ARPABET)
+Chuyển sang IPA
+So sánh từng âm vị (phoneme-level diff)
+
+👉 Mục tiêu:
+
+giải thích “sai ở âm nào”
+tạo diff trực quan (æ → ɑː, v.v.)
+⚠️ Trường hợp MISSING / EXTRA
+CMU được dùng chỉ để hỗ trợ hiển thị âm thanh của từ
+expected word → IPA
+recognized word → IPA (nếu có)
+Không thực hiện so sánh phoneme diff chính
+
+👉 Mục tiêu:
+
+giải thích “thiếu từ gì / thừa từ gì”
+có thể kèm IPA để user hiểu cách đọc từ đó
+4. Tạo phản hồi (UI Feedback Layer)
+Với NEAR / WRONG:
+Hiển thị:
+IPA expected vs actual
+bảng so sánh từng phoneme
+highlight vị trí sai
+
+Ví dụ:
+
+æ → ɑː
+k → r (missing/substitute)
+Với EXTRA / MISSING:
+Hiển thị dạng giải thích ngữ nghĩa:
+“Bạn đã nói thêm từ X”
+“Bạn đã bỏ sót từ Y”
+Có thể kèm IPA của từ liên quan để hỗ trợ học phát âm
+⚠️ Chốt kiến trúc quan trọng (điểm bạn cần giữ)
+_classify_word = quyết định nhánh xử lý
+CMU service = chỉ cung cấp phoneme/IPA + diff visualization
+CMU không tham gia quyết định NEAR/WRONG
+CMU không biết pipeline
+🧠 1 câu chốt để tránh sai kiến trúc lại
+
+_classify_word quyết định “có cần nghe kỹ không”
+CMU chỉ trả lời “âm đó đọc như thế nào”

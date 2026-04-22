@@ -23,32 +23,68 @@ export interface IShadowingWord {
   score: number
 }
 
-export interface IShadowingResult {
-  sentenceId: number
-  expectedText: string
-  recognizedText: string
-  totalWords: number
-  correctWords: number
-  accuracy: number
-  weightedAccuracy: number
-  fluencyScore: number
-  avgPause: number
-  speechRate: number
-  recognizedWordCount: number
-  lastRecognizedPosition: number
-  compares: IShadowingWordCompare[]
+// 1. Các kiểu Literal cho Status và Type
+export type DiffTokenType = "MATCH" | "MISMATCH" | "MISSING" | "EXTRA" | "NO_DATA";
+export type WordStatus = "CORRECT" | "NEAR" | "WRONG" | "MISSING" | "EXTRA";
+export type PhonemeErrorType = "MISSING" | "EXTRA";
+
+// 2. Chi tiết lỗi IPA cho từng từ (Extra/Missing)
+export interface IExtraOrMissingIpa {
+  word: string;
+  ipa: string;
+  type: PhonemeErrorType;
 }
 
+// 3. Token chi tiết cho từng âm tiết (Phoneme)
+export interface IDiffToken {
+  type: DiffTokenType;
+  expected_ipa: string | null;
+  actual_ipa: string | null;
+  position: number | null; // Vị trí âm tiết trong từ
+}
+
+// 4. Kết quả so sánh Phoneme (Âm tiết)
+export interface IPhonemeDiff {
+  score: number;
+  diff_tokens: IDiffToken[];
+  expected_ipa: string | null;
+  actual_ipa: string | null;
+}
+
+// 5. So sánh từng từ trong câu
 export interface IShadowingWordCompare {
-  position: number
-  expectedWord: string
-  recognizedWord: string
-  expectedNormalized: string
-  recognizedNormalized: string
-  status: "CORRECT" | "NEAR" | "WRONG" | "MISSING" | "EXTRA"
-  score: number
+  position: number;
+  expectedWord: string | null;
+  recognizedWord: string | null;
+  expectedNormalized: string | null;
+  recognizedNormalized: string | null;
+  status: WordStatus;
+  score: number;
+  phonemeDiff: IPhonemeDiff | null;
+  // Trường hợp từ đó là Extra hoặc Missing hoàn toàn
+  extraOrMissingIpa?: IExtraOrMissingIpa | null; 
 }
 
+// 6. Object tổng kết quả trả về cuối cùng
+export interface IShadowingResult {
+  sentenceId: number;
+  expectedText: string;
+  recognizedText: string;
+  totalWords: number;
+  correctWords: number;          // Chỉ đếm các từ CORRECT
+  accuracy: number;             // % (correctWords / totalWords)
+  weightedAccuracy: number;     // % (tính theo trọng số score)
+  fluencyScore: number;         // 0.0 - 1.0
+  avgPause: number;             // giây
+  speechRate: number;           // words/second
+  recognizedWordCount: number;
+  lastRecognizedPosition: number;
+  compares: IShadowingWordCompare[];
+  
+  // Các field bổ sung nếu backend trả về ở root (tùy logic xử lý)
+  extraOrMissingIpa?: IExtraOrMissingIpa | null;
+  phonemeDiff?: IPhonemeDiff | null;
+}
 
 export interface ILessonSentenceDetailsResponse {
   id: number;
