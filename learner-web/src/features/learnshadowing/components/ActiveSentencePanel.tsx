@@ -1,19 +1,10 @@
 import handleAPI from "@/apis/handleAPI"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Spinner2 } from "@/components/ui/spinner2"
-import type {
-  ILessonDetailsResponse,
-  ITranscriptionResponse
-} from "@/types"
-import {
-  ArrowRight,
-  Mic,
-  Square,
-  Volume2,
-  X,
-} from "lucide-react"
+import type { ILessonDetailsResponse, ITranscriptionResponse } from "@/types"
+import { ArrowRight, Mic, Square, Volume2, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
@@ -21,14 +12,15 @@ import WordPopup from "@/components/WordPopup"
 import { useWordPopup } from "@/hooks/UseWordPopupReturn"
 import { cn } from "@/lib/utils"
 
-
 interface ActiveSentencePanelProps {
   lesson: ILessonDetailsResponse
   activeIndex: number
   handlePause: () => void
   onNext: () => void
   userInteracted?: boolean
+  onComplete?: (sentenceId: number) => void
 }
+
 export const SHADOWING_THRESHOLD = {
   NEXT: 80,
   GOOD_SOUND: 80,
@@ -39,7 +31,8 @@ const ActiveSentencePanel = ({
   activeIndex,
   lesson,
   userInteracted = false,
-  handlePause
+  handlePause,
+  onComplete
 }: ActiveSentencePanelProps) => {
   const [isRecording, setIsRecording] = useState(false)
   const [hasRecordedAudio, setHasRecordedAudio] = useState(false)
@@ -58,6 +51,13 @@ const ActiveSentencePanel = ({
   const streamRef = useRef<MediaStream | null>(null)
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
   const cancelRecordingRef = useRef(false)
+  
+  // 👈 THÊM: ref để tránh gọi complete nhiều lần cho cùng 1 câu
+  const hasCalledCompleteRef = useRef<number | null>(null)
+  
+  // 👈 THÊM: snapshot sentenceId tại thời điểm record
+  const sentenceIdRef = useRef<number>(0)
+
   const currentSentence = useMemo(
     () => lesson.sentences[activeIndex],
     [lesson.sentences, activeIndex]
@@ -70,7 +70,7 @@ const ActiveSentencePanel = ({
     loadingWordData,
     handleWordClick,
     closePopup,
-  } = useWordPopup();
+  } = useWordPopup()
 
   const shouldShowNextButton = useMemo(
     () => (transcription?.shadowingResult?.weightedAccuracy ?? 0) >= SHADOWING_THRESHOLD.NEXT,
@@ -193,9 +193,26 @@ const ActiveSentencePanel = ({
     }
   }, [loadAudioInputDevices])
 
+  // 👉 SỬA: reset UI và update snapshot khi đổi câu
   useEffect(() => {
     resetRecordingUi()
-  }, [activeIndex, resetRecordingUi])
+    hasCalledCompleteRef.current = null
+    sentenceIdRef.current = currentSentence.id
+  }, [currentSentence.id, resetRecordingUi])
+
+  // 👉 SỬA: useEffect gọi onComplete - dùng sentenceIdRef thay vì currentSentence.id
+  useEffect(() => {
+    const score = transcription?.shadowingResult?.weightedAccuracy
+    const sentenceId = sentenceIdRef.current
+
+    if (score !== undefined &&
+        score >= SHADOWING_THRESHOLD.NEXT &&
+        onComplete &&
+        hasCalledCompleteRef.current !== sentenceId) {
+      hasCalledCompleteRef.current = sentenceId
+      onComplete(sentenceId)
+    }
+  }, [transcription?.shadowingResult?.weightedAccuracy, onComplete])
 
   const startRecording = useCallback(async () => {
     setRecordError(null)
@@ -206,6 +223,9 @@ const ActiveSentencePanel = ({
     }
 
     try {
+      // 👉 THÊM: snapshot sentenceId tại thời điểm bắt đầu record
+      sentenceIdRef.current = currentSentence.id
+
       const audioConstraints: MediaTrackConstraints | boolean =
         selectedDeviceId && selectedDeviceId !== "default"
           ? { deviceId: { exact: selectedDeviceId } }
@@ -591,8 +611,6 @@ const ActiveSentencePanel = ({
                 </Button>
               )}
 
-
-
               {/* Skip button - only show when no recording or after fail */}
               {hasRecordedAudio && !isRecording && shouldShowSkipButton && (
                 <Button
@@ -647,11 +665,7 @@ const ActiveSentencePanel = ({
           )}
         </div>
 
-
-
         {shadowing && <ShadowingResultPanel result={shadowing} />}
-
-
       </div>
       <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
 

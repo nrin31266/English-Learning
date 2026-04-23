@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ILessonSentenceDetailsResponse } from "@/types"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
@@ -11,32 +11,142 @@ import {
   CheckCircle2,
   Circle,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 type ShadowingTranscriptProps = {
   sentences: ILessonSentenceDetailsResponse[]
   activeIndex: number
   onSelectSentence: (index: number) => void
   visible?: boolean
+  completedIds?: Set<number>
 }
 
+// Component con với custom compare
+const TranscriptItem = React.memo(({
+  sentence,
+  index,
+  isActive,
+  isCompleted,
+  showIPA,
+  showTranslation,
+  onSelect,
+  setItemRef
+}: {
+  sentence: ILessonSentenceDetailsResponse
+  index: number
+  isActive: boolean
+  isCompleted: boolean
+  showIPA: boolean
+  showTranslation: boolean
+  onSelect: (index: number) => void
+  setItemRef: (el: HTMLButtonElement | null, index: number) => void
+}) => {
+  const mainText = sentence.textDisplay ?? sentence.textRaw
+
+  const handleClick = useCallback(() => {
+    onSelect(index)
+  }, [onSelect, index])
+  console.log("Rendering TranscriptItem", { index, isActive, isCompleted, showTranslation })
+  return (
+    <button
+      type="button"
+      ref={(el) => setItemRef(el, index)}
+      onClick={handleClick}
+      className={cn(
+        "w-full rounded-lg border px-3 py-2.5 text-left text-sm shadow-sm transition-all duration-200",
+        "hover:shadow-md hover:scale-[1.01]",
+        isActive
+          ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-primary/20"
+          : "border-border bg-background hover:bg-muted/50"
+      )}
+    >
+      <div className="mb-1 flex items-center justify-between text-[12px]">
+        <div className="flex items-center gap-1.5">
+          {isCompleted ? (
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+          ) : isActive ? (
+            <Circle className="h-3.5 w-3.5 text-primary fill-primary" />
+          ) : (
+            <Circle className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+          <span className={isActive ? "text-primary font-medium" : "text-muted-foreground"}>
+            #{index + 1}
+          </span>
+        </div>
+        {sentence.audioSegmentUrl && (
+          <Badge variant="outline" className="px-1.5 py-0 text-[11px] bg-primary/5 border-primary/20">
+            audio
+          </Badge>
+        )}
+      </div>
+
+      <p className="text-[15px] font-medium leading-relaxed">
+        {mainText}
+      </p>
+
+      {showTranslation && sentence.translationVi && (
+        <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+          {sentence.translationVi}
+        </p>
+      )}
+
+      {showIPA && (sentence.phoneticUk || sentence.phoneticUs) && (
+        <p className="mt-1 text-[13px] italic text-muted-foreground">
+          {sentence.phoneticUk ?? sentence.phoneticUs}
+        </p>
+      )}
+    </button>
+  )
+}, (prevProps, nextProps) => {
+  // ✅ Custom compare: chỉ re-render khi thực sự cần
+  return (
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.isCompleted === nextProps.isCompleted &&
+    prevProps.showIPA === nextProps.showIPA &&
+    prevProps.showTranslation === nextProps.showTranslation &&
+    prevProps.sentence.id === nextProps.sentence.id
+  )
+})
+
+TranscriptItem.displayName = "TranscriptItem"
+
+// Component chính
 const ShadowingTranscript = ({
   sentences,
   activeIndex,
   onSelectSentence,
   visible = true,
+  completedIds = new Set(),
 }: ShadowingTranscriptProps) => {
   const [showIPA, setShowIPA] = useState(false)
   const [showTranslation, setShowTranslation] = useState(true)
 
+  // ✅ Chuyển Set thành Map để tránh re-render
+  const completedMap = useMemo(() => {
+    const map = new Map<number, true>()
+    completedIds.forEach(id => map.set(id, true))
+    return map
+  }, [completedIds])
+
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-const progressText = useMemo(() => {
-  if (!sentences.length) return "0 / 0"
-  return `${activeIndex + 1} / ${sentences.length}`
-}, [sentences.length, activeIndex])
+  const progressText = useMemo(() => {
+    if (!sentences.length) return "0 / 0"
+    return `${activeIndex + 1} / ${sentences.length}`
+  }, [sentences.length, activeIndex])
 
-  // Auto scroll: chỉ scroll khi item nằm ngoài viewport
+  // ✅ Ổn định hàm onSelect
+  const handleSelectSentence = useCallback((index: number) => {
+    onSelectSentence(index)
+  }, [onSelectSentence])
+
+  // ✅ Ổn định hàm setItemRef
+  const setItemRef = useCallback((el: HTMLButtonElement | null, index: number) => {
+    itemRefs.current[index] = el
+  }, [])
+
+  // Auto scroll
   useEffect(() => {
     if (!visible) return
     if (activeIndex < 0 || activeIndex >= sentences.length) return
@@ -48,6 +158,7 @@ const progressText = useMemo(() => {
       const scrollContainer = scrollAreaRef.current.querySelector(
         '[data-radix-scroll-area-viewport]'
       ) as HTMLElement
+
       if (!scrollContainer) return
 
       const itemTop = el.offsetTop
@@ -55,7 +166,6 @@ const progressText = useMemo(() => {
       const containerHeight = scrollContainer.clientHeight
       const currentScroll = scrollContainer.scrollTop
 
-      // Kiểm tra item có nằm trong 70% viewport không
       const visibleTop = currentScroll
       const visibleBottom = currentScroll + containerHeight * 0.7
       const isVisible = itemTop >= visibleTop && itemTop + itemHeight <= visibleBottom
@@ -106,13 +216,13 @@ const progressText = useMemo(() => {
           </div>
         </div>
 
-<div className="hidden items-center gap-2 text-[12px] text-muted-foreground sm:flex">
-  <span>{progressText}</span>
-  <Progress
-    value={(activeIndex + 1) / sentences.length * 100}
-    className="w-36"
-  />
-</div>
+        <div className="hidden items-center gap-2 text-[12px] text-muted-foreground sm:flex">
+          <span>{progressText}</span>
+          <Progress
+            value={(activeIndex + 1) / sentences.length * 100}
+            className="w-36"
+          />
+        </div>
       </div>
 
       {/* Sentence list */}
@@ -120,58 +230,20 @@ const progressText = useMemo(() => {
         <div className="space-y-2 p-3">
           {sentences.map((s, index) => {
             const isActive = index === activeIndex
-            const mainText = s.textDisplay ?? s.textRaw
+            const isCompleted = !!completedMap.get(s.id)
 
             return (
-              <button
+              <TranscriptItem
                 key={s.id}
-                type="button"
-                ref={(el) => {
-                  itemRefs.current[index] = el
-                }}
-                onClick={() => onSelectSentence(index)}
-                className={[
-                  "w-full rounded-lg border px-3 py-2.5 text-left text-sm shadow-sm transition-all duration-200",
-                  "hover:shadow-md hover:scale-[1.01]",
-                  isActive
-                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-primary/20"
-                    : "border-border bg-background hover:bg-muted/50",
-                ].join(" ")}
-              >
-                <div className="mb-1 flex items-center justify-between text-[12px]">
-                  <div className="flex items-center gap-1.5">
-                    {index < activeIndex ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                    ) : isActive ? (
-                      <Circle className="h-3.5 w-3.5 text-primary fill-primary" />
-                    ) : (
-                      <Circle className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
-                    <span className={isActive ? "text-primary font-medium" : "text-muted-foreground"}>#{index+1}</span>
-                  </div>
-                  {s.audioSegmentUrl && (
-                    <Badge variant="outline" className="px-1.5 py-0 text-[11px] bg-primary/5 border-primary/20">
-                      audio
-                    </Badge>
-                  )}
-                </div>
-
-                <p className="text-[15px] font-medium leading-relaxed">
-                  {mainText}
-                </p>
-
-                {showTranslation && s.translationVi && (
-                  <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
-                    {s.translationVi}
-                  </p>
-                )}
-
-                {showIPA && (s.phoneticUk || s.phoneticUs) && (
-                  <p className="mt-1 text-[13px] italic text-muted-foreground">
-                    {s.phoneticUk ?? s.phoneticUs}
-                  </p>
-                )}
-              </button>
+                sentence={s}
+                index={index}
+                isActive={isActive}
+                isCompleted={isCompleted}
+                showIPA={showIPA}
+                showTranslation={showTranslation}
+                onSelect={handleSelectSentence}
+                setItemRef={setItemRef}
+              />
             )
           })}
 
@@ -186,4 +258,4 @@ const progressText = useMemo(() => {
   )
 }
 
-export default ShadowingTranscript
+export default React.memo(ShadowingTranscript)

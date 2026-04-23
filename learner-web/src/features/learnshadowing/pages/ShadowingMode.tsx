@@ -1,6 +1,6 @@
 import { useAppDispatch, useAppSelector } from "@/store"
 import { fetchLessonBySlug } from "@/store/lessonForShadowingSlide"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import  { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 import type { ILessonSentenceDetailsResponse } from "@/types"
@@ -28,6 +28,7 @@ import KeyboardShortcutsHelp from "@/components/players/KeyboardShortcutsHelp"
 import Player from "@/components/players/Player"
 import type { PlayerRef } from "@/components/players/types/types"
 import ShadowingTranscript from "../components/ShadowingTranscript"
+import { cn } from "@/lib/utils"
 
 const ShadowingMode = () => {
   const { slug } = useParams<{ slug: string }>()
@@ -42,13 +43,20 @@ const ShadowingMode = () => {
   const [activeIndex, setActiveIndex] = useState(0)
   const [autoPlayOnSentenceChange, setAutoPlayOnSentenceChange] = useState(true)
   const [userInteracted, setUserInteracted] = useState(false)
+  const [showTranscript, setShowTranscript] = useState(true)
+
+  // 👈 THÊM: state lưu các câu đã hoàn thành
+  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set())
+
+  // 👈 THÊM: ref lưu completedIds để dùng trong callback không cần dependency
+  const completedIdsRef = useRef(completedIds)
+  useEffect(() => {
+    completedIdsRef.current = completedIds
+  }, [completedIds])
 
   const playerRef = useRef<PlayerRef | null>(null)
   const [playbackRate, setPlaybackRate] = useState<number>(1.0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [showTranscript, setShowTranscript] = useState(true)
-
-  
 
   useEffect(() => {
     if (slug) {
@@ -60,6 +68,8 @@ const ShadowingMode = () => {
     setActiveIndex(0)
     setAutoPlayOnSentenceChange(true)
     setUserInteracted(false)
+    // 👈 THÊM: reset completed khi chuyển bài
+    setCompletedIds(new Set())
   }, [lesson?.id])
 
   const isLoading = status === "idle" || status === "loading"
@@ -95,10 +105,20 @@ const ShadowingMode = () => {
     playerRef.current?.pause()
   }
 
-  const handleSelectSentence = (index: number) => {
+  const handleSelectSentence = useCallback((index: number) => {
     setAutoPlayOnSentenceChange(true)
     setActiveIndex(index)
-  }
+  }, [])
+
+  // 👈 THÊM: hàm mark câu đã hoàn thành
+  const handleCompleteSentence = useCallback((sentenceId: number) => {
+    setCompletedIds(prev => {
+      if (prev.has(sentenceId)) return prev
+      const next = new Set(prev)
+      next.add(sentenceId)
+      return next
+    })
+  }, [])
 
   const handleBackToTopic = () => {
     if (lesson?.topic) {
@@ -245,57 +265,67 @@ const ShadowingMode = () => {
           Lesson not found.
         </div>
       ) : (
-        <div className="flex flex-col gap-4 lg:flex-row">
-          {/* LEFT: media + active sentence */}
-          <div className="flex min-h-0 flex-1 flex-col gap-3">
-            {/* Player Component - Thay thế toàn bộ media player + control panel */}
-            <Player
-              ref={playerRef}
-              lesson={lesson}
-              currentSentence={currentSentence}
-              autoStop={autoStop}
-              autoPlayOnSentenceChange={autoPlayOnSentenceChange}
-              onUserInteracted={setUserInteracted}
-              playbackRate={playbackRate}
-              isPlaying={isPlaying}
-              setIsPlaying={setIsPlaying}
-              largeVideo={largeVideo}
-              // Navigation
-              onPrev={handlePrev}
-              onNext={handleNext}
-              hasPrev={activeIndex > 0}
-              hasNext={activeIndex < sentences.length - 1}
-              // Settings
-              onAutoStopChange={setAutoStop}
-              onLargeVideoChange={setLargeVideo}
-              onPlaybackRateChange={setPlaybackRate}
-              onShowShortcuts={() => setShowHelp(true)}
-            />
+        // 👈 SỬA: Grid layout 12 cột như dictation
+        <div className={cn(
+          "grid gap-4 mt-2",
+          showTranscript 
+            ? "grid-cols-1 lg:grid-cols-12" 
+            : "grid-cols-1 lg:grid-cols-12"
+        )}>
+          {/* LEFT COLUMN: Player + ActiveSentencePanel */}
+          <div className={cn(
+            "flex flex-col gap-4",
+            showTranscript 
+              ? "lg:col-span-8"
+              : "lg:col-span-8 lg:col-start-3"
+          )}>
+            <div className="sticky top-4">
+              <Player
+                ref={playerRef}
+                lesson={lesson}
+                currentSentence={currentSentence}
+                autoStop={autoStop}
+                autoPlayOnSentenceChange={autoPlayOnSentenceChange}
+                onUserInteracted={setUserInteracted}
+                playbackRate={playbackRate}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
+                largeVideo={largeVideo}
+                onPrev={handlePrev}
+                onNext={handleNext}
+                hasPrev={activeIndex > 0}
+                hasNext={activeIndex < sentences.length - 1}
+                onAutoStopChange={setAutoStop}
+                onLargeVideoChange={setLargeVideo}
+                onPlaybackRateChange={setPlaybackRate}
+                onShowShortcuts={() => setShowHelp(true)}
+              />
+            </div>
 
-            {/* Active sentence panel */}
             <ActiveSentencePanel
               lesson={lesson}
               activeIndex={activeIndex}
               handlePause={handlePause}
               onNext={handleNext}
               userInteracted={userInteracted}
+              onComplete={handleCompleteSentence}  // 👈 THÊM: callback khi hoàn thành
             />
 
-            {/* Keyboard Shortcuts Dialog */}
             <KeyboardShortcutsHelp
               open={showHelp}
               onClose={() => setShowHelp(false)}
             />
           </div>
 
-          {/* RIGHT: Transcript panel */}
+          {/* RIGHT COLUMN: Transcript panel */}
           {showTranscript && (
-            <div className="mt-2 w-full shrink-0 lg:mt-0 lg:w-[340px] xl:w-[380px]">
+            <div className="lg:col-span-4">
               <ShadowingTranscript
                 sentences={sentences}
                 activeIndex={activeIndex}
                 onSelectSentence={handleSelectSentence}
                 visible={showTranscript}
+                completedIds={completedIds}  // 👈 THÊM: truyền completedIds
               />
             </div>
           )}
