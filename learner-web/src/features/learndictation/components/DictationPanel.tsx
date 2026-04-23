@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import type { ILessonSentenceDetailsResponse, ILessonWordResponse } from "@/types"
@@ -14,7 +13,7 @@ import {
     RotateCcw
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { WordChipStatus } from "./WordChip"
+
 import WordChip from "./WordChip"
 import WordPopup from "@/components/WordPopup"
 import { useWordPopup } from "@/hooks/UseWordPopupReturn"
@@ -44,134 +43,94 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
     const [answer, setAnswer] = useState("")
     const [revealState, setRevealState] = useState<RevealState>({})
     const textareaRef = useRef<HTMLTextAreaElement>(null)
-    const [isTransitioning, setIsTransitioning] = useState(false) // 👈 thêm state
-    // ========= WORD POPUP STATE ==========
-    const {
-        activeWord,
-        anchorEl,
-        wordData,
-        loadingWordData,
-        handleWordClick,
-        closePopup,
-    } = useWordPopup();
+    const [isTransitioning, setIsTransitioning] = useState(false)
+    
+    const { activeWord, anchorEl, wordData, loadingWordData, handleWordClick, closePopup } = useWordPopup();
 
     const sortedWords = useMemo(
         () => [...sentence.lessonWords].sort((a, b) => a.orderIndex - b.orderIndex),
         [sentence.lessonWords]
     )
-    useEffect(() => {
-        console.log("MOUNT")
 
-        return () => {
-            console.log("UNMOUNT")
-        }
-    }, [])
+    // ✅ Single source of truth: typedTokens
+    const typedTokens = useMemo(
+        () => answer.trim().split(/\s+/).filter(Boolean),
+        [answer]
+    )
 
     useEffect(() => {
-        // 👉 mỗi lần sentence thay đổi, reset toàn bộ state liên quan đến answer và reveal
         setIsTransitioning(true)
-        
-
-        setRevealState(prev => {
-            if (Object.keys(prev).length === 0) return prev
-            return {}
-        })
+        setRevealState({})
         if (completed) {
             setAnswer(sortedWords.map(w => getWordDisplay(w)).join(" "))
         } else {
-            if (currentTemporaryAnswer) {
-                setAnswer(currentTemporaryAnswer)
-            } else {
-                setAnswer("")
-            }
+            setAnswer(currentTemporaryAnswer || "")
         }
         textareaRef.current?.focus()
-        // 👉 kết thúc transition sau 1 frame
         requestAnimationFrame(() => {
             setIsTransitioning(false)
         })
     }, [sentence.id])
 
-
-
     const totalWords = sortedWords.length
-    const revealedWordIds = useMemo(() => sortedWords.filter(w => revealState[w.id]).map(w => w.id), [sortedWords, revealState])
-    const revealedCount = revealedWordIds.length
+    const revealedCount = Object.keys(revealState).length
     const hasRevealedAny = revealedCount > 0
 
-    const contentWordStatuses = useMemo(() => {
-        const statuses = new Map<number, { status: "correct" | "wrong" | "untyped"; text: string }>()
-        const typedTokens = answer.trim().split(/\s+/).filter(Boolean)
-
-        sortedWords.forEach((word, index) => {
-            const typedToken = index < typedTokens.length ? typedTokens[index] : null
+    // ✅ Tính correctTypedCount trực tiếp từ typedTokens (không cần contentWordStatuses)
+    const correctTypedCount = useMemo(() => {
+        let count = 0
+        sortedWords.forEach((word, idx) => {
             const targetDisplay = getWordDisplay(word)
             const targetNorm = normalizeWordLower(targetDisplay) || ""
-            const typedNorm = normalizeWordLower(typedToken) || ""
-
-            if (!typedToken) {
-                statuses.set(word.id, { status: "untyped", text: "*".repeat(targetDisplay.length) })
-            } else if (typedNorm === targetNorm) {
-                statuses.set(word.id, { status: "correct", text: targetDisplay })
-            } else {
-                let maskedText = ""
-                for (let i = 0; i < targetDisplay.length; i++) {
-                    const char = targetDisplay[i]
-                    const typedChar = typedToken[i]
-                    if (typedChar && typedChar.toLowerCase() === char.toLowerCase()) {
-                        maskedText += char
-                    } else {
-                        maskedText += "*"
-                    }
-                }
-                statuses.set(word.id, { status: "wrong", text: maskedText })
-            }
+            const typedNorm = normalizeWordLower(typedTokens[idx]) || ""
+            if (typedNorm && typedNorm === targetNorm) count++
         })
-        return statuses
-    }, [sortedWords, answer])
+        return count
+    }, [sortedWords, typedTokens])
 
-    const correctTypedCount = useMemo(() =>
-        Array.from(contentWordStatuses.values()).filter(s => s.status === "correct").length
-        , [contentWordStatuses])
-    const isAllCorrect = useMemo(() => {
-        const typedWords = answer.trim().split(/\s+/).filter(Boolean)
-        return typedWords.length === totalWords && correctTypedCount === totalWords
-    }, [answer, totalWords, correctTypedCount])
+    // ✅ isAllCorrect đơn giản
+    const isAllCorrect = typedTokens.length === totalWords && correctTypedCount === totalWords
 
-    // Dùng ở nhiều chỗ
+    const handleRevealOne = useCallback((wordId: number, wordText: string, wordIndex: number) => {
+        setRevealState(prev => ({ ...prev, [wordId]: true }))
+        
+        setAnswer(prevAnswer => {
+            const currentTokens = prevAnswer.trim().split(/\s+/).filter(Boolean)
+            if (currentTokens.length === wordIndex) {
+                const newAnswer = [...currentTokens, wordText].join(" ")
+                onTemporaryAnswerChange?.(newAnswer)
+                return newAnswer
+            }
+            return prevAnswer
+        })
+        
+        textareaRef.current?.focus()
+    }, [onTemporaryAnswerChange])
+
+    const handleWordClickCallback = useCallback((word: ILessonWordResponse, el: HTMLElement) => {
+        handleWordClick(word, el, sentence.textDisplay || "")
+    }, [sentence.textDisplay, handleWordClick])
+
+    // Auto submit when all correct
     useEffect(() => {
         if (isAllCorrect && !completed && !loading) {
-            onSubmit?.(answer.trim(), revealedWordIds)
+            onSubmit?.(answer.trim(), Object.keys(revealState).map(id => parseInt(id)))
         }
-    }, [isAllCorrect, completed])
-    const handleRevealOne = useCallback((id: number) => {
-        setRevealState(p => ({ ...p, [id]: true }))
-        // focus vào textarea sau khi reveal để tối ưu trải nghiệm
-        textareaRef.current?.focus()
-    }, [])
+    }, [isAllCorrect, completed, loading, answer, revealState, onSubmit])
 
-    const handleRevealAll = () => {
-        const next: RevealState = {}
-        sortedWords.forEach(w => next[w.id] = true)
-        setRevealState(next)
-        setAnswer(sortedWords.map(w => getWordDisplay(w)).join(" "))
-        textareaRef && textareaRef.current?.focus()
-    }
     const handleReset = () => {
         setRevealState({})
         setAnswer("")
         onTemporaryAnswerChange?.("")
-        textareaRef && textareaRef.current?.focus()
+        textareaRef.current?.focus()
     }
-
-    const progressPercent = (correctTypedCount / totalWords) * 100
 
     return (
         <div className="flex w-full flex-col gap-0 overflow-hidden rounded-xl border bg-gradient-to-br from-card to-card/80 shadow-lg">
-            {/* Header with gradient */}
-            <div className="relative overflow-hidden border-b  px-5 py-4">
+            {/* Header */}
+            <div className="relative overflow-hidden border-b px-5 py-4 flex flex-col gap-4">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
-
+                
                 <div className="relative flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="rounded-xl bg-primary/10 p-2.5 shadow-sm">
@@ -186,29 +145,9 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                             )}
                         </div>
                     </div>
-
-                    <div className="flex gap-2">
-
-                        {hasRevealedAny && (
-                            <Badge
-                                variant="outline"
-                                className="gap-1.5 px-3 py-1 text-xs font-medium border-amber-500/30 bg-amber-500/5 text-amber-600 dark:text-amber-400"
-                            >
-                                <Eye className="h-3 w-3" />
-                                {revealedCount} revealed
-                            </Badge>
-                        )}
-                    </div>
                 </div>
+                
                 <div className="flex flex-nowrap gap-2 items-center">
-
-                    {/* Progress bar */}
-                    <div className="mt-3 h-2 shadow-sm border w-full overflow-hidden rounded-full bg-muted/50">
-                        <div
-                            className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-300"
-                            style={{ width: `${progressPercent}%` }}
-                        />
-                    </div>
                     <Badge
                         variant="secondary"
                         className="gap-1.5 px-3 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
@@ -216,13 +155,21 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                         <CheckCircle2 className="h-3 w-3" />
                         {correctTypedCount}/{totalWords}
                     </Badge>
+                    {hasRevealedAny && (
+                        <Badge
+                            variant="outline"
+                            className="gap-1.5 px-3 py-1 text-xs font-medium border-amber-500/30 bg-amber-500/5 text-amber-600 dark:text-amber-400"
+                        >
+                            <Eye className="h-3 w-3" />
+                            {revealedCount} revealed
+                        </Badge>
+                    )}
                 </div>
-
             </div>
 
             {/* Main content */}
             <div className="p-5 flex flex-col gap-5">
-                {/* Textarea with styling */}
+                {/* Textarea */}
                 <div className="relative group">
                     <Textarea
                         ref={textareaRef}
@@ -235,17 +182,17 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                             if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault()
                                 if (!loading && isAllCorrect && completed) {
-                                    onNext && onNext()
+                                    onNext?.()
                                 }
                             }
                         }}
                         placeholder="Type what you hear..."
                         className={cn(
                             "min-h-[110px] resize-none text-lg! font-mono tracking-wide",
-                            "border border-border", // 👈 thêm dòng này
+                            "border border-border",
                             "bg-background/50",
                             "focus-visible:ring-2 focus-visible:ring-primary/30",
-                            "focus-visible:border-primary", // 👈 thêm luôn cho mượt
+                            "focus-visible:border-primary",
                             "placeholder:text-muted-foreground/50",
                             "transition-all duration-200"
                         )}
@@ -255,10 +202,7 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                         type="button"
                         size="icon"
                         variant="ghost"
-                        onClick={() => {
-                            // TODO: Voice recognition sẽ được tích hợp sau
-                            console.log("Mic clicked")
-                        }}
+                        onClick={() => console.log("Mic clicked")}
                         className="absolute bottom-2 right-2 h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
                     >
                         <Mic className="h-4 w-4" />
@@ -266,79 +210,33 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                 </div>
 
                 {/* Word chips area */}
-                {/* Word chips area */}
                 <div className="rounded-xl border bg-muted/15 mt-3">
-                    <div
-                        key={sentence.id}
-                        className="flex flex-wrap gap-2 p-4 max-h-56 overflow-y-auto min-h-[120px]"
-                    >
-                        {isTransitioning ? (
-                            // Skeleton loading
-                            <div className="flex flex-wrap gap-2 w-full">
-                                {sortedWords.map((_, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="animate-pulse rounded-lg border px-3 pt-4 pb-2 min-w-[3.5rem] min-h-[3rem] bg-muted/50"
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            sortedWords.map((word) => {
-                                const isRevealed = !!revealState[word.id]
-                                const statusObj = contentWordStatuses.get(word.id)
-
-                                let status: WordChipStatus = "untyped"
-                                let display = statusObj?.text || ""
-
-                                if (isRevealed) {
-                                    status = "revealed"
-                                    display = getWordDisplay(word)
-                                } else if (statusObj?.status === "correct") {
-                                    status = "correct_typed"
-                                } else if (statusObj?.status === "wrong") {
-                                    status = "wrong"
-                                }
-
-                                return (
-                                    <WordChip
-                                        key={word.id}
-                                        word={word}
-                                        displayText={display}
-                                        status={status}
-                                        onReveal={() => handleRevealOne(word.id)}
-                                        onClickWord={(w: ILessonWordResponse, el: HTMLElement) => {
-                                            handleWordClick(w, el, sentence.textDisplay || "")
-                                        }}
-                                    />
-                                )
-                            })
-                        )}
+                    <div className="flex flex-wrap gap-2 p-4 max-h-56 overflow-y-auto min-h-[120px]">
+                        {!isTransitioning && sortedWords.map((word, idx) => (
+                            <WordChip
+                                key={word.id}
+                                word={word}
+                                index={idx}
+                                typedToken={typedTokens[idx] || ""}
+                                isRevealed={!!revealState[word.id]}
+                                onReveal={handleRevealOne}
+                                onClickWord={handleWordClickCallback}
+                            />
+                        ))}
                     </div>
                 </div>
 
                 {/* Action buttons */}
                 <div className="flex justify-between items-center gap-3 pt-2">
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleReset}
-                            className="gap-2 text-muted-foreground hover:text-foreground"
-                        >
-                            <RotateCcw className="h-4 w-4" />
-                            Reset
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRevealAll}
-                            className="gap-2 text-muted-foreground hover:text-foreground"
-                            disabled={revealedCount === totalWords}
-                        >
-                            <Eye className="h-4 w-4" />
-                            Reveal All
-                        </Button>
-                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleReset}
+                        className="gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                        <RotateCcw className="h-4 w-4" />
+                        Reset
+                    </Button>
 
                     <Button
                         onClick={onNext}
@@ -349,14 +247,13 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
-                {/* Show nghia tieng viet khi hoan thanh */}
-                {
-                    isAllCorrect && completed && !loading && (
-                        <p>
-                            <span className="font-medium">Meaning:</span> {sentence.translationVi}
-                        </p>
-                    )
-                }
+
+                {/* Meaning */}
+                {isAllCorrect && completed && !loading && (
+                    <p>
+                        <span className="font-medium">Meaning:</span> {sentence.translationVi}
+                    </p>
+                )}
 
                 {/* Keyboard hint */}
                 <div className="text-center text-[11px] text-muted-foreground/60 pt-1">
@@ -364,14 +261,13 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                     <kbd className="rounded border bg-muted/30 px-1.5 py-0.5 font-mono text-[10px] shadow-sm">Ctrl</kbd> to replay audio
                 </div>
             </div>
+            
             <WordPopup
                 word={activeWord}
                 anchorEl={anchorEl}
                 onClose={() => {
                     closePopup()
-                    if (textareaRef.current) {
-                        textareaRef.current.focus()
-                    }
+                    textareaRef.current?.focus()
                 }}
                 wordData={wordData}
                 isLoading={loadingWordData}

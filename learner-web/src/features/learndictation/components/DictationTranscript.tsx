@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ILessonSentenceDetailsResponse } from "@/types"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,110 @@ type DictationTranscriptProps = {
   visible?: boolean
 }
 
+// Hook xử lý text
+const useProcessedText = (text: string, isCompleted: boolean) => {
+  return useMemo(() => {
+    if (isCompleted) return text
+
+    const tokens = text.split(/(\s+|[.,!?;:]|\b)/).filter(Boolean)
+
+    return tokens.map(token => {
+      const trimmed = token.trim()
+      if (trimmed === "") return token
+      if (token === " ") return " "
+      if (hasPunctuation(trimmed) && trimmed.length === 1) return token
+
+      const normalized = normalizeWordLower(trimmed)
+      if (!normalized || normalized.length === 0) return token
+
+      return "*".repeat(normalized.length)
+    }).join("")
+  }, [text, isCompleted])
+}
+
+// Component con với custom compare
+const TranscriptItem = React.memo(({
+  sentence,
+  index,
+  isActive,
+  isCompleted,
+  showTranslation,
+  onSelect,
+  setItemRef
+}: {
+  sentence: ILessonSentenceDetailsResponse
+  index: number
+  isActive: boolean
+  isCompleted: boolean
+  showTranslation: boolean
+  onSelect: (index: number) => void
+  setItemRef: (el: HTMLButtonElement | null, index: number) => void
+}) => {
+  const mainText = sentence.textDisplay ?? sentence.textRaw
+  const processedText = useProcessedText(mainText, isCompleted)
+
+  // Ổn định hàm click
+  const handleClick = useCallback(() => {
+    onSelect(index)
+  }, [onSelect, index])
+  console.log("Rendering TranscriptItem", { index, isActive, isCompleted })
+  return (
+    <button
+      type="button"
+      ref={(el) => setItemRef(el, index)}
+      onClick={handleClick}
+      className={[
+        "w-full rounded-lg border px-3 py-2.5 text-left text-sm shadow-sm transition-all duration-200",
+        "hover:shadow-md hover:scale-[1.01]",
+        isActive
+          ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-primary/20"
+          : "border-border bg-background hover:bg-muted/50",
+      ].join(" ")}
+    >
+      <div className="mb-1 flex items-center justify-between text-[12px]">
+        <div className="flex items-center gap-1.5">
+          {isCompleted ? (
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+          ) : isActive ? (
+            <Circle className="h-3.5 w-3.5 text-primary fill-primary" />
+          ) : (
+            <Circle className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+          <span className={isActive ? "text-primary font-medium" : "text-muted-foreground"}>
+            #{index + 1}
+          </span>
+        </div>
+        {sentence.audioSegmentUrl && (
+          <Badge variant="outline" className="px-1.5 py-0 text-[11px] bg-primary/5 border-primary/20">
+            audio
+          </Badge>
+        )}
+      </div>
+
+      <p className="text-[15px] font-medium leading-relaxed font-mono tracking-wide">
+        {processedText}
+      </p>
+
+      {showTranslation && sentence.translationVi && (
+        <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+          {sentence.translationVi}
+        </p>
+      )}
+    </button>
+  )
+}, (prevProps, nextProps) => {
+  // ✅ Custom compare: chỉ re-render khi thực sự cần
+  return (
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.isCompleted === nextProps.isCompleted &&
+    prevProps.showTranslation === nextProps.showTranslation &&
+    prevProps.sentence.id === nextProps.sentence.id
+  )
+})
+
+TranscriptItem.displayName = "TranscriptItem"
+
+// Component chính
 const DictationTranscript = ({
   sentences,
   activeIndex,
@@ -29,10 +133,12 @@ const DictationTranscript = ({
 }: DictationTranscriptProps) => {
   const [showTranslation, setShowTranslation] = useState(false)
 
-
-  const completedSet = useMemo(() => {
-    if (completedIds instanceof Set) return completedIds
-    return new Set(completedIds)
+  // ✅ Chuyển Set thành Map để tránh re-render
+  const completedMap = useMemo(() => {
+    const map = new Map<number, true>()
+    const set = completedIds instanceof Set ? completedIds : new Set(completedIds)
+    set.forEach(id => map.set(id, true))
+    return map
   }, [completedIds])
 
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -42,68 +148,50 @@ const DictationTranscript = ({
     if (!sentences.length) return "0 / 0"
     return `${activeIndex + 1} / ${sentences.length}`
   }, [sentences.length, activeIndex])
-  /**
-   * Xử lý text: giữ dấu câu, thay từ bằng *** theo số ký tự
-   */
-  const processText = (text: string, isCompleted: boolean): string => {
-    if (isCompleted) return text
-    
-    const tokens = text.split(/(\s+)/)
-    
-    return tokens.map(token => {
-      if (token.trim() === "") return token
-      
-      // Giữ lại dấu câu đơn
-      if (token.length === 1 && hasPunctuation(token)) return token
-      
-      // Chuẩn hóa từ để biết số ký tự cần ẩn
-      const normalized = normalizeWordLower(token)
-      if (!normalized || normalized.length === 0) return token
-      
-      // Thay bằng *** theo số ký tự thực tế
-      return "*".repeat(normalized.length)
-    }).join("")
-  }
 
-// Auto scroll - chỉ scroll khi item nằm ngoài viewport
-useEffect(() => {
-  if (!visible) return
-  if (activeIndex < 0 || activeIndex >= sentences.length) return
-  
-  const timer = setTimeout(() => {
-    const el = itemRefs.current[activeIndex]
-    if (!el || !scrollAreaRef.current) return
+  // ✅ Ổn định hàm onSelect
+  const handleSelectSentence = useCallback((index: number) => {
+    onSelectSentence(index)
+  }, [onSelectSentence])
 
-    const scrollContainer = scrollAreaRef.current.querySelector(
-      '[data-radix-scroll-area-viewport]'
-    ) as HTMLElement
-    
-    if (!scrollContainer) return
-
-    const itemTop = el.offsetTop
-    const itemHeight = el.offsetHeight
-    const containerHeight = scrollContainer.clientHeight
-    const currentScroll = scrollContainer.scrollTop
-    
-    // Kiểm tra item có nằm trong 70% viewport không
-    const visibleTop = currentScroll
-    const visibleBottom = currentScroll + containerHeight * 0.7
-    const isVisible = itemTop >= visibleTop && itemTop + itemHeight <= visibleBottom
-    
-    if (!isVisible) {
-      const scrollTo = itemTop - (containerHeight / 5) + (itemHeight / 2)
-      scrollContainer.scrollTo({ top: scrollTo, behavior: "smooth" })
-    }
-  }, 100)
-  
-  return () => clearTimeout(timer)
-}, [activeIndex, sentences.length, visible])
-
-  // Fix ref assignment
-  const setItemRef = (el: HTMLButtonElement | null, index: number) => {
+  // ✅ Ổn định hàm setItemRef
+  const setItemRef = useCallback((el: HTMLButtonElement | null, index: number) => {
     itemRefs.current[index] = el
-  }
+  }, [])
 
+  // Auto scroll
+  useEffect(() => {
+    if (!visible) return
+    if (activeIndex < 0 || activeIndex >= sentences.length) return
+
+    const timer = setTimeout(() => {
+      const el = itemRefs.current[activeIndex]
+      if (!el || !scrollAreaRef.current) return
+
+      const scrollContainer = scrollAreaRef.current.querySelector(
+        '[data-radix-scroll-area-viewport]'
+      ) as HTMLElement
+
+      if (!scrollContainer) return
+
+      const itemTop = el.offsetTop
+      const itemHeight = el.offsetHeight
+      const containerHeight = scrollContainer.clientHeight
+      const currentScroll = scrollContainer.scrollTop
+
+      const visibleTop = currentScroll
+      const visibleBottom = currentScroll + containerHeight * 0.7
+      const isVisible = itemTop >= visibleTop && itemTop + itemHeight <= visibleBottom
+
+      if (!isVisible) {
+        const scrollTo = itemTop - (containerHeight / 5) + (itemHeight / 2)
+        scrollContainer.scrollTo({ top: scrollTo, behavior: "smooth" })
+      }
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [activeIndex, sentences.length, visible])
+  console.log("Rendering DictationTranscript", { activeIndex, completedCount: completedMap.size, showTranslation })
   return (
     <div className="flex h-[calc(100vh-17vh)] min-h-[260px] flex-col rounded-xl border bg-gradient-to-b from-card to-card/50 shadow-md">
       {/* Header */}
@@ -144,55 +232,19 @@ useEffect(() => {
         <div className="space-y-2 p-3">
           {sentences.map((s, index) => {
             const isActive = index === activeIndex
-            const isCompleted = completedSet.has(s.id)
-            const mainText = s.textDisplay ?? s.textRaw
-            const processedText = processText(mainText, isCompleted)
+            const isCompleted = !!completedMap.get(s.id)
 
             return (
-              <button
+              <TranscriptItem
                 key={s.id}
-                type="button"
-                ref={(el) => setItemRef(el, index)}
-                onClick={() => onSelectSentence(index)}
-                className={[
-                  "w-full rounded-lg border px-3 py-2.5 text-left text-sm shadow-sm transition-all duration-200",
-                  "hover:shadow-md hover:scale-[1.01]",
-                  isActive
-                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-primary/20"
-                    : "border-border bg-background hover:bg-muted/50",
-                ].join(" ")}
-              >
-                <div className="mb-1 flex items-center justify-between text-[12px]">
-                  <div className="flex items-center gap-1.5">
-                    {isCompleted ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                    ) : isActive ? (
-                      <Circle className="h-3.5 w-3.5 text-primary fill-primary" />
-                    ) : (
-                      <Circle className="h-3.5 w-3.5 text-muted-foreground" />
-                    )}
-                    <span className={isActive ? "text-primary font-medium" : "text-muted-foreground"}>
-                      #{index + 1}
-                    </span>
-                  </div>
-                  {s.audioSegmentUrl && (
-                    <Badge variant="outline" className="px-1.5 py-0 text-[11px] bg-primary/5 border-primary/20">
-                      audio
-                    </Badge>
-                  )}
-                </div>
-
-                <p className="text-[15px] font-medium leading-relaxed font-mono tracking-wide">
-                  {processedText}
-                </p>
-
-
-                {showTranslation && s.translationVi && (
-                  <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
-                    {s.translationVi}
-                  </p>
-                )}
-              </button>
+                sentence={s}
+                index={index}
+                isActive={isActive}
+                isCompleted={isCompleted}
+                showTranslation={showTranslation}
+                onSelect={handleSelectSentence}
+                setItemRef={setItemRef}
+              />
             )
           })}
 
@@ -207,4 +259,4 @@ useEffect(() => {
   )
 }
 
-export default DictationTranscript
+export default React.memo(DictationTranscript)

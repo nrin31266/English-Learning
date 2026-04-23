@@ -640,9 +640,9 @@ const ActiveSentencePanel = ({
             }}
             className="items-center"
           />
-          {lesson.sentences.length > 0 && currentSentence.phoneticUk && (
-            <p className="text-sm italic text-muted-foreground">
-              {currentSentence.phoneticUk}
+          {lesson.sentences.length > 0 && currentSentence.phoneticUs && (
+            <p className="text-base italic text-muted-foreground">
+              {currentSentence.phoneticUs}
             </p>
           )}
         </div>

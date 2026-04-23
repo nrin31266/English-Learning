@@ -264,7 +264,7 @@ const DebugTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
       </div>
 
       {/* Formula Summary */}
-      <div className="bg-slate-50 p-3 rounded-lg text-sm space-y-1">
+      <div className="bg-background/50 p-3 rounded-lg text-sm space-y-1">
         <div className="font-semibold">📊 Scoring Formula</div>
         <div className="font-mono text-xs">
           weightedAccuracy = ({totalScore.toFixed(2)} / ({totalWords} + {EXTRA_ALPHA} × {stats.extra})) × 100

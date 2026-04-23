@@ -2,7 +2,6 @@ package com.rin.dictionaryservice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rin.dictionaryservice.dto.*;
-import com.rin.dictionaryservice.exception.DictionaryErrorCode;
 import com.rin.dictionaryservice.mapper.DictionaryMapper;
 import com.rin.dictionaryservice.model.CefrLevel;
 import com.rin.dictionaryservice.model.Word;
@@ -12,7 +11,6 @@ import com.rin.dictionaryservice.repository.httpclient.DictionaryApiClient;
 import com.rin.dictionaryservice.utils.TextUtils;
 import com.rin.englishlearning.common.exception.BaseErrorCode;
 import com.rin.englishlearning.common.exception.BaseException;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
@@ -100,9 +98,7 @@ public class WordService {
 
     ) {
         String wordSoft = TextUtils.normalizeWordSoft(request.getText());
-        if (!isValidWord(wordSoft, request.getPosTag(), request.getEntityType())) {
-            throw new BaseException(BaseErrorCode.INVALID_REQUEST, "Invalid word: " + request.getText());
-        }
+
 
         // 1. Check DB
         Word existingWord = wordRepository
@@ -126,6 +122,9 @@ public class WordService {
                     .message("Word processing failed. Please try again later.")
                     .definitions(List.of())
                     .build();
+        }
+        if (!isValidWord(wordSoft, request.getPosTag(), request.getEntityType())) {
+            throw new BaseException(BaseErrorCode.INVALID_REQUEST, "Invalid word: " + request.getText());
         }
 
         // ===================== CREATE PENDING =====================

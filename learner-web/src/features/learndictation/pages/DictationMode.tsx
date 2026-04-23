@@ -58,10 +58,10 @@ const DictationMode = () => {
     const [isPlaying, setIsPlaying] = useState(false)
     const [showTranscript, setShowTranscript] = useState(true)
 
-    const handleSelectSentence = (index: number) => {
+    const handleSelectSentence = useCallback((index: number) => {
         setAutoPlayOnSentenceChange(true)
         setActiveIndex(index)
-    }
+    }, [])
 
     const isMobile = useIsMobile()
 
@@ -131,6 +131,15 @@ const DictationMode = () => {
     }, [handleNext, handlePrev])
 
     const currentSentence = sentences[activeIndex]
+
+    const handleCompleteSentence = useCallback((sentenceId: number) => {
+        setCompletedIds(prev => {
+            if (prev.has(sentenceId)) return prev // 🔥 tránh re-render nếu đã có
+            const next = new Set(prev)
+            next.add(sentenceId)
+            return next
+        })
+    }, [])
 
     return (
         <div className="flex min-h-[calc(100vh-64px)] flex-col gap-4 py-4 px-1">
@@ -275,25 +284,26 @@ const DictationMode = () => {
 
                     <div className="relative">
                         <DictationPanel
-                                key="dictation-panel"
-                                sentence={currentSentence}
-                                onNext={handleNext}
-                                onSubmit={() => {
-                                    console.log("Submit clicked for sentence", currentSentence.id)
-                                    setCompletedIds((prev) => new Set(prev).add(currentSentence.id))
-                                }}
-                                currentTemporaryAnswer={tempAnswersRef.current[currentSentence.id]}
-                                onTemporaryAnswerChange={(val) => {
-                                    tempAnswersRef.current[currentSentence.id] = val
-                                }}
-                            />
-                         <DictationTranscript
-                                sentences={sentences}
-                                activeIndex={activeIndex}
-                                onSelectSentence={handleSelectSentence}
-                                visible={showTranscript}
-                                completedIds={completedIds}
-                            />
+                            key="dictation-panel"
+                            sentence={currentSentence}
+                            onNext={handleNext}
+                            onSubmit={() => {
+                                handleCompleteSentence(currentSentence.id)
+                            }}
+                            currentTemporaryAnswer={tempAnswersRef.current[currentSentence.id]}
+                            onTemporaryAnswerChange={(val) => {
+                                tempAnswersRef.current[currentSentence.id] = val
+                            }}
+                       
+                            
+                        />
+                        <DictationTranscript
+                            sentences={sentences}
+                            activeIndex={activeIndex}
+                            onSelectSentence={handleSelectSentence}
+                            visible={showTranscript}
+                            completedIds={completedIds}
+                        />
                     </div>
                 </div>
             ) : (
@@ -338,8 +348,7 @@ const DictationMode = () => {
                                 sentence={currentSentence}
                                 onNext={handleNext}
                                 onSubmit={() => {
-                                    console.log("Submit clicked for sentence", currentSentence.id)
-                                    setCompletedIds((prev) => new Set(prev).add(currentSentence.id))
+                                    handleCompleteSentence(currentSentence.id)
                                 }}
                                 completed={completedIds.has(currentSentence.id)}
                                 currentTemporaryAnswer={tempAnswersRef.current[currentSentence.id]}
