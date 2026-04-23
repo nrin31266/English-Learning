@@ -243,7 +243,7 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
                         disabled={loading}
                         className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md transition-all duration-200"
                     >
-                        Continue
+                        {isAllCorrect && completed ? "Completed" : "Skip"}
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
