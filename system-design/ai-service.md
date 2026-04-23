@@ -1,11 +1,16 @@
 # 🧠 AI Service (Language Processing Service)
 
 ## 📌 Tổng quan
+
 `Language Processing Service` (FastAPI) là AI engine trung tâm của hệ thống, chịu trách nhiệm:
-- Xử lý **speech-to-text** cho shadowing và lesson generation.
-- Phân tích **NLP** cho sentence/word.
-- Vận hành **worker nền** cho pipeline từ vựng.
-- Tích hợp với **Kafka**, **Redis** và **Cloudinary**.
+
+- Xử lý **speech-to-text (STT)** cho shadowing và lesson generation  
+- Phân tích **NLP** cho sentence và word  
+- Tính toán **shadowing scoring** theo từng từ  
+- Vận hành **worker nền** cho pipeline từ vựng  
+- Tích hợp với **Kafka, Redis, Cloudinary**  
+
+---
 
 ## 🧩 Kiến trúc module
 
@@ -14,101 +19,199 @@
 | Router | Vai trò |
 |---|---|
 | `/speech-to-text` | Upload audio, transcribe, chấm shadowing |
-| `/spacy` | Phân tích từ theo ngữ cảnh (lemma, POS, tag, dep) |
+| `/spacy` | Phân tích ngữ pháp (lemma, POS, dependency) |
 | `/tts` | Sinh audio phát âm |
-| `/ai-jobs` | Tạo `aiJobId` cho pipeline lesson generation |
+| `/ai-jobs` | Tạo và quản lý `aiJobId` cho pipeline |
+
+---
 
 ### Service nội bộ
 
 | Service | Vai trò |
 |---|---|
-| `speech_to_text_service` | WhisperX transcribe + align, lazy-load model |
-| `shadowing_service` | So khớp expected/recognized, tính điểm chính xác |
-| `gemini/analyzer` | NLP sentence batch và word enrichment |
-| `media_service` | Tải audio từ YouTube/file nguồn |
-| `word_processor` | Pipeline word: analyze -> TTS -> upload |
+| `speech_to_text_service` | WhisperX transcribe + word alignment |
+| `shadowing_service` | So khớp expected/actual, tính điểm |
+| `gemini/analyzer` | NLP sentence batch + word enrichment |
+| `media_service` | Tải audio từ YouTube/file |
+| `word_processor` | Pipeline xử lý từ (NLP → TTS → upload) |
+
+---
 
 ## 🎙️ Speech-to-Text
-- Công nghệ: **WhisperX + librosa + torch**.
-- Đầu ra chuẩn hóa:
+
+- Công nghệ: **WhisperX + librosa + torch**
+- Output chuẩn hóa:
   - `language`
   - `segments`
-  - `words` có timestamp
-- Ứng dụng:
-  - Chấm shadowing theo từng từ.
-  - Làm dữ liệu đầu vào tạo sentence/word metadata cho lesson.
+  - `words` (có timestamp)
+
+### Vai trò
+
+- Input cho:
+  - Shadowing scoring  
+  - Pipeline tạo lesson  
+- Đảm bảo:
+  - Word-level alignment (rất quan trọng cho scoring)
+
+---
+
+## 🎯 Shadowing Scoring
+
+### 1. Alignment (DP)
+
+- Sử dụng **Dynamic Programming**
+- So khớp:
+  - `expectedWords` vs `recognizedWords`
+- Giải quyết:
+  - Thừa từ
+  - Thiếu từ
+  - Tránh lệch dây chuyền
+
+---
+
+### 2. Word Classification
+
+Mỗi từ được classify:
+
+
+CORRECT / NEAR / WRONG / MISSING / EXTRA
+
+
+---
+
+### 3. Phoneme / IPA Analysis with CMU
+
+- Với `NEAR` / `WRONG`:
+  - So sánh IPA expected vs actual
+  - Trả về:
+    - `phonemeDiff`
+    - score theo phoneme
+- Với `EXTRA / MISSING`:
+  - Trả IPA để UI giải thích
+
+---
+
+### 4. Sentence-level Metrics
+
+- `accuracy`
+- `weightedAccuracy` (có penalty cho extra/missing)
+- `fluencyScore`
+- `speechRate`, `avgPause`
+
+---
+
+### 👉 Output trả về cho frontend
+
+- Danh sách word + trạng thái
+- Điểm tổng
+- Metadata phục vụ highlight UI
+
+---
+
+## 🔄 Flow Shadowing (thực tế)
+
+
+Frontend (record audio)
+→ API Gateway
+→ /speech-to-text/transcribe
+→ WhisperX
+→ Alignment + Scoring
+→ Response (JSON)
+→ UI render + feedback sound
+
+
+---
 
 ## 🔍 NLP (spaCy + Gemini)
 
 ### spaCy
-- Phân tích hình thái và ngữ pháp từ trong ngữ cảnh:
-  - lemma, POS, tag, dependency, entity.
-- Dùng để validate từ hợp lệ trước khi đẩy vào pipeline dictionary.
+
+- Phân tích:
+  - lemma
+  - POS
+  - dependency
+  - entity
+- Dùng để:
+  - Validate word hợp lệ
+  - Chuẩn hóa dữ liệu
+
+---
 
 ### Gemini
-- Phân tích sentence theo batch:
-  - dịch nghĩa, phiên âm, enrichment metadata.
-- Phân tích word:
-  - `isValid`, CEFR, definitions, phonetics, summary.
-- Mô hình được cấu hình trả về **JSON format** để map DTO ổn định.
+
+- Sentence:
+  - Dịch nghĩa
+  - Phân tích ngữ cảnh
+- Word:
+  - `isValid`
+  - CEFR
+  - definitions
+  - phonetics
+- Output luôn ở dạng **JSON** để map DTO ổn định
+
+---
 
 ## 🚀 Kafka Consumer Pipeline
-- Topic consume:
-  - `lesson-generation-requested-v1`
-- Handler chính:
-  - `handle_lesson_generation_requested`
-- Chuỗi xử lý:
-  - tải audio -> transcribe -> NLP -> publish step update
-- Topic publish:
-  - `lesson-processing-step-updated-v1`
+
+### Consume
+
+- Topic: `lesson-generation-requested-v1`
+
+### Flow
+
+
+Fetch audio
+→ Transcribe
+→ NLP analyze
+→ Publish step update
+
+
+### Publish
+
+- `lesson-processing-step-updated-v1`
+
+---
 
 ## ⚙️ Worker xử lý từ vựng
-- `WordWorker` chạy như process riêng, polling Dictionary internal API.
-- Claim job theo batch bằng `worker_id`.
-- Xử lý tuần tự từng từ để giảm rủi ro quá tải model/API.
-- Có cơ chế chờ khi gặp giới hạn tốc độ (`429`).
-- Report kết quả thành công/thất bại về Dictionary Service.
+
+- Chạy như process riêng (`WordWorker`)
+- Poll Dictionary Service để lấy job
+- Xử lý tuần tự từng từ:
+
+
+Analyze → Generate TTS → Upload → Save result
+
+
+### Đặc điểm
+
+- Batch claim theo `worker_id`
+- Retry khi lỗi
+- Handle rate limit (`429`)
+- Tránh overload model/API
+
+---
 
 ## 🧮 Redis Usage
-- Mục đích chính: lưu trạng thái **hủy AI job**.
-- Key pattern:
-  - `aiJobStatus:{aiJobId}`
-- Learning Content Service set `CANCELLED` khi người dùng hủy job.
-- LPS kiểm tra key trước/sau các bước để dừng pipeline sớm, tránh tốn tài nguyên.
+
+- Lưu trạng thái **cancel AI job**
+
+### Key
+
+
+aiJobStatus:{aiJobId}
+
+
+### Cách hoạt động
+
+- Learning Content Service set `CANCELLED`
+- AI Service check trước/sau mỗi bước
+- Dừng pipeline sớm → tiết kiệm tài nguyên
+
+---
 
 ## ☁️ Cloudinary Storage
-- Lưu trữ artifact AI phục vụ học tập và tái sử dụng dữ liệu:
-  - Audio lesson đã xử lý.
-  - Metadata JSON của lesson.
-  - Audio phát âm UK/US cho từ vựng.
 
-### API upload chính
-- `upload_file`: upload audio/video resource.
-- `upload_json_content`: upload metadata dạng raw JSON.
+Lưu:
 
-## 📊 Tóm tắt quyết định kỹ thuật trong AI Service
-
-| Thành phần | Lý do chọn |
-|---|---|
-| WhisperX | Có word-level timestamp, phù hợp chấm shadowing |
-| spaCy | Nhanh, ổn định cho xử lý ngữ pháp từ |
-| Gemini | Mạnh trong semantic enrichment cho sentence/word |
-| Kafka | Tách xử lý nặng khỏi request đồng bộ |
-| Redis | Kiểm soát trạng thái hủy job tức thời |
-| Cloudinary | Lưu trữ media/metadata tập trung, dễ tích hợp |
-
-##Quản lý worker logs
-# Xem realtime
-tail -f logs/word_worker_1.log
-
-# Xem toàn bộ log
-cat logs/word_worker_1.log
-
-# Xem 50 dòng cuối
-tail -n 50 logs/word_worker_1.log
-
-# Kiểm tra worker đang chạy
-pgrep -af word_worker
-
-# Dừng tất cả worker
-pkill -f word_worker
+- Audio lesson
+- Audio
