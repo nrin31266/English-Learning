@@ -19,7 +19,8 @@ public enum LearningContentErrorCode implements ErrorCode {
     INVALID_STATE(1009, "Invalid state for lesson with id: %s. Expected state: %s", HttpStatus.BAD_REQUEST),
 
     WORD_NOT_FOUND(1010, "Word not found with id: %s", HttpStatus.NOT_FOUND),
-    SENTENCE_NOT_IN_SAME_LESSON(1011, "Sentences with ids: %s and %s are not in the same lesson", HttpStatus.BAD_REQUEST)
+    SENTENCE_NOT_IN_SAME_LESSON(1011, "Sentences with ids: %s and %s are not in the same lesson", HttpStatus.BAD_REQUEST),
+    LESSON_PROGRESS_NOT_FOUND(1012, "Lesson progress not found for user id: %s and lesson id: %s", HttpStatus.NOT_FOUND)
     ;
 
 

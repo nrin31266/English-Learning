@@ -16,11 +16,14 @@ import com.rin.learningcontentservice.dto.response.*;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
 import com.rin.learningcontentservice.kafka.KafkaProducer;
 import com.rin.learningcontentservice.mapper.LessonMapper;
+import com.rin.learningcontentservice.mapper.LessonShadowingProgressMapper;
 import com.rin.learningcontentservice.model.Lesson;
 import com.rin.learningcontentservice.model.LessonSentence;
 import com.rin.learningcontentservice.model.LessonWord;
 import com.rin.learningcontentservice.model.Topic;
+import com.rin.learningcontentservice.model.shadowing.LessonShadowingProgress;
 import com.rin.learningcontentservice.repository.LessonRepository;
+import com.rin.learningcontentservice.repository.LessonShadowingProgressRepository;
 import com.rin.learningcontentservice.repository.TopicRepository;
 import com.rin.learningcontentservice.repository.httpclient.LanguageProcessingClient;
 import com.rin.learningcontentservice.repository.specification.LessonSpecifications;
@@ -33,6 +36,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -53,6 +58,8 @@ public class LessonService {
     private final KafkaProducer kafkaProducer;
     private final LanguageProcessingClient languageProcessingClient;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final LessonShadowingProgressMapper lessonShadowingProgressMapper;
+    private final LessonShadowingProgressRepository lessonShadowingProgressRepository;
     //
     private final ApplicationEventPublisher eventPublisher;
 
@@ -166,14 +173,70 @@ public class LessonService {
         return ld;
     }
     @Transactional
-    public LessonDetailsResponse getLessonDetailsWithoutInActivateSentences(String slug) {
+    public LessonDetailsResponse getLessonDetailsWithoutInActivateSentences(String slug, String mode) {
         var ld = getLessonDetails(slug);
         ld.setSentences(
                 ld.getSentences().stream()
                         .filter(s -> s.getIsActive() != null && s.getIsActive())
                         .toList()
         );
+        switch (mode){
+            case "SHADOWING" -> attachShadowingProgressIfUserLoggedIn(ld);
+            case "DICTATION" -> {
+                // For dictation, we can also attach progress or other relevant info if needed
+                // For now, we will not attach any additional info for dictation mode
+            }
+             default -> {
+                 // No additional processing for other modes
+            }
+        }
         return ld;
+    }
+
+    private void attachShadowingProgressIfUserLoggedIn(LessonDetailsResponse ld) {
+
+        String userId = getCurrentUserId();
+        if (userId == null) {
+            return;
+        }
+
+        LessonShadowingProgress progress =
+                lessonShadowingProgressRepository
+                        .findByUserIdAndLessonId(userId, ld.getId())
+                        .orElseGet(() ->
+                                buildDefaultProgress(userId, ld.getId(), ld)
+                        );
+
+        ld.setProgress(lessonShadowingProgressMapper.lessonShadowingProgressDto(progress));
+    }
+    private LessonShadowingProgress buildDefaultProgress(String userId, Long lessonId, LessonDetailsResponse ld) {
+        return lessonShadowingProgressRepository.save(
+                LessonShadowingProgress.builder()
+                        .userId(userId)
+                        .lessonVersion(ld.getVersion() == null ? 0 : ld.getVersion())
+                        .lessonId(lessonId)
+                        .completedSentences(0)
+                        .completed(false)
+                        .totalSentences(ld.getSentences().size()) // Vì đã lọc ra inactivate sentences nên totalSentences cũng phải dựa trên số lượng sentences sau khi lọc
+                        .sentenceAttempts(new ArrayList<>())
+                        .build()
+        );
+    }
+
+    private String getCurrentUserId() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof Jwt jwt) {
+            return jwt.getSubject(); // sub
+        }
+
+        return null;
     }
 
     public LessonSummaryResponse cancelLessonGeneration(Long lessonId) {
@@ -208,6 +271,9 @@ public class LessonService {
         return lessonMapper.toLessonSummaryResponse(lesson);
 
     }
+    private void removeUserProcessIfExists(Lesson lesson) {
+        lessonShadowingProgressRepository.removeByLessonId(lesson.getId());
+    }
     @Transactional
     public void completeLessonWithMetadata(Long lessonId, String aiMetadataUrl) {
 
@@ -217,6 +283,8 @@ public class LessonService {
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(lessonId)
                 )
         );
+
+        removeUserProcessIfExists(lesson);
 
         AiMetadataDto metadata = fetchMetadataFromUrl(aiMetadataUrl);
         if (metadata == null) {
@@ -270,7 +338,10 @@ public class LessonService {
         }
     }
 
+
     private List<LessonSentence> buildSentences(Lesson lesson, AiMetadataDto metadata) {
+
+
 
         List<LessonSentence> builtSentences = new ArrayList<>();
 
@@ -332,6 +403,8 @@ public class LessonService {
             return lessonWords;
         }
 
+
+
         int charCursor = 0;
 
         for (int wIdx = 0; wIdx < seg.getWords().size(); wIdx++) {
@@ -339,6 +412,7 @@ public class LessonService {
             WordMetadata w = seg.getWords().get(wIdx);
 
             String wordText = w.getWord() != null ? w.getWord().trim() : "";
+
 
             int startChar = -1;
             int endChar = -1;

@@ -1,10 +1,12 @@
 import { useAppDispatch, useAppSelector } from "@/store"
-import { fetchLessonBySlug } from "@/store/lessonForShadowingSlide"
-import  { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { fetchLessonBySlug, resetLessonState, submitShadowingScore, updateSentenceCompletion } from "@/store/lessonForShadowingSlide"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
 import type { ILessonSentenceDetailsResponse } from "@/types"
-
+import type {
+  LessonShadowingProgress
+} from "@/types/shadowingProgress"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import {
   ArrowLeft,
+  CheckCircle2,
   Loader2
 } from "lucide-react"
 
@@ -36,8 +39,8 @@ const ShadowingMode = () => {
   const dispatch = useAppDispatch()
   const [showHelp, setShowHelp] = useState(false)
   const lessonState = useAppSelector((state) => state.lessonForShadowing.lesson)
-  const { data: lesson, status, error } = lessonState
-
+  const completedIds = useAppSelector((state) => state.lessonForShadowing.completedIds)
+  const { data: lesson, status, error, } = lessonState
   const [autoStop, setAutoStop] = useState(true)
   const [largeVideo, setLargeVideo] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -45,8 +48,12 @@ const ShadowingMode = () => {
   const [userInteracted, setUserInteracted] = useState(false)
   const [showTranscript, setShowTranscript] = useState(true)
 
-  // 👈 THÊM: state lưu các câu đã hoàn thành
-  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set())
+  useEffect(() => {
+    return () => {
+      // Cleanup: reset lesson state when unmounting
+      dispatch(resetLessonState()) // Reset completion
+    }
+  },[])
 
   // 👈 THÊM: ref lưu completedIds để dùng trong callback không cần dependency
   const completedIdsRef = useRef(completedIds)
@@ -60,7 +67,7 @@ const ShadowingMode = () => {
 
   useEffect(() => {
     if (slug) {
-      dispatch(fetchLessonBySlug(slug))
+      dispatch(fetchLessonBySlug(slug));
     }
   }, [dispatch, slug])
 
@@ -68,8 +75,7 @@ const ShadowingMode = () => {
     setActiveIndex(0)
     setAutoPlayOnSentenceChange(true)
     setUserInteracted(false)
-    // 👈 THÊM: reset completed khi chuyển bài
-    setCompletedIds(new Set())
+
   }, [lesson?.id])
 
   const isLoading = status === "idle" || status === "loading"
@@ -110,15 +116,20 @@ const ShadowingMode = () => {
     setActiveIndex(index)
   }, [])
 
-  // 👈 THÊM: hàm mark câu đã hoàn thành
-  const handleCompleteSentence = useCallback((sentenceId: number) => {
-    setCompletedIds(prev => {
-      if (prev.has(sentenceId)) return prev
-      const next = new Set(prev)
-      next.add(sentenceId)
-      return next
-    })
-  }, [])
+  // 👈 SỬA: handleCompleteSentence nhận thêm score để gọi API
+  const handleCompleteSentence = useCallback((sentenceId: number, fluencyScore: number, score: number) => {
+
+    console.log("handleCompleteSentence called with:", { sentenceId, fluencyScore, score })
+    // Gọi API
+    if (lesson?.id) {
+      dispatch(submitShadowingScore({
+        lessonId: lesson.id,
+        sentenceId: sentenceId,
+        fluencyScore: fluencyScore,
+        score: score,
+      }))
+    }
+  }, [dispatch, lesson?.id])
 
   const handleBackToTopic = () => {
     if (lesson?.topic) {
@@ -207,6 +218,12 @@ const ShadowingMode = () => {
                 ) : (
                   <AudioFileTag />
                 )}
+                {lesson.progress?.completed && (
+                  <div className="ml-3 flex items-center gap-1 text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="text-xs font-medium">Completed</span>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -268,14 +285,14 @@ const ShadowingMode = () => {
         // 👈 SỬA: Grid layout 12 cột như dictation
         <div className={cn(
           "grid gap-4 mt-2",
-          showTranscript 
-            ? "grid-cols-1 lg:grid-cols-12" 
+          showTranscript
+            ? "grid-cols-1 lg:grid-cols-12"
             : "grid-cols-1 lg:grid-cols-12"
         )}>
           {/* LEFT COLUMN: Player + ActiveSentencePanel */}
           <div className={cn(
             "flex flex-col gap-4",
-            showTranscript 
+            showTranscript
               ? "lg:col-span-8"
               : "lg:col-span-8 lg:col-start-3"
           )}>

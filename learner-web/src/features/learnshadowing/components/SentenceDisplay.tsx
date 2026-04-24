@@ -51,6 +51,7 @@ const SentenceDisplay = ({
       </p>
     )
   }
+  console.log("Rendering SentenceDisplay with words", { sortedWords }) // Debug log để kiểm tra dữ liệu words và quá trình sort
   return (
     <div className={`flex flex-wrap justify-center gap-2 leading-relaxed ${className}`}>
       {sortedWords.map((word, index) => (
@@ -74,4 +75,10 @@ const SentenceDisplay = ({
   )
 }
 
-export default React.memo(SentenceDisplay)
+export default React.memo(SentenceDisplay, (prev, next) => {
+  return (
+    (prev.words?.[0]?.id ?? null) === (next.words?.[0]?.id ?? null) &&
+    prev.fallbackText === next.fallbackText &&
+    prev.className === next.className
+  )
+})

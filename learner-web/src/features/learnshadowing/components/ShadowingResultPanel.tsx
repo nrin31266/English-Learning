@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Sparkles, Target, Bug } from "lucide-react"
 import type { IPhonemeDiff, IShadowingResult } from "@/types"
@@ -9,9 +9,11 @@ import {
   PopoverContent,
 } from "@/components/ui/popover"
 import { SHADOWING_THRESHOLD } from "./ActiveSentencePanel"
+import SkeletonBlock from "@/components/SkeletonBlock"
 interface Props {
-  result: IShadowingResult
+  result: IShadowingResult | null
   className?: string
+  isLoading: boolean
 }
 
 // ===== GIỮ NGUYÊN LOGIC CỦA BẠN =====
@@ -81,7 +83,7 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
               key={c.position}
             >
               <div className="flex flex-col items-center">
-                <PopoverTrigger 
+                <PopoverTrigger
                   asChild
                   onClick={() => setOpenPopoverPosition((prev) => prev === c.position ? null : c.position)}
                   onMouseEnter={() => setOpenPopoverPosition(c.position)}
@@ -407,25 +409,86 @@ const DebugTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
     </div>
   )
 }
+
 // ===== MAIN =====
-const ShadowingResultPanel: React.FC<Props> = ({ result, className }) => {
+const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading }) => {
   const [tab, setTab] = useState<"result" | "debug">("result")
+  const [showResult, setShowResult] = useState(false)
+
+  // 👉 Delay 150ms để audio play trước
+  useEffect(() => {
+    if (!isLoading && result) {
+      const timer = setTimeout(() => setShowResult(true), 150)
+      return () => clearTimeout(timer)
+    } else {
+      setShowResult(false)
+    }
+  }, [isLoading, result])
+
+  // 👉 Đang loading HOẶC đang delay (chưa show result)
+  const isSkeleton = isLoading || (!!result && !showResult)
+
+  if (isSkeleton) {
+    return (
+      <div className={cn("rounded-2xl border bg-card p-4 flex flex-col gap-4 w-full", className)}>
+        <div className="flex gap-2 border-b">
+          <div className="px-4 py-2 text-sm font-medium text-muted-foreground">Result</div>
+          <div className="px-4 py-2 text-sm font-medium text-muted-foreground">Debug</div>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="animate-pulse bg-muted rounded-lg h-6 w-1/3" />
+          <div className="animate-pulse bg-muted rounded-lg h-10 w-full" />
+          <div className="animate-pulse bg-muted rounded-lg h-10 w-full" />
+          <div className="animate-pulse bg-muted rounded-lg h-10 w-2/3" />
+        </div>
+      </div>
+    )
+  }
+
+  // 👉 Không có result
+  if (!result) {
+    return (
+      <div className={cn("rounded-2xl border bg-card p-4 flex flex-col gap-4 w-full", className)}>
+        <div className="text-center text-sm text-muted-foreground py-8">
+          No result yet. Record your voice to see feedback.
+        </div>
+      </div>
+    )
+  }
+
+  // 👉 Render result thật
+  console.log("Rendering ShadowingResultPanel", { 
+    weightedAccuracy: result.weightedAccuracy, 
+    fluencyScore: result.fluencyScore 
+  })
 
   return (
     <div className={cn("rounded-2xl border bg-card p-4 flex flex-col gap-4 w-full", className)}>
-      {/* Tab buttons */}
       <div className="flex gap-2 border-b">
-        <button onClick={() => setTab("result")} className={cn("px-4 py-2 text-sm font-medium", tab === "result" && "border-b-2 border-primary text-primary")}>
+        <button
+          onClick={() => setTab("result")}
+          className={cn(
+            "px-4 py-2 text-sm font-medium transition",
+            tab === "result" && "border-b-2 border-primary text-primary"
+          )}
+        >
           Result
         </button>
-        <button onClick={() => setTab("debug")} className={cn("px-4 py-2 text-sm font-medium flex items-center gap-1", tab === "debug" && "border-b-2 border-primary text-primary")}>
+        <button
+          onClick={() => setTab("debug")}
+          className={cn(
+            "px-4 py-2 text-sm font-medium flex items-center gap-1 transition",
+            tab === "debug" && "border-b-2 border-primary text-primary"
+          )}
+        >
           <Bug className="h-3.5 w-3.5" /> Debug
         </button>
       </div>
 
-      {/* Content */}
-      {tab === "result" && <YourResultTab result={result} />}
-      {tab === "debug" && <DebugTab result={result} />}
+      <div className="animate-fade-in">
+        {tab === "result" && <YourResultTab result={result} />}
+        {tab === "debug" && <DebugTab result={result} />}
+      </div>
     </div>
   )
 }

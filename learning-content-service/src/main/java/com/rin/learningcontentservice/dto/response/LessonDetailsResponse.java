@@ -1,6 +1,7 @@
 package com.rin.learningcontentservice.dto.response;
 
 import com.rin.englishlearning.common.constants.*;
+import com.rin.learningcontentservice.model.shadowing.LessonShadowingProgress;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -39,4 +40,7 @@ public class LessonDetailsResponse {
     private Timestamp publishedAt;
     private String aiMetadataUrl;
     private List<LessonSentenceDetailsResponse> sentences;
+    private Integer version;
+
+    private LessonShadowingProgressDto progress;
 }

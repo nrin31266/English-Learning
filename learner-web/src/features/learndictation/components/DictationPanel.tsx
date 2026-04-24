@@ -126,7 +126,7 @@ const DictationPanel = ({ sentence, onSubmit, onNext, progress, loading = false,
     }
 
     return (
-        <div className="flex w-full flex-col gap-0 overflow-hidden rounded-xl border bg-gradient-to-br from-card to-card/80 shadow-lg">
+        <div className="flex w-full flex-col gap-0 overflow-hidden rounded-xl border bg-gradient-to-br from-card to-card/80 shadow-lg z-10">
             {/* Header */}
             <div className="relative overflow-hidden border-b px-5 py-4 flex flex-col gap-4">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />

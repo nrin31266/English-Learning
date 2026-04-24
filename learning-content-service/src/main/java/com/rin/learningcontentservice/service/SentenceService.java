@@ -113,6 +113,7 @@ public class SentenceService {
 
         Lesson lesson = sentence.getLesson();
         lesson.setTotalSentences((lesson.getTotalSentences() != null ? lesson.getTotalSentences() : 0) + 1);
+        lesson.setVersion(lesson.getVersion() == null ? 1 : lesson.getVersion());// default ver 0
         lessonRepository.save(lesson);
         lessonSentenceRepository.flush();
 
@@ -221,6 +222,9 @@ public class SentenceService {
         lesson.setTotalSentences(
                 (lesson.getTotalSentences() != null ? lesson.getTotalSentences() : 0) - 1
         );
+
+        //
+        lesson.setVersion(lesson.getVersion() == null ? 1 : lesson.getVersion());// default ver 0
         lessonRepository.save(lesson);
 
         lessonSentenceRepository.flush();

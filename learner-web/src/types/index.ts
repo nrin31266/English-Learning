@@ -1,3 +1,5 @@
+import type { LessonShadowingProgress } from "./shadowingProgress"
+
 export interface ITranscriptionResponse {
   id: string
   filename: string
@@ -111,6 +113,7 @@ export interface ILessonSentenceDetailsResponse {
   updatedAt: string;
 
   lessonWords: ILessonWordResponse[];
+
 }
 // ILessonWord
 export interface ILessonWordResponse {
@@ -161,6 +164,7 @@ export interface ILessonDetailsResponse {
   aiMessage: string | null
   aiMetadataUrl?: string | null
   sentences: ILessonSentenceDetailsResponse[];
+  progress: LessonShadowingProgress;
 }
 
 // LTopicResponse
@@ -172,6 +176,7 @@ export interface ITopicDetailsResponse{
   totalLessons: number
   lessons: IHomeLessonResponse[]
 }
+
 
 
 // ActiveTopicMinimalResponse

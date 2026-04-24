@@ -23,7 +23,8 @@
         @Id
         @GeneratedValue(strategy = GenerationType.IDENTITY)
         private Long id;
-
+        @Column(name = "lesson_version")
+        private Integer version = 0;
         // ───────────────────────────────────────────
         // Topic reference
         @ManyToOne(fetch = FetchType.LAZY)

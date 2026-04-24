@@ -18,7 +18,7 @@ type ShadowingTranscriptProps = {
   activeIndex: number
   onSelectSentence: (index: number) => void
   visible?: boolean
-  completedIds?: Set<number>
+  completedIds: number[]
 }
 
 // Component con với custom compare
@@ -116,7 +116,7 @@ const ShadowingTranscript = ({
   activeIndex,
   onSelectSentence,
   visible = true,
-  completedIds = new Set(),
+  completedIds = []
 }: ShadowingTranscriptProps) => {
   const [showIPA, setShowIPA] = useState(false)
   const [showTranslation, setShowTranslation] = useState(true)

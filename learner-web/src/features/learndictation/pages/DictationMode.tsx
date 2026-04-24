@@ -227,8 +227,8 @@ const DictationMode = () => {
                     showTranscript
                         ? "lg:col-span-8"      // có transcript: chiếm 8 cột
                         : "lg:col-span-8 lg:col-start-3" // không transcript: col-start-3 (căn giữa 8 cột)
-                )}>
-                    <Player
+                )}><div className="sticky top-4">
+<Player
                             ref={playerRef}
                             lesson={lesson}
                             currentSentence={currentSentence}
@@ -248,6 +248,8 @@ const DictationMode = () => {
                             onPlaybackRateChange={setPlaybackRate}
                             onShowShortcuts={() => setShowHelp(true)}
                         />
+                </div>
+                    
                         <KeyboardShortcutsHelp open={showHelp} onClose={() => setShowHelp(false)} />
                     <DictationPanel
                         key="dictation-panel"

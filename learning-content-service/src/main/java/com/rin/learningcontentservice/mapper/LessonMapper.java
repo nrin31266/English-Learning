@@ -17,11 +17,12 @@ public interface LessonMapper {
 
     LessonSummaryResponse toLessonSummaryResponse(Lesson lesson);
 
+
     LessonResponse toLessonResponse(Lesson lesson);
 
     HomeLessonResponse  toHomeLessonResponse(Lesson lesson);
 
-
+    @Mapping(target = "progress", ignore = true)
     LessonDetailsResponse toLessonDetailsResponse(Lesson lesson);
 
     void updateLessonFromRequest(EditLessonRequest lessonRequest, @MappingTarget Lesson lesson);

@@ -51,6 +51,7 @@ public class LessonWord {
     @Column(name = "entity_type", length = 50)
     private String entityType;   // VD: PERSON, GPE, ORG
 
+
     // ───────────────────────────────────────────
     // CHAR POSITIONING IN DISPLAY SENTENCE
     @Column(name = "start_char_index")

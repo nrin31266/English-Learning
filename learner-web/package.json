@@ -36,6 +36,7 @@
     "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "howler": "^2.2.4",
     "i18next": "^25.6.3",
     "keycloak-js": "^26.2.1",
     "lucide-react": "^0.548.0",
@@ -56,6 +57,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "@types/howler": "^2.2.12",
     "@types/node": "^24.9.1",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
