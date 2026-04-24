@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Sparkles, Target, Bug } from "lucide-react"
 import type { IPhonemeDiff, IShadowingResult } from "@/types"
@@ -413,22 +413,9 @@ const DebugTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
 // ===== MAIN =====
 const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading }) => {
   const [tab, setTab] = useState<"result" | "debug">("result")
-  const [showResult, setShowResult] = useState(false)
 
-  // 👉 Delay 150ms để audio play trước
-  useEffect(() => {
-    if (!isLoading && result) {
-      const timer = setTimeout(() => setShowResult(true), 150)
-      return () => clearTimeout(timer)
-    } else {
-      setShowResult(false)
-    }
-  }, [isLoading, result])
-
-  // 👉 Đang loading HOẶC đang delay (chưa show result)
-  const isSkeleton = isLoading || (!!result && !showResult)
-
-  if (isSkeleton) {
+  // 👉 Nếu đang loading, chỉ hiển thị skeleton
+  if (isLoading) {
     return (
       <div className={cn("rounded-2xl border bg-card p-4 flex flex-col gap-4 w-full", className)}>
         <div className="flex gap-2 border-b">
@@ -436,10 +423,10 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading })
           <div className="px-4 py-2 text-sm font-medium text-muted-foreground">Debug</div>
         </div>
         <div className="flex flex-col gap-3">
-          <div className="animate-pulse bg-muted rounded-lg h-6 w-1/3" />
-          <div className="animate-pulse bg-muted rounded-lg h-10 w-full" />
-          <div className="animate-pulse bg-muted rounded-lg h-10 w-full" />
-          <div className="animate-pulse bg-muted rounded-lg h-10 w-2/3" />
+          <SkeletonBlock className="h-6 w-1/3" />
+          <SkeletonBlock className="h-10 w-full" />
+          <SkeletonBlock className="h-10 w-full" />
+          <SkeletonBlock className="h-10 w-2/3" />
         </div>
       </div>
     )
@@ -456,7 +443,6 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading })
     )
   }
 
-  // 👉 Render result thật
   console.log("Rendering ShadowingResultPanel", { 
     weightedAccuracy: result.weightedAccuracy, 
     fluencyScore: result.fluencyScore 
@@ -481,7 +467,7 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading })
             tab === "debug" && "border-b-2 border-primary text-primary"
           )}
         >
-          <Bug className="h-3.5 w-3.5" /> Debug
+          Debug
         </button>
       </div>
 
