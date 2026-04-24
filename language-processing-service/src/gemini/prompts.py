@@ -1,50 +1,82 @@
 from string import Template
 
 SENTENCE_PROMPT_TEMPLATE = Template("""
-You are an English linguistic interpretation engine.
+You are a deterministic English phonetics engine.
 
 TASK:
-Analyze up to $max_sentences English sentences.
-For EACH sentence, return:
-- UK IPA (full sentence)
-- US IPA (full sentence)
-- Natural Vietnamese translation
+For each sentence:
+- Generate UK IPA (full sentence)
+- Generate US IPA (full sentence)
+- Generate word-level IPA STRICTLY aligned with provided words
+- Generate Vietnamese translation
 
-INPUT (JSON):
-A JSON array of objects:
+INPUT:
 [
-  { "orderIndex": number, "text": "sentence text" }
+  {
+    "orderIndex": number,
+    "text": "sentence text",
+    "words": [
+      { "orderIndex": number, "wordText": "original token" }
+    ]
+  }
 ]
 
-STRICT REQUIREMENTS:
-1) Output MUST be valid JSON ONLY. No markdown. No code fences.
-2) Output MUST be a JSON array with EXACTLY the same number of items as input.
-3) Each input orderIndex MUST appear exactly once in output.
-4) Keep ordering by orderIndex ascending.
-5) Do NOT rewrite or fix grammar of input text.
+HARD CONSTRAINTS (MUST FOLLOW):
+1) Output MUST be valid JSON ONLY. No markdown, no explanations.
+2) The number of output items MUST equal input items.
+3) Each sentence MUST preserve its original orderIndex.
+4) The "words" array MUST:
+   - Have EXACT SAME length as input.words
+   - Preserve EXACT orderIndex values
+   - Map 1-to-1 with input words (no missing, no extra)
+5) DO NOT:
+   - Split words
+   - Merge words
+   - Remove punctuation
+   - Reorder anything
+6) If structure does not strictly match input, the result is INVALID.
 
-OUTPUT FORMAT (JSON array only):
+OUTPUT FORMAT:
 [
   {
     "orderIndex": number,
     "phoneticUk": "",
     "phoneticUs": "",
+    "words": [
+      {
+        "orderIndex": number,
+        "ipaRaw": "",
+        "ipa": ""
+      }
+    ],
     "translationVi": ""
   }
 ]
 
-PHONETICS RULES:
-- Use IPA, full sentence only (do not split words).
-- Best effort. If truly unsure, use "".
+IPA RULES:
+- "ipaRaw": MUST preserve original punctuation from wordText.
+- "ipa": MUST be the same pronunciation WITHOUT punctuation.
+- Example:
+  "Hello," → ipaRaw: "həˈloʊ,", ipa: "həˈloʊ"
+  "world!" → ipaRaw: "wɝːld!", ipa: "wɝːld"
+- Use standard IPA.
+- DO NOT skip any word, even if unsure.
+
+SENTENCE IPA RULES:
+- Natural spoken IPA for the full sentence (not word-by-word concatenation).
 
 TRANSLATION RULES:
-- Natural Vietnamese, đúng ngữ cảnh.
-- Do not translate word-by-word.
+- Natural Vietnamese, correct context.
 
-NOW ANALYZE:
+FAIL CONDITIONS:
+- Missing any word
+- Different word count
+- Different orderIndex
+- Invalid JSON
+
+NOW PROCESS:
 $sentences_json
 """)
-
 
 WORD_ANALYSIS_PROMPT_TEMPLATE = Template("""
 You are an English lexical analysis engine.

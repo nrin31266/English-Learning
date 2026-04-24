@@ -340,15 +340,11 @@ public class LessonService {
 
 
     private List<LessonSentence> buildSentences(Lesson lesson, AiMetadataDto metadata) {
-
-
-
         List<LessonSentence> builtSentences = new ArrayList<>();
 
         if (metadata.getTranscribed() == null ||
                 metadata.getTranscribed().getSegments() == null ||
                 metadata.getTranscribed().getSegments().isEmpty()) {
-
             log.warn("No segments found in metadata for lesson {}", lesson.getId());
             return builtSentences;
         }
@@ -358,14 +354,12 @@ public class LessonService {
         Map<Integer, SentenceMetadata> nlpSentenceMap = new HashMap<>();
         if (metadata.getNlpAnalyzed() != null &&
                 metadata.getNlpAnalyzed().getSentences() != null) {
-
             for (SentenceMetadata s : metadata.getNlpAnalyzed().getSentences()) {
                 nlpSentenceMap.put(s.getOrderIndex(), s);
             }
         }
 
         for (int idx = 0; idx < segments.size(); idx++) {
-
             SegmentMetadata seg = segments.get(idx);
             SentenceMetadata nlpSentence = nlpSentenceMap.get(idx);
 
@@ -383,7 +377,18 @@ public class LessonService {
                     .audioEndMs(TimeUtils.toMs(seg.getEnd()))
                     .build();
 
-            lessonSentence.setLessonWords(buildWords(lessonSentence, seg, textRaw));
+            // 👉 TRUYỀN THÊM nlpSentence.getWords() VÀO buildWords
+            List<WordAnalyzedDto> nlpWords = nlpSentence != null ? nlpSentence.getWords() : null;
+            List<LessonWord> words = buildWords(lessonSentence, seg, textRaw, nlpWords);
+
+            // 🔥 CRITICAL: Set owning side và inverse side
+            for (LessonWord w : words) {
+                w.setSentence(lessonSentence);  // owning side
+            }
+            lessonSentence.setLessonWords(words);  // inverse side
+
+            // 🔥 CRITICAL: Đảm bảo lesson reference từ sentence
+            lessonSentence.setLesson(lesson);
 
             builtSentences.add(lessonSentence);
         }
@@ -394,7 +399,8 @@ public class LessonService {
     private List<LessonWord> buildWords(
             LessonSentence lessonSentence,
             SegmentMetadata seg,
-            String baseText
+            String baseText,
+            List<WordAnalyzedDto> nlpWords  // 👈 THÊM THAM SỐ NÀY
     ) {
 
         List<LessonWord> lessonWords = new ArrayList<>();
@@ -403,16 +409,22 @@ public class LessonService {
             return lessonWords;
         }
 
-
+        // Tạo map tra cứu nhanh IPA từ nlpWords theo orderIndex
+        Map<Integer, WordAnalyzedDto> nlpWordMap = new HashMap<>();
+        if (nlpWords != null) {
+            for (WordAnalyzedDto nw : nlpWords) {
+                nlpWordMap.put(nw.getOrderIndex(), nw);
+            }
+        }
 
         int charCursor = 0;
 
         for (int wIdx = 0; wIdx < seg.getWords().size(); wIdx++) {
 
             WordMetadata w = seg.getWords().get(wIdx);
+            WordAnalyzedDto nlpWord = nlpWordMap.get(wIdx);  // 👈 LẤY IPA THEO INDEX
 
             String wordText = w.getWord() != null ? w.getWord().trim() : "";
-
 
             int startChar = -1;
             int endChar = -1;
@@ -426,9 +438,6 @@ public class LessonService {
             }
 
             boolean hasPunctuation = TextUtils.hasPunctuation(wordText);
-
-
-
 
             LessonWord lessonWord = LessonWord.builder()
                     .sentence(lessonSentence)
@@ -446,6 +455,9 @@ public class LessonService {
                     .audioEndMs(TimeUtils.toMs(w.getEnd()))
                     .hasPunctuation(hasPunctuation)
                     .isClickable(true)
+                    // 👉 THÊM 2 FIELD IPA TỪ NLP
+                    .ipaRaw(nlpWord != null ? nlpWord.getIpaRaw() : null)
+                    .ipa(nlpWord != null ? nlpWord.getIpa() : null)
                     .build();
 
             lessonWords.add(lessonWord);
@@ -453,28 +465,22 @@ public class LessonService {
 
         return lessonWords;
     }
-
     private void attachSentencesToLesson(Lesson lesson, List<LessonSentence> builtSentences) {
-
-        List<LessonSentence> target = lesson.getSentences();
-
-        if (target == null) {
-            target = new ArrayList<>();
-            lesson.setSentences(target);
+        // 🔥 Clear collection
+        if (lesson.getSentences() == null) {
+            lesson.setSentences(new ArrayList<>());
         } else {
-            target.clear();
+            lesson.getSentences().clear();
         }
 
-        if (!builtSentences.isEmpty()) {
-
-            target.addAll(builtSentences);
-
-            lesson.setTotalSentences(target.size());
-
-        } else {
-
-            lesson.setTotalSentences(0);
+        // 🔥 Add từng sentence và đảm bảo both sides
+        for (LessonSentence sentence : builtSentences) {
+            sentence.setLesson(lesson);  // 🔥 CRITICAL: set owning side
+            lesson.getSentences().add(sentence);
         }
+
+        // Update total sentences
+        lesson.setTotalSentences(builtSentences.size());
     }
 
     private void finalizeLesson(Lesson lesson, String aiMetadataUrl) {
@@ -508,6 +514,8 @@ public class LessonService {
                 () -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND,
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(lessonId))
         );
+        // remove process
+        lessonShadowingProgressRepository.removeByLessonId(lessonId);
         lessonRepository.delete(lesson);
     }
 

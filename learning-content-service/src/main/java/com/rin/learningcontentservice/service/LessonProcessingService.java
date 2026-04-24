@@ -6,6 +6,7 @@ import com.rin.learningcontentservice.dto.response.ShadowingScoreResponse;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
 import com.rin.learningcontentservice.mapper.LessonShadowingProgressMapper;
 import com.rin.learningcontentservice.model.Lesson;
+import com.rin.learningcontentservice.model.LessonSentence;
 import com.rin.learningcontentservice.model.shadowing.LessonShadowingProgress;
 import com.rin.learningcontentservice.model.shadowing.SentenceShadowingAttempt;
 import com.rin.learningcontentservice.repository.LessonRepository;
@@ -17,6 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -135,24 +139,43 @@ public class LessonProcessingService {
             Lesson lesson,
             Integer lessonVersion
     ) {
-        // Đếm tổng số câu active
-        int total = (int) lesson.getSentences().stream()
+        // 1. Lấy ALL sentence IDs từ lesson (dùng để cleanup)
+        Set<Long> allLessonSentenceIds = lesson.getSentences().stream()
+                .map(LessonSentence::getId)
+                .collect(Collectors.toSet());
+
+        // 2. Lấy ACTIVE sentence IDs (business rule)
+        Set<Long> activeSentenceIds = lesson.getSentences().stream()
                 .filter(s -> Boolean.TRUE.equals(s.getIsActive()))
-                .count();
+                .map(LessonSentence::getId)
+                .collect(Collectors.toSet());
 
-        progress.setTotalSentences(total);
-
-        // Đếm số câu đã completed từ attempt hiện có
-        long completed = progress.getSentenceAttempts().stream()
+        // 3. Lấy COMPLETED sentence IDs từ attempts (source of truth)
+        Set<Long> completedSentenceIds = progress.getSentenceAttempts().stream()
                 .filter(SentenceShadowingAttempt::getCompleted)
+                .map(SentenceShadowingAttempt::getSentenceId)
+                .collect(Collectors.toSet());
+
+        // 4. Remove stale attempts (câu không còn trong lesson)
+        progress.getSentenceAttempts().removeIf(attempt ->
+                !allLessonSentenceIds.contains(attempt.getSentenceId())
+        );
+
+        // 5. Recompute completedCount: ACTIVE ⋂ COMPLETED
+        long completedCount = activeSentenceIds.stream()
+                .filter(completedSentenceIds::contains)
                 .count();
 
-        progress.setCompletedSentences((int) completed);
-        progress.setLessonVersion(lessonVersion);
-        progress.setCompleted(total > 0 && completed >= total);
+        int total = activeSentenceIds.size();
 
-        log.info("Recomputed progress for lesson {}: total={}, completed={}",
-                lesson.getId(), total, completed);
+        // 6. Update progress
+        progress.setTotalSentences(total);
+        progress.setCompletedSentences((int) completedCount);
+        progress.setLessonVersion(lessonVersion);
+        progress.setCompleted(total > 0 && completedCount >= total);
+
+        log.info("Recomputed progress for lesson {}: total={}, completed={}, attemptsSize={}",
+                lesson.getId(), total, completedCount, progress.getSentenceAttempts().size());
     }
 
     private String getCurrentUserId() {

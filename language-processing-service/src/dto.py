@@ -176,11 +176,19 @@ class TranscribedDto(BaseModel):
     segments: List[SegmentDto]
     class Config:
         from_attributes = True
+class WordAnalyzedDto(BaseModel):
+    orderIndex: int
+    ipaRaw: str = ""      # IPA kèm dấu câu
+    ipa: str = ""         # IPA không dấu câu
+    # Có thể thêm các field khác nếu cần
+    class Config:
+        from_attributes = True
 class SentenceAnalyzedDto(BaseModel):
     orderIndex: int
     phoneticUk: Optional[str] = None
     phoneticUs: Optional[str] = None
     translationVi: Optional[str] = None
+    words: List[WordAnalyzedDto] = []  # 👈 THÊM DÒNG NÀY
     class Config:
         from_attributes = True
 

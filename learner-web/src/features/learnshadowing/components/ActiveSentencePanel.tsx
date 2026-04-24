@@ -252,7 +252,7 @@ const ActiveSentencePanel = ({
       score >= SHADOWING_THRESHOLD.NEXT &&
       onComplete &&
       score > currentBestScore) {
-      // 👈 MARK: đã complete sentence này rồi
+      // 👈 Đã complete sentence này rồi
       completedSentenceIdRef.current = currentSentenceId
 
       if (completeTimerRef.current) {

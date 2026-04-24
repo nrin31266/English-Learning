@@ -11,23 +11,35 @@ from src.gemini.gemini_service import gemini_generate
 from src.gemini.prompts import SENTENCE_PROMPT_TEMPLATE, WORD_ANALYSIS_PROMPT_TEMPLATE
 
 
-
 async def analyze_sentence_batch(sentences_chunk: List[Dict[str, Any]]):
-    # TẠO PROMPT
     prompt = SENTENCE_PROMPT_TEMPLATE.substitute(
-        max_sentences=len(sentences_chunk),
         sentences_json=json.dumps(sentences_chunk, ensure_ascii=False)
     )
 
-    # GỌI GEMINI ASYNC
     resp = await gemini_generate(prompt)
 
+    # 🔥 HARD VALIDATION (fail fast)
     if not isinstance(resp, list):
-        raise ValueError(f"Gemini response must be a JSON array: {resp}")
+        raise ValueError("Response must be JSON array")
+
+    if len(resp) != len(sentences_chunk):
+        raise ValueError("Sentence count mismatch")
+
+    for inp, out in zip(sentences_chunk, resp):
+        if not isinstance(out, dict):
+            raise ValueError("Invalid item type")
+
+        if inp["orderIndex"] != out.get("orderIndex"):
+            raise ValueError(f"orderIndex mismatch: expected {inp['orderIndex']}, got {out.get('orderIndex')}")
+
+        if "words" not in out or not isinstance(out["words"], list):
+            raise ValueError("Missing words array")
+
+        # 👉 THÊM: validate word count
+        if len(inp.get("words", [])) != len(out["words"]):
+            raise ValueError(f"Word count mismatch for sentence {inp['orderIndex']}")
 
     return resp
-
-
 
 
 async def analyze_word(word: str, pos: str, context: str) -> dict:

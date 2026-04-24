@@ -45,6 +45,13 @@ public class LessonWord {
 
     private String lemma;          // dạng từ điển, VD: "running" -> "run"
 
+    // Thêm 2 field mới
+    @Column(name = "ipa_raw", length = 255)
+    private String ipaRaw;     // IPA kèm dấu câu
+
+    @Column(name = "ipa", length = 255)
+    private String ipa;        // IPA không dấu câu
+
 
     @Column(name = "pos_tag", length = 50)
     private String posTag;       // VD: VERB, NOUN, ADJ...

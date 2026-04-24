@@ -96,7 +96,7 @@ export const cancelLessonGeneration = createAsyncThunk(
     try {
       const res = await handleAPI<ILessonMinimalDto>({
         endpoint: `/learning-contents/admin/lessons/${id}/cancellation`,
-        method: "POST",
+        method: "PATCH",
         isAuth: true,
       });
       return res;
