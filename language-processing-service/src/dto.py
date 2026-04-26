@@ -17,12 +17,7 @@ class ShadowingWordCompare(BaseModel):
     
     phonemeDiff: dict | None = None  # THÊM: chứa diff_tokens cho UI
     extraOrMissingIpa: dict | None = None  # THÊM: cho EXTRA/MISSING
-class ExtraOrMissingIpa(BaseModel):
-    word: str
-    ipa: str
-    type: Literal["MISSING", "EXTRA"]
-    class Config:
-        from_attributes = True
+
 
 class DiffToken(BaseModel):
     type: Literal["MATCH", "MISMATCH", "MISSING", "EXTRA", "NO_DATA"]
@@ -53,7 +48,6 @@ class ShadowingResult(BaseModel):
     recognizedWordCount: int
     lastRecognizedPosition: int
     compares: List[ShadowingWordCompare]
-    extra_or_missing_ipa: ExtraOrMissingIpa | None = None  # THÊM: nếu có từ MISSING hoặc EXTRA, sẽ điền IPA ở đây
     phoneme_diff: Optional[PhonemeDiff] = None  # THÊM: nếu có data phoneme diff, sẽ điền ở đây
     
 

@@ -19,7 +19,7 @@ interface ActiveSentencePanelProps {
   handlePause: () => void
   onNext: () => void
   userInteracted?: boolean
-  onComplete?: (sentenceId: number, fluencyScore: number, weightedAccuracy: number) => void  // 👈 
+  onComplete?: (sentenceId: number, fluencyScore: number, weightedAccuracy: number) => void
 }
 
 export const SHADOWING_THRESHOLD = {
@@ -52,9 +52,14 @@ const ActiveSentencePanel = ({
   const [transcription, setTranscription] = useState<ITranscriptionResponse | null>(null)
   const [audioInputDevices, setAudioInputDevices] = useState<MediaDeviceInfo[]>([])
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("")
-  const [isPressStart, setIsPressStart] = useState(false)
-  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 👉 THÊM: State quản lý thời gian đếm ngược & Slow mode
+  const [timeLeft, setTimeLeft] = useState<number>(0)
+  const [isSlowMode, setIsSlowMode] = useState<boolean>(false)
+
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const dispatch = useAppDispatch()
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -62,24 +67,20 @@ const ActiveSentencePanel = ({
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
   const cancelRecordingRef = useRef(false)
 
-
-
-  // 👈 THÊM: snapshot sentenceId tại thời điểm record
   const sentenceIdRef = useRef<number>(0)
-  // 👈 TRACK: đã complete sentence nào rồi để tránh gọi onComplete nhiều lần
   const completedSentenceIdRef = useRef<number | null>(null)
 
   const currentSentence = useMemo(
     () => lesson.sentences[activeIndex],
     [lesson.sentences, activeIndex]
   )
-  // Trong ActiveSentencePanel.tsx
+
   const currentSentenceWords = useMemo(() => {
     return currentSentence?.lessonWords
-  }, [currentSentence?.id])  // 👈 THÊM DÒNG NÀY
+  }, [currentSentence?.id])
+
   const currentSentenceTextDisplay = currentSentence?.textDisplay || ""
 
-  // Trong ActiveSentencePanel, thêm useMemo để lấy attempt của câu hiện tại
   const currentAttempt = useMemo(() => {
     const progress = lesson.progress;
     if (!progress?.sentenceAttempts) return null;
@@ -109,17 +110,8 @@ const ActiveSentencePanel = ({
     [hasRecordedAudio, shouldShowNextButton]
   )
 
-
-
   const lastTranscriptionRef = useRef<string | null>(null)
   const lastPlayRef = useRef(0)
-
-  const clearPressTimer = useCallback(() => {
-    if (pressTimerRef.current) {
-      clearTimeout(pressTimerRef.current)
-      pressTimerRef.current = null
-    }
-  }, [])
 
   const revokeRecordedUrl = useCallback((url: string | null) => {
     if (url) {
@@ -139,7 +131,9 @@ const ActiveSentencePanel = ({
     })
     setTranscription(null)
     lastTranscriptionRef.current = null
+    setTimeLeft(0)
   }, [revokeRecordedUrl])
+
   const playFeedbackSound = useCallback((isGoodScore: boolean) => {
     const now = Date.now()
     if (now - lastPlayRef.current < 800) {
@@ -154,7 +148,6 @@ const ActiveSentencePanel = ({
     sound.play()
   }, [])
 
-  // Sửa useEffect play feedback sound - không phát nếu đã complete
   useEffect(() => {
     if (!transcription?.id) return
 
@@ -166,11 +159,6 @@ const ActiveSentencePanel = ({
 
     const score = transcription.shadowingResult?.weightedAccuracy
     if (score == null) return
-
-    // 👉 KIỂM TRA: nếu đã gọi complete rồi thì không phát âm thanh nữa
-    // if (currentAttempt?.completed) {
-    //   return
-    // }    
 
     const shouldPlayGood = score >= SHADOWING_THRESHOLD.GOOD_SOUND
     playFeedbackSound(shouldPlayGood)
@@ -193,11 +181,9 @@ const ActiveSentencePanel = ({
 
       setSelectedDeviceId((current) => {
         if (inputs.length === 0) return ""
-
         const selectedExists = inputs.some(
           (device, index) => getAudioInputValue(device.deviceId, index) === current
         )
-
         return selectedExists ? current : getAudioInputValue(inputs[0].deviceId, 0)
       })
     } catch (error) {
@@ -207,7 +193,6 @@ const ActiveSentencePanel = ({
 
   useEffect(() => {
     void loadAudioInputDevices()
-
     const mediaDevices = navigator.mediaDevices
     if (!mediaDevices?.addEventListener) return
 
@@ -221,45 +206,46 @@ const ActiveSentencePanel = ({
     }
   }, [loadAudioInputDevices])
 
-  // 👉 SỬA: reset UI và update snapshot khi đổi câu
   useEffect(() => {
     resetRecordingUi()
     sentenceIdRef.current = currentSentence.id
-    completedSentenceIdRef.current = null  // 👈 RESET: đánh dấu chưa complete câu mới
+    completedSentenceIdRef.current = null
+    // setIsSlowMode(false) // Tùy chọn: reset về tốc độ thường khi sang câu mới
 
     if (completeTimerRef.current) {
       clearTimeout(completeTimerRef.current)
       completeTimerRef.current = null
     }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
+    }
   }, [currentSentence.id, resetRecordingUi])
+
   useEffect(() => {
     const score = transcription?.shadowingResult?.weightedAccuracy
     const currentSentenceId = sentenceIdRef.current
 
-    // 👈 TRÁNH: gọi onComplete nhiều lần cho cùng một sentence (vòng lặp khi parent re-render)
     if (completedSentenceIdRef.current === currentSentenceId) {
       return
     }
 
-    // 👉 Lấy bestScore từ attempt của câu ĐANG ĐƯỢC TRANSCRIPT (không dùng currentAttempt từ UI)
     const attemptForThisSentence = lesson.progress?.sentenceAttempts?.find(
       a => a.sentenceId === currentSentenceId
     )
     const currentBestScore = attemptForThisSentence?.bestScore ?? 0
 
-    // 👉 Chỉ xử lý khi có transcription mới và chưa gọi complete cho câu này
     if (score !== undefined &&
       score >= SHADOWING_THRESHOLD.NEXT &&
       onComplete &&
       score > currentBestScore) {
-      // 👈 Đã complete sentence này rồi
+
       completedSentenceIdRef.current = currentSentenceId
 
       if (completeTimerRef.current) {
         clearTimeout(completeTimerRef.current)
       }
 
-      // Optimistic update
       dispatch(updateSentenceCompletion({
         sentenceId: currentSentenceId,
         completed: true,
@@ -271,6 +257,34 @@ const ActiveSentencePanel = ({
       }, 500)
     }
   }, [transcription?.shadowingResult?.weightedAccuracy, transcription?.shadowingResult?.fluencyScore, onComplete, lesson.progress?.sentenceAttempts])
+
+  // 👉 HÀM TÍNH TOÁN THỜI LƯỢNG GHI ÂM (Tối ưu độ chính xác & Khắc nghiệt hơn)
+  const calculateRecordingTime = useCallback(() => {
+    if (!currentSentenceWords || currentSentenceWords.length === 0) return 5;
+
+    const firstWord = currentSentenceWords[0];
+    const lastWord = currentSentenceWords[currentSentenceWords.length - 1];
+
+    const startMs = firstWord.audioStartMs ?? 0;
+    const endMs = lastWord.audioEndMs ?? (startMs + 2000);
+
+    // Lấy số giây thực tế (VD: 3.4 giây)
+    const exactSeconds = (endMs - startMs) / 1000;
+
+    // Buffer siêu khắt khe cho Normal Mode (Chỉ dư ra để lấy hơi và nhấn nút ngắt)
+    let normalBuffer = 1.5;
+    if (exactSeconds >= 3 && exactSeconds < 7) normalBuffer = 2;
+    if (exactSeconds >= 7) normalBuffer = 2.5;
+
+    // Nếu bật Slow: Cho thêm 50% thời gian gốc + 2s an toàn
+    const extraSlowTime = isSlowMode ? (exactSeconds * 0.5 + 2) : 0;
+
+    // Tính tổng và làm tròn lên thành số nguyên
+    return Math.ceil(exactSeconds + normalBuffer + extraSlowTime);
+  }, [currentSentenceWords, isSlowMode]);
+
+  const defaultTime = calculateRecordingTime();
+
   const startRecording = useCallback(async () => {
     setRecordError(null)
 
@@ -280,7 +294,6 @@ const ActiveSentencePanel = ({
     }
 
     try {
-      // 👉 THÊM: snapshot sentenceId tại thời điểm bắt đầu record
       sentenceIdRef.current = currentSentence.id
 
       const audioConstraints: MediaTrackConstraints | boolean =
@@ -300,7 +313,6 @@ const ActiveSentencePanel = ({
         revokeRecordedUrl(old)
         return null
       })
-      setTranscription(null)
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -309,6 +321,8 @@ const ActiveSentencePanel = ({
       }
 
       mediaRecorder.onstop = async () => {
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((t) => t.stop())
           streamRef.current = null
@@ -373,8 +387,27 @@ const ActiveSentencePanel = ({
         }
       }
 
+      const calculatedTime = calculateRecordingTime();
+      setTimeLeft(calculatedTime);
+
       mediaRecorder.start()
       setIsRecording(true)
+
+      // 👉 Bắt đầu đếm ngược tự động dừng
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = setInterval(() => {
+        setTimeLeft((prevTime) => {
+          if (prevTime <= 1) {
+            clearInterval(recordingTimerRef.current!);
+            if (mediaRecorderRef.current?.state !== "inactive") {
+              mediaRecorderRef.current?.stop();
+            }
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000);
+
     } catch (error) {
       console.error(error)
       setRecordError("Không thể truy cập micro. Vui lòng kiểm tra quyền.")
@@ -384,7 +417,7 @@ const ActiveSentencePanel = ({
       }
       setIsRecording(false)
     }
-  }, [currentSentence, loadAudioInputDevices, revokeRecordedUrl, selectedDeviceId])
+  }, [currentSentence, loadAudioInputDevices, revokeRecordedUrl, selectedDeviceId, calculateRecordingTime])
 
   const stopRecording = useCallback(() => {
     const mediaRecorder = mediaRecorderRef.current
@@ -407,47 +440,18 @@ const ActiveSentencePanel = ({
     }
   }, [])
 
-  const handlePointerDown = useCallback(() => {
+  // 👉 HÀM XỬ LÝ CLICK RECORD (Tap để Thu / Tap để Dừng sớm)
+  const handleRecordClick = useCallback(() => {
     if (isUploading || !userInteracted) return
 
-    clearPressTimer()
-    pressTimerRef.current = setTimeout(() => {
-      setIsPressStart(true)
+    if (isRecording) {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+      stopRecording()
+    } else {
       handlePause()
       void startRecording()
-    }, 200)
-  }, [clearPressTimer, handlePause, isUploading, startRecording, userInteracted])
-
-  const handlePointerUp = useCallback(() => {
-    clearPressTimer()
-
-    if (isPressStart && isRecording) {
-      stopRecording()
     }
-
-    setIsPressStart(false)
-  }, [clearPressTimer, isPressStart, isRecording, stopRecording])
-
-  const handlePointerLeave = useCallback(() => {
-    if (isPressStart) {
-      cancelRecording()
-
-      setIsPressStart(false)
-      clearPressTimer()
-    }
-  }, [cancelRecording, clearPressTimer, isPressStart])
-
-  useEffect(() => {
-    return () => {
-      clearPressTimer()
-
-      if (completeTimerRef.current) {
-        clearTimeout(completeTimerRef.current)
-        completeTimerRef.current = null
-      }
-    }
-  }, [clearPressTimer])
-
+  }, [isRecording, isUploading, userInteracted, handlePause, startRecording, stopRecording])
 
   const handleTogglePlayRecorded = () => {
     if (!hasRecordedAudio || !recordedUrl) return
@@ -513,6 +517,7 @@ const ActiveSentencePanel = ({
 
       chunksRef.current = []
       cancelRecordingRef.current = false
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
     }
   }, [])
 
@@ -533,12 +538,6 @@ const ActiveSentencePanel = ({
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [isRecording, cancelRecording])
-
-  useEffect(() => {
-    return () => {
-      revokeRecordedUrl(recordedUrl)
-    }
-  }, [recordedUrl, revokeRecordedUrl])
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -565,7 +564,6 @@ const ActiveSentencePanel = ({
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
       <div className="flex flex-col items-center gap-4 px-4 py-4">
 
-
         {currentAttempt && currentAttempt.bestScore !== null && (
           <BestScoreBadge bestScore={currentAttempt.bestScore} />
         )}
@@ -587,30 +585,26 @@ const ActiveSentencePanel = ({
           shouldShowSkipButton={shouldShowSkipButton}
           shouldShowNextButton={shouldShowNextButton}
           recordError={recordError}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerLeave}
+          timeLeft={timeLeft}
+          defaultTime={defaultTime}
+          isSlowMode={isSlowMode}
+          onToggleSlowMode={() => setIsSlowMode(prev => !prev)}
+          onRecordClick={handleRecordClick}
           onTogglePlayRecorded={handleTogglePlayRecorded}
           onNext={onNext}
         />
 
-        <div className="space-y-2 text-center w-full">
+        <div className="w-full">
           <MemoSentenceDisplay
             words={currentSentenceWords}
-            fallbackText={
-              currentSentence?.textDisplay || "No sentence available."
-            }
+            fallbackText={currentSentence?.textDisplay || "No sentence available."}
+            phoneticUs={currentSentence?.phoneticUs} // Truyền prop vào đây
             onWordClick={handleSentenceWordClick}
             className="items-center"
           />
-          {lesson.sentences.length > 0 && currentSentence.phoneticUs && (
-            <p className="text-base italic text-muted-foreground">
-              {currentSentence.phoneticUs}
-            </p>
-          )}
         </div>
 
-         <MemoShadowingResultPanel result={shadowing}  isLoading={isUploading}/>
+        <MemoShadowingResultPanel result={shadowing} isLoading={isUploading} />
       </div>
       <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
 

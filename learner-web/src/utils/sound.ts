@@ -9,7 +9,7 @@ export const successSound = new Howl({
 })
 
 export const failSound = new Howl({
-  src: ["/sounds/ceeday-huh-sound-effect.mp3"],
+  src: ["/sounds/windows-xp-critical-error-full-version.mp3"],
   preload: true,
   volume: 0.8,
 })

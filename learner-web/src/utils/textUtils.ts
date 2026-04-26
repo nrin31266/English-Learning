@@ -1,3 +1,4 @@
+// src/utils/textUtils.ts
 export const getIndexFromChar = (letter: string, length: number): number =>{
     if (!letter || letter.length === 0) return 0;
     const code = letter.charCodeAt(0);

@@ -39,16 +39,6 @@ def get_ipa_string_with_stress(word: str) -> Optional[str]:
     return _get_ipa(word, keep_stress=True, normalize=True, remove_length=False, as_string=True)
 
 
-def arpabet_to_ipa(arpabet_list: List[str]) -> List[str]:
-    """Deprecated."""
-    return []
-
-
-def arpabet_to_ipa_with_stress(arpabet_list: List[str]) -> str:
-    """Deprecated."""
-    return ""
-
-
 # ========== MAIN TEST ==========
 if __name__ == "__main__":
     print("\n" + "="*80)

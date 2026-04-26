@@ -30,12 +30,7 @@ export type DiffTokenType = "MATCH" | "MISMATCH" | "MISSING" | "EXTRA" | "NO_DAT
 export type WordStatus = "CORRECT" | "NEAR" | "WRONG" | "MISSING" | "EXTRA";
 export type PhonemeErrorType = "MISSING" | "EXTRA";
 
-// 2. Chi tiết lỗi IPA cho từng từ (Extra/Missing)
-export interface IExtraOrMissingIpa {
-  word: string;
-  ipa: string;
-  type: PhonemeErrorType;
-}
+
 
 // 3. Token chi tiết cho từng âm tiết (Phoneme)
 export interface IDiffToken {
@@ -48,7 +43,7 @@ export interface IDiffToken {
 // 4. Kết quả so sánh Phoneme (Âm tiết)
 export interface IPhonemeDiff {
   score: number;
-  diff_tokens: IDiffToken[];
+  diff_tokens?: IDiffToken[];
   expected_ipa: string | null;
   actual_ipa: string | null;
 }
@@ -64,7 +59,7 @@ export interface IShadowingWordCompare {
   score: number;
   phonemeDiff: IPhonemeDiff | null;
   // Trường hợp từ đó là Extra hoặc Missing hoàn toàn
-  extraOrMissingIpa?: IExtraOrMissingIpa | null; 
+
 }
 
 // 6. Object tổng kết quả trả về cuối cùng
@@ -84,7 +79,6 @@ export interface IShadowingResult {
   compares: IShadowingWordCompare[];
   
   // Các field bổ sung nếu backend trả về ở root (tùy logic xử lý)
-  extraOrMissingIpa?: IExtraOrMissingIpa | null;
   phonemeDiff?: IPhonemeDiff | null;
 }
 

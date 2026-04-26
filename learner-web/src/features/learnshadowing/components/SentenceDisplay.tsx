@@ -1,4 +1,3 @@
-
 import type { ILessonWordResponse } from "@/types"
 import React, { useMemo } from "react"
 
@@ -14,6 +13,8 @@ interface SentenceDisplayProps {
   onWordClick?: (word: ILessonWordResponse, el: HTMLElement) => void
   /** Class CSS thêm vào cho container */
   className?: string
+  /** Phiên âm IPA của cả câu */
+  phoneticUs?: string | null
 }
 
 /**
@@ -23,17 +24,14 @@ const SentenceDisplay = ({
   words,
   fallbackText = "No sentence available.",
   onWordClick,
-  className = ""
+  className = "",
+  phoneticUs
 }: SentenceDisplayProps) => {
   // Kiểm tra xem có dữ liệu words hợp lệ không
   const hasWords = words && Array.isArray(words) && words.length > 0
 
   /**
    * Memoize sorted words để tránh sort lại mỗi lần render
-   * Lý do:
-   * - Sort là operation tốn tài nguyên
-   * - Words thường không thay đổi trong lúc practice một câu
-   * - Chỉ re-sort khi words hoặc hasWords thay đổi
    */
   const sortedWords = useMemo(() => {
     if (!hasWords) return []
@@ -43,34 +41,43 @@ const SentenceDisplay = ({
     )
   }, [words, hasWords])
 
-  // Nếu không có words, hiển thị text fallback
-  if (!hasWords) {
-    return (
-      <p className={`text-lg font-semibold leading-relaxed text-center ${className}`}>
-        {fallbackText}
-      </p>
-    )
-  }
-  console.log("Rendering SentenceDisplay with words", { sortedWords }) // Debug log để kiểm tra dữ liệu words và quá trình sort
   return (
-    <div className={`flex flex-wrap justify-center gap-2 leading-relaxed ${className}`}>
-      {sortedWords.map((word, index) => (
-        <button
-          key={index}
-          className="
-           underline  
-            text-lg
-            font-semibold
-            hover:text-primary
-            transition-colors
-            duration-200
-          "
-          onClick={(e) => onWordClick?.(word, e.currentTarget)}
-          title={`Click để xem chi tiết từ: ${word.wordText}`}
-        >
-          {word.wordText}
-        </button>
-      ))}
+    <div className={`flex flex-col items-center gap-2 ${className}`}>
+      
+      {/* 1. HIỂN THỊ TEXT / TỪ VỰNG */}
+      {!hasWords ? (
+        <p className="text-lg font-semibold leading-relaxed text-center">
+          {fallbackText}
+        </p>
+      ) : (
+        <div className="flex flex-wrap justify-center gap-2 leading-relaxed">
+          {sortedWords.map((word, index) => (
+            <button
+              key={index}
+              className="
+                underline  
+                text-lg
+                font-semibold
+                hover:text-primary
+                transition-colors
+                duration-200
+              "
+              onClick={(e) => onWordClick?.(word, e.currentTarget)}
+              title={`Click để xem chi tiết từ: ${word.wordText}`}
+            >
+              {word.wordText}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 2. HIỂN THỊ PHIÊN ÂM IPA */}
+      {phoneticUs && (
+        <p className="text-base text-muted-foreground mt-1">
+          <span className="font-semibold">Sample IPA: </span> &#160;{phoneticUs}
+        </p>
+      )}
+
     </div>
   )
 }
@@ -79,6 +86,7 @@ export default React.memo(SentenceDisplay, (prev, next) => {
   return (
     (prev.words?.[0]?.id ?? null) === (next.words?.[0]?.id ?? null) &&
     prev.fallbackText === next.fallbackText &&
-    prev.className === next.className
+    prev.className === next.className &&
+    prev.phoneticUs === next.phoneticUs // Nhớ thêm check prop này
   )
 })

@@ -372,34 +372,16 @@ def build_shadowing_result(
         exp_word, exp_norm, rec_raw, rec_norm, align_type = aligned
         # Thêm biến để lưu diff visualization
         phoneme_diff = None
-        extra_or_missing_ipa = None
-
+    
         if rec_norm is not None:
             last_recognized_position = position
-
         if align_type == "INSERT":
             status, score = "EXTRA", 0.0
-            ipa = get_ipa_string_with_stress(rec_raw)
-            if ipa:
-                extra_or_missing_ipa = {
-                    "word": rec_raw,
-                    "ipa": ipa,
-                    "type": "EXTRA"
-                }
         elif align_type == "DELETE":
             status, score = "MISSING", 0.0
-            ipa = get_ipa_string_with_stress(exp_word)
-            if ipa:
-                extra_or_missing_ipa = {
-                    "word": exp_word,
-                    "ipa": ipa,
-                    "type": "MISSING"
-                }
-
         else:
             # MATCH/SUBSTITUTE đều dùng classifier cũ để giữ behavior hiện có.
             status, score = _classify_word(exp_norm, rec_norm)
-            # Chỉ phân tích diff nếu là NEAR hoặc WRONG
             if status in ("NEAR", "WRONG") and exp_word and rec_raw:
                 phoneme_score, diff_tokens, expected_ipa, actual_ipa = compare_words_with_ipa(
                     exp_word,
@@ -411,6 +393,22 @@ def build_shadowing_result(
                     "expected_ipa": expected_ipa or get_ipa_string_with_stress(exp_word),
                     "actual_ipa": actual_ipa or get_ipa_string_with_stress(rec_raw),
                 }
+        if status not in ("NEAR", "WRONG"):
+            expected_ipa, actual_ipa = None, None;
+            if status == "EXTRA":
+                expected_ipa = None
+                actual_ipa = get_ipa_string_with_stress(rec_raw)
+            elif status == "MISSING":
+                expected_ipa = get_ipa_string_with_stress(exp_word)
+                actual_ipa = None
+            else: #CORRECT
+                ipa = get_ipa_string_with_stress(exp_word)
+                expected_ipa = ipa
+                actual_ipa = ipa 
+            phoneme_diff = {
+                    "expected_ipa": expected_ipa,
+                    "actual_ipa": actual_ipa,
+            }
 
         if status == "CORRECT":
             correct_count += 1
@@ -432,7 +430,6 @@ def build_shadowing_result(
                 status=status,
                 score=score,
                 phonemeDiff=phoneme_diff,  # THÊM
-                extraOrMissingIpa=extra_or_missing_ipa,  # THÊM
             )
         )
 
