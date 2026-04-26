@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import List, Tuple
-from src.services.phoneme_ipa_service import compare_phonemes_with_ipa, compare_phonemes_with_ipa_and_stress, get_ipa_string_with_stress
+from src.services.phoneme_ipa_service import compare_phonemes_with_ipa, get_ipa_string_with_stress, compare_words_with_ipa
 from src.dto import ShadowingResult, ShadowingWordCompare, ShadowingRequest, ShadowingWord
 from src.utils.text_normalizer import normalize_word_lower
 
@@ -401,7 +401,7 @@ def build_shadowing_result(
             status, score = _classify_word(exp_norm, rec_norm)
             # Chỉ phân tích diff nếu là NEAR hoặc WRONG
             if status in ("NEAR", "WRONG") and exp_word and rec_raw:
-                phoneme_score, diff_tokens, expected_ipa, actual_ipa = compare_phonemes_with_ipa_and_stress(
+                phoneme_score, diff_tokens, expected_ipa, actual_ipa = compare_words_with_ipa(
                     exp_word,
                     rec_raw,
                 )

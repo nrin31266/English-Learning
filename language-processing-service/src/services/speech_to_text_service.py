@@ -1,7 +1,6 @@
 import asyncio
 import os
 import functools # Thêm cái này
-from src.services.cmu_service import preload_cmu_model
 import librosa
 import torch
 import whisperx
