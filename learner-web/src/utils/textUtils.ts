@@ -17,7 +17,7 @@ export const getIndexFromChar = (letter: string, length: number): number =>{
 export function hasPunctuation(token: string | null | undefined): boolean {
     if (!token || token.length === 0) return false;
 
-    const punctuationMarks = ".,!?;:\"()[]{}…—–-";
+    const punctuationMarks = "'.,!?;:\"()[]{}…—–-";
     for (const char of token) {
         if (punctuationMarks.includes(char)) {
             return true;
