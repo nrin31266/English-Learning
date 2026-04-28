@@ -35,7 +35,7 @@ export const useWordPopup = (): UseWordPopupReturn => {
         endpoint: "/dictionaries/words",
         method: "POST",
         body: {
-          text: word.wordText || word.wordNormalized || word.wordLower || "",
+          text: word.wordText || word.wordNormalized || "",
           context: context,
           isFallback: true,
           posTag: word.posTag,

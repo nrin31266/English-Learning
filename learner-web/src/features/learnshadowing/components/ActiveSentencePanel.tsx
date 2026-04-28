@@ -11,7 +11,7 @@ import WordPopup from "@/components/WordPopup"
 import { useWordPopup } from "@/hooks/UseWordPopupReturn"
 import { useAppDispatch } from "@/store"
 import { updateSentenceCompletion } from "@/store/lessonForShadowingSlide"
-import { failSound, successSound } from "../../../utils/sound"
+import {  successSound } from "../../../utils/sound"
 
 interface ActiveSentencePanelProps {
   lesson: ILessonDetailsResponse
@@ -66,6 +66,10 @@ const ActiveSentencePanel = ({
   const streamRef = useRef<MediaStream | null>(null)
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
   const cancelRecordingRef = useRef(false)
+  
+  // 👉 THÊM 2 DÒNG NÀY (CHỐNG SPAM):
+  const canStopRecordingRef = useRef(true) 
+  const minRecordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const sentenceIdRef = useRef<number>(0)
   const completedSentenceIdRef = useRef<number | null>(null)
@@ -136,15 +140,19 @@ const ActiveSentencePanel = ({
 
   const playFeedbackSound = useCallback((isGoodScore: boolean) => {
     const now = Date.now()
-    if (now - lastPlayRef.current < 800) {
+    
+    // Bạn có thể giảm debounce xuống 300ms - 500ms để nó phản hồi nhanh hơn,
+    // vì giờ ta không sợ crack âm thanh nữa.
+    if (now - lastPlayRef.current < 400) {
       return
     }
     lastPlayRef.current = now
 
-    const sound = isGoodScore ? successSound : failSound
-    if (sound.playing()) {
-      sound.stop()
-    }
+    if(!isGoodScore) return;
+    const sound = successSound
+    
+    // BỎ HOÀN TOÀN sound.stop()
+    // Gọi thẳng play(), Howler sẽ tự layer các âm thanh đè lên nhau cực mượt
     sound.play()
   }, [])
 
@@ -358,9 +366,7 @@ const ActiveSentencePanel = ({
           const expectedWords = currentSentence.lessonWords.map((w) => ({
             id: w.id,
             wordText: w.wordText,
-            wordLower: w.wordLower,
             wordNormalized: w.wordNormalized,
-            wordSlug: w.wordSlug,
             orderIndex: w.orderIndex,
           }))
           expectedWords.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
@@ -393,6 +399,12 @@ const ActiveSentencePanel = ({
       mediaRecorder.start()
       setIsRecording(true)
 
+      // 👉 THÊM ĐOẠN NÀY ĐỂ CHỐNG SPAM (Khóa nút dừng trong 1 giây đầu)
+      canStopRecordingRef.current = false;
+      if (minRecordTimerRef.current) clearTimeout(minRecordTimerRef.current);
+      minRecordTimerRef.current = setTimeout(() => {
+        canStopRecordingRef.current = true;
+      }, 1000); // Yêu cầu ghi âm tối thiểu 1000ms (1 giây)
       // 👉 Bắt đầu đếm ngược tự động dừng
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = setInterval(() => {
@@ -445,6 +457,9 @@ const ActiveSentencePanel = ({
     if (isUploading || !userInteracted) return
 
     if (isRecording) {
+      // 👉 THÊM DÒNG NÀY: Nếu chưa đủ 1 giây thì return luôn, không cho Stop
+      if (!canStopRecordingRef.current) return; 
+
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
       stopRecording()
     } else {
@@ -518,6 +533,7 @@ const ActiveSentencePanel = ({
       chunksRef.current = []
       cancelRecordingRef.current = false
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+      if (minRecordTimerRef.current) clearTimeout(minRecordTimerRef.current)
     }
   }, [])
 

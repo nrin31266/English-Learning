@@ -11,14 +11,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@radix
 import { EyeOff, GitMerge, Loader2, Save, Scissors, ToggleRight } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
-
 type SentenceItemProps = {
   sentence: ILessonSentence
   mode?: "view" | "edit"
   viewMode?: "minimal" | "detailed",
-  onSplitSentence?: (sentenceId: number) => void, // Callback khi split sentence
-  onMergeSentence?: (sentence1: ILessonSentence) => void, // Callback khi merge sentence
-  lastSentence?: boolean // để disable nút merge với câu tiếp theo nếu là câu cuối
+  onSplitSentence?: (sentenceId: number) => void,
+  onMergeSentence?: (sentence1: ILessonSentence) => void,
+  lastSentence?: boolean
 }
 
 const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSentence, onMergeSentence, lastSentence }: SentenceItemProps) => {
@@ -27,6 +26,7 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
   const isEditMode = mode === "edit"
   const isMinimalView = viewMode === "minimal"
   const dispatch = useAppDispatch()
+  
   // ───────────────────────────────────────────
   // State & initial values
   // ───────────────────────────────────────────
@@ -34,11 +34,9 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
     () => ({
       textDisplay: s.textDisplay ?? s.textRaw ?? "",
       translationVi: s.translationVi ?? "",
-      phoneticUk: s.phoneticUk ?? "",
       phoneticUs: s.phoneticUs ?? "",
     }),
-    // Nếu câu đổi (id / content khác) thì reset initial
-    [s.id, s.textDisplay, s.textRaw, s.translationVi, s.phoneticUk, s.phoneticUs]
+    [s.id, s.textDisplay, s.textRaw, s.translationVi, s.phoneticUs]
   )
 
   const [formValues, setFormValues] = useState(initialValues)
@@ -50,7 +48,6 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
   const hasChanges =
     formValues.textDisplay !== initialValues.textDisplay ||
     formValues.translationVi !== initialValues.translationVi ||
-    formValues.phoneticUk !== initialValues.phoneticUk ||
     formValues.phoneticUs !== initialValues.phoneticUs
 
   // ───────────────────────────────────────────
@@ -63,20 +60,20 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
       variant: "info",
       message: "Save functionality is coming soon!",
     }))
-    // In dữ liệu (tạm thời)
     console.log("Saving sentence changes:", {
       sentenceId: s.id,
       ...formValues,
     })
   }
 
-
   const handleMarkActiveInactive = (id: number, isActive: boolean) => {
     dispatch(markSentenceActiveInactive({ id, active: isActive }));
   }
+  
   const handleSplitSentence = () => {
     onSplitSentence?.(s.id);
   }
+  
   const sortedWords = useMemo(() => {
     return [...s.lessonWords].sort((a, b) => a.orderIndex - b.orderIndex);
   }, [s.lessonWords]);
@@ -89,11 +86,9 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
     <div className={`flex gap-3 py-3`}>
       {/* Time column */}
       <div className="mt-0.5 w-12 shrink-0 text-[14px] text-muted-foreground font-semibold">
-
         #{s.orderIndex + 1}
       </div>
       <div className="mt-0.5 w-12 shrink-0 text-[14px] text-muted-foreground">
-
         {formatTimeMs(s.audioStartMs)}
       </div>
 
@@ -118,6 +113,7 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
                   className="min-h-[80px] text-sm"
                 />
               </div>
+              
               {/* Translation */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground">
@@ -136,41 +132,22 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
                 />
               </div>
 
-              {/* Phonetics */}
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">
-                    Phonetic UK
-                  </Label>
-                  <Input
-                    value={formValues.phoneticUk}
-                    onChange={(e) =>
-                      setFormValues((prev) => ({
-                        ...prev,
-                        phoneticUk: e.target.value,
-                      }))
-                    }
-                    placeholder="/ˈsɛntəns/"
-                    className="h-8 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">
-                    Phonetic US
-                  </Label>
-                  <Input
-                    value={formValues.phoneticUs}
-                    onChange={(e) =>
-                      setFormValues((prev) => ({
-                        ...prev,
-                        phoneticUs: e.target.value,
-                      }))
-                    }
-                    placeholder="/ˈsɛntəns/"
-                    className="h-8 text-sm"
-                  />
-                </div>
+              {/* Phonetics - US only */}
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">
+                  Phonetic US
+                </Label>
+                <Input
+                  value={formValues.phoneticUs}
+                  onChange={(e) =>
+                    setFormValues((prev) => ({
+                      ...prev,
+                      phoneticUs: e.target.value,
+                    }))
+                  }
+                  placeholder="/ˈsɛntəns/"
+                  className="h-8 text-sm"
+                />
               </div>
             </div>
 
@@ -230,7 +207,6 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
                 onClick={() => handleMarkActiveInactive(s.id, !s.isActive)}
               >
                 {
-
                   data === s.id.toString() && status === "loading" && type === "mark-active-inactive" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null
                 }
                 {
@@ -263,11 +239,6 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
                 )}
 
                 <div>
-                  {s.phoneticUk && (
-                    <p className="text-[12px] leading-snug text-muted-foreground">
-                      UK: [{s.phoneticUk}]
-                    </p>
-                  )}
                   {s.phoneticUs && (
                     <p className="text-[12px] leading-snug text-muted-foreground">
                       US: [{s.phoneticUs}]
@@ -288,7 +259,7 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
                             : "cursor-default opacity-60",
                         ].join(" ")}
                       >
-                        {w.wordLower}
+                        {w.wordText}
                       </button>
                     ))}
                   </div>

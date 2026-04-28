@@ -34,7 +34,7 @@ type DictationPanelProps = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getWordDisplay = (w: ILessonWordResponse): string =>
-    w.wordText || w.wordNormalized || w.wordLower || ""
+    w.wordText || w.wordNormalized ||""
 
 
 

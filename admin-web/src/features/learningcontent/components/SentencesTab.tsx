@@ -103,7 +103,7 @@ const SentencesTab = ({ lesson }: { lesson: ILessonDetailsDto }) => {
         </div>
       </CardHeader>
 
-      <CardContent className="h-[480px] p-0">
+      <CardContent className="p-0">
         <ScrollArea className="h-full px-4">
           <div className="divide-y">
             {lesson.sentences && lesson.sentences.length > 0 ? (

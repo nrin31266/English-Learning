@@ -15,4 +15,6 @@ public class SegmentMetadata {
     private Double end;
     private String text;
     private List<WordMetadata> words;
+    private String phoneticUs;
+    private String translationVi;
 }

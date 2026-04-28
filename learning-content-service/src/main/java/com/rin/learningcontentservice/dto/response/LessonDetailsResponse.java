@@ -1,7 +1,6 @@
 package com.rin.learningcontentservice.dto.response;
 
 import com.rin.englishlearning.common.constants.*;
-import com.rin.learningcontentservice.model.shadowing.LessonShadowingProgress;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

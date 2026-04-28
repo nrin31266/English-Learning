@@ -54,9 +54,7 @@ class ShadowingResult(BaseModel):
 class ShadowingWord(BaseModel):
     id: int
     wordText: str
-    wordLower: str
     wordNormalized: str
-    wordSlug: str
     orderIndex: int
     class Config:
         from_attributes = True
@@ -161,40 +159,37 @@ class SegmentDto(BaseModel):
     end: float
     text: str
     words: List[WordDto]
+    phoneticUs: Optional[str] = None      # Thêm field mới
+    translationVi: Optional[str] = None   # Thêm field mới
     class Config:
         from_attributes = True
-    
+
+# XÓA HOÀN TOÀN các class sau (không cần dùng nữa):
+# - WordAnalyzedDto
+# - SentenceAnalyzedDto  
+# - NlpAnalyzedDto
 
 
 class TranscribedDto(BaseModel):
     segments: List[SegmentDto]
     class Config:
         from_attributes = True
-class WordAnalyzedDto(BaseModel):
-    orderIndex: int
-    ipaRaw: str = ""      # IPA kèm dấu câu
-    ipa: str = ""         # IPA không dấu câu
-    # Có thể thêm các field khác nếu cần
-    class Config:
-        from_attributes = True
-class SentenceAnalyzedDto(BaseModel):
-    orderIndex: int
-    phoneticUk: Optional[str] = None
-    phoneticUs: Optional[str] = None
-    translationVi: Optional[str] = None
-    words: List[WordAnalyzedDto] = []  # 👈 THÊM DÒNG NÀY
-    class Config:
-        from_attributes = True
 
-class NlpAnalyzedDto(BaseModel):
-    sentences: List[SentenceAnalyzedDto]
-    class Config:
-        from_attributes = True
+# class SentenceAnalyzedDto(BaseModel):
+#     orderIndex: int
+#     phoneticUs: Optional[str] = None
+#     translationVi: Optional[str] = None
+#     class Config:
+#         from_attributes = True
+
+# class NlpAnalyzedDto(BaseModel):
+#     sentences: List[SentenceAnalyzedDto]
+#     class Config:
+#         from_attributes = True
 
 class LessonGenerationAiMetadataDto(BaseModel):
     sourceFetched: Optional[SourceFetchedDto] = None
     transcribed: Optional[TranscribedDto] = None
-    nlpAnalyzed: Optional[NlpAnalyzedDto] = None  
 
     class Config:
         from_attributes = True

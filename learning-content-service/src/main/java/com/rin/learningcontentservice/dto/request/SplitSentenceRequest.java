@@ -22,7 +22,6 @@ public class SplitSentenceRequest {
     public static class SentenceData {
         String textDisplay;
         String translationVi;
-        String phoneticUk;
         String phoneticUs;
     }
 }

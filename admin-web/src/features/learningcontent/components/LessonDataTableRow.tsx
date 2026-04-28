@@ -1,30 +1,25 @@
-import React, { useEffect, useState } from "react"
-import { TableCell, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { TableCell, TableRow } from "@/components/ui/table"
+import { useEffect } from "react"
 
-import {
-  Youtube,
-  FileAudio2,
-  FileQuestion,
-  CheckCircle2,
-  AlertTriangle,
-  Loader2,
-  CircleDot,
-  Mic,
-  MicOff,
-  MoreHorizontal,
-  Sparkles,
-  User2,
-  NotebookPen,
-} from "lucide-react"
-import type { ILessonDto, ILessonProcessingStepNotifyEvent, LessonProcessingStep, LessonStatus } from "@/types"
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
 import { useAppDispatch } from "@/store"
 import { updateLessonFromProcessingEvent } from "@/store/learningcontent/lessonSlice"
-import { Link } from "react-router-dom"
+import type { ILessonDto, ILessonProcessingStepNotifyEvent } from "@/types"
 import { getProcessingMeta } from "@/utils/lessonContentUtils"
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleDot,
+  FileAudio2,
+  FileQuestion,
+  Loader2,
+  Sparkles,
+  User2,
+  Youtube
+} from "lucide-react"
+import { Link } from "react-router-dom"
 
 interface LessonDataTableRowProps {
   row: ILessonDto

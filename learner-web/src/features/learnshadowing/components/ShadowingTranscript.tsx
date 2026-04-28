@@ -90,7 +90,7 @@ const TranscriptItem = React.memo(({
         </p>
       )}
 
-      {showIPA && (sentence.phoneticUk || sentence.phoneticUs) && (
+      {showIPA && (sentence.phoneticUs || "") && (
         <p className="mt-1 text-[13px] italic text-muted-foreground">
          {sentence.phoneticUs || ""} {/* Ưu tiên hiển thị phiên âm US nếu có */}
         </p>

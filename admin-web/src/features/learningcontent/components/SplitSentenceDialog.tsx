@@ -23,13 +23,11 @@ export const splitSentenceSchema = z.object({
   sentence1: z.object({
     textDisplay: z.string().min(1, "Câu 1 không được để trống"),
     translationVi: z.string().min(1, "Bản dịch tiếng Việt không được để trống"),
-    phoneticUk: z.string().min(1, "Phonetic UK không được để trống"),
     phoneticUs: z.string().min(1, "Phonetic US không được để trống"),
   }),
   sentence2: z.object({
     textDisplay: z.string().min(1, "Câu 2 không được để trống"),
     translationVi: z.string().min(1, "Bản dịch tiếng Việt không được để trống"),
-    phoneticUk: z.string().min(1, "Phonetic UK không được để trống"),
     phoneticUs: z.string().min(1, "Phonetic US không được để trống"),
   }),
 })
@@ -82,23 +80,14 @@ const SentenceCard = ({
       </FormItem>
     )} />
 
-    {/* Phonetic side by side */}
-    <div className="grid grid-cols-2 gap-2">
-      <FormField control={form.control} name={`${prefix}.phoneticUk`} render={({ field }) => (
-        <FormItem>
-          <FormLabel className="text-[11px] text-muted-foreground">🇬🇧 UK</FormLabel>
-          <FormControl><Input {...field} className="h-8 text-sm" placeholder="/ˈ.../" /></FormControl>
-          <FormMessage />
-        </FormItem>
-      )} />
-      <FormField control={form.control} name={`${prefix}.phoneticUs`} render={({ field }) => (
-        <FormItem>
-          <FormLabel className="text-[11px] text-muted-foreground">🇺🇸 US</FormLabel>
-          <FormControl><Input {...field} className="h-8 text-sm" placeholder="/ˈ.../" /></FormControl>
-          <FormMessage />
-        </FormItem>
-      )} />
-    </div>
+    {/* Phonetic US only */}
+    <FormField control={form.control} name={`${prefix}.phoneticUs`} render={({ field }) => (
+      <FormItem>
+        <FormLabel className="text-[11px] text-muted-foreground">🇺🇸 Phonetic US</FormLabel>
+        <FormControl><Input {...field} className="h-8 text-sm" placeholder="/ˈ.../" /></FormControl>
+        <FormMessage />
+      </FormItem>
+    )} />
   </div>
 )
 
@@ -113,8 +102,8 @@ const SplitSentenceDialog = ({ open, onClose, sentence }: ISplitSentenceDialogPr
     resolver: zodResolver(splitSentenceSchema),
     defaultValues: {
       splitAfterWordId: 0,
-      sentence1: { textDisplay: "", translationVi: "", phoneticUk: "", phoneticUs: "" },
-      sentence2: { textDisplay: "", translationVi: "", phoneticUk: "", phoneticUs: "" },
+      sentence1: { textDisplay: "", translationVi: "", phoneticUs: "" },
+      sentence2: { textDisplay: "", translationVi: "", phoneticUs: "" },
     },
   })
 
@@ -126,10 +115,9 @@ const SplitSentenceDialog = ({ open, onClose, sentence }: ISplitSentenceDialogPr
         sentence1: {
           textDisplay: sentence.textDisplay ?? sentence.textRaw ?? "",
           translationVi: sentence.translationVi ?? "",
-          phoneticUk: sentence.phoneticUk ?? "",
           phoneticUs: sentence.phoneticUs ?? "",
         },
-        sentence2: { textDisplay: "", translationVi: "", phoneticUk: "", phoneticUs: "" },
+        sentence2: { textDisplay: "", translationVi: "", phoneticUs: "" },
       })
     }
   }, [sentence?.id])
@@ -155,10 +143,7 @@ const SplitSentenceDialog = ({ open, onClose, sentence }: ISplitSentenceDialogPr
       return [tokens.slice(0, idx + 1).join(" "), tokens.slice(idx + 1).join(" ")]
     }
 
-    const [uk1, uk2] = splitPhonetic(sentence.phoneticUk)
     const [us1, us2] = splitPhonetic(sentence.phoneticUs)
-    form.setValue("sentence1.phoneticUk", uk1)
-    form.setValue("sentence2.phoneticUk", uk2)
     form.setValue("sentence1.phoneticUs", us1)
     form.setValue("sentence2.phoneticUs", us2)
 
@@ -214,10 +199,9 @@ const SplitSentenceDialog = ({ open, onClose, sentence }: ISplitSentenceDialogPr
             {sentence?.translationVi && (
               <span className="text-muted-foreground text-[12px]">{sentence.translationVi}</span>
             )}
-            {(sentence?.phoneticUk || sentence?.phoneticUs) && (
+            {sentence?.phoneticUs && (
               <span className="ml-auto flex gap-3 text-[11px] text-muted-foreground">
-                {sentence?.phoneticUk && <span>🇬🇧 {sentence.phoneticUk}</span>}
-                {sentence?.phoneticUs && <span>🇺🇸 {sentence.phoneticUs}</span>}
+                <span>🇺🇸 {sentence.phoneticUs}</span>
               </span>
             )}
           </div>

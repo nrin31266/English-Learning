@@ -50,6 +50,7 @@ const renderSentenceIpaFromDiff = (compares: IShadowingResult['compares'], lastR
       return 
     }
 
+
     if (!attempted) {
       // Chưa đọc: hiển thị expected IPA màu xám nhạt
       const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""

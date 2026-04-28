@@ -447,8 +447,6 @@ const LessonDetails: React.FC = () => {
         <TabsContent value="sitting" className="mt-0">  
           <LessonSitting lesson={data} />
         </TabsContent>
-
-     
       </Tabs>
     </div>
   )

@@ -34,23 +34,23 @@ public class LessonWord {
     @Column(name = "word_text", nullable = false, length = 255)
     private String wordText;     // gốc từ wisperx trả về
 
-    @Column(name = "word_lower", length = 255)
-    private String wordLower;    // lowercase đơn giản
+//    @Column(name = "word_lower", length = 255)
+//    private String wordLower;    // lowercase đơn giản
 
     @Column(name = "word_normalized", length = 255)
     private String wordNormalized; // dùng tra từ điển
 
-    @Column(name = "word_slug", length = 255)
-    private String wordSlug;      // slug
+//    @Column(name = "word_slug", length = 255)
+//    private String wordSlug;      // slug
 
     private String lemma;          // dạng từ điển, VD: "running" -> "run"
 
-    // Thêm 2 field mới
-    @Column(name = "ipa_raw", length = 255)
-    private String ipaRaw;     // IPA kèm dấu câu
-
-    @Column(name = "ipa", length = 255)
-    private String ipa;        // IPA không dấu câu
+//    // Thêm 2 field mới
+//    @Column(name = "ipa_raw", length = 255)
+//    private String ipaRaw;     // IPA kèm dấu câu
+//
+//    @Column(name = "ipa", length = 255)
+//    private String ipa;        // IPA không dấu câu
 
 
     @Column(name = "pos_tag", length = 50)
@@ -59,13 +59,13 @@ public class LessonWord {
     private String entityType;   // VD: PERSON, GPE, ORG
 
 
-    // ───────────────────────────────────────────
-    // CHAR POSITIONING IN DISPLAY SENTENCE
-    @Column(name = "start_char_index")
-    private Integer startCharIndex;  // inclusive
-
-    @Column(name = "end_char_index")
-    private Integer endCharIndex;    // exclusive
+//    // ───────────────────────────────────────────
+//    // CHAR POSITIONING IN DISPLAY SENTENCE
+//    @Column(name = "start_char_index")
+//    private Integer startCharIndex;  // inclusive
+//
+//    @Column(name = "end_char_index")
+//    private Integer endCharIndex;    // exclusive
 
     // AUDIO POSITIONING
     @Column(name = "audio_start_ms")

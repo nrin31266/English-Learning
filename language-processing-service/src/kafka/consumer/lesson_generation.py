@@ -15,7 +15,7 @@ from src.services import media_service, ai_job_service, speech_to_text_service
 from src.services.file_service import fetch_json_from_url, file_exists
 from src.s3_storage import cloud_service
 from src.utils.chunk_utils import chunk_list
-from src.gemini import analyzer
+from src.gemini.analyzer import analyze_sentence_batch
 from src.services.spaCy_service import analyze_word
 from src.utils.text_utils import clean_for_spacy
 
@@ -29,8 +29,8 @@ async def _is_cancelled(ai_job_id: str | None) -> bool:
     return cancelled
 
 
-async def _load_metadata(url: str | None) -> dto.LessonGenerationAiMetadataDto:
-    if not url:
+async def _load_metadata(url: str | None, is_restart: bool) -> dto.LessonGenerationAiMetadataDto:
+    if not url or is_restart:
         return dto.LessonGenerationAiMetadataDto()
     try:
         data = await fetch_json_from_url(url)
@@ -81,22 +81,7 @@ async def _publish_step(
     print(
         f">[Lesson Generation] Step {step} published for ai_job_id={ai_job_id}: {message}"
     )
-def _normalize_ipa_fields(analyzed_sentences: List[dto.SentenceAnalyzedDto]) -> List[dto.SentenceAnalyzedDto]:
-    """Đảm bảo mỗi word có ipaRaw và ipa"""
-    for sentence in analyzed_sentences:
-        for word in sentence.words:
-            # Nếu có ipa (cũ) nhưng chưa có ipaRaw
-            if hasattr(word, 'ipa') and word.ipa and not hasattr(word, 'ipaRaw'):
-                word.ipaRaw = word.ipa
-                word.ipa = word.ipa.rstrip(string.punctuation)
-            
-            # Đảm bảo cả 2 field đều tồn tại
-            if not hasattr(word, 'ipaRaw') or word.ipaRaw is None:
-                word.ipaRaw = ""
-            if not hasattr(word, 'ipa') or word.ipa is None:
-                word.ipa = ""
-    
-    return analyzed_sentences
+
 
 async def _download_audio_by_source(
     event: LessonGenerationRequestedEvent,
@@ -130,7 +115,7 @@ from src.utils.text_utils import clean_for_spacy
 
 
 # WORD ANALYSIS WITH SPACY
-async def enrich_words_with_spacy(
+async def _enrich_words_with_spacy(
     sentence_text: str, words: List[dto.WordDto]
 ) -> List[dto.WordDto]:
     """Thêm posTag và entityType cho từng word trong câu"""
@@ -165,7 +150,7 @@ async def enrich_words_with_spacy(
     return enriched_words
 
 
-async def enrich_segments_with_spacy(
+async def _enrich_segments_with_spacy(
     segments: List[dto.SegmentDto],
 ) -> List[dto.SegmentDto]:
     """Thêm posTag và entityType cho tất cả words trong segments"""
@@ -178,7 +163,7 @@ async def enrich_segments_with_spacy(
         words = segment.words
 
         if words and sentence_text:
-            enriched_words = await enrich_words_with_spacy(sentence_text, words)
+            enriched_words = await _enrich_words_with_spacy(sentence_text, words)
             segment.words = enriched_words
 
         if (idx + 1) % 50 == 0:
@@ -186,20 +171,57 @@ async def enrich_segments_with_spacy(
 
     print(f"[SpaCy] Completed! Enriched {len(segments)} segments")
     return segments
-
+async def _enrich_segments_with_nlp(
+    segments: List[dto.SegmentDto],
+    batch_size: int = 50,
+    max_concurrency: int = 3
+) -> List[dto.SegmentDto]:
+    """
+    Chỉ gửi text câu lên Gemini, nhận về phoneticUs và translationVi
+    Mapping orderIndex được xử lý hoàn toàn bên ngoài
+    """
+    if not segments:
+        return segments
+    
+    # 1. Extract chỉ text từ segments
+    sentence_texts = [seg.text for seg in segments]
+    
+    # 2. Chunk và gửi lên Gemini
+    chunks = list(chunk_list(sentence_texts, batch_size))
+    all_results = []
+    
+    for i in range(0, len(chunks), max_concurrency):
+        print(f"Sending chunk {i // batch_size + 1} to Gemini for NLP analysis...")
+        wave = chunks[i:i + max_concurrency]
+        results = await asyncio.gather(
+            *[analyze_sentence_batch(chunk) for chunk in wave],
+            return_exceptions=True
+        )
+        
+        for chunk, result in zip(wave, results):
+            if isinstance(result, Exception):
+                raise result
+            all_results.extend(result)
+    
+    # 3. Map kết quả vào segments (theo đúng thứ tự)
+    for idx, (segment, analysis) in enumerate(zip(segments, all_results)):
+        segment.phoneticUs = analysis.get("phoneticUs", "")
+        segment.translationVi = analysis.get("translationVi", "")
+    
+    return segments
 
 async def handle_lesson_generation_requested(
     event: LessonGenerationRequestedEvent,
 ) -> None:
     print(f"[Lesson Generation] Started with event: {event}")
-    BATCH_SIZE, MAX_CONCURRENCY = 10, 3
+    BATCH_SIZE, MAX_CONCURRENCY = 100, 1
 
     try:
         await asyncio.sleep(2)
         if await _is_cancelled(event.ai_job_id):
             return
 
-        metadata = await _load_metadata(event.ai_meta_data_url)
+        metadata = await _load_metadata(event.ai_meta_data_url, event.is_restart)
         print(f"Loaded metadata for lesson_id={event.lesson_id}: {metadata}")
         metadata_url = event.ai_meta_data_url
 
@@ -261,7 +283,7 @@ async def handle_lesson_generation_requested(
             metadata.transcribed = dto.TranscribedDto.model_validate(raw)
 
             # 🔥 THÊM DÒNG NÀY: Enrich words với spaCy NGAY SAU KHI TRANSCRIBE
-            metadata.transcribed.segments = await enrich_segments_with_spacy(
+            metadata.transcribed.segments = await _enrich_segments_with_spacy(
                 metadata.transcribed.segments
             )
 
@@ -285,46 +307,28 @@ async def handle_lesson_generation_requested(
             f"✅ [Lesson Generation] Step TRANSCRIBED completed for ai_job_id={event.ai_job_id}"
         )
 
-        # STEP 3: NLP
-        if metadata.nlpAnalyzed is None or event.is_restart:
-            segments = metadata.transcribed.segments
-            sentences_payload = [
-                {
-                    "orderIndex": i,
-                    "text": seg.text,
-                    "words": [
-                        {"orderIndex": j, "wordText": w.word}  # hoặc w.word.strip()
-                        for j, w in enumerate(seg.words or [])
-                    ],
-                }
-                for i, seg in enumerate(segments)
-            ]
-            chunks = list(chunk_list(sentences_payload, BATCH_SIZE))
-            analyzed: List[dto.SentenceAnalyzedDto] = []
+        
+        # STEP 3: Phonetics & Translation (thay thế NLP step)
+        print(f"Starting NLP analysis for ai_job_id={event.ai_job_id}...")
 
-            for i in range(0, len(chunks), MAX_CONCURRENCY):
-                if await _is_cancelled(event.ai_job_id):
-                    return
+        # Kiểm tra xem đã có phoneticUs chưa (segment đầu tiên)
+        need_nlp = False
+        if metadata.transcribed and metadata.transcribed.segments:
+            # Kiểm tra segment đầu tiên xem đã có phoneticUs chưa
+            first_segment = metadata.transcribed.segments[0]
+            if not hasattr(first_segment, 'phoneticUs') or first_segment.phoneticUs is None:
+                need_nlp = True
+        elif event.is_restart:
+            need_nlp = True
 
-                wave = chunks[i : i + MAX_CONCURRENCY]
-                results = await asyncio.gather(
-                    *[analyzer.analyze_sentence_batch(chunk) for chunk in wave],
-                    return_exceptions=True,
-                )
-
-                for chunk, result in zip(wave, results):
-                    if isinstance(result, Exception):
-                        raise result
-                    
-                    batch_analyzed = [dto.SentenceAnalyzedDto(**item) for item in result]
-                    
-                    # 👉 THÊM DÒNG NÀY
-                    batch_analyzed = _normalize_ipa_fields(batch_analyzed)
-    
-                    analyzed.extend(batch_analyzed)
-
-            analyzed.sort(key=lambda s: s.orderIndex)
-            metadata.nlpAnalyzed = dto.NlpAnalyzedDto(sentences=analyzed)
+        if need_nlp:
+            # Gọi Gemini để lấy phoneticUs và translationVi
+            enriched_segments = await _enrich_segments_with_nlp(
+                metadata.transcribed.segments,
+                batch_size=BATCH_SIZE,
+                max_concurrency=MAX_CONCURRENCY,
+            )
+            metadata.transcribed.segments = enriched_segments
             metadata_url = await _save_metadata(event.lesson_id, metadata)
             is_skip_step3 = False
         else:
@@ -333,11 +337,7 @@ async def handle_lesson_generation_requested(
         await _publish_step(
             ai_job_id=event.ai_job_id,
             step=LessonProcessingStep.NLP_ANALYZED,
-            message=(
-                "NLP analysis completed successfully."
-                if not is_skip_step3
-                else "NLP reused from previous metadata."
-            ),
+            message="Phonetics and translation completed successfully.",
             metadata_url=metadata_url,
             is_skip=is_skip_step3,
         )

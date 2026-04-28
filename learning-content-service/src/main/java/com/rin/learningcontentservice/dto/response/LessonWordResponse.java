@@ -15,12 +15,8 @@ public class LessonWordResponse {
     private Integer orderIndex;
 
     private String wordText;
-    private String wordLower;
     private String wordNormalized;
-    private String wordSlug;
 
-    private Integer startCharIndex;
-    private Integer endCharIndex;
 
     private Integer audioStartMs;
     private Integer audioEndMs;

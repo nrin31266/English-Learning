@@ -19,7 +19,6 @@ public class LessonSentenceDetailsResponse {
     private String textDisplay;
     private String translationVi;
 
-    private String phoneticUk;
     private String phoneticUs;
 
     private Integer audioStartMs;

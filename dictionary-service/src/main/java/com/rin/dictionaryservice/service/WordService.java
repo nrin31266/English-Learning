@@ -40,51 +40,125 @@ public class WordService {
     private static final int MAX_RETRY = 5;
     ObjectMapper objectMapper;
     DictionaryApiClient dictionaryApiClient;
-    private static final Map<String, String> SPACY_TO_API_POS = Map.of(
-            "VERB", "verb",
-            "NOUN", "noun",
-            "ADJ", "adjective",
-            "ADV", "adverb"
+
+    private static final Map<String, List<String>> SPACY_TO_API_POS = Map.ofEntries(
+            Map.entry("VERB", List.of("verb", "v")),
+            Map.entry("NOUN", List.of("noun", "n")),
+            Map.entry("ADJ", List.of("adjective", "adj", "a")),
+            Map.entry("ADV", List.of("adverb", "adv")),
+            Map.entry("PRON", List.of("pronoun", "pron")),
+            Map.entry("PREP", List.of("preposition", "prep")),
+            Map.entry("CONJ", List.of("conjunction", "conj")),
+            Map.entry("DET", List.of("determiner", "det", "article")),
+            Map.entry("NUM", List.of("numeral", "num", "number")),
+            Map.entry("INTJ", List.of("interjection", "int")),
+            Map.entry("AUX", List.of("auxiliary", "aux", "helping verb")),
+            Map.entry("PART", List.of("particle", "part")),
+            Map.entry("SCONJ", List.of("subordinating conjunction", "sconj")),
+            Map.entry("CCONJ", List.of("coordinating conjunction", "cconj")),
+            Map.entry("PROPN", List.of("proper noun", "propn", "name"))
     );
 
     private String normalizePos(String pos) {
         if (pos == null) return null;
-        return SPACY_TO_API_POS.getOrDefault(pos.toUpperCase(), pos.toLowerCase());
+
+        String upperPos = pos.toUpperCase();
+
+        // Kiểm tra nếu có mapping
+        if (SPACY_TO_API_POS.containsKey(upperPos)) {
+            // Ưu tiên trả về mapping đầu tiên (thông dụng nhất)
+            return SPACY_TO_API_POS.get(upperPos).get(0);
+        }
+
+        // Fallback: trả về lowercase
+        return pos.toLowerCase();
     }
 
-    private DictionaryApiResponse extractDictionaryApiResponseByPos(
-            List<DictionaryApiResponse> responses,
-            String targetPos  // spaCy POS (VERB, NOUN, ADJ...)
-    ) {
-        if (responses == null || targetPos == null) return null;
+    // Hỗ trợ fuzzy matching (cho trường hợp dictionary API trả về POS hơi khác)
+    private String fuzzyMatchPos(String apiPos, String targetPos) {
+        if (apiPos == null || targetPos == null) return null;
 
-        String apiTargetPos = normalizePos(targetPos);
+        String apiPosLower = apiPos.toLowerCase();
+        String targetPosNormalized = normalizePos(targetPos);
 
-        for (DictionaryApiResponse response : responses) {
-            if (response.getMeanings() == null || response.getMeanings().isEmpty()) continue;
+        // Exact match
+        if (apiPosLower.equals(targetPosNormalized)) {
+            return targetPosNormalized;
+        }
 
-            List<DictionaryApiResponse.Meaning> filteredMeanings = response.getMeanings().stream()
-                    .filter(meaning -> {
-                        String apiPos = meaning.getPartOfSpeech();
-                        return apiPos != null && apiPos.equalsIgnoreCase(apiTargetPos);
-                    })
-                    .toList();
-
-            if (!filteredMeanings.isEmpty()) {
-                return DictionaryApiResponse.builder()
-                        .word(response.getWord())
-                        .phonetic(response.getPhonetic())
-                        .phonetics(response.getPhonetics())
-                        .meanings(filteredMeanings)
-                        .license(response.getLicense())
-                        .sourceUrls(response.getSourceUrls())
-                        .build();
+        // Check nếu apiPos nằm trong danh sách mapping của targetPos
+        String upperTarget = targetPos.toUpperCase();
+        if (SPACY_TO_API_POS.containsKey(upperTarget)) {
+            List<String> allowedApiPos = SPACY_TO_API_POS.get(upperTarget);
+            if (allowedApiPos.contains(apiPosLower)) {
+                return apiPosLower;
             }
         }
 
         return null;
     }
 
+    private DictionaryApiResponse extractDictionaryApiResponseByPos(
+            List<DictionaryApiResponse> responses,
+            String targetPos
+    ) {
+        if (responses == null || targetPos == null) return null;
+
+        String normalizedTargetPos = normalizePos(targetPos);
+
+        for (DictionaryApiResponse response : responses) {
+            if (response.getMeanings() == null || response.getMeanings().isEmpty()) continue;
+
+            // Priority 1: Exact match theo meaning
+            List<DictionaryApiResponse.Meaning> exactMatchMeanings = response.getMeanings().stream()
+                    .filter(meaning -> {
+                        String apiPos = meaning.getPartOfSpeech();
+                        return apiPos != null && apiPos.equalsIgnoreCase(normalizedTargetPos);
+                    })
+                    .toList();
+
+            if (!exactMatchMeanings.isEmpty()) {
+                return buildResponseWithMeanings(response, exactMatchMeanings);
+            }
+
+            // Priority 2: Fuzzy match (nếu có sự khác biệt nhỏ về POS)
+            List<DictionaryApiResponse.Meaning> fuzzyMatchMeanings = response.getMeanings().stream()
+                    .filter(meaning -> {
+                        String apiPos = meaning.getPartOfSpeech();
+                        return fuzzyMatchPos(apiPos, targetPos) != null;
+                    })
+                    .toList();
+
+            if (!fuzzyMatchMeanings.isEmpty()) {
+                log.debug("Using fuzzy match for POS: {} -> {}", targetPos, fuzzyMatchMeanings.get(0).getPartOfSpeech());
+                return buildResponseWithMeanings(response, fuzzyMatchMeanings);
+            }
+        }
+
+        // Priority 3: Fallback - lấy meaning đầu tiên hoặc bất kỳ
+        for (DictionaryApiResponse response : responses) {
+            if (response.getMeanings() != null && !response.getMeanings().isEmpty()) {
+                log.warn("No POS match found for '{}', using first meaning as fallback", targetPos);
+                return buildResponseWithMeanings(response, response.getMeanings());
+            }
+        }
+
+        return null;
+    }
+
+    private DictionaryApiResponse buildResponseWithMeanings(
+            DictionaryApiResponse original,
+            List<DictionaryApiResponse.Meaning> meanings
+    ) {
+        return DictionaryApiResponse.builder()
+                .word(original.getWord())
+                .phonetic(original.getPhonetic())
+                .phonetics(original.getPhonetics())
+                .meanings(meanings)
+                .license(original.getLicense())
+                .sourceUrls(original.getSourceUrls())
+                .build();
+    }
 
 
     @Cacheable(

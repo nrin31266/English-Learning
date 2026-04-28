@@ -13,6 +13,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
 @Builder
 public class LessonSentence {
 
@@ -47,8 +48,8 @@ public class LessonSentence {
 
     // ───────────────────────────────────────────
     // PHONETICS
-    @Column(name = "phonetic_uk", length = 1000)
-    private String phoneticUk;
+//    @Column(name = "phonetic_uk", length = 1000)
+//    private String phoneticUk;
 
     @Column(name = "phonetic_us", length = 1000)
     private String phoneticUs;

@@ -1,3 +1,4 @@
+import SkeletonComponent from "@/components/SkeletonComponent"
 import { Badge } from "@/components/ui/badge"
 import {
     Breadcrumb,
@@ -10,12 +11,11 @@ import { Button } from "@/components/ui/button"
 import {
     Table,
     TableBody,
-    TableCaption,
     TableCell,
     TableFooter,
     TableHead,
     TableHeader,
-    TableRow,
+    TableRow
 } from "@/components/ui/table"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { fetchTopics } from "@/store/learningcontent/topicSlide"
@@ -26,7 +26,6 @@ import { useEffect, useState } from "react"
 import { useTranslation } from 'react-i18next'
 import { Link } from "react-router-dom"
 import { TopicDialog } from "../components/TopicDialog"
-import SkeletonComponent from "@/components/SkeletonComponent"
 const AllTopic = () => {
     const { t } = useTranslation()
     const [open, setOpen] = useState(false);

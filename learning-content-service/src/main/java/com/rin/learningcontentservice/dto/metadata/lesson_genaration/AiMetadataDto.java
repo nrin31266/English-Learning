@@ -12,5 +12,4 @@ public class AiMetadataDto {
 
     private Transcribed transcribed;
 
-    private NlpAnalyzed nlpAnalyzed;
 }

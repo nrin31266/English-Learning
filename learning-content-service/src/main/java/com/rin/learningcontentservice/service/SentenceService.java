@@ -29,12 +29,15 @@ public class SentenceService {
     private final LessonRepository lessonRepository;
     private final SentenceMapper lessonSentenceMapper;
     private final LessonWordRepository lessonWordRepository;
-
+    @Transactional
     public void markSentenceActiveOrInactive(Long sentenceId, Boolean active) {
         LessonSentence sentence = lessonSentenceRepository.findById(sentenceId)
                 .orElseThrow(() -> new BaseException(LearningContentErrorCode.SENTENCE_NOT_FOUND,
                         LearningContentErrorCode.SENTENCE_NOT_FOUND.formatMessage(sentenceId)));
         sentence.setIsActive(active);
+        var lesson = sentence.getLesson();
+        lesson.setVersion(lesson.getVersion() == null ? 0 : lesson.getVersion() + 1);
+        lessonRepository.save(lesson);
         lessonSentenceRepository.save(sentence);
     }
 
@@ -56,21 +59,20 @@ public class SentenceService {
                         sentence.getOrderIndex());
 
         sentencesAfter.forEach(s -> s.setOrderIndex(s.getOrderIndex() + 1));
+
         // Tìm word đầu tiên của câu 2 trước khi move
         LessonWord firstWordOfSentence2 = sentence.getLessonWords().stream()
                 .filter(w -> w.getOrderIndex() > splitAfterWord.getOrderIndex())
                 .min(Comparator.comparing(LessonWord::getOrderIndex))
                 .orElseThrow();
 
-
-        // 👉 Tạo sentence2 (rỗng)
+        // Tạo sentence2
         LessonSentence sentence2 = LessonSentence.builder()
                 .lesson(sentence.getLesson())
                 .orderIndex(sentence.getOrderIndex() + 1)
                 .textRaw(sentence.getTextRaw())
                 .textDisplay(request.getSentence2().getTextDisplay().trim())
                 .translationVi(request.getSentence2().getTranslationVi().trim())
-                .phoneticUk(request.getSentence2().getPhoneticUk().trim())
                 .phoneticUs(request.getSentence2().getPhoneticUs().trim())
                 .audioStartMs(firstWordOfSentence2.getAudioStartMs())
                 .audioEndMs(sentence.getAudioEndMs())
@@ -93,17 +95,10 @@ public class SentenceService {
             w.setOrderIndex(newIndex++);
             savedSentence2.getLessonWords().add(w);
         }
-        // Recalculate startCharIndex/endCharIndex cho words câu 2
-        int offset = firstWordOfSentence2.getStartCharIndex();
-        savedSentence2.getLessonWords().forEach(w -> {
-            w.setStartCharIndex(w.getStartCharIndex() - offset);
-            w.setEndCharIndex(w.getEndCharIndex() - offset);
-        });
 
         // Update sentence1
         sentence.setTextDisplay(request.getSentence1().getTextDisplay().trim());
         sentence.setTranslationVi(request.getSentence1().getTranslationVi().trim());
-        sentence.setPhoneticUk(request.getSentence1().getPhoneticUk().trim());
         sentence.setPhoneticUs(request.getSentence1().getPhoneticUs().trim());
         sentence.setAudioEndMs(splitAfterWord.getAudioEndMs());
 
@@ -113,7 +108,7 @@ public class SentenceService {
 
         Lesson lesson = sentence.getLesson();
         lesson.setTotalSentences((lesson.getTotalSentences() != null ? lesson.getTotalSentences() : 0) + 1);
-        lesson.setVersion(lesson.getVersion() == null ? 1 : lesson.getVersion());// default ver 0
+        lesson.setVersion(lesson.getVersion() == null ? 1 : lesson.getVersion());
         lessonRepository.save(lesson);
         lessonSentenceRepository.flush();
 
@@ -149,27 +144,11 @@ public class SentenceService {
                 .sorted(Comparator.comparing(LessonWord::getOrderIndex))
                 .toList();
 
-        // Base index của sentence1
-        int baseIndex = sentence1.getLessonWords().size();
-
-        // Offset char index (có thêm space)
-        int offset = 0;
-
-        if (!sentence1.getLessonWords().isEmpty()) {
-            LessonWord lastWord = sentence1.getLessonWords().stream()
-                    .max(Comparator.comparing(LessonWord::getOrderIndex))
-                    .orElseThrow();
-
-            offset = lastWord.getEndCharIndex() + 1;
-        }
-
         // Move words từ sentence2 → sentence1
+        int baseIndex = sentence1.getLessonWords().size();
         for (LessonWord w : wordsToMove) {
             w.setSentence(sentence1);
             w.setOrderIndex(baseIndex++);
-            w.setStartCharIndex(w.getStartCharIndex() + offset);
-            w.setEndCharIndex(w.getEndCharIndex() + offset);
-
             sentence1.getLessonWords().add(w);
         }
 
@@ -187,13 +166,7 @@ public class SentenceService {
                         + (sentence2.getTranslationVi() != null ? sentence2.getTranslationVi() : "")
         );
 
-        // Merge phonetic
-        sentence1.setPhoneticUk(
-                (sentence1.getPhoneticUk() != null ? sentence1.getPhoneticUk() : "")
-                        + " "
-                        + (sentence2.getPhoneticUk() != null ? sentence2.getPhoneticUk() : "")
-        );
-
+        // Merge phonetic (chỉ giữ US, bỏ UK)
         sentence1.setPhoneticUs(
                 (sentence1.getPhoneticUs() != null ? sentence1.getPhoneticUs() : "")
                         + " "
@@ -223,8 +196,7 @@ public class SentenceService {
                 (lesson.getTotalSentences() != null ? lesson.getTotalSentences() : 0) - 1
         );
 
-        //
-        lesson.setVersion(lesson.getVersion() == null ? 1 : lesson.getVersion());// default ver 0
+        lesson.setVersion(lesson.getVersion() == null ? 1 : lesson.getVersion());
         lessonRepository.save(lesson);
 
         lessonSentenceRepository.flush();

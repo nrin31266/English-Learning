@@ -351,17 +351,11 @@ public class LessonService {
 
         List<SegmentMetadata> segments = metadata.getTranscribed().getSegments();
 
-        Map<Integer, SentenceMetadata> nlpSentenceMap = new HashMap<>();
-        if (metadata.getNlpAnalyzed() != null &&
-                metadata.getNlpAnalyzed().getSentences() != null) {
-            for (SentenceMetadata s : metadata.getNlpAnalyzed().getSentences()) {
-                nlpSentenceMap.put(s.getOrderIndex(), s);
-            }
-        }
+        // 🔥 XÓA toàn bộ code liên quan đến nlpSentenceMap
+        // Không cần mapping nữa vì dữ liệu đã có sẵn trong segment
 
         for (int idx = 0; idx < segments.size(); idx++) {
             SegmentMetadata seg = segments.get(idx);
-            SentenceMetadata nlpSentence = nlpSentenceMap.get(idx);
 
             String textRaw = seg.getText() != null ? seg.getText().trim() : "";
 
@@ -370,24 +364,18 @@ public class LessonService {
                     .orderIndex(idx)
                     .textRaw(textRaw)
                     .textDisplay(textRaw)
-                    .translationVi(nlpSentence != null ? nlpSentence.getTranslationVi() : null)
-                    .phoneticUk(nlpSentence != null ? nlpSentence.getPhoneticUk() : null)
-                    .phoneticUs(nlpSentence != null ? nlpSentence.getPhoneticUs() : null)
+                    .translationVi(seg.getTranslationVi())  // 👈 Lấy trực tiếp từ segment
+                    .phoneticUs(seg.getPhoneticUs())        // 👈 Lấy trực tiếp từ segment
                     .audioStartMs(TimeUtils.toMs(seg.getStart()))
                     .audioEndMs(TimeUtils.toMs(seg.getEnd()))
                     .build();
 
-            // 👉 TRUYỀN THÊM nlpSentence.getWords() VÀO buildWords
-            List<WordAnalyzedDto> nlpWords = nlpSentence != null ? nlpSentence.getWords() : null;
-            List<LessonWord> words = buildWords(lessonSentence, seg, textRaw, nlpWords);
+            List<LessonWord> words = buildWords(lessonSentence, seg);
 
-            // 🔥 CRITICAL: Set owning side và inverse side
             for (LessonWord w : words) {
-                w.setSentence(lessonSentence);  // owning side
+                w.setSentence(lessonSentence);
             }
-            lessonSentence.setLessonWords(words);  // inverse side
-
-            // 🔥 CRITICAL: Đảm bảo lesson reference từ sentence
+            lessonSentence.setLessonWords(words);
             lessonSentence.setLesson(lesson);
 
             builtSentences.add(lessonSentence);
@@ -398,9 +386,7 @@ public class LessonService {
 
     private List<LessonWord> buildWords(
             LessonSentence lessonSentence,
-            SegmentMetadata seg,
-            String baseText,
-            List<WordAnalyzedDto> nlpWords  // 👈 THÊM THAM SỐ NÀY
+            SegmentMetadata seg
     ) {
 
         List<LessonWord> lessonWords = new ArrayList<>();
@@ -409,34 +395,12 @@ public class LessonService {
             return lessonWords;
         }
 
-        // Tạo map tra cứu nhanh IPA từ nlpWords theo orderIndex
-        Map<Integer, WordAnalyzedDto> nlpWordMap = new HashMap<>();
-        if (nlpWords != null) {
-            for (WordAnalyzedDto nw : nlpWords) {
-                nlpWordMap.put(nw.getOrderIndex(), nw);
-            }
-        }
-
-        int charCursor = 0;
 
         for (int wIdx = 0; wIdx < seg.getWords().size(); wIdx++) {
 
             WordMetadata w = seg.getWords().get(wIdx);
-            WordAnalyzedDto nlpWord = nlpWordMap.get(wIdx);  // 👈 LẤY IPA THEO INDEX
 
             String wordText = w.getWord() != null ? w.getWord().trim() : "";
-
-            int startChar = -1;
-            int endChar = -1;
-
-            if (!wordText.isEmpty()) {
-                startChar = baseText.indexOf(wordText, charCursor);
-                if (startChar >= 0) {
-                    endChar = startChar + wordText.length();
-                    charCursor = endChar;
-                }
-            }
-
             boolean hasPunctuation = TextUtils.hasPunctuation(wordText);
 
             LessonWord lessonWord = LessonWord.builder()
@@ -446,18 +410,11 @@ public class LessonService {
                     .posTag(w.getPosTag())
                     .lemma(w.getLemma())
                     .entityType(w.getEntityType())
-                    .wordLower(TextUtils.normalizeWordLower(wordText))
                     .wordNormalized(TextUtils.normalizeWordLower(TextUtils.normalizeWordSoft(wordText)))
-                    .wordSlug(TextUtils.createSlug(wordText))
-                    .startCharIndex(startChar >= 0 ? startChar : null)
-                    .endCharIndex(endChar >= 0 ? endChar : null)
                     .audioStartMs(TimeUtils.toMs(w.getStart()))
                     .audioEndMs(TimeUtils.toMs(w.getEnd()))
                     .hasPunctuation(hasPunctuation)
                     .isClickable(true)
-                    // 👉 THÊM 2 FIELD IPA TỪ NLP
-                    .ipaRaw(nlpWord != null ? nlpWord.getIpaRaw() : null)
-                    .ipa(nlpWord != null ? nlpWord.getIpa() : null)
                     .build();
 
             lessonWords.add(lessonWord);

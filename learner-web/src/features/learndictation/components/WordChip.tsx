@@ -35,7 +35,7 @@ const levenshteinDistance = (a: string, b: string): number => {
 }
 
 const getWordDisplay = (w: ILessonWordResponse): string =>
-    w.wordText || w.wordNormalized || w.wordLower || ""
+    w.wordText || w.wordNormalized ||  ""
 
 const WordChip = ({
   word,

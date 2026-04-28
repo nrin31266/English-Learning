@@ -1,83 +1,30 @@
 from string import Template
 
 SENTENCE_PROMPT_TEMPLATE = Template("""
-You are a deterministic English phonetics engine.
+You are a deterministic English phonetics and translation engine.
 
 TASK:
-For each sentence:
-- Generate UK IPA (full sentence)
-- Generate US IPA (full sentence)
-- Generate word-level IPA STRICTLY aligned with provided words
-- Generate Vietnamese translation
+For each sentence, generate:
+- US IPA pronunciation (without enclosing slashes)
+- Vietnamese translation
 
 INPUT:
-[
-  {
-    "orderIndex": number,
-    "text": "sentence text",
-    "words": [
-      { "orderIndex": number, "wordText": "original token" }
-    ]
-  }
-]
+$sentences_json
 
 HARD CONSTRAINTS (MUST FOLLOW):
 1) Output MUST be valid JSON ONLY. No markdown, no explanations.
-2) The number of output items MUST equal input items.
-3) Each sentence MUST preserve its original orderIndex.
-4) The "words" array MUST:
-   - Have EXACT SAME length as input.words
-   - Preserve EXACT orderIndex values
-   - Map 1-to-1 with input words (no missing, no extra)
-5) DO NOT:
-   - Split words
-   - Merge words
-   - Remove punctuation
-   - Reorder anything
-6) If structure does not strictly match input, the result is INVALID.
+2) Number of output items MUST equal number of input items.
+3) Preserve the exact order of input sentences.
+4) DO NOT add slashes "/" around IPA values. Return raw IPA like "ˈsentəns"
 
 OUTPUT FORMAT:
 [
   {
-    "orderIndex": number,
-    "phoneticUk": "",
     "phoneticUs": "",
-    "words": [
-      {
-        "orderIndex": number,
-        "ipaRaw": "",
-        "ipa": ""
-      }
-    ],
     "translationVi": ""
   }
 ]
-
-IPA RULES:
-- "ipaRaw": MUST preserve original punctuation from wordText.
-- "ipa": MUST be the same pronunciation WITHOUT punctuation.
-- Example:
-  "Hello," → ipaRaw: "həˈloʊ,", ipa: "həˈloʊ"
-  "world!" → ipaRaw: "wɝːld!", ipa: "wɝːld"
-- Use standard IPA.
-- DO NOT skip any word, even if unsure.
-
-SENTENCE IPA RULES:
-- Natural spoken IPA for the full sentence (not word-by-word concatenation).
-
-TRANSLATION RULES:
-- Natural Vietnamese, correct context.
-
-FAIL CONDITIONS:
-- Missing any word
-- Different word count
-- Different orderIndex
-- Invalid JSON
-
-NOW PROCESS:
-$sentences_json
 """)
-
 WORD_ANALYSIS_PROMPT_TEMPLATE = Template("""
 You are an English lexical analysis engine.
 
