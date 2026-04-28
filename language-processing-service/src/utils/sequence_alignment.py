@@ -28,6 +28,7 @@ COST_DIFFERENT = 0.6    # mismatch khác (vẫn rẻ hơn insert)
 COST_INSERT_DELETE = 1.0  # insert/delete
 SWAP_PENALTY = 0.3      # phạt thêm khi phát hiện swap
 
+
 def get_phoneme_similarity(a: str, b: str) -> float:
     if a == b:
         return 1.0
@@ -37,6 +38,7 @@ def get_phoneme_similarity(a: str, b: str) -> float:
         return SIMILAR_PHONEMES[(b, a)]
     return 0.0
 
+
 def get_phoneme_cost(a: str, b: str, similarity_threshold: float = 0.5) -> float:
     if a == b:
         return COST_MATCH
@@ -45,12 +47,12 @@ def get_phoneme_cost(a: str, b: str, similarity_threshold: float = 0.5) -> float
         return COST_SIMILAR
     return COST_DIFFERENT
 
+
 def levenshtein_alignment_with_similarity(
     seq1: List[str], 
     seq2: List[str],
     similarity_threshold: float = 0.5,
-    # 👉 FIX TẠI ĐÂY: Đổi anchor_first thành False để tránh force-align sai lệch
-    anchor_first: bool = False,  
+    anchor_first: bool = False,  # 👉 ĐÃ ĐỔI THÀNH FALSE
 ) -> Tuple[List[Tuple[Optional[str], Optional[str]]], float]:
     """
     Alignment với:

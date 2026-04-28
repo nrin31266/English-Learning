@@ -29,29 +29,56 @@ const getWordClass = (status: string, attempted: boolean) => {
   }
 }
 
-// 👉 DANH SÁCH ÂM THỪA PHỔ BIẾN: Chỉ hiển thị những âm này khi bị EXTRA (đuôi s/es, ed, ing...)
-const COMMON_EXTRA_PHONEMES = ["s", "z", "t", "d", "ɪz", "ɪt", "əd", "ɪd", "ə", "ŋ"]
+// 👉 BLACKLIST RÁC: Chỉ tàng hình những ký tự thực sự không mang giá trị âm vị học
+const NOISE_PHONEMES = ["", " ", "ː", "ˑ"]
 
-// Helper: lấy màu sắc cho từng loại token
+// 👉 SEMANTIC COLOR MAPPING TỐI GIẢN
 const getTokenColorClass = (token: IDiffToken): string => {
   switch (token.type) {
+    // 1. Phonemes
     case "MATCH": return "text-emerald-600"
     case "MISMATCH": return "text-red-500 font-semibold"
     case "MISSING": return "text-slate-400"
-    case "EXTRA": return "text-amber-500 line-through font-medium"
-    // 👉 ĐỔI MÀU DẤU NHẤN: Hồng tím cực đậm, bôi to thêm chút xíu để dễ nhận diện, ko lộn với màu đúng
-    case "STRESS": return "text-fuchsia-500 font-extrabold text-[110%]"
-    case "PUNCT": return "text-slate-400" // Dấu câu cho mờ mờ đi cho đỡ rối
+    case "EXTRA": return "text-amber-500 line-through text-[80%] opacity-80" // Style nhẹ lại để không làm rối UI
+    
+    // 2. Stress (Clean UI - Đúng 2 trạng thái Correct vs Wrong)
+    case "STRESS_MATCH": return "text-emerald-500 font-extrabold text-[110%]"
+    case "STRESS_WRONG": return "text-red-500 font-extrabold text-[110%]" 
+    
+    // 3. Punctuation
+    case "PUNCT": return "text-slate-300 font-light" 
+      
     default: return "text-muted-foreground"
   }
 }
 
-// Helper: lấy text hiển thị cho token
+// 👉 THÔNG MINH LẤY TEXT: Ưu tiên expected (Kể cả STRESS_WRONG bị missing). Nếu expected không có, lấy actual.
 const getTokenDisplayText = (token: IDiffToken): string => {
-  if (token.type === "EXTRA") {
-    return token.actual_ipa || token.actual || ""
-  }
-  return token.expected_ipa || token.expected || ""
+  return token.expected_ipa || token.expected || token.actual_ipa || token.actual || ""
+}
+
+// 👉 FILTER LỌC STRESS TRÙNG LẶP: Mỗi từ chỉ hiện tối đa 1 STRESS (Ưu tiên MATCH)
+const normalizeStressTokens = (tokens: IDiffToken[]) => {
+  const hasCorrect = tokens.some(t => t.type === "STRESS_MATCH")
+  let used = false
+
+  return tokens.filter(t => {
+    if (t.type.startsWith("STRESS")) {
+      if (used) return false
+
+      if (hasCorrect) {
+        if (t.type === "STRESS_MATCH") {
+          used = true
+          return true
+        }
+        return false 
+      } else {
+        used = true 
+        return true
+      }
+    }
+    return true
+  })
 }
 
 // Render IPA cho toàn câu từ diff_tokens
@@ -61,7 +88,7 @@ const renderSentenceIpaFromDiff = (compares: IShadowingResult['compares'], lastR
   compares.forEach((c, idx) => {
     const attempted = c.position <= lastRecognizedPosition
 
-    // EXTRA TỪ LỚN: hiển thị actual_ipa gạch ngang màu vàng
+    // EXTRA TỪ LỚN
     if (c.status === "EXTRA") {
       if (attempted) {
         const extraIpa = c.phonemeDiff?.actual_ipa || c.recognizedWord || ""
@@ -74,7 +101,7 @@ const renderSentenceIpaFromDiff = (compares: IShadowingResult['compares'], lastR
       return
     }
 
-    // Chưa đọc: hiển thị expected_ipa màu xám
+    // Chưa đọc: hiển thị màu xám
     if (!attempted) {
       const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
       elements.push(
@@ -85,11 +112,9 @@ const renderSentenceIpaFromDiff = (compares: IShadowingResult['compares'], lastR
       return
     }
 
-    // Đã đọc: dùng diff_tokens để render từng phoneme
     const diffTokens = c.phonemeDiff?.diff_tokens
 
     if (!diffTokens || diffTokens.length === 0) {
-      // Fallback: không có diff_tokens
       const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
       let colorClass = "text-emerald-600"
       if (c.status === "MISSING") colorClass = "text-slate-400"
@@ -102,16 +127,17 @@ const renderSentenceIpaFromDiff = (compares: IShadowingResult['compares'], lastR
       return
     }
 
-    // Có diff_tokens: render từng token với màu sắc riêng
+    // 🎯 Áp dụng Filter STRESS
+    const normalizedTokens = normalizeStressTokens(diffTokens)
     const tokenElements: React.ReactNode[] = []
     
-    diffTokens.forEach((token, tokenIdx) => {
+    normalizedTokens.forEach((token, tokenIdx) => {
       const displayText = getTokenDisplayText(token)
       if (!displayText) return
 
-      // 👉 LỌC EXTRA PHONEME THÔNG MINH: Lược bỏ bớt rác UI
-      if (token.type === "EXTRA" && !COMMON_EXTRA_PHONEMES.includes(displayText)) {
-        return // Không render các âm rác dư thừa
+      // 🔥 FIX CHUẨN PRODUCTION: Giữ lại toàn bộ EXTRA Phoneme của user để học, chỉ lọc bỏ rác thực sự
+      if (token.type === "EXTRA" && NOISE_PHONEMES.includes(displayText)) {
+        return 
       }
 
       tokenElements.push(
@@ -128,7 +154,6 @@ const renderSentenceIpaFromDiff = (compares: IShadowingResult['compares'], lastR
     )
   })
 
-  // 👉 LÀM TO CHỮ: text-xl, font-medium, tracking-wide
   return <div className="font-mono text-xl font-medium tracking-wide leading-relaxed break-all">{elements}</div>
 }
 
@@ -141,7 +166,6 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={cn(
@@ -165,7 +189,6 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
 
       <div className="h-px bg-border/50" />
 
-      {/* DÒNG 1: TỪ VỰNG (5 status) */}
       <div className="flex flex-wrap items-end gap-x-3 gap-y-4">
         {compares.map((c) => {
           const attempted = c.position <= lastRecognizedPosition
@@ -183,15 +206,11 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
                   asChild
                   onClick={() => setOpenPopoverPosition((prev) => prev === c.position ? null : c.position)}
                   onMouseEnter={() => {
-                    if (hoverTimeoutRef.current) {
-                      clearTimeout(hoverTimeoutRef.current)
-                    }
+                    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
                     setOpenPopoverPosition(c.position)
                   }}
                   onMouseLeave={() => {
-                    hoverTimeoutRef.current = setTimeout(() => {
-                      setOpenPopoverPosition(null)
-                    }, 120)
+                    hoverTimeoutRef.current = setTimeout(() => setOpenPopoverPosition(null), 120)
                   }}
                 >
                   <div className="flex flex-col items-center cursor-pointer">
@@ -213,7 +232,6 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
                 </PopoverTrigger>
               </div>
 
-              {/* POPOVER: hiển thị expected/actual IPA */}
               <PopoverContent className="w-auto p-3" sideOffset={5}>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
@@ -227,22 +245,20 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
                     )}
                   </div>
 
-                  {/* Expected IPA */}
                   {c.status !== "EXTRA" && (
                     <div className="text-sm">
                       <div className="text-muted-foreground text-xs mb-0.5">Expected IPA:</div>
                       <div className="font-mono text-emerald-700 break-all">
-                        {c.phonemeDiff?.expected_ipa || c.phonemeDiff?.expected_ipa || "—"}
+                        {c.phonemeDiff?.expected_ipa || "—"}
                       </div>
                     </div>
                   )}
 
-                  {/* Actual IPA (chỉ hiển thị khi có lỗi hoặc EXTRA) */}
                   {(c.status === "NEAR" || c.status === "WRONG" || c.status === "EXTRA") && (
                     <div className="text-sm">
                       <div className="text-muted-foreground text-xs mb-0.5">Your IPA:</div>
                       <div className="font-mono text-red-600 break-all">
-                        {c.phonemeDiff?.actual_ipa || c.phonemeDiff?.actual_ipa || (c.status === "EXTRA" ? c.recognizedWord : "—")}
+                        {c.phonemeDiff?.actual_ipa || (c.status === "EXTRA" ? c.recognizedWord : "—")}
                       </div>
                     </div>
                   )}
@@ -253,7 +269,6 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
         })}
       </div>
 
-      {/* DÒNG 2: IPA TOÀN CÂU - dùng diff_tokens để tô màu từng phoneme */}
       <div className="mt-2 flex flex-col gap-2 rounded-xl bg-muted/30 p-4 border border-border/50">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
           Pronunciation Sequence

@@ -26,7 +26,7 @@ export interface IShadowingWord {
 }
 
 // 👇 THÊM 2 TYPE NÀY
-export type DiffTokenType = "MATCH" | "MISMATCH" | "MISSING" | "EXTRA" | "STRESS" | "PUNCT" | "NO_DATA"
+export type DiffTokenType = "MATCH" | "MISMATCH" | "MISSING" | "EXTRA" | "STRESS_MATCH" | "PUNCT" | "NO_DATA" | "STRESS_WRONG";
 export type WordStatus = "CORRECT" | "NEAR" | "WRONG" | "MISSING" | "EXTRA"
 
 export interface IDiffToken {
