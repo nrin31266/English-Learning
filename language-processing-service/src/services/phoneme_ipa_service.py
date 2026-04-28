@@ -36,7 +36,7 @@ def get_ipa_string(word: str) -> Optional[str]:
 
 def get_ipa_string_with_stress(word: str) -> Optional[str]:
     """Get IPA with stress (keep original, no normalization)"""
-    return _get_ipa(word, keep_stress=True, normalize=True, remove_length=False, as_string=True)
+    return _get_ipa(word, keep_stress=True, normalize=True, remove_length=False, as_string=True, remove_punctuation=False)
 
 
 # ========== MAIN TEST ==========

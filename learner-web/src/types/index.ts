@@ -25,50 +25,61 @@ export interface IShadowingWord {
   score: number
 }
 
-export type DiffTokenType = "MATCH" | "MISMATCH" | "MISSING" | "EXTRA" | "NO_DATA";
-export type WordStatus = "CORRECT" | "NEAR" | "WRONG" | "MISSING" | "EXTRA";
-export type PhonemeErrorType = "MISSING" | "EXTRA";
+// 👇 THÊM 2 TYPE NÀY
+export type DiffTokenType = "MATCH" | "MISMATCH" | "MISSING" | "EXTRA" | "STRESS" | "PUNCT" | "NO_DATA"
+export type WordStatus = "CORRECT" | "NEAR" | "WRONG" | "MISSING" | "EXTRA"
 
 export interface IDiffToken {
-  type: DiffTokenType;
-  expected_ipa: string | null;
-  actual_ipa: string | null;
-  position: number | null;
+  type: DiffTokenType
+  expected: string | null      // 👈 đổi từ expected_ipa → expected
+  actual: string | null        // 👈 đổi từ actual_ipa → actual
+  position: number | null
+  // Optional fields cho STRESS/PUNCT
+  expected_ipa?: string | null
+  actual_ipa?: string | null
+  stress?: {
+    expected: string | null
+    actual: string | null
+  }
+  punct?: {
+    expected: string | null
+    actual: string | null
+  }
 }
 
 export interface IPhonemeDiff {
-  score: number;
-  diff_tokens?: IDiffToken[];
-  expected_ipa: string | null;
-  actual_ipa: string | null;
+  score: number
+  diff_tokens: IDiffToken[]     // 👈 bỏ optional, luôn có (có thể là [])
+  expected_ipa: string | null
+  actual_ipa: string | null
 }
 
 export interface IShadowingWordCompare {
-  position: number;
-  expectedWord: string | null;
-  recognizedWord: string | null;
-  expectedNormalized: string | null;
-  recognizedNormalized: string | null;
-  status: WordStatus;
-  score: number;
-  phonemeDiff: IPhonemeDiff | null;
+  position: number
+  expectedWord: string | null
+  recognizedWord: string | null
+  expectedNormalized: string | null
+  recognizedNormalized: string | null
+  status: WordStatus
+  score: number
+  phonemeDiff: IPhonemeDiff      // 👈 bỏ optional, luôn có
 }
 
 export interface IShadowingResult {
-  sentenceId: number;
-  expectedText: string;
-  recognizedText: string;
-  totalWords: number;
-  correctWords: number;
-  accuracy: number;
-  weightedAccuracy: number;
-  fluencyScore: number;
-  avgPause: number;
-  speechRate: number;
-  recognizedWordCount: number;
-  lastRecognizedPosition: number;
-  compares: IShadowingWordCompare[];
-  phonemeDiff?: IPhonemeDiff | null;
+  sentenceId: number
+  expectedText: string
+  recognizedText: string
+  totalWords: number
+  correctWords: number
+  accuracy: number
+  weightedAccuracy: number
+  fluencyScore: number
+  avgPause: number
+  speechRate: number
+  recognizedWordCount: number
+  lastRecognizedPosition: number
+  compares: IShadowingWordCompare[]
+  phonemeDiff?: IPhonemeDiff | null
 }
 
 export interface ILessonSentenceDetailsResponse {

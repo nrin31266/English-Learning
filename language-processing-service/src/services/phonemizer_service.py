@@ -17,10 +17,8 @@ logger = logging.getLogger(__name__)
 _phonemizer = None
 _loaded = False
 
-
-
 IPA_NORMALIZATION_RULES = [
-    (r'[ɹɻ]', 'r'),           # turned r, retroflex r → r  ← BỎ COMMENT
+    (r'[ɹɻ]', 'r'),           # turned r, retroflex r → r 
     (r'ɾ', 't'),              # flap t → t
     (r'ɐ', 'ə'),              # near-open central → schwa
     (r'ᵻ', 'ɪ'),              # near-close central unrounded → ɪ
@@ -82,8 +80,6 @@ def _ensure_loaded(disable_gpu: bool = False):
         _loaded = True
 
 
-# src/services/phonemizer_service.py
-
 def _normalize_ipa(
     ipa: str,
     keep_stress: bool = True,
@@ -108,7 +104,7 @@ def _normalize_ipa(
     if remove_punctuation:
         ipa = re.sub(PUNCTUATION_PATTERN, '', ipa)
     else:
-        # 🟢 GIỮ PUNCTUATION NH�NG XÓA KHOẢNG TRẮNG THỪA TRƯỚC NÓ
+        # GIỮ PUNCTUATION NHƯNG XÓA KHOẢNG TRẮNG THỪA TRƯỚC NÓ
         ipa = re.sub(r'\s+([.,!?;:])', r'\1', ipa)
 
     # Dọn dẹp khoảng trắng
@@ -116,19 +112,56 @@ def _normalize_ipa(
     return ipa
 
 # =========================
-# PHONEME TOKENIZER
+# PHONEME TOKENIZER (FIXED)
 # =========================
 def _tokenize_phonemes(ipa: str) -> List[str]:
     """
-    Proper phoneme segmentation (NOT char split)
+    Proper phoneme segmentation.
+    Splits string into phonemes, stress marks, and punctuation properly.
     """
     if not ipa:
         return []
 
-    # keep multi-char phonemes first
-    pattern = r'ər|tʃ|dʒ|aɪ|aʊ|oʊ|eɪ|ɪə|eə|ʊə|[a-zA-Zˈˌɪʊæɑɔɛɜəʌθðŋʃʒr]+'
+    tokens = []
+    i = 0
 
-    return re.findall(pattern, ipa)
+    # Danh sách các âm ghép (multi-character phonemes)
+    MULTI = ["tʃ", "dʒ", "aɪ", "aʊ", "oʊ", "eɪ", "ɔɪ", "ər", "ɑː", "ɜː", "ɪə", "ʊə", "eə"]
+
+    while i < len(ipa):
+        # Bỏ qua khoảng trắng
+        if ipa[i].isspace():
+            i += 1
+            continue
+
+        # Ưu tiên check âm ghép
+        matched = False
+        for m in MULTI:
+            if ipa.startswith(m, i):
+                tokens.append(m)
+                i += len(m)
+                matched = True
+                break
+        if matched:
+            continue
+
+        # Check dấu nhấn
+        if ipa[i] in "ˈˌ":
+            tokens.append(ipa[i])
+            i += 1
+            continue
+
+        # Check dấu câu
+        if ipa[i] in ".,!?;:\"()[]{}…—–-'":
+            tokens.append(ipa[i])
+            i += 1
+            continue
+
+        # Default: Ký tự đơn (âm đơn)
+        tokens.append(ipa[i])
+        i += 1
+
+    return tokens
 
 
 # =========================
@@ -178,7 +211,7 @@ def get_ipa(
     remove_length: bool = False,
     as_string: bool = True,
     disable_gpu: bool = False,
-    remove_punctuation: bool = True,  # THÊM PARAMETER
+    remove_punctuation: bool = True,
 ) -> Optional[Union[str, List[str]]]:
 
     _ensure_loaded(disable_gpu=disable_gpu)

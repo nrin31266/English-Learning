@@ -350,7 +350,7 @@ def build_shadowing_result(
     # Defensive normalize: payload có thể gửi wordNormalized chưa sạch (vd: "let's").
     # Ưu tiên wordNormalized nếu có, fallback sang wordText để tránh mismatch giả.
     expected_norm = [
-        normalize_word_lower(w.wordNormalized) or normalize_word_lower(w.wordText)
+        normalize_word_lower(w.wordText)  # CHỈ lowercase, KHÔNG xóa punctuation
         for w in expected_words
     ]
 
@@ -370,11 +370,11 @@ def build_shadowing_result(
 
     for position, aligned in enumerate(aligned_items):
         exp_word, exp_norm, rec_raw, rec_norm, align_type = aligned
-        # Thêm biến để lưu diff visualization
         phoneme_diff = None
-    
+
         if rec_norm is not None:
             last_recognized_position = position
+        
         if align_type == "INSERT":
             status, score = "EXTRA", 0.0
         elif align_type == "DELETE":
@@ -382,6 +382,7 @@ def build_shadowing_result(
         else:
             # MATCH/SUBSTITUTE đều dùng classifier cũ để giữ behavior hiện có.
             status, score = _classify_word(exp_norm, rec_norm)
+            
             if status in ("NEAR", "WRONG") and exp_word and rec_raw:
                 phoneme_score, diff_tokens, expected_ipa, actual_ipa = compare_words_with_ipa(
                     exp_word,
@@ -389,25 +390,39 @@ def build_shadowing_result(
                 )
                 phoneme_diff = {
                     "score": phoneme_score,
-                    "diff_tokens": diff_tokens,  # UI tự render highlight từ đây
+                    "diff_tokens": diff_tokens,
                     "expected_ipa": expected_ipa or get_ipa_string_with_stress(exp_word),
                     "actual_ipa": actual_ipa or get_ipa_string_with_stress(rec_raw),
                 }
+                
+                # 🔥 NÂNG CẤP DỰA TRÊN PHONEME_SCORE
+                if phoneme_score >= 0.8:
+                    # Nếu phoneme tốt, nâng lên CORRECT
+                    status = "CORRECT"
+                    score = 1.0
+                elif phoneme_score >= 0.6 and status == "WRONG":
+                    # Nếu phoneme khá và đang là WRONG, nâng lên NEAR
+                    status = "NEAR"
+                    score = 0.85  # Hoặc giữ nguyên score cũ từ _classify_word
+        
         if status not in ("NEAR", "WRONG"):
-            expected_ipa, actual_ipa = None, None;
+            expected_ipa, actual_ipa = None, None
             if status == "EXTRA":
                 expected_ipa = None
-                actual_ipa = get_ipa_string_with_stress(rec_raw)
+                actual_ipa = get_ipa_string_with_stress(rec_raw) if rec_raw else None
             elif status == "MISSING":
-                expected_ipa = get_ipa_string_with_stress(exp_word)
+                expected_ipa = get_ipa_string_with_stress(exp_word) if exp_word else None
                 actual_ipa = None
-            else: #CORRECT
-                ipa = get_ipa_string_with_stress(exp_word)
+            else:  # CORRECT
+                ipa = get_ipa_string_with_stress(exp_word) if exp_word else None
                 expected_ipa = ipa
-                actual_ipa = ipa 
+                actual_ipa = ipa
+
             phoneme_diff = {
-                    "expected_ipa": expected_ipa,
-                    "actual_ipa": actual_ipa,
+                "score": 1.0 if status == "CORRECT" else 0.0,
+                "diff_tokens": [],
+                "expected_ipa": expected_ipa,
+                "actual_ipa": actual_ipa,
             }
 
         if status == "CORRECT":
@@ -416,7 +431,6 @@ def build_shadowing_result(
         if status == "EXTRA":
             extra_words += 1
 
-        # chỉ cộng điểm cho các từ expected (không tính EXTRA vào mẫu số)
         if exp_norm is not None:
             total_score += score
 
@@ -429,7 +443,7 @@ def build_shadowing_result(
                 recognizedNormalized=rec_norm,
                 status=status,
                 score=score,
-                phonemeDiff=phoneme_diff,  # THÊM
+                phonemeDiff=phoneme_diff,
             )
         )
 
