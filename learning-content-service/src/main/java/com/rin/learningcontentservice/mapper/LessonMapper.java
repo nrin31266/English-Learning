@@ -22,7 +22,7 @@ public interface LessonMapper {
 
     HomeLessonResponse  toHomeLessonResponse(Lesson lesson);
 
-    @Mapping(target = "progress", ignore = true)
+
     LessonDetailsResponse toLessonDetailsResponse(Lesson lesson);
 
     void updateLessonFromRequest(EditLessonRequest lessonRequest, @MappingTarget Lesson lesson);

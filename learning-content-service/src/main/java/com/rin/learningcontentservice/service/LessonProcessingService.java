@@ -2,16 +2,11 @@ package com.rin.learningcontentservice.service;
 
 import com.rin.englishlearning.common.exception.BaseErrorCode;
 import com.rin.englishlearning.common.exception.BaseException;
-import com.rin.learningcontentservice.dto.response.ShadowingScoreResponse;
+import com.rin.learningcontentservice.dto.request.ProgressUpdateRequest;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
-import com.rin.learningcontentservice.mapper.LessonShadowingProgressMapper;
-import com.rin.learningcontentservice.model.Lesson;
-import com.rin.learningcontentservice.model.LessonSentence;
-import com.rin.learningcontentservice.model.shadowing.LessonShadowingProgress;
-import com.rin.learningcontentservice.model.shadowing.SentenceShadowingAttempt;
+import com.rin.learningcontentservice.model.*;
 import com.rin.learningcontentservice.repository.LessonRepository;
-import com.rin.learningcontentservice.repository.LessonShadowingProgressRepository;
-import com.rin.learningcontentservice.repository.SentenceShadowingAttemptRepository;
+import com.rin.learningcontentservice.repository.UserLessonProgressRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,19 +23,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class LessonProcessingService {
 
-    private final LessonShadowingProgressRepository lessonShadowingProgressRepository;
     private final LessonRepository lessonRepository;
-    private final SentenceShadowingAttemptRepository sentenceShadowingAttemptRepository;
-    private static final int SHADOWING_THRESHOLD = 80;
-    private final LessonShadowingProgressMapper lessonShadowingProgressMapper;
+    private final UserLessonProgressRepository userLessonProgressRepository;
+
+    // Ngưỡng điểm phát âm chuẩn chỉ dùng cho Shadowing
+    private static final double SHADOWING_PASS_THRESHOLD = 80.0;
 
     @Transactional
-    public ShadowingScoreResponse save(
-            Double fluencyScore,
-            Double weightedAccuracy,
-            Long lessonId,
-            Long sentenceId
-    ) {
+    public void updateProgress(ProgressUpdateRequest request) {
 
         String userId = getCurrentUserId();
         if (userId == null) {
@@ -47,150 +38,103 @@ public class LessonProcessingService {
         }
 
         // 1. Lấy lesson
-        Lesson lesson = lessonRepository.findById(lessonId)
+        Lesson lesson = lessonRepository.findById(request.getLessonId())
                 .orElseThrow(() -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND));
 
-        // 2. Lấy progress
-        LessonShadowingProgress progress =
-                lessonShadowingProgressRepository
-                        .findByUserIdAndLessonId(userId, lessonId)
-                        .orElseThrow(() -> new BaseException(LearningContentErrorCode.LESSON_PROGRESS_NOT_FOUND));
+        // 2. Lấy progress (tạo mới nếu chưa có)
+        UserLessonProgress progress = userLessonProgressRepository
+                .findByUserIdAndLessonIdAndMode(userId, request.getLessonId(), request.getMode())
+                .orElseGet(() -> UserLessonProgress.builder()
+                        .userId(userId)
+                        .lessonId(request.getLessonId())
+                        .mode(request.getMode())
+                        .lessonVersion(0)
+                        .status(ProgressStatus.IN_PROGRESS)
+                        .completedSentenceIds(new HashSet<>())
+                        .build());
 
-        // 3. Kiểm tra version
-        Integer lessonVersion = lesson.getVersion() == null ? 0 : lesson.getVersion();
-        if (!lessonVersion.equals(progress.getLessonVersion())) {
-            recomputeProgress(progress, lesson, lessonVersion);
+        // 3. Kiểm tra version để dọn dẹp data nếu Admin có sửa bài học
+        Integer currentLessonVersion = lesson.getVersion() == null ? 0 : lesson.getVersion();
+        if (!currentLessonVersion.equals(progress.getLessonVersion())) {
+            recomputeProgress(progress, lesson, currentLessonVersion);
         }
 
-        // 4. Tìm attempt cho sentenceId
-        SentenceShadowingAttempt attempt = progress.getSentenceAttempts().stream()
-                .filter(a -> a.getSentenceId().equals(sentenceId))
-                .findFirst()
-                .orElse(null);
+        // 4. Logic "Qua môn" (Passed) linh hoạt theo Mode
+        boolean isPassed = false;
 
-        // 5. Tạo mới nếu chưa có
-        if (attempt == null) {
-            attempt = SentenceShadowingAttempt.builder()
-                    .userId(userId)
-                    .lessonId(lessonId)
-                    .sentenceId(sentenceId)
-                    .lessonShadowingProgress(progress)
-                    .completed(false)
-                    .build();
-            progress.getSentenceAttempts().add(attempt);
+        if (request.getMode() == LearningMode.SHADOWING) {
+            // Shadowing: Làm tròn điểm trước khi so sánh (VD: 79.6 -> 80) để đồng bộ với Frontend
+            isPassed = request.getScore() != null && Math.round(request.getScore()) >= SHADOWING_PASS_THRESHOLD;
+        } else if (request.getMode() == LearningMode.DICTATION) {
+            // Dictation: Cứ nộp là qua
+            isPassed = true;
         }
 
-        // ❌ Nếu đã 100% thì bỏ luôn
-        if (attempt.getBestScore() != null && attempt.getBestScore() >= 100.0) {
-            log.info("Already 100%, ignoring request for sentenceId={}", sentenceId);
-            return ShadowingScoreResponse.builder()
-                    .lessonCompleted(progress.getCompleted())
-                    .attemptCompleted(attempt.getCompleted())
-                    .attemptId(attempt.getId())
-                    .build();
-        }
+        // 5. Nếu đạt yêu cầu -> Đánh dấu hoàn thành & lưu DB
+        if (isPassed) {
 
-        // Kiểm tra có phải điểm tốt hơn không
-        boolean isBetterScore = attempt.getBestScore() == null || weightedAccuracy > attempt.getBestScore();
+            // Nếu set.add() trả về true nghĩa là câu này chưa từng hoàn thành trước đó
+            boolean isNewCompletion = progress.getCompletedSentenceIds().add(request.getSentenceId());
 
-        if (isBetterScore) {
+            if (isNewCompletion) {
+                // Đếm số câu đang active của bài học
+                long activeTotal = lesson.getSentences().stream()
+                        .filter(s -> Boolean.TRUE.equals(s.getIsActive()))
+                        .count();
 
+                // Đếm số câu hoàn thành nằm trong danh sách active
+                long completedActive = progress.getCompletedSentenceIds().stream()
+                        .filter(id -> lesson.getSentences().stream()
+                                .anyMatch(s -> s.getId().equals(id) && Boolean.TRUE.equals(s.getIsActive())))
+                        .count();
 
-            // ✅ Update best score
-            attempt.setBestScore(weightedAccuracy);
-            attempt.setBestFluency(fluencyScore);
+                // Kiểm tra xem đã hoàn thành toàn bộ bài chưa
+                if (activeTotal > 0 && completedActive >= activeTotal) {
+                    progress.setStatus(ProgressStatus.COMPLETED);
+                }
 
-            // ✅ Check completed (nếu đạt threshold)
-            boolean isCompleted = (int) Math.round(weightedAccuracy) >= SHADOWING_THRESHOLD;
-            if (isCompleted) {
-                attempt.setCompleted(true);
+                userLessonProgressRepository.save(progress);
+
+                log.info("Lưu tiến độ âm thầm: userId={}, lessonId={}, sentenceId={}, mode={}, score={}",
+                        userId, request.getLessonId(), request.getSentenceId(), request.getMode(), request.getScore());
             }
-
-            sentenceShadowingAttemptRepository.save(attempt);
-
-            log.info("Improved score → saved. userId={}, lessonId={}, sentenceId={}, score={}",
-                    userId, lessonId, sentenceId, weightedAccuracy);
-
-        } else {
-            log.info("Score not improved → ignored. userId={}, lessonId={}, sentenceId={}, score={}, bestScore={}",
-                    userId, lessonId, sentenceId, weightedAccuracy, attempt.getBestScore());
         }
-
-        // Tính lại tổng số câu đã completed
-        long completedCount = progress.getSentenceAttempts().stream()
-                .filter(SentenceShadowingAttempt::getCompleted)
-                .count();
-
-        progress.setCompletedSentences((int) completedCount);
-        progress.setCompleted(progress.getTotalSentences() > 0 && completedCount >= progress.getTotalSentences());
-
-        // Lưu progress
-        progress = lessonShadowingProgressRepository.save(progress);
-
-        return ShadowingScoreResponse.builder()
-                .lessonCompleted(progress.getCompleted())
-                .attemptCompleted(attempt.getCompleted())
-                .attemptId(attempt.getId())
-                .build();
     }
 
-    private void recomputeProgress(
-            LessonShadowingProgress progress,
-            Lesson lesson,
-            Integer lessonVersion
-    ) {
-        // 1. Lấy ALL sentence IDs từ lesson (dùng để cleanup)
+    private void recomputeProgress(UserLessonProgress progress, Lesson lesson, Integer lessonVersion) {
         Set<Long> allLessonSentenceIds = lesson.getSentences().stream()
                 .map(LessonSentence::getId)
                 .collect(Collectors.toSet());
 
-        // 2. Lấy ACTIVE sentence IDs (business rule)
         Set<Long> activeSentenceIds = lesson.getSentences().stream()
                 .filter(s -> Boolean.TRUE.equals(s.getIsActive()))
                 .map(LessonSentence::getId)
                 .collect(Collectors.toSet());
 
-        // 3. Lấy COMPLETED sentence IDs từ attempts (source of truth)
-        Set<Long> completedSentenceIds = progress.getSentenceAttempts().stream()
-                .filter(SentenceShadowingAttempt::getCompleted)
-                .map(SentenceShadowingAttempt::getSentenceId)
-                .collect(Collectors.toSet());
+        if (progress.getCompletedSentenceIds() != null) {
+            progress.getCompletedSentenceIds().retainAll(allLessonSentenceIds);
+        } else {
+            progress.setCompletedSentenceIds(new HashSet<>());
+        }
 
-        // 4. Remove stale attempts (câu không còn trong lesson)
-        progress.getSentenceAttempts().removeIf(attempt ->
-                !allLessonSentenceIds.contains(attempt.getSentenceId())
-        );
-
-        // 5. Recompute completedCount: ACTIVE ⋂ COMPLETED
         long completedCount = activeSentenceIds.stream()
-                .filter(completedSentenceIds::contains)
+                .filter(progress.getCompletedSentenceIds()::contains)
                 .count();
 
         int total = activeSentenceIds.size();
 
-        // 6. Update progress
-        progress.setTotalSentences(total);
-        progress.setCompletedSentences((int) completedCount);
         progress.setLessonVersion(lessonVersion);
-        progress.setCompleted(total > 0 && completedCount >= total);
+        progress.setStatus((total > 0 && completedCount >= total) ? ProgressStatus.COMPLETED : ProgressStatus.IN_PROGRESS);
 
-        log.info("Recomputed progress for lesson {}: total={}, completed={}, attemptsSize={}",
-                lesson.getId(), total, completedCount, progress.getSentenceAttempts().size());
+        log.info("Recomputed progress for lesson {}: totalActive={}, completedValid={}",
+                lesson.getId(), total, completedCount);
     }
 
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return null;
-        }
-
+        if (authentication == null || !authentication.isAuthenticated()) return null;
         Object principal = authentication.getPrincipal();
-
-        if (principal instanceof Jwt jwt) {
-            return jwt.getSubject();
-        }
-
+        if (principal instanceof Jwt jwt) return jwt.getSubject();
         return null;
     }
 }

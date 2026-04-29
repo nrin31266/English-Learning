@@ -27,8 +27,13 @@ async def consume_events():
                 continue
 
             if msg.error():
-                if msg.error().code() != KafkaError._PARTITION_EOF:
+                err_code = msg.error().code()
+
+                if err_code == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                    print("kafka_waiting_for_topic...")
+                elif err_code != KafkaError._PARTITION_EOF:
                     print(f"kafka_error err={msg.error()}")
+
                 continue
 
             route = TOPIC_ROUTES.get(msg.topic())

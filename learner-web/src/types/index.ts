@@ -1,4 +1,5 @@
-import type { LessonShadowingProgress } from "./shadowingProgress"
+import type { LessonProgressOverview } from "./lessonProgress"
+
 
 export interface ITranscriptionResponse {
   id: string
@@ -144,7 +145,7 @@ export interface ILessonDetailsResponse {
   aiMessage: string | null;
   aiMetadataUrl?: string | null;
   sentences: ILessonSentenceDetailsResponse[];
-  progress: LessonShadowingProgress;
+  progressOverview: LessonProgressOverview;  // 👈 thêm trường này để chứa progress của cả bài học
 }
 
 export interface ITopicDetailsResponse {

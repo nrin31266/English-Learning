@@ -5,8 +5,7 @@ import React, {
 import YouTube, { type YouTubeProps } from "react-youtube"
 import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
 import type { PlayerRef } from "./types/types"
-import { Button } from "@/components/ui/button"
-import { Play, } from "lucide-react"
+import { Play } from "lucide-react"
 
 const START_PADDING = 0.1
 const END_PADDING = 0.05
@@ -45,7 +44,6 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
       }
     }, [lesson.sourceUrl])
 
-    // YouTubePlayer.tsx - Thêm origin fix
     const opts: YouTubeProps["opts"] = {
       width: "100%",
       height: largeVideo ? "420" : "200",
@@ -53,11 +51,10 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
         controls: 1,
         rel: 0,
         modestbranding: 1,
-        origin: window.location.origin, // Fix postMessage error
+        origin: typeof window !== "undefined" ? window.location.origin : "", 
       },
     }
 
-    // Hàm dừng kiểm tra animation frame
     const stopMonitoring = useCallback(() => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
@@ -67,21 +64,13 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
 
     const onErrorHandler: YouTubeProps["onError"] = (e) => {
       const code = e.data
-
       console.error("YouTube Error:", code)
-
-      // 🔥 các lỗi quan trọng
-      // 2 = invalid video
-      // 5 = HTML5 error
-      // 100 = video removed
-      // 101/150 = embed not allowed
 
       if ([2, 5, 100, 101, 150].includes(code)) {
         onError?.()
       }
     }
 
-    // Hàm bắt đầu kiểm tra thời gian để dừng video
     const startMonitoring = useCallback(() => {
       const player = playerRef.current
       const segment = currentSegmentRef.current
@@ -99,7 +88,6 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
 
         const currentTime = currentPlayer.getCurrentTime()
 
-        // Nếu đã qua end time, dừng video
         if (currentTime >= currentSegmentData.end) {
           currentPlayer.pauseVideo()
           setIsPlaying(false)
@@ -107,11 +95,10 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
           return
         }
 
-        // Tiếp tục kiểm tra
         animationFrameRef.current = requestAnimationFrame(checkAndStop)
       }
 
-      stopMonitoring() // Clear cái cũ trước
+      stopMonitoring() 
       animationFrameRef.current = requestAnimationFrame(checkAndStop)
     }, [autoStop, stopMonitoring])
 
@@ -123,15 +110,13 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
     const onStateChange: YouTubeProps["onStateChange"] = (e) => {
       const state = e.data
 
-      if (state === 1) { // Playing
+      if (state === 1) { 
         setIsPlaying(true)
-        // Khi video bắt đầu play, bắt đầu kiểm tra nếu autoStop đang bật
         if (autoStop && currentSegmentRef.current) {
           startMonitoring()
         }
-      } else if (state === 2 || state === 0) { // Paused or ended
+      } else if (state === 2 || state === 0) { 
         setIsPlaying(false)
-        // Khi pause, dừng kiểm tra (sẽ resume khi play lại)
         stopMonitoring()
       }
     }
@@ -143,10 +128,8 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
       const start = Math.max(currentSentence.audioStartMs / 1000 - START_PADDING, 0)
       const end = currentSentence.audioEndMs / 1000 + END_PADDING
 
-      // Lưu segment hiện tại
       currentSegmentRef.current = { start, end }
 
-      // Seek và play
       player.seekTo(start, true)
       player.setPlaybackRate(playbackRate || 1)
       player.playVideo()
@@ -156,22 +139,14 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
       const player = playerRef.current
       if (!player || !userInteracted) return
 
-      // Nếu đã có segment (đang trong segment mode)
       if (currentSegmentRef.current) {
         const now = player.getCurrentTime()
-
-        // Nếu đã qua end, replay từ đầu
         if (now >= currentSegmentRef.current.end - END_PADDING && autoStop) {
-          console.log("ahshd")
           playCurrentSegment()
           return
         }
-
-        // Resume với segment hiện tại
         player.playVideo()
-        // startMonitoring sẽ được gọi trong onStateChange
       } else {
-        // Play bình thường (không segment)
         player.playVideo()
       }
     }, [userInteracted, playCurrentSegment, autoStop])
@@ -180,7 +155,6 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
       const player = playerRef.current
       if (!player) return
       player.pauseVideo()
-      // stopMonitoring sẽ được gọi trong onStateChange
     }, [])
 
     useImperativeHandle(ref, () => ({
@@ -188,34 +162,27 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
       getUserInteracted: () => userInteracted,
     }), [playCurrentSegment, play, pause, userInteracted])
 
-    // Theo dõi thay đổi của autoStop
     useEffect(() => {
       const player = playerRef.current
       if (!player || !autoStop) return
-
-      // Nếu autoStop được bật và đang play segment, bắt đầu monitor
       if (isPlaying && currentSegmentRef.current) {
         startMonitoring()
       }
     }, [autoStop, isPlaying, startMonitoring])
 
-    // Theo dõi thay đổi của currentSentence - dừng ngay khi chuyển câu
     useEffect(() => {
       const player = playerRef.current
       if (!player) return
 
-      // Reset segment khi đổi câu
       currentSegmentRef.current = null
       stopMonitoring()
 
-      // Dừng video ngay lập tức
       if (isPlaying) {
         player.pauseVideo()
         setIsPlaying(false)
       }
     }, [currentSentence?.id])
 
-    // Auto play khi đổi câu
     useEffect(() => {
       if (!isReady || !currentSentence || !userInteracted || !autoPlayOnSentenceChange) return
 
@@ -226,7 +193,6 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
       return () => clearTimeout(timer)
     }, [currentSentence?.id, isReady, userInteracted, autoPlayOnSentenceChange, playCurrentSegment])
 
-    // Cleanup
     useEffect(() => {
       return () => {
         stopMonitoring()
@@ -238,25 +204,11 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
       }
     }, [stopMonitoring])
 
-    // const togglePlay = () => {
-    //   if (!userInteracted) {
-
-    //     return
-    //   }
-
-    //   if (isPlaying) {
-    //     pause()
-    //   } else {
-    //     if (currentSentence) {
-    //       play()
-    //     } else {
-    //       play()
-    //     }
-    //   }
-    // }
-
+    // --- UI ĐÃ ĐƯỢC LÀM SẠCH VÀ TỐI GIẢN ---
     return (
-      <div className="w-full rounded-t-xl border bg-black relative shadow-lg overflow-hidden">
+      <div 
+        className={`w-full border bg-black relative shadow-sm overflow-hidden ${largeVideo ? "rounded-xl" : "rounded-t-xl"}`}
+      >
         <YouTube
           videoId={videoId}
           opts={opts}
@@ -265,10 +217,9 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
           onError={onErrorHandler}
         />
 
+        {/* Lớp phủ siêu gọn, chỉ hiện nút Play khi chưa tương tác */}
         {!userInteracted && isReady && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-
-          </div>
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-[2px]"/>
         )}
       </div>
     )

@@ -1,4 +1,3 @@
-// src/components/players/Player.tsx
 import { forwardRef, useState } from "react"
 import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
 import type { PlayerRef } from "./types/types"
@@ -42,6 +41,10 @@ interface PlayerProps {
   onLargeVideoChange?: (checked: boolean) => void
   onPlaybackRateChange?: (rate: number) => void
   onShowShortcuts?: () => void
+
+  // Progress Bar Toggle 👈 Thêm
+  showProgress?: boolean
+  onToggleProgress?: () => void
 }
 
 const Player = forwardRef<PlayerRef, PlayerProps>(
@@ -79,6 +82,10 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
     onLargeVideoChange,
     onPlaybackRateChange,
     onShowShortcuts,
+
+    // Progress Bar Toggle 👈 Thêm
+    showProgress,
+    onToggleProgress
   }, ref) => {
     // State to track if user has interacted with the player (for auto-play logic)
     const [userInteracted, setUserInteracted] = useState(false)
@@ -93,7 +100,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
     }
     const dispatch = useAppDispatch()
     return (
-      <div className="flex border rounded-2xl flex-col shadow gap-3 w-full">
+      <div className="flex border rounded-2xl flex-col shadow gap-3 w-full bg-card overflow-hidden">
         {/* Media Player - tự động chọn dựa trên sourceType */}
         {lesson.sourceType === "YOUTUBE" && !forceAudioFallback ? (
           <YouTubePlayer
@@ -174,8 +181,10 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
           playbackRate={playbackRate}
           onPlaybackRateChange={handlePlaybackRateChange}
           
-          // Shortcuts
+          // Shortcuts & Progress Toggle 👈 Thêm
           onShowShortcuts={onShowShortcuts}
+          showProgress={showProgress}
+          onToggleProgress={onToggleProgress}
         />
       </div>
     )

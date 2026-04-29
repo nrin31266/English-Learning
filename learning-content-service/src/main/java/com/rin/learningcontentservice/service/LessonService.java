@@ -16,15 +16,10 @@ import com.rin.learningcontentservice.dto.response.*;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
 import com.rin.learningcontentservice.kafka.KafkaProducer;
 import com.rin.learningcontentservice.mapper.LessonMapper;
-import com.rin.learningcontentservice.mapper.LessonShadowingProgressMapper;
-import com.rin.learningcontentservice.model.Lesson;
-import com.rin.learningcontentservice.model.LessonSentence;
-import com.rin.learningcontentservice.model.LessonWord;
-import com.rin.learningcontentservice.model.Topic;
-import com.rin.learningcontentservice.model.shadowing.LessonShadowingProgress;
+import com.rin.learningcontentservice.model.*;
 import com.rin.learningcontentservice.repository.LessonRepository;
-import com.rin.learningcontentservice.repository.LessonShadowingProgressRepository;
 import com.rin.learningcontentservice.repository.TopicRepository;
+import com.rin.learningcontentservice.repository.UserLessonProgressRepository;
 import com.rin.learningcontentservice.repository.httpclient.LanguageProcessingClient;
 import com.rin.learningcontentservice.repository.specification.LessonSpecifications;
 import com.rin.learningcontentservice.utils.TextUtils;
@@ -58,8 +53,7 @@ public class LessonService {
     private final KafkaProducer kafkaProducer;
     private final LanguageProcessingClient languageProcessingClient;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final LessonShadowingProgressMapper lessonShadowingProgressMapper;
-    private final LessonShadowingProgressRepository lessonShadowingProgressRepository;
+    private final UserLessonProgressRepository userLessonProgressRepository;
     //
     private final ApplicationEventPublisher eventPublisher;
 
@@ -180,49 +174,63 @@ public class LessonService {
                         .filter(s -> s.getIsActive() != null && s.getIsActive())
                         .toList()
         );
-        switch (mode){
-            case "SHADOWING" -> attachShadowingProgressIfUserLoggedIn(ld);
-            case "DICTATION" -> {
-                // For dictation, we can also attach progress or other relevant info if needed
-                // For now, we will not attach any additional info for dictation mode
-            }
-             default -> {
-                 // No additional processing for other modes
-            }
-        }
+
+        // Gọi hàm đính kèm Wrapper DTO
+        attachProgressOverviewIfUserLoggedIn(ld);
+
         return ld;
     }
 
-    private void attachShadowingProgressIfUserLoggedIn(LessonDetailsResponse ld) {
-
+    private void attachProgressOverviewIfUserLoggedIn(LessonDetailsResponse ld) {
         String userId = getCurrentUserId();
         if (userId == null) {
             return;
         }
 
-        LessonShadowingProgress progress =
-                lessonShadowingProgressRepository
-                        .findByUserIdAndLessonId(userId, ld.getId())
-                        .orElseGet(() ->
-                                buildDefaultProgress(userId, ld.getId(), ld)
-                        );
+        // 1. Query 1 lần lấy ra tiến độ của tất cả các Mode cho bài học này
+        List<UserLessonProgress> progresses = userLessonProgressRepository
+                .findByUserIdAndLessonId(userId, ld.getId());
 
-        ld.setProgress(lessonShadowingProgressMapper.lessonShadowingProgressDto(progress));
+        // 2. Khởi tạo 2 DTO mặc định (rỗng) đề phòng user chưa học mode nào
+        UserLessonProgressDto shadowingDto = buildEmptyProgressDto("SHADOWING");
+        UserLessonProgressDto dictationDto = buildEmptyProgressDto("DICTATION");
+
+        // 3. Phân loại dữ liệu từ DB (nếu có)
+        for (UserLessonProgress p : progresses) {
+            if ("SHADOWING".equals(p.getMode().name())) {
+                shadowingDto = mapToProgressDto(p);
+            } else if ("DICTATION".equals(p.getMode().name())) {
+                dictationDto = mapToProgressDto(p);
+            }
+        }
+
+        LessonProgressOverviewDto overviewDto = LessonProgressOverviewDto.builder()
+                .shadowing(shadowingDto)
+                .dictation(dictationDto)
+                .build();
+
+        // 5. Gắn vào response trả về
+        ld.setProgressOverview(overviewDto);
     }
-    private LessonShadowingProgress buildDefaultProgress(String userId, Long lessonId, LessonDetailsResponse ld) {
-        return lessonShadowingProgressRepository.save(
-                LessonShadowingProgress.builder()
-                        .userId(userId)
-                        .lessonVersion(ld.getVersion() == null ? 0 : ld.getVersion())
-                        .lessonId(lessonId)
-                        .completedSentences(0)
-                        .completed(false)
-                        .totalSentences(ld.getSentences().size()) // Vì đã lọc ra inactivate sentences nên totalSentences cũng phải dựa trên số lượng sentences sau khi lọc
-                        .sentenceAttempts(new ArrayList<>())
-                        .build()
-        );
+    private UserLessonProgressDto mapToProgressDto(UserLessonProgress progress) {
+        return UserLessonProgressDto.builder()
+                .mode(progress.getMode().name())
+                .status(progress.getStatus())
+                .completedSentenceIds(progress.getCompletedSentenceIds())
+                .totalCompletedSentences(
+                        progress.getCompletedSentenceIds() != null ? progress.getCompletedSentenceIds().size() : 0
+                )
+                .build();
     }
 
+    private UserLessonProgressDto buildEmptyProgressDto(String mode) {
+        return UserLessonProgressDto.builder()
+                .mode(mode)
+                .status(ProgressStatus.IN_PROGRESS)
+                .completedSentenceIds(new HashSet<>())
+                .totalCompletedSentences(0)
+                .build();
+    }
     private String getCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -272,7 +280,8 @@ public class LessonService {
 
     }
     private void removeUserProcessIfExists(Lesson lesson) {
-        lessonShadowingProgressRepository.removeByLessonId(lesson.getId());
+        // Đổi sang Repo mới
+        userLessonProgressRepository.deleteByLessonId(lesson.getId());
     }
     @Transactional
     public void completeLessonWithMetadata(Long lessonId, String aiMetadataUrl) {
@@ -471,8 +480,8 @@ public class LessonService {
                 () -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND,
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(lessonId))
         );
-        // remove process
-        lessonShadowingProgressRepository.removeByLessonId(lessonId);
+        // Đổi sang Repo mới
+        userLessonProgressRepository.deleteByLessonId(lessonId);
         lessonRepository.delete(lesson);
     }
 

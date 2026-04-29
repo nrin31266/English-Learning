@@ -1,17 +1,19 @@
+// src/pages/shadowing/components/ActiveSentencePanel.tsx
+
 import handleAPI from "@/apis/handleAPI"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { ILessonDetailsResponse, ILessonWordResponse, ITranscriptionResponse } from "@/types"
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
-import BestScoreBadge from "./BestScoreBadge"
 import MicrophoneSelector from "./MicrophoneSelector"
 import RecordingControls from "./RecordingControls"
 import WordPopup from "@/components/WordPopup"
 import { useWordPopup } from "@/hooks/UseWordPopupReturn"
 import { useAppDispatch } from "@/store"
 import { updateSentenceCompletion } from "@/store/lessonForShadowingSlide"
-import {  successSound } from "../../../utils/sound"
+import { successSound } from "../../../utils/sound"
+import { CheckCircle2 } from "lucide-react"
 
 interface ActiveSentencePanelProps {
   lesson: ILessonDetailsResponse
@@ -53,7 +55,6 @@ const ActiveSentencePanel = ({
   const [audioInputDevices, setAudioInputDevices] = useState<MediaDeviceInfo[]>([])
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("")
 
-  // 👉 THÊM: State quản lý thời gian đếm ngược & Slow mode
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [isSlowMode, setIsSlowMode] = useState<boolean>(false)
 
@@ -66,9 +67,8 @@ const ActiveSentencePanel = ({
   const streamRef = useRef<MediaStream | null>(null)
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
   const cancelRecordingRef = useRef(false)
-  
-  // 👉 THÊM 2 DÒNG NÀY (CHỐNG SPAM):
-  const canStopRecordingRef = useRef(true) 
+
+  const canStopRecordingRef = useRef(true)
   const minRecordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const sentenceIdRef = useRef<number>(0)
@@ -85,11 +85,10 @@ const ActiveSentencePanel = ({
 
   const currentSentenceTextDisplay = currentSentence?.textDisplay || ""
 
-  const currentAttempt = useMemo(() => {
-    const progress = lesson.progress;
-    if (!progress?.sentenceAttempts) return null;
-    return progress.sentenceAttempts.find(a => a.sentenceId === currentSentence.id);
-  }, [lesson.progress, currentSentence.id]);
+  // 👉 SỬA: Check hoàn thành bằng cách tra cứu ID trong progressOverview mới
+  const isCompleted = useMemo(() => {
+    return lesson.progressOverview?.shadowing?.completedSentenceIds?.includes(currentSentence.id)
+  }, [lesson.progressOverview, currentSentence.id])
 
   const {
     activeWord,
@@ -140,20 +139,13 @@ const ActiveSentencePanel = ({
 
   const playFeedbackSound = useCallback((isGoodScore: boolean) => {
     const now = Date.now()
-    
-    // Bạn có thể giảm debounce xuống 300ms - 500ms để nó phản hồi nhanh hơn,
-    // vì giờ ta không sợ crack âm thanh nữa.
     if (now - lastPlayRef.current < 400) {
       return
     }
     lastPlayRef.current = now
 
-    if(!isGoodScore) return;
-    const sound = successSound
-    
-    // BỎ HOÀN TOÀN sound.stop()
-    // Gọi thẳng play(), Howler sẽ tự layer các âm thanh đè lên nhau cực mượt
-    sound.play()
+    if (!isGoodScore) return;
+    successSound.play()
   }, [])
 
   useEffect(() => {
@@ -177,7 +169,11 @@ const ActiveSentencePanel = ({
 
     try {
       const devices = await navigator.mediaDevices.enumerateDevices()
-      const inputs = devices.filter((d) => d.kind === "audioinput")
+      let inputs = devices.filter((d) => d.kind === "audioinput" && d.deviceId !== "default" && d.deviceId !== "communications")
+      if (inputs.length === 0) {
+        inputs = devices.filter((d) => d.kind === "audioinput")
+      }
+
       setAudioInputDevices((current) => {
         const sameLength = current.length === inputs.length
         const sameItems = sameLength && current.every((device, index) => {
@@ -189,6 +185,7 @@ const ActiveSentencePanel = ({
 
       setSelectedDeviceId((current) => {
         if (inputs.length === 0) return ""
+        if (inputs.length === 1) return getAudioInputValue(inputs[0].deviceId, 0)
         const selectedExists = inputs.some(
           (device, index) => getAudioInputValue(device.deviceId, index) === current
         )
@@ -203,11 +200,9 @@ const ActiveSentencePanel = ({
     void loadAudioInputDevices()
     const mediaDevices = navigator.mediaDevices
     if (!mediaDevices?.addEventListener) return
-
     const handleDeviceChange = () => {
       void loadAudioInputDevices()
     }
-
     mediaDevices.addEventListener("devicechange", handleDeviceChange)
     return () => {
       mediaDevices.removeEventListener("devicechange", handleDeviceChange)
@@ -218,7 +213,6 @@ const ActiveSentencePanel = ({
     resetRecordingUi()
     sentenceIdRef.current = currentSentence.id
     completedSentenceIdRef.current = null
-    // setIsSlowMode(false) // Tùy chọn: reset về tốc độ thường khi sang câu mới
 
     if (completeTimerRef.current) {
       clearTimeout(completeTimerRef.current)
@@ -230,6 +224,7 @@ const ActiveSentencePanel = ({
     }
   }, [currentSentence.id, resetRecordingUi])
 
+  // 👉 SỬA: Logic hoàn thành (Dùng Math.round và Optimistic Update)
   useEffect(() => {
     const score = transcription?.shadowingResult?.weightedAccuracy
     const currentSentenceId = sentenceIdRef.current
@@ -238,56 +233,38 @@ const ActiveSentencePanel = ({
       return
     }
 
-    const attemptForThisSentence = lesson.progress?.sentenceAttempts?.find(
-      a => a.sentenceId === currentSentenceId
-    )
-    const currentBestScore = attemptForThisSentence?.bestScore ?? 0
+    // Làm tròn để so sánh khớp backend (79.6 -> 80)
+    const isPassed = score !== undefined && Math.round(score) >= SHADOWING_THRESHOLD.NEXT;
 
-    if (score !== undefined &&
-      score >= SHADOWING_THRESHOLD.NEXT &&
-      onComplete &&
-      score > currentBestScore) {
-
+    if (isPassed) {
       completedSentenceIdRef.current = currentSentenceId
 
-      if (completeTimerRef.current) {
-        clearTimeout(completeTimerRef.current)
-      }
-
+      // 1. Optimistic Update UI (Sidebar/Transcript xanh luôn)
       dispatch(updateSentenceCompletion({
         sentenceId: currentSentenceId,
-        completed: true,
-        score: score
+        completed: true
       }))
 
-      completeTimerRef.current = setTimeout(() => {
-        onComplete(currentSentenceId, transcription?.shadowingResult?.fluencyScore ?? 0, score)
-      }, 500)
+      // 2. Gọi API âm thầm qua callback cha
+      if (onComplete) {
+        onComplete(currentSentenceId, transcription?.shadowingResult?.fluencyScore ?? 0, score!)
+      }
     }
-  }, [transcription?.shadowingResult?.weightedAccuracy, transcription?.shadowingResult?.fluencyScore, onComplete, lesson.progress?.sentenceAttempts])
+  }, [transcription, onComplete, dispatch])
 
-  // 👉 HÀM TÍNH TOÁN THỜI LƯỢNG GHI ÂM (Tối ưu độ chính xác & Khắc nghiệt hơn)
   const calculateRecordingTime = useCallback(() => {
     if (!currentSentenceWords || currentSentenceWords.length === 0) return 5;
-
     const firstWord = currentSentenceWords[0];
     const lastWord = currentSentenceWords[currentSentenceWords.length - 1];
-
     const startMs = firstWord.audioStartMs ?? 0;
     const endMs = lastWord.audioEndMs ?? (startMs + 2000);
-
-    // Lấy số giây thực tế (VD: 3.4 giây)
     const exactSeconds = (endMs - startMs) / 1000;
 
-    // Buffer siêu khắt khe cho Normal Mode (Chỉ dư ra để lấy hơi và nhấn nút ngắt)
     let normalBuffer = 1.5;
     if (exactSeconds >= 3 && exactSeconds < 7) normalBuffer = 2;
     if (exactSeconds >= 7) normalBuffer = 2.5;
 
-    // Nếu bật Slow: Cho thêm 50% thời gian gốc + 2s an toàn
     const extraSlowTime = isSlowMode ? (exactSeconds * 0.5 + 2) : 0;
-
-    // Tính tổng và làm tròn lên thành số nguyên
     return Math.ceil(exactSeconds + normalBuffer + extraSlowTime);
   }, [currentSentenceWords, isSlowMode]);
 
@@ -295,7 +272,6 @@ const ActiveSentencePanel = ({
 
   const startRecording = useCallback(async () => {
     setRecordError(null)
-
     if (!navigator.mediaDevices?.getUserMedia) {
       setRecordError("Trình duyệt không hỗ trợ ghi âm.")
       return
@@ -303,11 +279,7 @@ const ActiveSentencePanel = ({
 
     try {
       sentenceIdRef.current = currentSentence.id
-
-      const audioConstraints: MediaTrackConstraints | boolean =
-        selectedDeviceId
-          ? { deviceId: { exact: selectedDeviceId } }
-          : true
+      const audioConstraints: MediaTrackConstraints | boolean = selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true
       const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
       streamRef.current = stream
       void loadAudioInputDevices()
@@ -317,59 +289,35 @@ const ActiveSentencePanel = ({
       chunksRef.current = []
       cancelRecordingRef.current = false
       setHasRecordedAudio(false)
-      setRecordedUrl((old) => {
-        revokeRecordedUrl(old)
-        return null
-      })
+      setRecordedUrl(null)
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          chunksRef.current.push(event.data)
-        }
+        if (event.data && event.data.size > 0) chunksRef.current.push(event.data)
       }
 
       mediaRecorder.onstop = async () => {
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((t) => t.stop())
           streamRef.current = null
         }
-
         setIsRecording(false)
 
-        const wasCancelled = cancelRecordingRef.current
-        cancelRecordingRef.current = false
-
-        if (wasCancelled) {
-          chunksRef.current = []
-          setHasRecordedAudio(false)
-          setRecordedUrl((old) => {
-            revokeRecordedUrl(old)
-            return null
-          })
+        if (cancelRecordingRef.current) {
+          cancelRecordingRef.current = false
           return
         }
 
         const blob = new Blob(chunksRef.current, { type: "audio/webm" })
         const url = URL.createObjectURL(blob)
-        setRecordedUrl((old) => {
-          revokeRecordedUrl(old)
-          return url
-        })
+        setRecordedUrl(url)
         setHasRecordedAudio(true)
-
-        chunksRef.current = []
 
         try {
           setIsUploading(true)
           const expectedWords = currentSentence.lessonWords.map((w) => ({
-            id: w.id,
-            wordText: w.wordText,
-            wordNormalized: w.wordNormalized,
-            orderIndex: w.orderIndex,
-          }))
-          expectedWords.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+            id: w.id, wordText: w.wordText, wordNormalized: w.wordNormalized, orderIndex: w.orderIndex,
+          })).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
 
           const formData = new FormData()
           formData.append("file", blob, "recording.webm")
@@ -383,37 +331,27 @@ const ActiveSentencePanel = ({
             isAuth: true,
             contentType: "multipart/form-data",
           })
-
           setTranscription(data)
         } catch (error) {
-          console.log(error)
           setRecordError("Upload hoặc chuyển đổi audio thất bại.")
         } finally {
           setIsUploading(false)
         }
       }
 
-      const calculatedTime = calculateRecordingTime();
-      setTimeLeft(calculatedTime);
-
+      setTimeLeft(calculateRecordingTime());
       mediaRecorder.start()
       setIsRecording(true)
 
-      // 👉 THÊM ĐOẠN NÀY ĐỂ CHỐNG SPAM (Khóa nút dừng trong 1 giây đầu)
       canStopRecordingRef.current = false;
       if (minRecordTimerRef.current) clearTimeout(minRecordTimerRef.current);
-      minRecordTimerRef.current = setTimeout(() => {
-        canStopRecordingRef.current = true;
-      }, 1000); // Yêu cầu ghi âm tối thiểu 1000ms (1 giây)
-      // 👉 Bắt đầu đếm ngược tự động dừng
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      minRecordTimerRef.current = setTimeout(() => { canStopRecordingRef.current = true; }, 1000);
+      
       recordingTimerRef.current = setInterval(() => {
         setTimeLeft((prevTime) => {
           if (prevTime <= 1) {
             clearInterval(recordingTimerRef.current!);
-            if (mediaRecorderRef.current?.state !== "inactive") {
-              mediaRecorderRef.current?.stop();
-            }
+            if (mediaRecorderRef.current?.state !== "inactive") mediaRecorderRef.current?.stop();
             return 0;
           }
           return prevTime - 1;
@@ -421,45 +359,25 @@ const ActiveSentencePanel = ({
       }, 1000);
 
     } catch (error) {
-      console.error(error)
-      setRecordError("Không thể truy cập micro. Vui lòng kiểm tra quyền.")
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop())
-        streamRef.current = null
-      }
+      setRecordError("Không thể truy cập micro.")
       setIsRecording(false)
     }
-  }, [currentSentence, loadAudioInputDevices, revokeRecordedUrl, selectedDeviceId, calculateRecordingTime])
+  }, [currentSentence, loadAudioInputDevices, selectedDeviceId, calculateRecordingTime])
 
   const stopRecording = useCallback(() => {
-    const mediaRecorder = mediaRecorderRef.current
-    if (!mediaRecorder) return
-
-    cancelRecordingRef.current = false
-    if (mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop()
-    }
+    if (mediaRecorderRef.current?.state !== "inactive") mediaRecorderRef.current?.stop()
   }, [])
 
   const cancelRecording = useCallback(() => {
-    const mediaRecorder = mediaRecorderRef.current
-    if (!mediaRecorder) return
-
     cancelRecordingRef.current = true
     chunksRef.current = []
-    if (mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop()
-    }
+    if (mediaRecorderRef.current?.state !== "inactive") mediaRecorderRef.current?.stop()
   }, [])
 
-  // 👉 HÀM XỬ LÝ CLICK RECORD (Tap để Thu / Tap để Dừng sớm)
   const handleRecordClick = useCallback(() => {
     if (isUploading || !userInteracted) return
-
     if (isRecording) {
-      // 👉 THÊM DÒNG NÀY: Nếu chưa đủ 1 giây thì return luôn, không cho Stop
-      if (!canStopRecordingRef.current) return; 
-
+      if (!canStopRecordingRef.current) return;
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
       stopRecording()
     } else {
@@ -469,119 +387,37 @@ const ActiveSentencePanel = ({
   }, [isRecording, isUploading, userInteracted, handlePause, startRecording, stopRecording])
 
   const handleTogglePlayRecorded = () => {
-    if (!hasRecordedAudio || !recordedUrl) return
-    const player = audioPlayerRef.current
-    if (!player) return
-
+    if (!hasRecordedAudio || !recordedUrl || !audioPlayerRef.current) return
     if (!isPlayingRecorded) {
-      player
-        .play()
-        .then(() => setIsPlayingRecorded(true))
-        .catch((e) => {
-          console.error("Play recorded audio error:", e)
-          setRecordError("Không thể phát audio đã ghi.")
-        })
+      audioPlayerRef.current.play().then(() => setIsPlayingRecorded(true))
     } else {
-      player.pause()
-      player.currentTime = 0
+      audioPlayerRef.current.pause()
+      audioPlayerRef.current.currentTime = 0
       setIsPlayingRecorded(false)
     }
   }
 
   useEffect(() => {
-    const player = audioPlayerRef.current
-    if (!player) return
-    const onEnded = () => setIsPlayingRecorded(false)
-    player.addEventListener("ended", onEnded)
     return () => {
-      player.removeEventListener("ended", onEnded)
-    }
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (mediaRecorderRef.current) {
-        try {
-          if (mediaRecorderRef.current.state !== "inactive") {
-            mediaRecorderRef.current.stop()
-          }
-          mediaRecorderRef.current.ondataavailable = null
-          mediaRecorderRef.current.onstop = null
-          mediaRecorderRef.current.onerror = null
-        } catch (e) {
-          console.warn('MediaRecorder cleanup error:', e)
-        }
-        mediaRecorderRef.current = null
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => {
-          track.stop()
-          track.enabled = false
-        })
-        streamRef.current = null
-      }
-
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.pause()
-        audioPlayerRef.current.removeAttribute('src')
-        audioPlayerRef.current.load()
-        audioPlayerRef.current.src = ""
-        audioPlayerRef.current = null
-      }
-
-      chunksRef.current = []
-      cancelRecordingRef.current = false
+      mediaRecorderRef.current?.stop()
+      streamRef.current?.getTracks().forEach(t => t.stop())
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
       if (minRecordTimerRef.current) clearTimeout(minRecordTimerRef.current)
     }
   }, [])
 
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        if (isRecording) {
-          cancelRecording()
-        }
-        if (audioPlayerRef.current) {
-          audioPlayerRef.current.pause()
-        }
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [isRecording, cancelRecording])
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (mediaRecorderRef.current?.state !== 'inactive') {
-        mediaRecorderRef.current?.stop()
-      }
-      streamRef.current?.getTracks().forEach(t => t.stop())
-      audioPlayerRef.current?.pause()
-      revokeRecordedUrl(recordedUrl)
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, [recordedUrl, revokeRecordedUrl])
-
-  const shadowing = useMemo(
-    () => transcription?.shadowingResult || null,
-    [transcription]
-  )
+  const shadowing = useMemo(() => transcription?.shadowingResult || null, [transcription])
 
   return (
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
-      <div className="flex flex-col items-center gap-4 px-4 py-4">
-
-        {currentAttempt && currentAttempt.bestScore !== null && (
-          <BestScoreBadge bestScore={currentAttempt.bestScore} />
+      <div className="flex flex-col items-center gap-4 px-4 py-4 relative">
+        
+        {/* 👉 Badge hoàn thành tinh tế hơn thay vì BestScoreBadge cũ (nếu muốn) */}
+        {isCompleted && (
+          <div className="absolute right-4 top-4 flex items-center gap-1.5 text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-bold uppercase tracking-wider">Completed</span>
+          </div>
         )}
 
         <MicrophoneSelector
@@ -614,7 +450,7 @@ const ActiveSentencePanel = ({
           <MemoSentenceDisplay
             words={currentSentenceWords}
             fallbackText={currentSentence?.textDisplay || "No sentence available."}
-            phoneticUs={currentSentence?.phoneticUs} // Truyền prop vào đây
+            phoneticUs={currentSentence?.phoneticUs}
             onWordClick={handleSentenceWordClick}
             className="items-center"
           />
@@ -622,15 +458,8 @@ const ActiveSentencePanel = ({
 
         <MemoShadowingResultPanel result={shadowing} isLoading={isUploading} />
       </div>
-      <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} />
-
-      <WordPopup
-        word={activeWord}
-        anchorEl={anchorEl}
-        onClose={closePopup}
-        wordData={wordData}
-        isLoading={loadingWordData}
-      />
+      <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} onEnded={() => setIsPlayingRecorded(false)} />
+      <WordPopup word={activeWord} anchorEl={anchorEl} onClose={closePopup} wordData={wordData} isLoading={loadingWordData} />
     </ScrollArea>
   )
 }

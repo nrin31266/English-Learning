@@ -41,5 +41,5 @@ public class LessonDetailsResponse {
     private List<LessonSentenceDetailsResponse> sentences;
     private Integer version;
 
-    private LessonShadowingProgressDto progress;
+    private LessonProgressOverviewDto progressOverview;
 }

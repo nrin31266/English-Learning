@@ -1,4 +1,3 @@
-// src/components/players/PlayerControlPanel.tsx
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -9,7 +8,8 @@ import {
     StepBack,
     StepForward,
     Volume2,
-    Keyboard
+    Keyboard,
+    PanelBottom // 👈 Thêm icon này
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useEffect, useRef, useState } from "react"
@@ -34,6 +34,10 @@ interface PlayerControlPanelProps {
     largeVideo?: boolean
     onLargeVideoChange?: (checked: boolean) => void
     sourceType?: "YOUTUBE" | "AUDIO"
+    
+    // Progress Bar Toggle 👈 Thêm
+    showProgress?: boolean
+    onToggleProgress?: () => void
 
     // Playback speed
     playbackRate?: number
@@ -67,6 +71,10 @@ const PlayerControlPanel = ({
     onLargeVideoChange,
     sourceType = "AUDIO",
 
+    // Progress Bar Toggle 👈 Thêm
+    showProgress = true,
+    onToggleProgress,
+
     // Playback speed
     playbackRate = 1.0,
     onPlaybackRateChange,
@@ -86,7 +94,7 @@ const PlayerControlPanel = ({
 
         const observer = new ResizeObserver(entries => {
             const width = entries[0].contentRect.width
-            // Chỉ set state khi vượt ngưỡng 768px
+            // Chỉ set state khi vượt ngưỡng 600px
             setIsSmall(prev => {
                 const newValue = width < 600
                 return prev !== newValue ? newValue : prev
@@ -128,7 +136,6 @@ const PlayerControlPanel = ({
                         </Label>
                     </div>
                 )}
-
             </div>
 
             <div className=" items-center gap-2 grid grid-cols-2  ">
@@ -187,7 +194,21 @@ const PlayerControlPanel = ({
                 }
 
 
-                <div className="justify-end gap-2 flex "> {/* Shortcuts button */}
+                <div className="justify-end gap-2 flex ">
+                    {/* Nút Toggle Progress Bar (Chỉ Icon) 👈 Thêm */}
+                    {onToggleProgress && (
+                        <Button
+                            variant={showProgress ? "secondary" : "outline"}
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={onToggleProgress}
+                            title="Bật/Tắt thanh tiến trình"
+                        >
+                            <PanelBottom className="h-3.5 w-3.5" />
+                        </Button>
+                    )}
+
+                    {/* Shortcuts button */}
                     {onShowShortcuts && (
                         <Button
                             variant="outline"
@@ -196,7 +217,6 @@ const PlayerControlPanel = ({
                             onClick={onShowShortcuts}
                         >
                             <Keyboard className="h-3 w-3" />
-
                         </Button>
                     )}
 

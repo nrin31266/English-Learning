@@ -396,14 +396,14 @@ def build_shadowing_result(
                 }
                 
                 # 🔥 NÂNG CẤP DỰA TRÊN PHONEME_SCORE
-                if phoneme_score >= 0.8:
-                    # Nếu phoneme tốt, nâng lên CORRECT
+                if phoneme_score >= 0.9 and status == "NEAR":
+                    # chỉ upgrade nếu gần sẵn + phát âm rất tốt
                     status = "CORRECT"
                     score = 1.0
-                elif phoneme_score >= 0.6 and status == "WRONG":
-                    # Nếu phoneme khá và đang là WRONG, nâng lên NEAR
+
+                elif phoneme_score >= 0.75 and status == "WRONG":
                     status = "NEAR"
-                    score = 0.85  # Hoặc giữ nguyên score cũ từ _classify_word
+                    score = 0.7
         
         if status not in ("NEAR", "WRONG"):
             expected_ipa, actual_ipa = None, None

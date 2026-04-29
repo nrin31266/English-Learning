@@ -1,25 +1,15 @@
 import type { ILessonWordResponse } from "@/types"
 import React, { useMemo } from "react"
+import { cn } from "@/lib/utils"
 
-/**
- * Props cho component SentenceDisplay
- */
 interface SentenceDisplayProps {
-  /** Danh sách các từ trong câu (có orderIndex để sắp xếp) */
   words?: ILessonWordResponse[]
-  /** Text hiển thị khi không có words (fallback) */
   fallbackText?: string
-  /** Callback khi user click vào một từ - dùng để show modal chi tiết từ */
   onWordClick?: (word: ILessonWordResponse, el: HTMLElement) => void
-  /** Class CSS thêm vào cho container */
   className?: string
-  /** Phiên âm IPA của cả câu */
   phoneticUs?: string | null
 }
 
-/**
- * Component chính để hiển thị câu văn
- */
 const SentenceDisplay = ({
   words,
   fallbackText = "No sentence available.",
@@ -27,41 +17,35 @@ const SentenceDisplay = ({
   className = "",
   phoneticUs
 }: SentenceDisplayProps) => {
-  // Kiểm tra xem có dữ liệu words hợp lệ không
   const hasWords = words && Array.isArray(words) && words.length > 0
 
-  /**
-   * Memoize sorted words để tránh sort lại mỗi lần render
-   */
   const sortedWords = useMemo(() => {
     if (!hasWords) return []
-    // Tạo shallow copy trước khi sort để không mutate mảng gốc
     return [...words].sort(
       (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)
     )
   }, [words, hasWords])
 
   return (
-    <div className={`flex flex-col items-center gap-2 ${className}`}>
+    <div className={cn("flex flex-col items-center md:items-start gap-3 w-full", className)}>
       
-      {/* 1. HIỂN THỊ TEXT / TỪ VỰNG */}
       {!hasWords ? (
-        <p className="text-lg font-semibold leading-relaxed text-center">
+        <p className="text-xl md:text-2xl font-semibold leading-relaxed text-center md:text-left text-foreground/90">
           {fallbackText}
         </p>
       ) : (
-        <div className="flex flex-wrap justify-center gap-2 leading-relaxed">
+        // 👉 FIX "DÍNH": Chuyển sang gap-x-2 (8px) cho mobile và gap-x-2.5 (10px) cho PC. Tăng gap-y lên 2.5
+        <div className="flex flex-wrap justify-center md:justify-start gap-x-2 sm:gap-x-2.5 gap-y-2.5 leading-relaxed">
           {sortedWords.map((word, index) => (
             <button
-              key={index}
-              className="
-                underline  
-                text-lg
-                font-semibold
-                hover:text-primary
-                transition-colors
-                duration-200
-              "
+              key={`${word.id || index}`}
+              className={cn(
+                "relative group text-xl sm:text-2xl md:text-3xl font-semibold transition-all duration-200",
+                "text-foreground/90 hover:text-primary active:scale-95",
+                // 👉 Thêm px-0.5 để vùng bấm rộng hơn một xíu nhưng text không bị sát mép nhau
+                // 👉 Tăng underline-offset-8 để nếu có gạch chân thì nó nằm xa chữ ra, không bị rối mắt
+                "px-0.5 decoration-primary/40 underline-offset-8 hover:underline hover:decoration-primary"
+              )}
               onClick={(e) => onWordClick?.(word, e.currentTarget)}
               title={`Click để xem chi tiết từ: ${word.wordText}`}
             >
@@ -71,10 +55,11 @@ const SentenceDisplay = ({
         </div>
       )}
 
-      {/* 2. HIỂN THỊ PHIÊN ÂM IPA */}
       {phoneticUs && (
-        <p className="text-base text-muted-foreground mt-1">
-          <span className="font-semibold">Sample IPA: </span> &#160;{phoneticUs}
+        <p className="text-sm sm:text-base text-muted-foreground/80 mt-2 font-medium tracking-wide text-center md:text-left">
+          <span className="opacity-70 font-normal mr-1">/</span>
+          {phoneticUs}
+          <span className="opacity-70 font-normal ml-1">/</span>
         </p>
       )}
 
@@ -83,10 +68,13 @@ const SentenceDisplay = ({
 }
 
 export default React.memo(SentenceDisplay, (prev, next) => {
+  const prevSignature = prev.words?.map(w => w.id).join('-') || ""
+  const nextSignature = next.words?.map(w => w.id).join('-') || ""
+
   return (
-    (prev.words?.[0]?.id ?? null) === (next.words?.[0]?.id ?? null) &&
+    prevSignature === nextSignature &&
     prev.fallbackText === next.fallbackText &&
     prev.className === next.className &&
-    prev.phoneticUs === next.phoneticUs // Nhớ thêm check prop này
+    prev.phoneticUs === next.phoneticUs
   )
 })

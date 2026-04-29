@@ -243,7 +243,7 @@ const WordPopup = ({
       }}
       className={cn(
         "w-96 rounded-lg border bg-background shadow-lg",
-        "transition-opacity transition-transform duration-150 ease-out",
+        "transition-transform duration-150 ease-out z-50",
         isVisible && !isExiting
           ? "opacity-100 scale-100"
           : "opacity-0 scale-95 pointer-events-none"
@@ -298,14 +298,12 @@ const WordPopup = ({
         {/* Phonetics with flags and audio buttons */}
         {showContent && (
           <div className="mb-3 space-y-2">
-            {/* UK - chỉ hiển thị nếu có cả IPA và audio URL */}
-            {wordData?.phonetics?.uk && wordData?.phonetics?.ukAudioUrl && (
-              <div className="flex items-center gap-2">
+             <div className="flex items-center gap-2">
                 <span className="text-base">{getFlagEmoji("uk")}</span>
                 <span className="text-sm font-mono">{wordData.phonetics.uk}</span>
                 <button
                   onClick={handlePlayUk}
-                  disabled={isPlayingUk}
+                  disabled={isPlayingUk || !wordData.phonetics.ukAudioUrl}
                   className="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPlayingUk ? (
@@ -315,16 +313,13 @@ const WordPopup = ({
                   )}
                 </button>
               </div>
-            )}
 
-            {/* US - chỉ hiển thị nếu có cả IPA và audio URL */}
-            {wordData?.phonetics?.us && wordData?.phonetics?.usAudioUrl && (
-              <div className="flex items-center gap-2">
+           <div className="flex items-center gap-2">
                 <span className="text-base">{getFlagEmoji("us")}</span>
                 <span className="text-sm font-mono">{wordData.phonetics.us}</span>
                 <button
                   onClick={handlePlayUs}
-                  disabled={isPlayingUs}
+                  disabled={isPlayingUs || !wordData.phonetics.usAudioUrl}
                   className="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPlayingUs ? (
@@ -334,7 +329,6 @@ const WordPopup = ({
                   )}
                 </button>
               </div>
-            )}
           </div>
         )}
 
