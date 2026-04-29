@@ -4,7 +4,7 @@ import { Suspense, lazy, type ReactElement } from "react"
 import { createBrowserRouter } from "react-router-dom"
 
 
-const HomePage = () => <div>Home Page</div>
+const HomePage = lazy(() => import('@/features/home/HomePage'))
 const TopicsPage = lazy(() => import('@/features/topic/pages/Topics'))
 const TopicsDetailsPage = lazy(() => import('@/features/topic/pages/TopicDetails'))
 const ShadowingModePage = lazy(() => import('@/features/learnshadowing/pages/ShadowingMode'))

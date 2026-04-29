@@ -73,7 +73,8 @@ public class Word {
     @AllArgsConstructor
     public static class Definition {
         String definition;   // EN
-        String meaningVi;    // VI
-        String example;
+        String meaningVi;    // VI - Ép AI gen cực kỳ ngắn gọn
+        String example;      // Câu ví dụ ngắn
+        CefrLevel level;     // 🔥 Thêm trường này: A1, A2, B1...
     }
 }
