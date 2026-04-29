@@ -51,12 +51,12 @@ const TranscriptItem = React.memo(({
       ref={(el) => setItemRef(el, index)}
       onClick={handleClick}
       className={cn(
-        "w-full rounded-lg border px-3 py-2.5 text-left text-sm transition-colors duration-100", // Giảm transition chỉ còn màu sắc
+        "w-full rounded-lg border px-3 py-2.5 text-left text-sm transition-colors duration-100", 
         isActive
           ? "border-primary bg-primary/5 ring-1 ring-primary/20"
           : isCompleted
           ? "border-green-300 bg-green-50" 
-          : "border-border bg-background hover:bg-muted/30" // Giảm độ đậm của hover
+          : "border-border bg-background hover:bg-muted/30" 
       )}
     >
       <div className="mb-1 flex items-center justify-between text-[12px]">
@@ -150,7 +150,7 @@ const ShadowingTranscript = ({
     itemRefs.current[index] = el
   }, [])
 
-  // ✅ SỬA LOGIC SCROLL: Luôn đưa lên đầu khi activeIndex thay đổi
+  // 👉 FIX: Tối ưu thuật toán Auto Scroll - Chỉ cuộn khi item bị khuất, bỏ delay khó chịu
   useEffect(() => {
     if (!visible) return
     if (activeIndex < 0 || activeIndex >= sentences.length) return
@@ -165,15 +165,26 @@ const ShadowingTranscript = ({
 
       if (!scrollContainer) return
 
-      // Công thức cuộn lên đầu: lấy offsetTop của phần tử
-      // Trừ đi một khoảng nhỏ (ví dụ 12px) để không bị dính sát mép trên cùng của container
-      const scrollTo = el.offsetTop - 12
+      const itemTop = el.offsetTop
+      const itemHeight = el.offsetHeight
+      const containerHeight = scrollContainer.clientHeight
+      const currentScroll = scrollContainer.scrollTop
 
-      scrollContainer.scrollTo({ 
-        top: scrollTo, 
-        behavior: "smooth" // Giữ scroll mượt
-      })
-    }, 50) // Giảm delay xuống để phản hồi nhanh hơn
+      // Kiểm tra xem item có đang nằm gọn trong viewport không
+      const visibleTop = currentScroll
+      const visibleBottom = currentScroll + containerHeight
+      const isVisible = itemTop >= visibleTop && (itemTop + itemHeight) <= visibleBottom
+
+      // CHỈ Scroll khi nào nó bị khuất khỏi màn hình
+      if (!isVisible) {
+        // Canh item vào khoảng 1/3 màn hình từ trên xuống
+        const scrollTo = itemTop - (containerHeight / 3) + (itemHeight / 2)
+        scrollContainer.scrollTo({ 
+          top: scrollTo, 
+          behavior: "smooth" 
+        })
+      }
+    }, 30) // Delay nhỏ nhất để bắt kịp thao tác Tab/Next
 
     return () => clearTimeout(timer)
   }, [activeIndex, sentences.length, visible])

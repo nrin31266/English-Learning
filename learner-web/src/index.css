@@ -157,3 +157,20 @@ body{
 .animate-fade-in {
   animation: fade-in 0.25s ease-out;
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700&display=swap');
+
+.font-dictation {
+  font-family: 'Nunito', sans-serif;
+}
+
+/* Ẩn thanh cuộn cho Chrome, Safari và Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ẩn thanh cuộn cho IE, Edge và Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

@@ -31,11 +31,12 @@ export const fetchLessonBySlugForDictation = createAsyncThunk(
   }
 );
 
-// 👉 API gọi âm thầm (Fire and Forget)
+
 export const submitDictationScore = createAsyncThunk(
   "lessonForDictation/submitDictationScore",
   async (
-    { lessonId, sentenceId }: { lessonId: number; sentenceId: number },
+    // 👉 Thêm score vào đây
+    { lessonId, sentenceId, score }: { lessonId: number; sentenceId: number; score: number },
     { rejectWithValue }
   ) => {
     try {
@@ -43,7 +44,8 @@ export const submitDictationScore = createAsyncThunk(
         endpoint: `/learning-contents/process/progress`,
         method: "PUT",
         isAuth: true,
-        body: { lessonId, sentenceId, mode: "DICTATION", score: 0 },
+        // 👉 Gắn score vào body
+        body: { lessonId, sentenceId, mode: "DICTATION", score }, 
       });
     } catch (error) {
       return rejectWithValue(extractError(error));
