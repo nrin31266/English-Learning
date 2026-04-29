@@ -12,7 +12,7 @@ export default function Page() {
   return (
     <SidebarProvider>
       <SidebarInset className="">
-        <header className="sticky top-0 z-50 h-16
+        <header className="sticky top-0 z-48 h-16
             border-b border-border/40
             bg-background/70 backdrop-blur shadow-sm">
           <AppHeaderContent />

@@ -136,7 +136,6 @@ const renderSentenceIpaFromDiff = (compares: IShadowingResult['compares'], lastR
     )
   })
 
-  // Cỡ chữ nhỏ gọn hơn cho IPA
   return <div className="font-mono text-sm sm:text-base tracking-wide leading-snug break-words">{elements}</div>
 }
 
@@ -148,7 +147,7 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
   const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   return (
-    <div className="flex flex-col gap-3"> {/* Ép khoảng cách tổng thể */}
+    <div className="flex flex-col gap-3">
       
       {/* 🎯 SCORE STRIP: Thanh điểm số siêu gọn 1 hàng ngang */}
       <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 border border-border/50">
@@ -167,8 +166,9 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
         </div>
       </div>
 
-      {/* 🎯 MAIN TEXT: Bố cục sát nhau, baseline đồng đều */}
-      <div className="flex flex-wrap items-end gap-x-1.5 sm:gap-x-2 gap-y-3 px-1 mt-1">
+      {/* 🎯 MAIN TEXT: Bố cục sát nhau nhưng KHÔNG BỊ DÍNH */}
+      {/* 👉 Dùng flex-wrap và tăng gap-y lên một chút để tránh các dòng đè lên nhau */}
+      <div className="flex flex-wrap items-end gap-x-1.5 sm:gap-x-2 gap-y-1.5 px-1 mt-1">
         {compares.map((c) => {
           const attempted = c.position <= lastRecognizedPosition
           const isExtra = c.status === "EXTRA"
@@ -192,23 +192,27 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
                     hoverTimeoutRef.current = setTimeout(() => setOpenPopoverPosition(null), 120)
                   }}
                 >
-                  <div className="flex flex-col items-center cursor-pointer group relative">
-                    {/* Phần báo lỗi: Position absolute gọn nhẹ để không đẩy line-height lên */}
-                    <div className="absolute bottom-full mb-0.5 flex w-full justify-center whitespace-nowrap">
+                  {/* 👉 BỎ ABSOLUTE: Chia mỗi từ thành 1 cột chứa 2 dòng (Lỗi ở trên, Chữ chính ở dưới) */}
+                  <div className="flex flex-col items-center cursor-pointer group hover:bg-muted/30 rounded px-0.5 transition-colors">
+                    
+                    {/* KHU VỰC HIỂN THỊ LỖI (Dòng trên) */}
+                    {/* 👉 Set min-h-[16px] để đảm bảo dòng trên luôn chiếm chỗ, kể cả khi từ đó đúng. Điều này giữ baseline luôn thẳng. */}
+                    <div className="min-h-[16px] flex items-end justify-center mb-0.5 whitespace-nowrap">
                       {isExtra && c.recognizedWord ? (
-                        <span className={cn(getWordClass(c.status, attempted), "text-[9px] leading-none")}>
+                        <span className={cn(getWordClass(c.status, attempted), "text-[11px] font-semibold leading-none")}>
                           +{c.recognizedWord}
                         </span>
                       ) : hasError ? (
-                        <span className="text-muted-foreground/60 line-through text-[9px] leading-none">
+                        // Tăng size chữ gạch ngang lên text-[11px] để dễ nhìn
+                        <span className="text-muted-foreground/70 line-through text-[11px] font-medium leading-none">
                           {c.recognizedWord}
                         </span>
                       ) : null}
                     </div>
                     
-                    {/* Chữ chính */}
+                    {/* CHỮ CHÍNH (Dòng dưới) */}
                     <span className={cn(
-                      "text-lg sm:text-xl md:text-2xl transition-colors leading-none pt-2", 
+                      "text-lg sm:text-xl md:text-2xl transition-colors leading-none", 
                       getWordClass(c.status, attempted)
                     )}>
                       {isExtra ? "" : c.expectedWord || "_"}
@@ -254,7 +258,6 @@ const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
 
       {/* 🎯 BẢNG PHIÊN ÂM (Sequence): Chuyển thành text block nhỏ */}
       <div className="mt-2 pt-3 border-t border-border/40">
-
         {renderSentenceIpaFromDiff(compares, lastRecognizedPosition)}
       </div>
     </div>
