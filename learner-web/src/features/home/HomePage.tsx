@@ -146,7 +146,11 @@ const HomePage = () => {
             Join Fluenrin today and transform the way you learn English. Consistent, focused practice yields the best results.
           </p>
           <Button onClick={()=>{
-            keycloak.login();
+            if (!keycloak.authenticated) {
+              keycloak.login();
+            } else {
+              navigate("/topics");
+            }
           }} size="lg" className="h-14 px-10 text-base font-bold rounded-xl shadow-md transition-transform hover:scale-105">
             Create Your Account
           </Button>

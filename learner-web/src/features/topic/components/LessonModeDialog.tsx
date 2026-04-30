@@ -1,5 +1,3 @@
-// src/pages/Topics.tsx (LessonModeDialog)
-
 import AudioFileTag from "@/components/AudioFileTag"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -7,7 +5,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -75,9 +72,11 @@ const LessonModeDialog = ({
               <button
                 type="button"
                 onClick={() => onNavigate("shadowing")}
-                className="group flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-all duration-200 hover:border-primary hover:bg-primary/5 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                // 👉 Thêm duration-300 và ease-out cho mượt
+                className="group flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-all duration-300 ease-out hover:border-primary hover:bg-primary/5 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                {/* 👉 Đồng bộ duration-300 ease-out cho Icon */}
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors duration-300 ease-out group-hover:bg-primary group-hover:text-primary-foreground">
                   <Mic className="h-5 w-5" />
                 </div>
                 <div className="flex-1 space-y-1">
@@ -99,9 +98,11 @@ const LessonModeDialog = ({
               <button
                 type="button"
                 onClick={() => onNavigate("dictation")}
-                className="group flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-all duration-200 hover:border-blue-500 hover:bg-blue-500/5 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                // 👉 Thêm duration-300 và ease-out cho mượt
+                className="group flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-all duration-300 ease-out hover:border-blue-500 hover:bg-blue-500/5 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
+                {/* 👉 Đồng bộ duration-300 ease-out cho Icon */}
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-colors duration-300 ease-out group-hover:bg-blue-500 group-hover:text-white">
                   <Keyboard className="h-5 w-5" />
                 </div>
                 <div className="flex-1 space-y-1">
