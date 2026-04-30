@@ -115,7 +115,7 @@ const LessonProgressBar = ({ sentences, completedIds, activeIndex, onSelect }: P
                 )}
               >
                 {isActive && (
-                  <div className="absolute inset-x-0 top-0 h-[3px] bg-amber-400 z-10" />
+                  <div className="absolute inset-x-0 top-0 h-[3px] bg-primary z-10" />
                 )}
                 
                 <span className="relative z-0">

@@ -3,9 +3,11 @@ package com.rin.learningcontentservice.dto.request;
 
 import com.rin.learningcontentservice.model.LearningMode;
 import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 public class ProgressUpdateRequest {
     @NotNull(message = "Lesson ID cannot be null")
     private Long lessonId;

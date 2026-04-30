@@ -17,7 +17,7 @@ type ShadowingTranscriptProps = {
   activeIndex: number
   onSelectSentence: (index: number) => void
   visible?: boolean
-  completedIds: number[]
+  completedIds: Set<number>
 }
 
 const TranscriptItem = React.memo(({
@@ -124,7 +124,7 @@ const ShadowingTranscript = ({
   activeIndex,
   onSelectSentence,
   visible = true,
-  completedIds = []
+  completedIds = new Set<number>()
 }: ShadowingTranscriptProps) => {
   const [showIPA, setShowIPA] = useState(false)
   const [showTranslation, setShowTranslation] = useState(true)
@@ -138,7 +138,7 @@ const ShadowingTranscript = ({
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  const completedCount = useMemo(() => completedIds.length, [completedIds]);
+  const completedCount = useMemo(() => completedIds.size, [completedIds]);
 
   const currentStepText = useMemo(() => {
     if (!sentences.length) return "0 / 0";

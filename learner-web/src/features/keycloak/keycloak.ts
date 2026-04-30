@@ -25,6 +25,15 @@ export default class KeycloakClient {
     return this._keycloak;
   }
 
+  public login(): void {
+    this._keycloak.login();
+  }
+
+  // check user da login chua
+  public isAuthenticated(): boolean {
+    return this._keycloak.authenticated ?? false;
+  }
+
   // ✅ INIT ONLY HERE
   public async init(): Promise<boolean> {
     if (this._initialized) return this._keycloak.authenticated ?? false;

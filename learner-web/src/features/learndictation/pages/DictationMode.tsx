@@ -1,11 +1,12 @@
 // src/pages/DictationMode.tsx
 
 import { useAppDispatch, useAppSelector } from "@/store"
-import { 
-    fetchLessonBySlugForDictation, 
+import {
+    fetchLessonBySlugForDictation,
     resetLessonState,
-    submitDictationScore, 
-    updateDictationCompletion 
+    submitBatchDictationScore,
+    submitDictationScore,
+    updateDictationCompletion
 } from "@/store/lessonForDictationSlide"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
@@ -30,17 +31,24 @@ import DictationTranscript from "../components/DictationTranscript"
 import DictationPanel from "../components/DictationPanel"
 import { cn } from "@/lib/utils"
 import LessonProgressBar from "@/components/LessonProgressStrip"
+import KeycloakClient from "@/features/keycloak/keycloak"
+import { useAuth } from "@/features/keycloak/providers/AuthProvider"
+import { clearGuestProgress, getGuestProgress, saveGuestProgress } from "@/utils/guestStorage"
+import { CompletionModal, LoginIncentiveModal } from "@/components/ModeModals"
+
+const MODE_NAME = "DICTATION";
 
 const DictationMode = () => {
     const { slug } = useParams<{ slug: string }>()
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
-    
+    const { profile } = useAuth();
+    const keycloak = KeycloakClient.getInstance();
+
     const [showHelp, setShowHelp] = useState(false)
     const lessonState = useAppSelector((state) => state.lessonForDictation.lesson)
     const { data: lesson, status, error } = lessonState
 
-    // Nguồn dữ liệu hoàn thành từ Redux (Single Source of Truth)
     const dictationProgress = useMemo(() => lesson?.progressOverview?.dictation, [lesson])
     const completedIdsArray = useMemo(() => dictationProgress?.completedSentenceIds || [], [dictationProgress])
     const completedIdsSet = useMemo(() => new Set(completedIdsArray), [completedIdsArray])
@@ -51,26 +59,28 @@ const DictationMode = () => {
     const [activeIndex, setActiveIndex] = useState(0)
     const [autoPlayOnSentenceChange, setAutoPlayOnSentenceChange] = useState(true)
     const [userInteracted, setUserInteracted] = useState(false)
+
     const tempAnswersRef = useRef<Record<number, string>>({})
 
     const playerRef = useRef<PlayerRef | null>(null)
     const [playbackRate, setPlaybackRate] = useState<number>(1.0)
     const [isPlaying, setIsPlaying] = useState(false)
-    
-    // State điều khiển UI 
+
     const [showTranscriptToggle, setShowTranscriptToggle] = useState(false)
     const [showProgress, setShowProgress] = useState(true)
     const [isDesktop, setIsDesktop] = useState(true)
 
-    // Theo dõi kích thước màn hình
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showCompletionModal, setShowCompletionModal] = useState(false);
+    const syncRef = useRef(false);
+
     useEffect(() => {
-        const checkDesktop = () => setIsDesktop(window.innerWidth >= 1280) // xl breakpoint
+        const checkDesktop = () => setIsDesktop(window.innerWidth >= 1280)
         checkDesktop()
         window.addEventListener("resize", checkDesktop)
         return () => window.removeEventListener("resize", checkDesktop)
     }, [])
 
-    // Màn Desktop thì tuỳ ý, Mobile thì luôn bật Transcript cho rộng rãi
     const effectiveShowTranscript = isDesktop ? showTranscriptToggle : true
 
     const handleSelectSentence = useCallback((index: number) => {
@@ -86,7 +96,6 @@ const DictationMode = () => {
         }
     }
 
-    // 👉 ĐÃ FIX CHUẨN: Chỉ gọi 1 lần khi có slug, dọn dẹp sạch sẽ khi unmount (Tránh spam API)
     useEffect(() => {
         if (slug) {
             dispatch(fetchLessonBySlugForDictation(slug))
@@ -122,59 +131,143 @@ const DictationMode = () => {
     }, [sentences.length])
 
     useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-        const target = e.target as HTMLElement | null;
-        
-        // 1. Định nghĩa các phím chức năng ông muốn chiếm quyền điều khiển
-        const isNavigationKey = e.key === "Tab" || e.key === "PageDown" || e.key === "PageUp";
-        const isControlKey = e.code === "ControlLeft" || e.code === "ControlRight";
+        const onKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement | null;
+            const isNavigationKey = e.key === "Tab" || e.key === "PageDown" || e.key === "PageUp";
+            const isControlKey = e.code === "ControlLeft" || e.code === "ControlRight";
 
-        // 2. Nếu là phím chức năng, xử lý NGAY VÀ LUÔN, bất kể đang ở đâu
-        if (isNavigationKey || isControlKey) {
-            e.preventDefault(); // Chặn đứng việc trình duyệt đi tìm Focus gây lag
-
-            if (isControlKey) {
-                playerRef.current?.playCurrentSegment();
-            } else if (e.key === "PageDown" || e.key === "Tab") {
-                handleNext();
-            } else if (e.key === "PageUp") {
-                handlePrev();
+            if (isNavigationKey || isControlKey) {
+                e.preventDefault();
+                if (isControlKey) {
+                    playerRef.current?.playCurrentSegment();
+                } else if (e.key === "PageDown" || e.key === "Tab") {
+                    handleNext();
+                } else if (e.key === "PageUp") {
+                    handlePrev();
+                }
+                return;
             }
-            return; // Xử lý xong thì thoát
-        }
 
-        // 3. Nếu KHÔNG PHẢI phím tắt bên trên, mà đang gõ bài thì để yên cho người ta gõ
-        const isEditable = target?.tagName === "INPUT" || 
-                           target?.tagName === "TEXTAREA" || 
-                           target?.isContentEditable;
-        
-        if (isEditable) return;
+            const isEditable = target?.tagName === "INPUT" ||
+                target?.tagName === "TEXTAREA" ||
+                target?.isContentEditable;
 
-        // 4. Các logic phím tắt khác dành cho người dùng không focus vào ô input (nếu có)
-        // Ví dụ: if (e.code === "Space") { ... }
-    };
+            if (isEditable) return;
+        };
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-}, [handleNext, handlePrev]);
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [handleNext, handlePrev]);
 
     const currentSentence = sentences[activeIndex]
 
-    // Gửi điểm âm thầm
+    // 1. Logic xử lý khi hoàn thành 1 câu
     const handleCompleteSentence = useCallback((sentenceId: number, score: number) => {
-        if (lesson?.id) {
+        if (!lesson?.id) return;
+
+        dispatch(updateDictationCompletion({ sentenceId }));
+
+        if (profile) {
             dispatch(submitDictationScore({
                 lessonId: lesson.id,
-                sentenceId: sentenceId,
-                score: score
-            }))
-            dispatch(updateDictationCompletion({ sentenceId }))
+                sentenceId,
+                score
+            }));
+        } else {
+            // 👉 Truyền thêm mode
+            const currentLocal = getGuestProgress(slug!, MODE_NAME);
+            if (!currentLocal.includes(sentenceId)) {
+                const nextLocal = [...currentLocal, sentenceId];
+                saveGuestProgress(slug!, MODE_NAME, nextLocal);
+
+                setShowLoginModal(true);
+            }
         }
-    }, [dispatch, lesson?.id])
+    }, [dispatch, lesson?.id, profile, slug]);
+
+    useEffect(() => {
+        if (lesson && isLessonCompleted) {
+            setShowCompletionModal(true);
+        }
+    }, [isLessonCompleted, lesson]);
+
+    // 🚀 LOGIC 0: Tái hiện tiến độ cho Guest khi F5
+    useEffect(() => {
+        if (!profile && status === "succeeded" && slug) {
+            // 👉 Truyền thêm mode
+            const localData = getGuestProgress(slug, MODE_NAME);
+            if (localData.length > 0) {
+                console.log("Hydrating guest progress from localStorage...");
+                localData.forEach(sId => {
+                    dispatch(updateDictationCompletion({ sentenceId: sId }));
+                });
+            }
+        }
+    }, [profile, status, slug, dispatch]);
+
+    // 🚀 LOGIC SYNC: Chạy khi Guest quyết định Login
+    useEffect(() => {
+        const performBatchSync = async () => {
+            // 👉 Đảm bảo sentences đã load xong mới nhảy index
+            if (profile && lesson?.id && slug && sentences.length > 0 && !syncRef.current) {
+                // 👉 Truyền thêm mode
+                const localData = getGuestProgress(slug, MODE_NAME);
+
+                if (localData.length > 0) {
+                    syncRef.current = true;
+
+                    const pendingIds = localData.filter(sId => !completedIdsSet.has(sId));
+
+                    if (pendingIds.length > 0) {
+                        console.log(`🚀 Fluenrin: Launching batch sync for ${pendingIds.length} sentences...`);
+
+                        try {
+                            await dispatch(submitBatchDictationScore({
+                                lessonId: lesson.id,
+                                sentenceIds: pendingIds,
+                                score: 100
+                            })).unwrap();
+
+                            pendingIds.forEach(sId => {
+                                dispatch(updateDictationCompletion({ sentenceId: sId }));
+                            });
+
+                            // 👉 LOGIC MỚI: Nhảy index đến câu cuối cùng trong danh sách sync
+                            const lastSyncedId = pendingIds[pendingIds.length - 1];
+                            const targetIndex = sentences.findIndex(s => s.id === lastSyncedId);
+
+                            if (targetIndex !== -1) {
+                                setActiveIndex(targetIndex);
+                                setAutoPlayOnSentenceChange(false); // Tránh giật âm thanh ngay khi vừa load
+                            }
+
+                            console.log("✅ Sync successful. Progress preserved.");
+                        } catch (error) {
+                            console.error("❌ Batch sync failed:", error);
+                            syncRef.current = false;
+                            return;
+                        }
+                    }
+
+                    // 👉 Truyền thêm mode
+                    clearGuestProgress(slug, MODE_NAME);
+                }
+            }
+        };
+
+        performBatchSync();
+    }, [profile, lesson?.id, slug, dispatch, completedIdsSet, sentences]);
+
+    // 3. Hàm Login kết hợp lưu trữ
+    const handleLoginIncentive = () => {
+        // 👉 Truyền thêm mode
+        saveGuestProgress(slug!, MODE_NAME, completedIdsArray);
+        keycloak.login();
+    };
 
     return (
         <div className="flex min-h-[calc(100vh-64px)] flex-col gap-2 py-2 px-2 pb-8">
-            
+
             {/* 👉 HEADER TỐI ƯU 1 HÀNG DUY NHẤT */}
             <div className="flex items-center justify-between gap-2 rounded-lg bg-card border px-2 sm:px-3 py-1.5 shadow-sm">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -190,7 +283,7 @@ const DictationMode = () => {
                             Topics
                         </span>
                         <span className="text-muted-foreground/40 shrink-0">/</span>
-                        
+
                         {lesson?.topic && (
                             <>
                                 <span className="text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer truncate max-w-[100px] sm:max-w-[150px] shrink-0 transition-colors" onClick={() => navigate(`/topics/${lesson.topic?.slug}`)}>
@@ -199,7 +292,7 @@ const DictationMode = () => {
                                 <span className="text-muted-foreground/40 shrink-0">/</span>
                             </>
                         )}
-                        
+
                         <span className="text-[11px] sm:text-xs font-bold text-foreground truncate max-w-[150px] sm:max-w-[200px] shrink-0">
                             {lesson?.title ?? "Loading..."}
                         </span>
@@ -208,11 +301,22 @@ const DictationMode = () => {
                             <div className="flex items-center gap-1.5 border-l border-border/50 pl-2 ml-1 shrink-0">
                                 <LanguageLevelBadge level={lesson.languageLevel} />
                                 {lesson.sourceType === "YOUTUBE" ? <YouTubeTag /> : <AudioFileTag />}
+
                                 {isLessonCompleted && (
                                     <div className="flex items-center gap-1 text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100">
                                         <CheckCircle2 className="h-3 w-3" />
                                         <span className="text-[10px] font-bold">Done</span>
                                     </div>
+                                )}
+
+                                {/* 👉 LOGIC MỚI: Nhắc nhở Guest Mode - Tối giản, thanh lịch */}
+                                {!profile && (
+                                    <button
+                                        onClick={handleLoginIncentive}
+                                        className="ml-2 text-[11px] sm:text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors shrink-0"
+                                    >
+                                        Sign in to save
+                                    </button>
                                 )}
                             </div>
                         )}
@@ -220,10 +324,10 @@ const DictationMode = () => {
                 </div>
 
                 <div className="hidden xl:flex items-center shrink-0">
-                    <Button 
-                        variant={showTranscriptToggle ? "secondary" : "outline"} 
-                        size="sm" 
-                        className="h-7 px-2 text-xs" 
+                    <Button
+                        variant={showTranscriptToggle ? "secondary" : "outline"}
+                        size="sm"
+                        className="h-7 px-2 text-xs"
                         onClick={() => setShowTranscriptToggle((prev) => !prev)}
                     >
                         <FileText className="h-3.5 w-3.5 mr-1" />
@@ -281,9 +385,9 @@ const DictationMode = () => {
                                 onToggleProgress={() => setShowProgress(prev => !prev)}
                             />
                         </div>
-                        
+
                         <KeyboardShortcutsHelp open={showHelp} onClose={() => setShowHelp(false)} />
-                        
+
                         <DictationPanel
                             key="dictation-panel"
                             sentence={currentSentence}
@@ -306,13 +410,13 @@ const DictationMode = () => {
                                 activeIndex={activeIndex}
                                 onSelectSentence={handleSelectSentence}
                                 visible={effectiveShowTranscript}
-                                completedIds={completedIdsSet} 
+                                completedIds={completedIdsSet}
                             />
                         </div>
                     )}
                 </div>
             )}
-            
+
             {showProgress && sentences.length > 0 && (
                 <LessonProgressBar
                     sentences={sentences as { id: number }[]}
@@ -321,6 +425,19 @@ const DictationMode = () => {
                     onSelect={handleSelectSentence}
                 />
             )}
+            <LoginIncentiveModal
+                open={showLoginModal}
+                onClose={() => setShowLoginModal(false)}
+                onLogin={handleLoginIncentive}
+            />
+
+            <CompletionModal
+                open={showCompletionModal}
+                onBack={handleBackToTopic}
+                onReview={() => {
+                    setShowCompletionModal(false);
+                }}
+            />
         </div>
     )
 }

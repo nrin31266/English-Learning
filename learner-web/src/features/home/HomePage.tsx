@@ -1,16 +1,21 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { 
-  PlayCircle, 
-  Mic, 
-  Keyboard, 
-  BrainCircuit, 
+import {
+  PlayCircle,
+  Mic,
+  Keyboard,
+  BrainCircuit,
   ArrowRight,
   Sparkles,
   BarChart
 } from "lucide-react"
+import KeycloakClient from "../keycloak/keycloak";
+import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {
+  const kcClient = KeycloakClient.getInstance();
+  const keycloak = kcClient.keycloak;
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* 🌟 SOFT GLOW BACKGROUND */}
@@ -25,7 +30,7 @@ const HomePage = () => {
             <Sparkles className="w-4 h-4 mr-2 inline-block" />
             The New Standard in Language Learning
           </Badge>
-          
+
           {/* 👉 TÊN APP SIÊU TO KHỔNG LỒ + HIỆU ỨNG GRADIENT */}
           <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-black tracking-tighter mb-6 text-foreground leading-[1.1]">
             Welcome to <br className="md:hidden" />
@@ -43,7 +48,9 @@ const HomePage = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="h-14 px-8 text-base font-bold rounded-xl gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105">
+            <Button onClick={()=>{
+              navigate("/topics")
+            }} size="lg" className="h-14 px-8 text-base font-bold rounded-xl gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105">
               Start Your Journey <ArrowRight className="w-4 h-4" />
             </Button>
             <Button size="lg" variant="ghost" className="h-14 px-8 text-base font-bold gap-2 rounded-xl border border-transparent hover:border-border hover:bg-muted/50 transition-all">
@@ -63,7 +70,7 @@ const HomePage = () => {
               </h2>
               <div className="space-y-6 text-muted-foreground leading-relaxed">
                 <p>
-                  Most language learners spend years passively watching videos or clicking multiple-choice answers without ever improving their spoken fluency. Fluenrin changes this paradigm by requiring active participation. 
+                  Most language learners spend years passively watching videos or clicking multiple-choice answers without ever improving their spoken fluency. Fluenrin changes this paradigm by requiring active participation.
                 </p>
                 <p>
                   When you use our <strong>Dictation</strong> mode, you are training your ear to catch every subtle native sound, linking phonetics directly to spelling. It reveals the blind spots in your listening skills that passive watching hides.
@@ -73,7 +80,7 @@ const HomePage = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="relative rounded-2xl border border-border bg-card p-8 shadow-sm transition-all hover:shadow-md">
               <div className="absolute top-4 left-4 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
                 <BrainCircuit className="w-6 h-6 text-primary" />
@@ -101,20 +108,20 @@ const HomePage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { 
-                title: "Shadowing Practice", 
-                desc: "Listen to native audio and speak aloud simultaneously. Perfect your rhythm, tone, and connected speech.", 
-                icon: Mic 
+              {
+                title: "Shadowing Practice",
+                desc: "Listen to native audio and speak aloud simultaneously. Perfect your rhythm, tone, and connected speech.",
+                icon: Mic
               },
-              { 
-                title: "Focused Dictation", 
-                desc: "Type exactly what you hear. This intense exercise forces you to recognize linking sounds and weak forms.", 
-                icon: Keyboard 
+              {
+                title: "Focused Dictation",
+                desc: "Type exactly what you hear. This intense exercise forces you to recognize linking sounds and weak forms.",
+                icon: Keyboard
               },
-              { 
-                title: "Contextual Vocabulary", 
-                desc: "Stop memorizing isolated words. Learn vocabulary within the context of real sentences and situations.", 
-                icon: BarChart 
+              {
+                title: "Contextual Vocabulary",
+                desc: "Stop memorizing isolated words. Learn vocabulary within the context of real sentences and situations.",
+                icon: BarChart
               }
             ].map((feature, i) => (
               <div key={i} className="group p-8 rounded-2xl border border-border bg-card hover:bg-muted/20 transition-all duration-300 hover:-translate-y-1">
@@ -138,7 +145,9 @@ const HomePage = () => {
           <p className="text-muted-foreground mb-10 text-lg">
             Join Fluenrin today and transform the way you learn English. Consistent, focused practice yields the best results.
           </p>
-          <Button size="lg" className="h-14 px-10 text-base font-bold rounded-xl shadow-md transition-transform hover:scale-105">
+          <Button onClick={()=>{
+            keycloak.login();
+          }} size="lg" className="h-14 px-10 text-base font-bold rounded-xl shadow-md transition-transform hover:scale-105">
             Create Your Account
           </Button>
         </div>

@@ -50,6 +50,24 @@ export const submitShadowingScore = createAsyncThunk(
     }
   }
 );
+export const submitBatchShadowingScore = createAsyncThunk(
+  "lessonForShadowing/submitBatch",
+  async (
+    { lessonId, sentenceIds, score }: { lessonId: number; sentenceIds: number[]; score: number },
+    { rejectWithValue }
+  ) => {
+    try {
+      return await handleAPI({
+        endpoint: `/learning-contents/process/progress/batch`, // Endpoint mới
+        method: "PUT",
+        isAuth: true,
+        body: { lessonId, sentenceIds, mode: "SHADOWING", score },
+      });
+    } catch (error) {
+      return rejectWithValue(extractError(error));
+    }
+  }
+);
 
 export const lessonForShadowingSlice = createSlice({
   name: "lessonForShadowing",
@@ -102,6 +120,9 @@ export const lessonForShadowingSlice = createSlice({
       })
       .addCase(submitShadowingScore.rejected, (state, action) => {
         console.error("Submit shadowing score âm thầm bị lỗi:", action.payload);
+      })
+      .addCase(submitBatchShadowingScore.rejected, (state, action) => {
+        console.error("Batch sync shadowing bị lỗi:", action.payload);
       });
   },
 });

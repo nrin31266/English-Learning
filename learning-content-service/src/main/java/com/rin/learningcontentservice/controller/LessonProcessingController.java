@@ -1,6 +1,7 @@
 package com.rin.learningcontentservice.controller;
 
 import com.rin.englishlearning.common.dto.ApiResponse;
+import com.rin.learningcontentservice.dto.request.ProgressBatchRequest;
 import com.rin.learningcontentservice.dto.request.ProgressUpdateRequest;
 import com.rin.learningcontentservice.service.LessonProcessingService;
 import jakarta.validation.Valid;
@@ -27,4 +28,14 @@ public class LessonProcessingController {
         // Trả về HTTP 200 OK thành công, không cần data rườm rà vì frontend đã Optimistic UI
         return ApiResponse.success(null);
     }
+    // LessonProcessingController.java
+
+    @PutMapping("/progress/batch")
+    public ApiResponse<Void> updateBatchProgress(@Valid @RequestBody ProgressBatchRequest request) {
+        // Đẩy qua service xử lý một lượt
+        lessonProcessingService.updateBatchProgress(request);
+
+        return ApiResponse.success(null);
+    }
+
 }

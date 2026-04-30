@@ -4,7 +4,10 @@ import { useAppDispatch, useAppSelector } from "@/store"
 import {
   fetchLessonBySlugForShadowing,
   resetLessonState,
-  submitShadowingScore
+  submitBatchShadowingScore, // 👉 Đừng quên tạo Thunk này ở Slide nhé
+  submitShadowingScore,
+  updateSentenceCompletion,
+
 } from "@/store/lessonForShadowingSlide"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
@@ -29,18 +32,28 @@ import type { PlayerRef } from "@/components/players/types/types"
 import ShadowingTranscript from "../components/ShadowingTranscript"
 import { cn } from "@/lib/utils"
 import LessonProgressBar from "@/components/LessonProgressStrip" 
+import KeycloakClient from "@/features/keycloak/keycloak"
+import { useAuth } from "@/features/keycloak/providers/AuthProvider"
+import { clearGuestProgress, getGuestProgress, saveGuestProgress } from "@/utils/guestStorage"
+import { CompletionModal, LoginIncentiveModal } from "@/components/ModeModals"
+
+const MODE_NAME = "SHADOWING";
 
 const ShadowingMode = () => {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const { profile } = useAuth();
+  const keycloak = KeycloakClient.getInstance();
 
   const [showHelp, setShowHelp] = useState(false)
   const lessonState = useAppSelector((state) => state.lessonForShadowing.lesson)
   const { data: lesson, status, error } = lessonState
 
+  // 👉 Đồng bộ cơ chế Set/Array giống Dictation
   const shadowingProgress = useMemo(() => lesson?.progressOverview?.shadowing, [lesson])
-  const completedIds = useMemo(() => shadowingProgress?.completedSentenceIds || [], [shadowingProgress])
+  const completedIdsArray = useMemo(() => shadowingProgress?.completedSentenceIds || [], [shadowingProgress])
+  const completedIdsSet = useMemo(() => new Set(completedIdsArray), [completedIdsArray])
   const isLessonCompleted = useMemo(() => shadowingProgress?.status === 'COMPLETED', [shadowingProgress])
 
   const [autoStop, setAutoStop] = useState(true)
@@ -52,21 +65,24 @@ const ShadowingMode = () => {
   // State điều khiển UI
   const [showTranscriptToggle, setShowTranscriptToggle] = useState(false)
   const [showProgress, setShowProgress] = useState(true)
-  const [isDesktop, setIsDesktop] = useState(true) // 👉 Phát hiện màn hình
+  const [isDesktop, setIsDesktop] = useState(true)
+
+  // 👉 Thêm State cho Modals & Sync
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const syncRef = useRef(false);
 
   const playerRef = useRef<PlayerRef | null>(null)
   const [playbackRate, setPlaybackRate] = useState<number>(1.0)
   const [isPlaying, setIsPlaying] = useState(false)
 
-  // 👉 Theo dõi kích thước màn hình
   useEffect(() => {
-    const checkDesktop = () => setIsDesktop(window.innerWidth >= 1280) // xl breakpoint
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 1280)
     checkDesktop()
     window.addEventListener("resize", checkDesktop)
     return () => window.removeEventListener("resize", checkDesktop)
   }, [])
 
-  // 👉 Logic: Desktop thì tùy ý, Mobile (nhỏ hơn xl) thì LUÔN BẬT Transcript
   const effectiveShowTranscript = isDesktop ? showTranscriptToggle : true
 
   useEffect(() => {
@@ -114,15 +130,96 @@ const ShadowingMode = () => {
     setActiveIndex(index)
   }, [])
 
+  // 🚀 1. Logic xử lý khi hoàn thành 1 câu (Hỗ trợ Guest & User)
   const handleCompleteSentence = useCallback((sentenceId: number, _fluency: number, score: number) => {
-    if (lesson?.id) {
+    if (!lesson?.id) return;
+
+    dispatch(updateSentenceCompletion({ sentenceId, completed: true }));
+
+    if (profile) {
       dispatch(submitShadowingScore({
         lessonId: lesson.id,
-        sentenceId: sentenceId,
-        score: score,
-      }))
+        sentenceId,
+        score
+      }));
+    } else {
+      const currentLocal = getGuestProgress(slug!, MODE_NAME);
+      if (!currentLocal.includes(sentenceId)) {
+        const nextLocal = [...currentLocal, sentenceId];
+        saveGuestProgress(slug!, MODE_NAME, nextLocal);
+        setShowLoginModal(true);
+      }
     }
-  }, [dispatch, lesson?.id])
+  }, [dispatch, lesson?.id, profile, slug]);
+
+  // 🚀 2. Hiển thị Modal khi hoàn thành toàn bộ bài
+  useEffect(() => {
+    if (lesson && isLessonCompleted) {
+        setShowCompletionModal(true);
+    }
+  }, [isLessonCompleted, lesson]);
+
+  // 🚀 3. LOGIC 0: Tái hiện tiến độ cho Guest khi F5
+  useEffect(() => {
+    if (!profile && status === "succeeded" && slug) {
+        const localData = getGuestProgress(slug, MODE_NAME);
+        if (localData.length > 0) {
+            console.log("Hydrating guest progress from localStorage...");
+            localData.forEach(sId => {
+                dispatch(updateSentenceCompletion({ sentenceId: sId, completed: true }));
+            });
+        }
+    }
+  }, [profile, status, slug, dispatch]);
+
+  // 🚀 4. LOGIC SYNC: Chạy khi Guest quyết định Login
+  useEffect(() => {
+    const performBatchSync = async () => {
+        if (profile && lesson?.id && slug && sentences.length > 0 && !syncRef.current) {
+            const localData = getGuestProgress(slug, MODE_NAME);
+
+            if (localData.length > 0) {
+                syncRef.current = true;
+
+                const pendingIds = localData.filter(sId => !completedIdsSet.has(sId));
+
+                if (pendingIds.length > 0) {
+                    console.log(`🚀 Fluenrin: Launching batch sync for ${pendingIds.length} shadowing sentences...`);
+
+                    try {
+                        await dispatch(submitBatchShadowingScore({
+                            lessonId: lesson.id,
+                            sentenceIds: pendingIds,
+                            score: 100 // Thay bằng điểm mặc định ông muốn cho Shadowing
+                        })).unwrap();
+
+                        pendingIds.forEach(sId => {
+                            dispatch(updateSentenceCompletion({ sentenceId: sId, completed: true }));
+                        });
+
+                        const lastSyncedId = pendingIds[pendingIds.length - 1];
+                        const targetIndex = sentences.findIndex(s => s.id === lastSyncedId);
+
+                        if (targetIndex !== -1) {
+                            setActiveIndex(targetIndex);
+                            setAutoPlayOnSentenceChange(false);
+                        }
+
+                        console.log("✅ Sync successful. Progress preserved.");
+                    } catch (error) {
+                        console.error("❌ Batch sync failed:", error);
+                        syncRef.current = false;
+                        return;
+                    }
+                }
+
+                clearGuestProgress(slug, MODE_NAME);
+            }
+        }
+    };
+
+    performBatchSync();
+  }, [profile, lesson?.id, slug, dispatch, completedIdsSet, sentences]);
 
   const handleBackToTopic = () => {
     if (lesson?.topic) {
@@ -131,6 +228,12 @@ const ShadowingMode = () => {
       navigate("/topics")
     }
   }
+
+  // 🚀 5. Hàm Login kết hợp lưu trữ
+  const handleLoginIncentive = () => {
+    saveGuestProgress(slug!, MODE_NAME, completedIdsArray);
+    keycloak.login();
+  };
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -164,7 +267,6 @@ const ShadowingMode = () => {
         {/* Nửa trái: Nút Back + Nội dung (Cho phép scroll ngang nếu quá dài) */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
           
-          {/* Nút Back (Chỉ Icon trên Mobile, Icon + Chữ trên PC) */}
           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 sm:hidden" onClick={handleBackToTopic}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -172,7 +274,6 @@ const ShadowingMode = () => {
             <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Back
           </Button>
 
-          {/* Dải Breadcrumb & Tags tự động dàn ngang, ẩn thanh cuộn */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 whitespace-nowrap pr-2">
             <span className="text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer shrink-0 transition-colors" onClick={() => navigate("/topics")}>
               Topics
@@ -197,11 +298,22 @@ const ShadowingMode = () => {
               <div className="flex items-center gap-1.5 border-l border-border/50 pl-2 ml-1 shrink-0">
                 <LanguageLevelBadge level={lesson.languageLevel} />
                 {lesson.sourceType === "YOUTUBE" ? <YouTubeTag /> : <AudioFileTag />}
+                
                 {isLessonCompleted && (
                   <div className="flex items-center gap-1 text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100">
                     <CheckCircle2 className="h-3 w-3" />
                     <span className="text-[10px] font-bold">Done</span>
                   </div>
+                )}
+
+                {/* 👉 Nút Nhắc nhở Guest Mode tối giản */}
+                {!profile && (
+                    <button
+                        onClick={handleLoginIncentive}
+                        className="ml-2 text-[11px] sm:text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors shrink-0"
+                    >
+                        Sign in to save
+                    </button>
                 )}
               </div>
             )}
@@ -283,21 +395,36 @@ const ShadowingMode = () => {
                 activeIndex={activeIndex}
                 onSelectSentence={handleSelectSentence}
                 visible={effectiveShowTranscript}
-                completedIds={completedIds}
+                completedIds={completedIdsSet} // 👉 Đã đổi sang Set để đồng bộ giống Dictation
               />
             </div>
           )}
         </div>
       )}
       
-      {showProgress && (
+      {showProgress && sentences.length > 0 && (
         <LessonProgressBar
           sentences={sentences as { id: number; }[]}
-          completedIds={completedIds}
+          completedIds={completedIdsArray} // 👉 ProgressBar xài Array
           activeIndex={activeIndex}
           onSelect={handleSelectSentence}
         />
       )}
+
+      {/* 🚀 Render Modals */}
+      <LoginIncentiveModal
+          open={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+          onLogin={handleLoginIncentive}
+      />
+
+      <CompletionModal
+          open={showCompletionModal}
+          onBack={handleBackToTopic}
+          onReview={() => {
+              setShowCompletionModal(false);
+          }}
+      />
     </div>
   )
 }

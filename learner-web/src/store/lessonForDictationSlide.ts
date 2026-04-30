@@ -52,6 +52,24 @@ export const submitDictationScore = createAsyncThunk(
     }
   }
 );
+export const submitBatchDictationScore = createAsyncThunk(
+  "lessonForDictation/submitBatch",
+  async (
+    { lessonId, sentenceIds, score }: { lessonId: number; sentenceIds: number[]; score: number },
+    { rejectWithValue }
+  ) => {
+    try {
+      return await handleAPI({
+        endpoint: `/learning-contents/process/progress/batch`, // Endpoint mới
+        method: "PUT",
+        isAuth: true,
+        body: { lessonId, sentenceIds, mode: "DICTATION", score },
+      });
+    } catch (error) {
+      return rejectWithValue(extractError(error));
+    }
+  }
+);
 
 export const lessonForDictationSlice = createSlice({
   name: "lessonForDictation",
@@ -102,7 +120,9 @@ export const lessonForDictationSlice = createSlice({
       })
       .addCase(submitDictationScore.rejected, (state, action) => {
         console.error("Submit dictation âm thầm bị lỗi:", action.payload);
-      });
+      }).addCase(submitBatchDictationScore.rejected, (state, action) => {
+        console.error("Batch sync dictation bị lỗi:", action.payload);
+      });;
   },
 });
 

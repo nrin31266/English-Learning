@@ -1,3 +1,5 @@
+// src/pages/shadowing/components/RecordingControls.tsx
+
 import { Button } from "@/components/ui/button"
 import { Spinner2 } from "@/components/ui/spinner2"
 import { cn } from "@/lib/utils"
@@ -10,6 +12,7 @@ interface RecordingControlsProps {
   hasRecordedAudio: boolean
   isPlayingRecorded: boolean
   userInteracted: boolean
+  isCompleted: boolean // 👉 Đã thêm prop này từ Cha truyền xuống
   shouldShowSkipButton: boolean
   shouldShowNextButton: boolean
   recordError: string | null
@@ -28,6 +31,7 @@ const RecordingControls = ({
   hasRecordedAudio,
   isPlayingRecorded,
   userInteracted,
+  isCompleted,
   shouldShowSkipButton,
   shouldShowNextButton,
   recordError,
@@ -53,10 +57,10 @@ const RecordingControls = ({
   return (
     <div className="flex flex-col items-center w-full gap-2 mt-2">
       
-      {/* KHU VỰC ĐIỀU KHIỂN (SỬ DỤNG ABSOLUTE POSITIONING ĐỂ NÚT GIỮA BẤT ĐỘNG) */}
+      {/* KHU VỰC ĐIỀU KHIỂN (SỬ DỤNG ABSOLUTE LÀM CHUẨN ĐỂ NÚT GIỮA KHÔNG BỊ LỆCH) */}
       <div className="relative flex items-center justify-center w-full max-w-md mx-auto h-20 sm:h-24">
         
-        {/* BÊN TRÁI: Dùng absolute định vị từ viền trái đến giữa (right-1/2) */}
+        {/* BÊN TRÁI: Các công cụ bổ trợ (Slow Mode, Play Recorded) */}
         <div className="absolute inset-y-0 left-0 right-[50%] flex flex-col sm:flex-row items-end sm:items-center justify-center gap-2 pr-10 sm:pr-14">
           
           {(!isRecording && !isUploading) && (
@@ -90,7 +94,7 @@ const RecordingControls = ({
           )}
         </div>
 
-        {/* GIỮA: Nút Record (Chỉ đứng 1 mình ở lớp z-10, hoàn toàn tách biệt với 2 bên) */}
+        {/* GIỮA: Nút Record (Lớp z-10, tách biệt hoàn toàn với 2 bên) */}
         <div className="relative z-10 shrink-0">
           <button
             className={cn(
@@ -135,11 +139,12 @@ const RecordingControls = ({
           </button>
         </div>
 
-        {/* BÊN PHẢI: Dùng absolute định vị từ giữa (left-1/2) đến viền phải */}
+        {/* BÊN PHẢI: Nút Skip / Next (Đã được tháo khỏi mác hasRecordedAudio) */}
         <div className="absolute inset-y-0 left-[50%] right-0 flex flex-col sm:flex-row items-start sm:items-center justify-center gap-2 pl-10 sm:pl-14">
-          {(hasRecordedAudio && !isRecording && !isUploading) && (
+          {(!isRecording && !isUploading) && (
             <>
-              {shouldShowSkipButton && !shouldShowNextButton && (
+              {/* Nút Skip: Hiện khi chưa qua bài và cần bỏ qua */}
+              {(shouldShowSkipButton && !shouldShowNextButton) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -150,6 +155,7 @@ const RecordingControls = ({
                 </Button>
               )}
               
+              {/* 👉 Nút Next: Hiện bất chấp Audio, miễn là has completed hoặc đủ điểm */}
               {shouldShowNextButton && (
                 <Button 
                   size="sm"
@@ -167,7 +173,12 @@ const RecordingControls = ({
 
       {/* VỊ TRÍ TEXT TRẠNG THÁI & THỜI GIAN CỐ ĐỊNH */}
       <div className="h-6 flex items-center justify-center w-full mt-1">
-        {recordError ? (
+        {/* 👉 LOGIC MỚI: Nhắc nhở người dùng nhấn Play thay vì để mờ nhạt gây tưởng nhầm là lỗi */}
+        {!userInteracted ? (
+           <span className="text-xs sm:text-sm text-primary uppercase font-bold flex items-center gap-1">
+             ▶ Play audio to start
+           </span>
+        ) : recordError ? (
           <span className="text-xs text-red-500 bg-red-50/80 px-3 py-1 rounded-full border border-red-200 shadow-sm">
             ⚠️ {recordError}
           </span>

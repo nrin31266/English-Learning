@@ -2,6 +2,7 @@ package com.rin.learningcontentservice.service;
 
 import com.rin.englishlearning.common.exception.BaseErrorCode;
 import com.rin.englishlearning.common.exception.BaseException;
+import com.rin.learningcontentservice.dto.request.ProgressBatchRequest;
 import com.rin.learningcontentservice.dto.request.ProgressUpdateRequest;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
 import com.rin.learningcontentservice.model.*;
@@ -28,7 +29,23 @@ public class LessonProcessingService {
 
     // Ngưỡng điểm phát âm chuẩn chỉ dùng cho Shadowing
     private static final double SHADOWING_PASS_THRESHOLD = 80.0;
+// LessonProcessingService.java
 
+    @Transactional // Đảm bảo tính toàn vẹn dữ liệu
+    public void updateBatchProgress(ProgressBatchRequest request) {
+        for (Long sentenceId : request.getSentenceIds()) {
+            // Build lại request lẻ từ data của request batch
+            ProgressUpdateRequest singleRequest = ProgressUpdateRequest.builder()
+                    .lessonId(request.getLessonId())
+                    .sentenceId(sentenceId)
+                    .mode(request.getMode())
+                    .score(request.getScore())
+                    .build();
+
+            // Gọi lại logic update cũ mà ông đã viết
+            this.updateProgress(singleRequest);
+        }
+    }
     @Transactional
     public void updateProgress(ProgressUpdateRequest request) {
 

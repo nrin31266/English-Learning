@@ -37,15 +37,16 @@ const getWordDisplay = (w: ILessonWordResponse): string =>
 // ─── Main Component ───────────────────────────────────────────────────────────
 const DictationPanel = ({
     sentence, onSubmit, onNext,
-    loading = false, completed = false,
+    loading = false, 
+    completed = false,
     currentTemporaryAnswer, onTemporaryAnswerChange,
-    userInteracted = false
+    userInteracted
 }: DictationPanelProps) => {
     const [answer, setAnswer] = useState("")
     const [revealState, setRevealState] = useState<RevealState>({})
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const [isTransitioning, setIsTransitioning] = useState(false)
-
+   
     const { activeWord, anchorEl, wordData, loadingWordData, handleWordClick, closePopup } = useWordPopup();
 
     const sortedWords = useMemo(
@@ -106,6 +107,7 @@ const DictationPanel = ({
 
     // 🎯 Xử lý khi gõ đúng hết: Fill text chuẩn và phát âm thanh
     useEffect(() => {
+       
         if (isAllCorrect && !completed && !loading && userInteracted) {
             successSound.play()
             // Đưa bản text đẹp nhất (có dấu câu, viết hoa) vào textarea
@@ -116,7 +118,7 @@ const DictationPanel = ({
         }
     }, [isAllCorrect, completed, loading, calculatedScore, onSubmit, userInteracted, sentence.textDisplay])
 
-    // 🎯 Hàm "Làm đẹp" những từ đã gõ đúng và đưa con trỏ tới vị trí lỗi
+    
     // 🎯 Hàm "Làm đẹp" và Đưa con trỏ tới CUỐI từ lỗi để xóa/sửa cho nhanh
     const prettifyAndFocus = useCallback(() => {
         let firstErrorIndex = -1
@@ -174,7 +176,11 @@ const DictationPanel = ({
             return prevAnswer
         })
         if (userInteracted) textareaRef.current?.focus()
-    }, [onTemporaryAnswerChange, userInteracted])
+    }, [onTemporaryAnswerChange])
+
+    const handleWordChipClick = useCallback((w: ILessonWordResponse, el: HTMLElement) => {
+        handleWordClick(w, el, sentence.textDisplay || "")
+    }, [handleWordClick, sentence.textDisplay])
 
     const handleReset = () => {
         if (!userInteracted) return;
@@ -183,7 +189,7 @@ const DictationPanel = ({
         onTemporaryAnswerChange?.("")
         textareaRef.current?.focus()
     }
-
+    // console.log("Render DictationPanel - Typed Tokens:", typedTokens, "Reveal State:", revealState)
     return (
         <div className="flex w-full flex-col gap-3 rounded-xl border bg-card p-3 sm:p-4 shadow-sm relative">
 
@@ -231,32 +237,27 @@ const DictationPanel = ({
                             }
                         }
                     }}
-                    placeholder={userInteracted ? "Type what you hear..." : ""}
+                    // 👉 Dùng Placeholder thay vì lớp Blur overlay lố lăng
+                    placeholder={userInteracted ? "Type what you hear..." : "▶ Play audio to start typing..."}
                     className={cn(
                         "min-h-[80px] sm:min-h-[100px] resize-none text-xl! sm:text-2xl! leading-relaxed font-bold tracking-wide p-3 sm:p-4 font-dictation",
-                        "border border-border/60 bg-muted/20",
+                        "border border-border/60",
                         "focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary",
-                        "placeholder:text-muted-foreground/40",
                         "transition-all duration-200 shadow-inner",
-                        !userInteracted && "opacity-60 cursor-not-allowed"
+                        // 👉 Khi chưa tương tác, cho nền xám nhẹ và cursor-not-allowed, text placeholder làm rõ ràng hơn
+                        userInteracted ? "bg-muted/20 placeholder:text-muted-foreground/40" : "bg-muted/40 cursor-not-allowed placeholder:text-foreground/60 placeholder:font-semibold"
                     )}
                     disabled={loading || !userInteracted}
                 />
-
-                {!userInteracted && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/40 backdrop-blur-sm rounded-md pointer-events-none">
-                        <span className="text-foreground/80 px-4 py-2 rounded-lg text-sm font-semibold tracking-wide ">
-                            Play audio to start
-                        </span>
-                    </div>
-                )}
             </div>
 
             {/* 🎯 WORD CHIPS */}
             <div className={cn(
                 "rounded-lg border border-border/50 bg-muted/10 p-3 flex flex-wrap gap-2 max-h-48 overflow-y-auto min-h-[80px] z-10 transition-all",
-                !userInteracted && "opacity-40 pointer-events-none grayscale-[50%]"
+                // 👉 Xóa grayscale tịt ngóm đi, chỉ cần khóa click là đủ
+                !userInteracted && "pointer-events-none opacity-80"
             )}>
+                {/* 👉 Bỏ điều kiện userInteracted ở mảng, cho render TẤT CẢ từ đầu! */}
                 {!isTransitioning && sortedWords.map((word, idx) => (
                     <WordChip
                         key={word.id}
@@ -265,13 +266,11 @@ const DictationPanel = ({
                         typedToken={typedTokens[idx] || ""}
                         isRevealed={!!revealState[word.id]}
                         onReveal={handleRevealOne}
-                        onClickWord={(w, el) => {
-                            if (!userInteracted) return;
-                            handleWordClick(w, el, sentence.textDisplay || "")
-                        }}
+                        onClickWord={handleWordChipClick}
+                        userInteracted={userInteracted || false}
                     />
                 ))}
-            </div>
+            </div>  
 
             {/* 🎯 FOOTER */}
             <div className="flex justify-between items-center pt-1 z-10">

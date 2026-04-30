@@ -176,40 +176,42 @@ public class LessonService {
         );
 
         // Gọi hàm đính kèm Wrapper DTO
-        attachProgressOverviewIfUserLoggedIn(ld);
+        attachProgressOverview(ld);
 
         return ld;
     }
 
-    private void attachProgressOverviewIfUserLoggedIn(LessonDetailsResponse ld) {
-        String userId = getCurrentUserId();
-        if (userId == null) {
-            return;
-        }
-
-        // 1. Query 1 lần lấy ra tiến độ của tất cả các Mode cho bài học này
-        List<UserLessonProgress> progresses = userLessonProgressRepository
-                .findByUserIdAndLessonId(userId, ld.getId());
-
-        // 2. Khởi tạo 2 DTO mặc định (rỗng) đề phòng user chưa học mode nào
+    private void attachProgressOverview(LessonDetailsResponse ld) {
+        // 1. Luôn khởi tạo 2 DTO mặc định (rỗng) ngay từ đầu
         UserLessonProgressDto shadowingDto = buildEmptyProgressDto("SHADOWING");
         UserLessonProgressDto dictationDto = buildEmptyProgressDto("DICTATION");
 
-        // 3. Phân loại dữ liệu từ DB (nếu có)
-        for (UserLessonProgress p : progresses) {
-            if ("SHADOWING".equals(p.getMode().name())) {
-                shadowingDto = mapToProgressDto(p);
-            } else if ("DICTATION".equals(p.getMode().name())) {
-                dictationDto = mapToProgressDto(p);
+        String userId = getCurrentUserId();
+
+        // 2. Chỉ thực hiện truy vấn và ghi đè dữ liệu nếu User đã đăng nhập
+        if (userId != null) {
+            // Query 1 lần lấy ra tiến độ của tất cả các Mode cho bài học này
+            List<UserLessonProgress> progresses = userLessonProgressRepository
+                    .findByUserIdAndLessonId(userId, ld.getId());
+
+            // Phân loại và map dữ liệu thực tế từ DB vào DTO
+            for (UserLessonProgress p : progresses) {
+                if ("SHADOWING".equals(p.getMode().name())) {
+                    shadowingDto = mapToProgressDto(p);
+                } else if ("DICTATION".equals(p.getMode().name())) {
+                    dictationDto = mapToProgressDto(p);
+                }
             }
         }
 
+        // 3. Xây dựng Overview DTO
+        // Nếu userId == null, nó sẽ dùng 2 DTO rỗng đã khởi tạo ở bước 1
         LessonProgressOverviewDto overviewDto = LessonProgressOverviewDto.builder()
                 .shadowing(shadowingDto)
                 .dictation(dictationDto)
                 .build();
 
-        // 5. Gắn vào response trả về
+        // 4. Gắn vào response trả về
         ld.setProgressOverview(overviewDto);
     }
     private UserLessonProgressDto mapToProgressDto(UserLessonProgress progress) {

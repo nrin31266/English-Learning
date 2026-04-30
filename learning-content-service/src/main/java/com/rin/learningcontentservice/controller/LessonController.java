@@ -23,4 +23,5 @@ public class LessonController {
         return ApiResponse.success(lessonService.getLessonDetailsWithoutInActivateSentences(slug, mode));
     }
 
+
 }

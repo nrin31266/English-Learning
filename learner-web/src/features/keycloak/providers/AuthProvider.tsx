@@ -27,12 +27,11 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // ───────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      const authenticated = await kcClient.init();
+      // KeycloakClient đã dùng 'check-sso', nên nó sẽ 
+      // âm thầm kiểm tra xem có session không mà không redirect.
+      await kcClient.init();
 
-      if (!authenticated) {
-        keycloak.login();
-        return;
-      }
+      
 
       setLoadingKC(false);
     };
@@ -88,10 +87,8 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   if (loadingKC)
     return <FullScreenSpinner label="Checking session..." />;
 
-  if (!keycloak.authenticated)
-    return <FullScreenSpinner label="Redirecting..." />;
-
-  if (loadingProfile)
+  // Nếu đã login nhưng chưa load xong Profile thì mới hiện Spinner
+  if (keycloak.authenticated && loadingProfile)
     return <FullScreenSpinner label="Loading profile..." />;
 
   return (

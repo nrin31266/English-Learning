@@ -85,7 +85,6 @@ const ActiveSentencePanel = ({
 
   const currentSentenceTextDisplay = currentSentence?.textDisplay || ""
 
-  // 👉 SỬA: Check hoàn thành bằng cách tra cứu ID trong progressOverview mới
   const isCompleted = useMemo(() => {
     return lesson.progressOverview?.shadowing?.completedSentenceIds?.includes(currentSentence.id)
   }, [lesson.progressOverview, currentSentence.id])
@@ -103,14 +102,16 @@ const ActiveSentencePanel = ({
     handleWordClick(word, el, currentSentenceTextDisplay)
   }, [currentSentenceTextDisplay, handleWordClick])
 
+  // 👉 LOGIC MỚI: Nếu đã completed thì show NEXT luôn, khỏi cần xét điểm hiện tại
   const shouldShowNextButton = useMemo(
-    () => (transcription?.shadowingResult?.weightedAccuracy ?? 0) >= SHADOWING_THRESHOLD.NEXT,
-    [transcription]
+    () => isCompleted || (transcription?.shadowingResult?.weightedAccuracy ?? 0) >= SHADOWING_THRESHOLD.NEXT,
+    [isCompleted, transcription]
   )
 
+  // 👉 LOGIC MỚI: Skip chỉ hiện khi KHÔNG completed và (chưa có điểm pass)
   const shouldShowSkipButton = useMemo(
-    () => !hasRecordedAudio || !shouldShowNextButton,
-    [hasRecordedAudio, shouldShowNextButton]
+    () => !isCompleted && hasRecordedAudio && !shouldShowNextButton,
+    [isCompleted, hasRecordedAudio, shouldShowNextButton]
   )
 
   const lastTranscriptionRef = useRef<string | null>(null)
@@ -224,7 +225,6 @@ const ActiveSentencePanel = ({
     }
   }, [currentSentence.id, resetRecordingUi])
 
-  // 👉 SỬA: Logic hoàn thành (Dùng Math.round và Optimistic Update)
   useEffect(() => {
     const score = transcription?.shadowingResult?.weightedAccuracy
     const currentSentenceId = sentenceIdRef.current
@@ -233,19 +233,10 @@ const ActiveSentencePanel = ({
       return
     }
 
-    // Làm tròn để so sánh khớp backend (79.6 -> 80)
     const isPassed = score !== undefined && Math.round(score) >= SHADOWING_THRESHOLD.NEXT;
 
     if (isPassed) {
       completedSentenceIdRef.current = currentSentenceId
-
-      // 1. Optimistic Update UI (Sidebar/Transcript xanh luôn)
-      dispatch(updateSentenceCompletion({
-        sentenceId: currentSentenceId,
-        completed: true
-      }))
-
-      // 2. Gọi API âm thầm qua callback cha
       if (onComplete) {
         onComplete(currentSentenceId, transcription?.shadowingResult?.fluencyScore ?? 0, score!)
       }
@@ -412,7 +403,6 @@ const ActiveSentencePanel = ({
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
       <div className="flex flex-col items-center gap-4 px-4 py-4 relative">
         
-        {/* 👉 Badge hoàn thành tinh tế hơn thay vì BestScoreBadge cũ (nếu muốn) */}
         {isCompleted && (
           <div className="absolute right-4 top-4 flex items-center gap-1.5 text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -434,6 +424,7 @@ const ActiveSentencePanel = ({
           hasRecordedAudio={hasRecordedAudio}
           isPlayingRecorded={isPlayingRecorded}
           userInteracted={userInteracted}
+          isCompleted={isCompleted} // 👉 Truyền biến isCompleted xuống
           shouldShowSkipButton={shouldShowSkipButton}
           shouldShowNextButton={shouldShowNextButton}
           recordError={recordError}

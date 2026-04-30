@@ -34,6 +34,7 @@ type WordChipProps = {
   index: number
   typedToken: string
   isRevealed?: boolean
+  userInteracted: boolean // 👉 Thêm prop này
   onReveal?: (wordId: number, wordText: string, wordIndex: number) => void
   onClickWord?: (word: ILessonWordResponse, el: HTMLElement) => void
 }
@@ -43,6 +44,7 @@ const WordChip = ({
   index,
   typedToken,
   isRevealed = false,
+  userInteracted, // 👉 Nhận prop
   onReveal,
   onClickWord
 }: WordChipProps) => {
@@ -87,7 +89,6 @@ const WordChip = ({
   }, [word, typedToken])
 
   const finalDisplayText = isRevealed ? getWordDisplay(word) : displayText
-  // 👉 Cho phép ấn mở nếu chưa đúng hoàn toàn VÀ chưa được mở
   const isRevealable = status !== "correct_typed" && !isRevealed
   const isClickable = status === "correct_typed"
 
@@ -113,53 +114,57 @@ const WordChip = ({
   const current = config[status]
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // 👉 Chặn click ngay tại đây nếu chưa tương tác
+    if (!userInteracted) return;
+
     if (isRevealable) {
       onReveal?.(word.id, getWordDisplay(word), index)
     } else if (isClickable && onClickWord) {
       onClickWord(word, e.currentTarget)
     }
   }
-  console.log(`Render WordChip #${index + 1} - Status: ${status} - Revealed: ${isRevealed}`);
+
+
+  // console.log(`Render WordChip #${index + 1} - Status: ${status} - Revealed: ${isRevealed}`);
+  
   return (
     <button
       type="button"
       onClick={handleClick}
       className={cn(
         "group relative inline-flex items-center justify-center shrink-0 transition-all duration-200",
-        "h-8 px-2.5 rounded-md border text-sm sm:text-base", // 👉 Ép cứng h-8 (32px)
+        "h-8 px-2.5 rounded-md border text-sm sm:text-base",
         current.border,
         (isClickable || isRevealable) && "cursor-pointer active:scale-95",
         isClickable && "hover:bg-primary/5",
-        // Nếu đã mở thì thêm viền xanh dương nhẹ để nhận diện
         isRevealed && "border-sky-500/40"
       )}
     >
-      {/* Badge con mắt ở góc - Không chặn click */}
       {isRevealed && (
         <div className="absolute -top-1.5 -right-1.5 bg-card rounded-full p-0.5 border border-sky-500/40 shadow-sm z-20 pointer-events-none">
           <Eye className="h-2.5 w-2.5 text-sky-500" />
         </div>
       )}
 
-     {/* 🎯 FONT CHỮ LOGIC: Mở/Đúng -> font-dictation | Đang dấu sao -> font-mono */}
       <span className={cn(
         "font-bold tracking-wide text-sm sm:text-base whitespace-nowrap",
-        (isRevealed || status === "correct_typed") ? "font-dictation" : "font-mono",
-        current.text // 👉 Màu sắc LUÔN theo status bài làm (Xanh/Đỏ/Vàng)
+        "font-mono",
+        current.text
       )}>
         {finalDisplayText}
       </span>
 
-      {/* Focus ring */}
       <span className="absolute inset-0 rounded-md ring-primary/20 transition-all group-focus-visible:ring-2 pointer-events-none" />
     </button>
   )
 }
 
+// 👉 React.memo ĐỈNH CAO: Chỉ cần check đúng 4 cái này, vứt việc check hàm đi!
 export default React.memo(WordChip, (prevProps, nextProps) => {
   return (
     prevProps.typedToken === nextProps.typedToken &&
     prevProps.isRevealed === nextProps.isRevealed &&
-    prevProps.word.id === nextProps.word.id
+    prevProps.word.id === nextProps.word.id &&
+    prevProps.userInteracted === nextProps.userInteracted // Đảm bảo tự render lại đúng 1 lần khi ấn Play
   )
 })
