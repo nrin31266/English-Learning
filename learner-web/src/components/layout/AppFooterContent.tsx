@@ -6,142 +6,112 @@ import {
   BookOpen,
   Server,
   Heart,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from "lucide-react";
 
 const AppFooterContent = () => {
   return (
-    <div className="w-full">
+    <div className="w-full bg-background border-t border-border/40">
       {/* Main footer content */}
-      <div className="max-w-screen-2xl mx-auto px-6 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 text-sm text-background/80">
-        {/* Column 1 - About for Learners */}
+      <div className="max-w-screen-2xl mx-auto px-6 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 text-sm">
+        
+        {/* Column 1 - About Fluenrin */}
         <div>
-          <h3 className="font-semibold text-background mb-3 flex items-center gap-2">
-            <Building2 size={18} />
-            About MeowTalk for Learners
+          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+            <Building2 size={18} className="text-primary" />
+            About Fluenrin
           </h3>
-          <p className="leading-relaxed text-background/70">
-            MeowTalk is your personal learning companion — helping you explore courses,
-            practice with AI, and track your progress in one simple dashboard.
+          <p className="leading-relaxed text-muted-foreground">
+            Fluenrin is your personal AI Language Coach — engineered to help you master English through active immersion, 
+            precise shadowing, and smart dictation practice.
           </p>
         </div>
 
         {/* Column 2 - Learning Resources */}
         <div>
-          <h3 className="font-semibold text-background mb-3 flex items-center gap-2">
-            <BookOpen size={18} />
+          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+            <BookOpen size={18} className="text-primary" />
             Learning Resources
           </h3>
-          <ul className="space-y-2">
+          <ul className="space-y-3 text-muted-foreground">
             <li>
-              <a
-                className="flex items-center gap-2 hover:text-background transition"
-                href="#"
-              >
-                Course catalog
-                <div>
-                  <ExternalLink size={14} />
-                </div>
+              <a className="flex items-center gap-2 hover:text-primary transition-colors" href="#">
+                Course catalog <ExternalLink size={14} />
               </a>
             </li>
             <li>
-              <a
-                className="flex items-center gap-2 hover:text-background transition"
-                href="#"
-              >
-                Learning paths
-                <div>
-                  <ExternalLink size={14} />
-                </div>
+              <a className="flex items-center gap-2 hover:text-primary transition-colors" href="#">
+                Shadowing paths <ExternalLink size={14} />
               </a>
             </li>
             <li>
-              <a
-                className="flex items-center gap-2 hover:text-background transition"
-                href="#"
-              >
-                Help center
-                <div>
-                  <ExternalLink size={14} />
-                </div>
+              <a className="flex items-center gap-2 hover:text-primary transition-colors" href="#">
+                Help center <ExternalLink size={14} />
               </a>
             </li>
           </ul>
         </div>
 
-        {/* Column 3 - Learner Tools (instead of system/admin tools) */}
+        {/* Column 3 - Learner Tools */}
         <div>
-          <h3 className="font-semibold text-background mb-3 flex items-center gap-2">
-            <Server size={18} />
+          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+            <Server size={18} className="text-primary" />
             Learner Tools
           </h3>
-          <ul className="space-y-2">
+          <ul className="space-y-3 text-muted-foreground">
             <li>
-              <a className="hover:text-background transition" href="/dashboard">
-                My dashboard
-              </a>
+              <a className="hover:text-primary transition-colors font-medium" href="/dashboard">My dashboard</a>
             </li>
             <li>
-              <a className="hover:text-background transition" href="/courses">
-                My courses
-              </a>
+              <a className="hover:text-primary transition-colors font-medium" href="/courses">My courses</a>
             </li>
             <li>
-              <a className="hover:text-background transition" href="/progress">
-                Progress & achievements
-              </a>
+              <a className="hover:text-primary transition-colors font-medium" href="/progress">Progress & achievements</a>
             </li>
             <li>
-              <a className="hover:text-background transition" href="/community">
-                Community & discussions
-              </a>
+              <a className="hover:text-primary transition-colors font-medium" href="/community">Community & discussions</a>
             </li>
           </ul>
         </div>
 
         {/* Column 4 - Contact */}
         <div>
-          <h3 className="font-semibold text-background mb-3">
-            Need help?
+          <h3 className="font-bold text-foreground mb-4">
+            Need support?
           </h3>
-          <ul className="space-y-3">
-            <li className="flex items-center gap-2">
-              <div><Mail size={16} /></div>
-              <a
-                href="mailto:support@example.com"
-                className="hover:text-background"
-              >
-                Email: nrin31266@gmail.com
+          <ul className="space-y-4 text-muted-foreground">
+            <li className="flex items-center gap-3 group">
+              <div className="p-2 rounded-md bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                <Mail size={16} />
+              </div>
+              <a href="mailto:nrin31266@gmail.com" className="hover:text-primary transition-colors truncate">
+                nrin31266@gmail.com
               </a>
             </li>
-            <li className="flex items-center gap-2">
-              <div><Phone size={16} /></div>
-              <a
-                href="tel:+123456789"
-                className="hover:text-background"
-              >
-                Phone: +1 234 567 890
+            <li className="flex items-center gap-3 group">
+              <div className="p-2 rounded-md bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                <Github size={16} />
+              </div>
+              <a href="https://github.com/your-org" className="hover:text-primary transition-colors" target="_blank" rel="noreferrer">
+                Fluenrin Open Source
               </a>
             </li>
-            <li className="flex items-center gap-2">
-              <div><Github size={16} /></div>
-              <a
-                href="https://github.com/your-org"
-                className="hover:text-background"
-                target="_blank"
-                rel="noreferrer"
-              >
-                GitHub
-              </a>
-            </li>
+            {/* <li className="flex items-center gap-2 text-xs opacity-70 italic">
+               <Sparkles size={12} className="text-amber-500" />
+               Built for serious learners.
+            </li> */}
           </ul>
         </div>
       </div>
 
       {/* Bottom row */}
-      <div className="border-t border-border/40 py-3 text-center text-background/60 text-sm flex items-center justify-center gap-1">
-        © {new Date().getFullYear()} MeowTalk — Made with
-        <Heart size={14} className="fill-red-500 text-red-500" /> for learners
+      <div className="border-t border-border/40 py-6 text-center text-muted-foreground text-sm flex flex-col sm:flex-row items-center justify-center gap-2">
+        <div className="flex items-center gap-1">
+          © {new Date().getFullYear()} <span className="font-bold text-foreground">Fluenrin</span> — Made with
+          <Heart size={14} className="fill-red-500 text-red-500 mx-0.5" /> 
+          for learners.
+        </div>
       </div>
     </div>
   );

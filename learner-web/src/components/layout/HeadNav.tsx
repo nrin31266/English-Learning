@@ -1,120 +1,240 @@
-
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { BookA, Menu, Notebook } from "lucide-react"
+import { 
+  BookA, 
+  Menu, 
+  Notebook, 
+  Library, 
+  X, 
+  ChevronDown,
+  Users,
+  Trophy,
+  MessageCircle,
+  Newspaper,
+  type LucideIcon // 👉 Thêm dòng này để lấy type của Icon
+} from "lucide-react"
 import * as React from "react"
 import { Link, useLocation } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+
+// 👉 KHAI BÁO TYPE RÕ RÀNG ĐỂ TYPESCRIPT KHÔNG LA LÀNG
+type NavChild = {
+  name: string;
+  path: string;
+  description?: string;
+  icon?: LucideIcon; // icon là optional (có cũng được, không có cũng được)
+};
+
+type NavItem = {
+  name: string;
+  path?: string; // Nếu có children thì path có thể không cần
+  icon: LucideIcon;
+  children?: NavChild[];
+};
+
+// Ốp type vào data
+const NAV_LINKS: NavItem[] = [
+  { name: "Topics", path: "/topics", icon: Notebook },
+  { name: "Dictionary", path: "/dictionary", icon: BookA },
+  { 
+    name: "Practice", 
+    icon: Library,
+    children: [
+      { name: "Review Hub", path: "/review", description: "Review your saved words and sentences." },
+      { name: "Mock Test", path: "/mock-test", description: "Take a full CEFR standard test." },
+      { name: "Grammar", path: "/grammar", description: "Master English grammar rules." },
+    ]
+  },
+  { 
+    name: "Community", 
+    icon: Users,
+    children: [
+      { name: "Leaderboard", path: "/leaderboard", icon: Trophy, description: "Compete with other learners globally." },
+      { name: "Discussions", path: "/discussions", icon: MessageCircle, description: "Ask questions and share study tips." },
+    ]
+  },
+  { name: "Blog", path: "/blog", icon: Newspaper },
+]
 
 const HeadNav = () => {
-  const isMobile = useIsMobile();
   const pn = useLocation().pathname;
-  const [open, setOpen] = React.useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [expandedMobileMenus, setExpandedMobileMenus] = React.useState<string[]>([]);
 
+  React.useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setExpandedMobileMenus([]);
+  }, [pn]);
 
+  const toggleMobileSubmenu = (menuName: string) => {
+    setExpandedMobileMenus(prev => 
+      prev.includes(menuName) ? prev.filter(n => n !== menuName) : [...prev, menuName]
+    );
+  };
 
   return (
-    <NavigationMenu viewport={isMobile} className="relative flex gap-2">
+    <div className="flex items-center gap-6">
       {/* Logo / Brand */}
-      <Link to="/" className="flex items-center gap-2">
-        <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
-          EN
+      <Link to="/" className="flex items-center gap-2 group">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-black shadow-sm transition-transform group-hover:scale-105">
+          FR
         </span>
-        <span className="hidden sm:inline text-base font-semibold">
-          English Learning
+        <span className="hidden sm:inline text-lg font-bold tracking-tight text-foreground">
+          Fluenrin
         </span>
       </Link>
-      {isMobile && (
-        <button
-          type="button"
-          className="ml-auto p-2 transition-transform duration-300"
-          onClick={() => setOpen(prev => !prev)}
-          aria-label="Toggle navigation menu"
-          aria-expanded={open}
-          aria-controls="mobile-nav-menu"
-        >
-          <Menu className={`${open ? 'rotate-45' : 'rotate-0'} transition-transform duration-300`} />
-        </button>
-      )}
-      <NavigationMenuList
-        id="mobile-nav-menu"
-        className={`${isMobile
-          ? `p-4 top-full -left-8 mt-2 absolute flex flex-col min-w-40 border rounded-md shadow bg-background z-20 
-      transition-all duration-300 ease-out
-      justify-start items-start
-      ${open
-            ? 'opacity-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 -translate-y-2 pointer-events-none'
-          }`
-          : 'justify-start'
-          }`}
+
+      {/* 💻 DESKTOP NAVIGATION */}
+      <nav className="hidden lg:flex items-center gap-1.5">
+        {NAV_LINKS.map((link) => {
+          const isChildActive = link.children?.some(c => pn.startsWith(c.path));
+          const isActive = (link.path && pn.startsWith(link.path)) || (link.path === '/topics' && pn.startsWith('/learn/lessons')) || isChildActive;
+          const Icon = link.icon;
+          
+          return link.children ? (
+            <div key={link.name} className="relative group">
+              <button
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors outline-none",
+                  isActive 
+                    ? "bg-primary/10 text-primary" 
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {link.name}
+                <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
+              </button>
+
+              <div className="absolute top-full left-0 mt-1 w-64 opacity-0 invisible -translate-y-2 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-200 z-50">
+                <div className="p-2 rounded-xl border bg-card text-card-foreground shadow-xl flex flex-col gap-1">
+                  {link.children.map(child => {
+                    const ChildIcon = child.icon; // Đổi tên biến cho gọn
+                    return (
+                      <Link
+                        key={child.path}
+                        to={child.path}
+                        className={cn(
+                          "block p-3 rounded-lg hover:bg-muted transition-colors",
+                          pn.startsWith(child.path) ? "bg-primary/5" : ""
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          {ChildIcon && <ChildIcon className="h-4 w-4 text-muted-foreground" />}
+                          <div className={cn("text-sm font-semibold", pn.startsWith(child.path) ? "text-primary" : "text-foreground")}>
+                            {child.name}
+                          </div>
+                        </div>
+                        {child.description && (
+                          <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                            {child.description}
+                          </div>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Link
+              key={link.name}
+              to={link.path!}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                isActive 
+                  ? "bg-primary/10 text-primary" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {link.name}
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* 📱 MOBILE MENU TOGGLE */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="lg:hidden text-muted-foreground"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-expanded={isMobileMenuOpen} // 👉 THÊM ARIA-EXPANDED VÀO ĐÂY ĐỂ TRUYỀN TÍN HIỆU CHO HEADER
       >
-        <NavigationMenuItem className="">
-          <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link onClick={() => setOpen(false)} to="/topics" className={`flex flex-wrap ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'font-bold! text-primary-foreground! bg-primary!' : ''
-              }`}><div><Notebook className={`
-                ${pn.startsWith('/topics') || pn.startsWith('/learn/lessons') ? 'text-primary-foreground' : 'text-muted-foreground'}
-            `} /></div> Topics</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link onClick={() => setOpen(false)} to="/dictionary" className={`flex flex-wrap ${pn.startsWith('/dictionary') ? 'font-bold! text-primary-foreground! bg-primary!' : ''
-              }`}><div><BookA className={`
-                ${pn.startsWith('/dictionary') ? 'text-primary-foreground' : 'text-muted-foreground'}
-            `} /></div> Dictionary</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link onClick={() => setOpen(false)} to="/review" className={`flex flex-wrap ${pn.startsWith('/review') ? 'font-bold! text-primary-foreground! bg-primary!' : ''
-              }`}>Review</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem >
-          <NavigationMenuTrigger className={
-            pn.startsWith('/settings') ? 'font-bold! text-primary-foreground! bg-primary!' : ''
-          }>More</NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <ul className="grid w-[300px] gap-4">
-              <li>      
-                <NavigationMenuLink asChild>
-                  <Link onClick={() => setOpen(false)} to="/settings">
-                    <div className="font-medium">Settings</div>
-                    <div className="text-muted-foreground">
-                      Browse all settings in the library.
+        {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </Button>
+
+      {/* 📱 MOBILE NAVIGATION PANEL */}
+      {isMobileMenuOpen && (
+        <div className="absolute top-16 left-0 right-0 border-b bg-background/95 backdrop-blur-md shadow-xl p-4 lg:hidden z-50 animate-in slide-in-from-top-2 max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <nav className="flex flex-col gap-2">
+            {NAV_LINKS.map((link) => {
+              const isChildActive = link.children?.some(c => pn.startsWith(c.path));
+              const isActive = (link.path && pn.startsWith(link.path)) || (link.path === '/topics' && pn.startsWith('/learn/lessons')) || isChildActive;
+              const Icon = link.icon;
+              const isExpanded = expandedMobileMenus.includes(link.name);
+              
+              return link.children ? (
+                <div key={link.name} className="flex flex-col gap-1">
+                  <button
+                    onClick={() => toggleMobileSubmenu(link.name)}
+                    className={cn(
+                      "flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                      isActive || isExpanded
+                        ? "bg-primary/5 text-primary" 
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className="h-5 w-5" />
+                      {link.name}
                     </div>
-                  </Link>
-                </NavigationMenuLink>
-                <NavigationMenuLink asChild>
-                  <Link onClick={() => setOpen(false)} to="/documentation">
-                    <div className="font-medium">Documentation</div>
-                    <div className="text-muted-foreground">
-                      Learn how to use the components in your project.
+                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
+                  </button>
+                  
+                  {isExpanded && (
+                    <div className="flex flex-col gap-1 pl-12 pr-4 pb-2 animate-in slide-in-from-top-2 relative z-50">
+                      {link.children.map(child => {
+                        const ChildIcon = child.icon;
+                        return (
+                          <Link
+                            key={child.path}
+                            to={child.path}
+                            className={cn(
+                              "flex items-center gap-2 py-2.5 text-sm font-medium transition-colors border-l-2 pl-4",
+                              pn.startsWith(child.path) 
+                                ? "border-primary text-primary" 
+                                : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground"
+                            )}
+                          >
+                            {ChildIcon && <ChildIcon className="h-4 w-4 opacity-70" />}
+                            {child.name}
+                          </Link>
+                        )
+                      })}
                     </div>
-                  </Link>
-                </NavigationMenuLink>
-                <NavigationMenuLink asChild>
-                  <Link onClick={() => setOpen(false)} to="#">
-                    <div className="font-medium">Blog</div>
-                    <div className="text-muted-foreground">
-                      Read our latest blog posts.
-                    </div>
-                  </Link>
-                </NavigationMenuLink>
-              </li>
-            </ul>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-      </NavigationMenuList>
-    </NavigationMenu>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  key={link.name}
+                  to={link.path!}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                    isActive 
+                      ? "bg-primary/10 text-primary" 
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                  {link.name}
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+      )}
+    </div>
   )
 }
 

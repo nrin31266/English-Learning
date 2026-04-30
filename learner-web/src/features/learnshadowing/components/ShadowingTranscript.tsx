@@ -51,18 +51,19 @@ const TranscriptItem = React.memo(({
       ref={(el) => setItemRef(el, index)}
       onClick={handleClick}
       className={cn(
-        "w-full rounded-lg border px-3 py-2.5 text-left text-sm transition-colors duration-100", 
+        "w-full rounded-lg border px-3 py-2.5 text-left text-sm transition-all duration-200", 
         isActive
-          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+          ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm" // Đang active: Nổi bật nhất
           : isCompleted
-          ? "border-green-300 bg-green-50" 
-          : "border-border bg-background hover:bg-muted/30" 
+          ? "border-border bg-background opacity-60 hover:opacity-100 hover:bg-muted/30" // Đã học: Bỏ nền xanh, giảm opacity xíu cho chìm xuống (Hover vào thì sáng lại)
+          : "border-border bg-background hover:bg-muted/30" // Chưa học: Bình thường
       )}
     >
       <div className="mb-1 flex items-center justify-between text-[12px]">
         <div className="flex items-center gap-1.5">
+          {/* Vẫn giữ lại cái tích xanh lá cực kỳ rõ ràng ở đây */}
           {isCompleted ? (
-            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
           ) : isActive ? (
             <Circle className="h-3.5 w-3.5 text-primary fill-primary" />
           ) : (
@@ -78,7 +79,7 @@ const TranscriptItem = React.memo(({
         </div>
 
         {sentence.audioSegmentUrl && (
-          <Badge variant="outline" className="px-1.5 py-0 text-[11px] bg-primary/5 border-primary/20">
+          <Badge variant="outline" className="px-1.5 py-0 text-[11px] bg-primary/5 border-primary/20 text-primary">
             audio
           </Badge>
         )}
@@ -91,14 +92,16 @@ const TranscriptItem = React.memo(({
         {mainText}
       </p>
 
+      {/* 👉 Dịch nghĩa: Sáng rõ ở Dark Mode để dễ đọc */}
       {showTranslation && sentence.translationVi && (
-        <p className="mt-1 text-[13px] leading-snug text-muted-foreground/80">
+        <p className="mt-1 text-[13px] leading-snug text-muted-foreground dark:text-slate-300">
           {sentence.translationVi}
         </p>
       )}
 
+      {/* 👉 IPA: Chữ nghiêng, tối hơn dịch nghĩa một xíu để phân cấp */}
       {showIPA && (sentence.phoneticUs || "") && (
-        <p className="mt-1 text-[13px] italic text-muted-foreground/70">
+        <p className="mt-1 text-[13px] italic text-muted-foreground/80 dark:text-slate-400">
          {sentence.phoneticUs || ""}
         </p>
       )}

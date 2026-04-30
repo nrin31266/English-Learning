@@ -1,233 +1,147 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
-  ChevronRight, 
   PlayCircle, 
-  Zap, 
-  Heart, 
-  MessageCircle, 
-  Trophy,
-  Star,
-  Users,
-  Target,
-  Award,
-  Clock,
-  BookOpen,
-  Mic,
-  Globe,
-  Flame,
-  Shield
+  Mic, 
+  Keyboard, 
+  BrainCircuit, 
+  ArrowRight,
+  Sparkles,
+  BarChart
 } from "lucide-react"
 
 const HomePage = () => {
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-slate-950">
+    <div className="min-h-screen bg-background relative overflow-hidden">
       {/* 🌟 SOFT GLOW BACKGROUND */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-gradient-to-b from-emerald-500/10 to-transparent blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      <div className="fixed inset-0 pointer-events-none -z-10 flex justify-center">
+        <div className="absolute top-[-10%] w-[800px] h-[500px] bg-primary/5 blur-[120px] rounded-full" />
       </div>
 
-      {/* 🚀 HERO: THE EMOTIONAL HOOK */}
-      <section className="relative pt-24 pb-16 px-4">
+      {/* 🚀 HERO SECTION: FLUENRIN LÀ TÂM ĐIỂM */}
+      <section className="relative pt-32 pb-20 px-4">
         <div className="container mx-auto max-w-5xl text-center">
-          <Badge className="mb-6 px-4 py-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-none rounded-full font-bold">
-            ✨ Your personal AI Language Coach
+          <Badge variant="outline" className="mb-8 px-4 py-1.5 border-primary/20 bg-primary/5 text-primary text-sm font-medium rounded-full">
+            <Sparkles className="w-4 h-4 mr-2 inline-block" />
+            The New Standard in Language Learning
           </Badge>
           
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-8 text-slate-900 dark:text-white">
-            Speak English Like a <br />
-            <span className="text-emerald-600">Native, Effortlessly.</span>
+          {/* 👉 TÊN APP SIÊU TO KHỔNG LỒ + HIỆU ỨNG GRADIENT */}
+          <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-black tracking-tighter mb-6 text-foreground leading-[1.1]">
+            Welcome to <br className="md:hidden" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-indigo-500 to-purple-600 drop-shadow-sm">
+              Fluenrin.
+            </span>
           </h1>
 
-          <p className="max-w-2xl mx-auto text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed">
-            Stop struggling with boring textbooks. Our AI listens to your voice, understands your mistakes, and helps you master English through the power of <span className="font-bold text-slate-900 dark:text-white">active immersion.</span>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground/80 mb-8 tracking-tight">
+            Master English through Deep Immersion.
+          </h2>
+
+          <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-12 leading-relaxed">
+            Fluenrin is not just another flashcard application. It is a carefully engineered environment designed for serious learners. By combining the proven methodologies of <strong>Shadowing</strong> and <strong>Dictation</strong>, Fluenrin forces your brain to actively process language.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="h-14 px-10 text-lg font-bold rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-500/20">
-              Start Learning Now
+            <Button size="lg" className="h-14 px-8 text-base font-bold rounded-xl gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105">
+              Start Your Journey <ArrowRight className="w-4 h-4" />
             </Button>
-            <Button size="lg" variant="ghost" className="h-14 px-8 text-lg font-bold gap-2">
-              <PlayCircle className="w-6 h-6 text-emerald-600" /> Watch how it works
+            <Button size="lg" variant="ghost" className="h-14 px-8 text-base font-bold gap-2 rounded-xl border border-transparent hover:border-border hover:bg-muted/50 transition-all">
+              <PlayCircle className="w-5 h-5 text-muted-foreground" /> See How It Works
             </Button>
           </div>
         </div>
       </section>
 
-      {/* 📊 STATS SECTION - NEW */}
-      <section className="py-12 px-4">
+      {/* 📖 METHODOLOGY: Triết lý học thuật */}
+      <section className="py-24 px-4 bg-muted/30 border-y border-border/50">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { number: "500K+", label: "Active Learners", icon: Users },
-              { number: "98%", label: "Success Rate", icon: Target },
-              { number: "50+", label: "Languages", icon: Globe },
-              { number: "24/7", label: "AI Support", icon: Clock }
-            ].map((stat, i) => (
-              <div key={i} className="text-center p-6 rounded-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border border-slate-100 dark:border-slate-800">
-                <stat.icon className="w-8 h-8 mx-auto mb-3 text-emerald-500" />
-                <div className="text-3xl font-bold text-slate-900 dark:text-white">{stat.number}</div>
-                <div className="text-sm text-slate-500 mt-1">{stat.label}</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight mb-6 text-foreground">
+                The Science of Active Recall
+              </h2>
+              <div className="space-y-6 text-muted-foreground leading-relaxed">
+                <p>
+                  Most language learners spend years passively watching videos or clicking multiple-choice answers without ever improving their spoken fluency. Fluenrin changes this paradigm by requiring active participation. 
+                </p>
+                <p>
+                  When you use our <strong>Dictation</strong> mode, you are training your ear to catch every subtle native sound, linking phonetics directly to spelling. It reveals the blind spots in your listening skills that passive watching hides.
+                </p>
+                <p>
+                  Transitioning to <strong>Shadowing</strong>, you immediately apply what you've heard. By mimicking the rhythm, intonation, and stress of native speakers in real-time, you reprogram your vocal muscles to speak English naturally, breaking away from translated, robotic speech.
+                </p>
               </div>
-            ))}
+            </div>
+            
+            <div className="relative rounded-2xl border border-border bg-card p-8 shadow-sm transition-all hover:shadow-md">
+              <div className="absolute top-4 left-4 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <BrainCircuit className="w-6 h-6 text-primary" />
+              </div>
+              <div className="mt-12 space-y-4">
+                <div className="h-2 w-3/4 bg-muted rounded-full" />
+                <div className="h-2 w-full bg-muted rounded-full" />
+                <div className="h-2 w-5/6 bg-muted rounded-full" />
+                <div className="p-4 mt-6 bg-primary/5 border border-primary/10 rounded-xl">
+                  <p className="text-sm font-mono text-primary font-medium italic">"Fluency is a habit, not a destination."</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 🌈 THE "THREE PILLARS" OF MASTERY */}
-      <section className="py-20 px-4">
+      {/* 🧩 CORE FEATURES */}
+      <section className="py-24 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Everything you need to be fluent</h2>
-            <p className="text-slate-500 italic">Built for learners, powered by intelligence.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <div className="relative group p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all duration-500">
-              <div className="mb-6 inline-flex p-4 rounded-2xl bg-orange-100 text-orange-600">
-                <MessageCircle className="w-8 h-8" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Master Pronunciation</h3>
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Shadow real native speakers. Our AI analyzes your tone and stress in real-time, helping you sound natural and confident.
-              </p>
-            </div>
-
-            <div className="relative group p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all duration-500">
-              <div className="mb-6 inline-flex p-4 rounded-2xl bg-blue-100 text-blue-600">
-                <Zap className="w-8 h-8" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Listen & Transcribe</h3>
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Train your ears with smart dictation. We automatically guide you through errors, making sure you never miss a word.
-              </p>
-            </div>
-
-            <div className="relative group p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all duration-500">
-              <div className="mb-6 inline-flex p-4 rounded-2xl bg-emerald-100 text-emerald-600">
-                <Heart className="w-8 h-8" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Words That Stick</h3>
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Learn words in context with multi-meaning quizzes tailored perfectly to your current skill level.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 🎯 HOW IT WORKS - STEP BY STEP */}
-      <section className="py-20 px-4 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900/30 dark:to-transparent">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-              Simple Process
-            </Badge>
-            <h2 className="text-4xl font-bold mb-4">Learn in 3 easy steps</h2>
-            <p className="text-slate-500">Start speaking confidently from day one</p>
+            <h2 className="text-3xl font-bold tracking-tight mb-4">Core Features</h2>
+            <p className="text-muted-foreground">Everything you need to reach the next level.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: "01", title: "Choose Content", desc: "Pick from thousands of real-world videos, podcasts, and articles", icon: BookOpen, color: "blue" },
-              { step: "02", title: "Practice Speaking", desc: "Shadow native speakers and get instant AI feedback", icon: Mic, color: "emerald" },
-              { step: "03", title: "Track Progress", desc: "Watch your fluency score grow with detailed analytics", icon: Award, color: "purple" }
-            ].map((item, i) => (
-              <div key={i} className="relative text-center">
-                <div className="text-6xl font-black text-slate-200 dark:text-slate-800 mb-4">{item.step}</div>
-                <div className={`inline-flex p-3 rounded-xl bg-${item.color}-100 text-${item.color}-600 mb-4`}>
-                  <item.icon className="w-6 h-6" />
+              { 
+                title: "Shadowing Practice", 
+                desc: "Listen to native audio and speak aloud simultaneously. Perfect your rhythm, tone, and connected speech.", 
+                icon: Mic 
+              },
+              { 
+                title: "Focused Dictation", 
+                desc: "Type exactly what you hear. This intense exercise forces you to recognize linking sounds and weak forms.", 
+                icon: Keyboard 
+              },
+              { 
+                title: "Contextual Vocabulary", 
+                desc: "Stop memorizing isolated words. Learn vocabulary within the context of real sentences and situations.", 
+                icon: BarChart 
+              }
+            ].map((feature, i) => (
+              <div key={i} className="group p-8 rounded-2xl border border-border bg-card hover:bg-muted/20 transition-all duration-300 hover:-translate-y-1">
+                <div className="mb-6 inline-flex p-3 rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
+                  <feature.icon className="w-6 h-6" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                <p className="text-slate-500 text-sm">{item.desc}</p>
-                {i < 2 && <ChevronRight className="hidden md:block absolute top-1/3 -right-6 w-6 h-6 text-slate-300" />}
+                <h3 className="text-xl font-bold mb-3 text-foreground">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {feature.desc}
+                </p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 🏆 USER SOCIAL PROOF / MOTIVATION */}
-      <section className="py-20 bg-slate-50 dark:bg-slate-900/50 border-y border-slate-100 dark:border-slate-800">
-        <div className="container mx-auto max-w-5xl px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div className="text-left">
-              <h2 className="text-4xl font-bold mb-6">Why our learners love us</h2>
-              <div className="space-y-6">
-                {[
-                  "Real-world content from your favorite videos",
-                  "Instant AI feedback on every sentence",
-                  "Personalized path from Beginner to Pro",
-                  "Fun, gamified experience that keeps you motivated"
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 font-medium text-slate-700 dark:text-slate-300">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold">✓</div>
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm text-center">
-                    <Trophy className="w-10 h-10 mx-auto mb-4 text-amber-500" />
-                    <div className="text-2xl font-bold">100%</div>
-                    <div className="text-sm text-slate-500 italic">User Growth</div>
-                </div>
-                <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm text-center">
-                    <Users className="w-10 h-10 mx-auto mb-4 text-blue-500" />
-                    <div className="text-2xl font-bold">5.0</div>
-                    <div className="text-sm text-slate-500 italic">User Rating</div>
-                </div>
-                <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm text-center col-span-2">
-                    <div className="flex justify-center mb-4">
-                        {[1,2,3,4,5].map(s => <Star key={s} className="w-5 h-5 fill-amber-400 text-amber-400" />)}
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 italic">"The most addictive way to practice English speaking!"</p>
-                </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 🔥 DAILY STREAK SECTION - NEW */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-3xl p-12 text-center text-white">
-            <Flame className="w-16 h-16 mx-auto mb-6 fill-white/20" />
-            <h2 className="text-3xl font-bold mb-3">Maintain Your Streak</h2>
-            <p className="text-emerald-50 mb-6 max-w-md mx-auto">Practice 15 minutes daily and watch your progress skyrocket</p>
-            <div className="flex justify-center gap-2">
-              {[1,2,3,4,5,6,7].map(day => (
-                <div key={day} className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center font-bold">
-                  {day}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 🛡️ TRUST BADGES - NEW */}
-      <section className="py-12 px-4">
-        <div className="container mx-auto max-w-6xl text-center">
-          <p className="text-sm uppercase tracking-wider text-slate-400 mb-6">Trusted by learners worldwide</p>
-          <div className="flex flex-wrap justify-center gap-8 items-center opacity-60">
-            <Shield className="w-10 h-10 text-slate-400" />
-            <span className="font-bold text-slate-500">GDPR Compliant</span>
-            <span className="font-bold text-slate-500">SSL Encrypted</span>
-            <span className="font-bold text-slate-500">24/7 Support</span>
           </div>
         </div>
       </section>
 
       {/* 🏁 FINAL CTA */}
-      <section className="py-24 text-center">
-        <h2 className="text-4xl font-bold mb-4">Ready to change your life?</h2>
-        <p className="text-slate-500 mb-8 max-w-md mx-auto">Join thousands of happy learners and start your journey today</p>
-        <Button size="lg" className="h-16 px-12 text-xl font-bold rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100">
-          Get Started For Free
-        </Button>
+      <section className="py-24 text-center border-t border-border/50 bg-muted/10">
+        <div className="container mx-auto max-w-3xl px-4">
+          <h2 className="text-3xl md:text-4xl font-black mb-6 text-foreground tracking-tight">Ready to build your fluency?</h2>
+          <p className="text-muted-foreground mb-10 text-lg">
+            Join Fluenrin today and transform the way you learn English. Consistent, focused practice yields the best results.
+          </p>
+          <Button size="lg" className="h-14 px-10 text-base font-bold rounded-xl shadow-md transition-transform hover:scale-105">
+            Create Your Account
+          </Button>
+        </div>
       </section>
     </div>
   )

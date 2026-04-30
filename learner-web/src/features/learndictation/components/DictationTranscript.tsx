@@ -43,7 +43,6 @@ const TranscriptItem = React.memo(({
 }) => {
   
   // 🚀 TỐI ƯU 2: Đưa logic xử lý text vào useMemo NỘI BỘ của từng item.
-  // Khi video chạy, isActive của các câu khác không đổi -> Logic này KHÔNG CHẠY LẠI.
   const processedText = useMemo(() => {
     const text = sentence.textDisplay ?? sentence.textRaw;
     if (isCompleted || !text) return text;
@@ -65,25 +64,25 @@ const TranscriptItem = React.memo(({
   const handleClick = useCallback(() => {
     onSelect(index);
   }, [onSelect, index]);
-  console.log(`Render TranscriptItem #${index + 1} - Active: ${isActive} - Completed: ${isCompleted}`);
+
   return (
     <button
       type="button"
       ref={(el) => setItemRef(el, index)}
       onClick={handleClick}
       className={cn(
-        "w-full rounded-lg border px-3 py-2.5 text-left text-sm transition-all duration-75", 
+        "w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-200", 
         isActive
-          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+          ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm" // Đang active
           : isCompleted
-          ? "border-green-300 bg-green-50" 
-          : "border-border bg-background hover:bg-muted/30"
+          ? "border-border bg-background opacity-60 hover:opacity-100 hover:bg-muted/30" // Đã học: Tàng hình nhẹ, bỏ nền xanh
+          : "border-border bg-background hover:bg-muted/30" // Chưa học
       )}
     >
       <div className="mb-1 flex items-center justify-between text-[12px]">
         <div className="flex items-center gap-1.5">
           {isCompleted ? (
-            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> // Giữ lại tích xanh làm điểm nhấn
           ) : isActive ? (
             <Circle className="h-3.5 w-3.5 text-primary fill-primary" />
           ) : (
@@ -94,7 +93,7 @@ const TranscriptItem = React.memo(({
           </span>
         </div>
         {sentence.audioSegmentUrl && (
-          <Badge variant="outline" className="px-1.5 py-0 text-[11px] bg-primary/5 border-primary/20">audio</Badge>
+          <Badge variant="outline" className="px-1.5 py-0 text-[11px] bg-primary/5 border-primary/20 text-primary">audio</Badge>
         )}
       </div>
 
@@ -105,12 +104,18 @@ const TranscriptItem = React.memo(({
         {processedText}
       </p>
 
+      {/* 👉 Dịch nghĩa: Fix lỗi Dark Mode */}
       {showTranslation && sentence.translationVi && (
-        <p className="mt-1 text-[13px] leading-snug text-muted-foreground/80">{sentence.translationVi}</p>
+        <p className="mt-1 text-[13px] leading-snug text-muted-foreground dark:text-slate-300">
+          {sentence.translationVi}
+        </p>
       )}
 
+      {/* 👉 IPA: Fix lỗi Dark Mode */}
       {showIPA && (sentence.phoneticUs || "") && (
-        <p className="mt-1 text-[13px] italic text-muted-foreground/70">{sentence.phoneticUs || ""}</p>
+        <p className="mt-1 text-[13px] italic text-muted-foreground/80 dark:text-slate-400">
+          {sentence.phoneticUs || ""}
+        </p>
       )}
     </button>
   );
