@@ -11,25 +11,15 @@ import { cefrLevelOptions } from "@/types"
 import LessonCard from "../components/LessonCard"
 import LessonModeDialog from "../components/LessonModeDialog"
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-
-import {
-  ArrowLeft,
-  Headphones,
-  Loader2,
+import { 
+  ArrowLeft, 
+  Loader2, 
+  Library, 
+  Calendar,
+  Filter,
+  Sparkles
 } from "lucide-react"
-
-// ===================== Topic Details Page =====================
+import { cn } from "@/lib/utils"
 
 const TopicDetails = () => {
   const { slug } = useParams<{ slug: string }>()
@@ -37,33 +27,22 @@ const TopicDetails = () => {
   const dispatch = useAppDispatch()
 
   const topicState = useAppSelector((state) => state.topic.topic)
-  const { data: topic, status, error } = topicState
+  const { data: topic, status } = topicState
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedLesson, setSelectedLesson] = useState<IHomeLessonResponse | null>(null)
-
-  // Filter theo CEFR level
-  const [levelFilter, setLevelFilter] =
-    useState<(typeof cefrLevelOptions)[number] | "all">("all")
+  const [levelFilter, setLevelFilter] = useState<(typeof cefrLevelOptions)[number] | "all">("all")
 
   useEffect(() => {
-    if (slug) {
-      dispatch(fetchTopicBySlug(slug))
-    }
+    if (slug) dispatch(fetchTopicBySlug(slug))
   }, [dispatch, slug])
-
-  const isLoading = status === "idle" || status === "loading"
 
   const filteredLessons = useMemo(() => {
     if (!topic) return []
-    let lessons = topic.lessons || []
-    if (levelFilter !== "all") {
-      lessons = lessons.filter((l) => l.languageLevel === levelFilter)
-    }
-    return lessons
+    const lessons = topic.lessons || []
+    if (levelFilter === "all") return lessons
+    return lessons.filter((l) => l.languageLevel === levelFilter)
   }, [topic, levelFilter])
-
-  const totalLessons = topic?.totalLessons ?? topic?.lessons.length ?? 0
 
   const handleLessonClick = (lesson: IHomeLessonResponse) => {
     setSelectedLesson(lesson)
@@ -72,193 +51,134 @@ const TopicDetails = () => {
 
   const handleNavigate = (mode: "listening" | "shadowing" | "dictation") => {
     if (!selectedLesson) return
-
     const base = `/learn/lessons/${selectedLesson.id}/${selectedLesson.slug}`
-    let url = base
-    if (mode === "shadowing") url = `${base}/shadowing`
-    if (mode === "dictation") url = `${base}/dictation`
-
+    const url = mode === "listening" ? base : `${base}/${mode}`
     navigate(url)
     setDialogOpen(false)
   }
 
-  // Nếu không có slug hoặc lỗi route
-  if (!slug) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4">
-        <p className="text-sm text-muted-foreground">
-          Topic slug không hợp lệ.
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate("/topics")}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Quay lại Topics
-        </Button>
-      </div>
-    )
-  }
+  const isLoading = status === "loading" || status === "idle"
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6 lg:px-8">
-      {/* Breadcrumb + Back */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink
-                className="cursor-pointer"
-                onClick={() => navigate("/topics")}
-              >
-                Topics
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>
-                {topic?.name ?? "Loading..."}
-              </BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-2"
+    <div className="mx-auto w-full  flex flex-col gap-6 px-4 py-6 lg:px-8 lg:py-8">
+      
+      {/* --- HEADER --- */}
+      <header className="flex flex-col gap-4">
+        <button 
           onClick={() => navigate("/topics")}
+          className="group flex w-fit items-center gap-1.5 text-xs font-medium text-muted-foreground transition-all hover:text-primary"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to topics
-        </Button>
+          <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
+          Back to Topics
+        </button>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-1 rounded-full bg-primary" />
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              {topic?.name || "Loading..."}
+            </h1>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            {/* Lessons Count - NHẸ HƠN */}
+            <div className="flex items-center gap-1.5">
+              <Library className="h-4 w-4 text-primary/70" />
+              <span className="font-medium">
+                {topic?.totalLessons || 0} lessons
+              </span>
+            </div>
+            
+            {topic?.updatedAt && (
+              <>
+                <span className="text-border">•</span>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground/50" />
+                  <span className="text-xs">
+                    Updated {new Date(topic.updatedAt).toLocaleDateString('en-GB')}
+                  </span>
+                </div>
+              </>
+            )}
+
+            {/* Thêm badge nếu có nhiều bài */}
+            {(topic?.totalLessons || 0) >= 10 && (
+              <>
+                <span className="text-border">•</span>
+                <div className="flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-amber-500" />
+                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                    Popular
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* --- FILTER BAR --- */}
+      <div className="flex flex-col gap-3 border-t border-border/30 pt-6">
+        <div className="flex items-center gap-2">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Filter by level
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => setLevelFilter("all")}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+              levelFilter === "all" 
+                ? "bg-foreground text-background" 
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            )}
+          >
+            All
+          </button>
+          {cefrLevelOptions.map((lvl) => (
+            <button
+              key={lvl}
+              onClick={() => setLevelFilter(lvl)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+                levelFilter === lvl 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {lvl}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Header Topic */}
-      <section className="rounded-xl border bg-card p-4 shadow-sm lg:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold leading-tight tracking-tight">
-                {topic?.name ?? "Topic"}
-              </h1>
-              {totalLessons > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  {totalLessons} lesson{totalLessons !== 1 && "s"}
-                </Badge>
-              )}
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              /{topic?.slug ?? slug}
-              {topic?.updatedAt && (
-                <>
-                  {" · "}Last updated{" "}
-                  {new Date(topic.updatedAt).toLocaleDateString()}
-                </>
-              )}
-            </p>
+      {/* --- LESSONS GRID --- */}
+      <main className="min-h-[40vh] mt-2">
+        {isLoading ? (
+          <div className="flex h-64 items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-
-          {/* Nhỏ nhỏ hint nghe */}
-          <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-            <Headphones className="h-4 w-4 text-primary" />
-            <span>
-              Select a lesson to choose a practice mode (Listening / Shadowing / Dictation)
-            </span>
+        ) : filteredLessons.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed bg-muted/10">
+            <Library className="h-8 w-8 text-muted-foreground/30 mb-2" />
+            <p className="text-sm font-medium text-muted-foreground/60">No lessons found</p>
           </div>
-        </div>
-      </section>
-
-      {/* Body: Lessons */}
-      {isLoading ? (
-        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Waiting for lessons to load...
-        </div>
-      ) : status === "failed" ? (
-        <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm">
-          <p className="font-medium text-destructive">
-            Failed to load topic details.
-          </p>
-          {error?.message && (
-            <p className="mt-1 text-xs text-destructive/80">
-              {error.message}
-            </p>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-3"
-            onClick={() => dispatch(fetchTopicBySlug(slug))}
-          >
-            Thử lại
-          </Button>
-        </div>
-      ) : !topic ? (
-        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-          Sorry, we couldn't find the topic you're looking for.
-        </div>
-      ) : (
-        <section className="space-y-4">
-          {/* Filter line */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <Headphones className="h-5 w-5 text-primary" />
-              Lessons in this topic
-            </h2>
-
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-muted-foreground">
-                Filter by level:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                <Button
-                  size="sm"
-                  variant={levelFilter === "all" ? "default" : "outline"}
-                  className="h-7 px-3 text-xs"
-                  onClick={() => setLevelFilter("all")}
-                >
-                  All
-                </Button>
-                {cefrLevelOptions.map((lvl) => (
-                  <Button
-                    key={lvl}
-                    size="sm"
-                    variant={levelFilter === lvl ? "default" : "outline"}
-                    className="h-7 px-3 text-xs"
-                    onClick={() => setLevelFilter(lvl)}
-                  >
-                    {lvl}
-                  </Button>
-                ))}
-              </div>
-            </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-16">
+            {filteredLessons.map((lesson) => (
+              <LessonCard
+                key={lesson.id}
+                lesson={lesson}
+                onClick={() => handleLessonClick(lesson)}
+              />
+            ))}
           </div>
+        )}
+      </main>
 
-          {filteredLessons.length === 0 ? (
-            <div className="flex min-h-[30vh] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-              Sorry, there are no lessons available with the current filter.
-            </div>
-          ) : (
-            <ScrollArea className="h-[calc(100vh-220px)] pr-1">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 pb-4">
-                {filteredLessons.map((lesson) => (
-                  <LessonCard
-                    key={lesson.id}
-                    lesson={lesson}
-                    onClick={() => handleLessonClick(lesson)}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </section>
-      )}
-
-      {/* Dialog chọn mode luyện */}
       <LessonModeDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}

@@ -13,4 +13,6 @@ public interface UserLessonProgressRepository extends JpaRepository<UserLessonPr
     List<UserLessonProgress> findByUserIdAndLessonId(String userId, Long lessonId);
     @Modifying
     void deleteByLessonId(Long lessonId);
+
+    List<UserLessonProgress> findByUserIdAndLessonIdIn(String userId, List<Long> lessonIds);
 }

@@ -1,6 +1,5 @@
 // src/pages/Topics.tsx
 
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { fetchTopics } from "@/store/topicsSlide"
 import type {
@@ -8,18 +7,12 @@ import type {
   IHomeLessonResponse,
   IHomeTopicResponse,
 } from "@/types"
-import {
-  BookOpen,
-  Headphones,
-  Loader2
-} from "lucide-react"
+import { Compass, Loader2, Sparkles } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import TopicSection from "../components/TopicSection"
 import LessonModeDialog from "../components/LessonModeDialog"
-
-
-// ===== Main Page =====
+import TopicFilterPanel from "../components/TopicFilterPanel"
 
 const Topics = () => {
   const dispatch = useAppDispatch()
@@ -28,7 +21,6 @@ const Topics = () => {
   const homeState = useAppSelector((state) => state.topics.topics)
   const { data, status } = homeState
 
-  const [activeTopicSlug, setActiveTopicSlug] = useState<string | null>(null)
   const [selectedLesson, setSelectedLesson] = useState<IHomeLessonResponse | null>(null)
   const [selectedTopic, setSelectedTopic] = useState<IHomeTopicResponse | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -40,18 +32,10 @@ const Topics = () => {
   const allTopics: ITopicSummaryResponse[] = data?.allTopics ?? []
   const homeTopics: IHomeTopicResponse[] = data?.topics ?? []
 
-  // Chỉ giữ topic có lesson
   const topicsWithLessons = useMemo(
     () => homeTopics.filter((t) => t.lessons && t.lessons.length > 0),
     [homeTopics]
   )
-
-  // Nếu chưa chọn topic nào → mặc định topic đầu tiên (có lesson)
-  useEffect(() => {
-    if (!activeTopicSlug && topicsWithLessons.length > 0) {
-      setActiveTopicSlug(topicsWithLessons[0].slug)
-    }
-  }, [topicsWithLessons, activeTopicSlug])
 
   const handleLessonClick = (lesson: IHomeLessonResponse, topic: IHomeTopicResponse) => {
     setSelectedLesson(lesson)
@@ -61,16 +45,8 @@ const Topics = () => {
 
   const handleNavigate = (mode: "listening" | "shadowing" | "dictation") => {
     if (!selectedLesson) return
-
     const base = `/learn/lessons/${selectedLesson.id}/${selectedLesson.slug}`
-    let url = base
-
-    if (mode === "shadowing") {
-      url = `${base}/shadowing`
-    } else if (mode === "dictation") {
-      url = `${base}/dictation`
-    }
-
+    const url = mode === "listening" ? base : `${base}/${mode}`
     navigate(url)
     setDialogOpen(false)
   }
@@ -78,99 +54,68 @@ const Topics = () => {
   const isLoading = status === "loading" || status === "idle"
 
   return (
-    <div className="flex flex-col gap-10 px-4 py-8">
-      {/* SECTION 1: ALL TOPICS */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-xl font-semibold">
-            <BookOpen className="h-5 w-5 text-primary" />
-            Topics
+    <div className="mx-auto w-full flex flex-col gap-16 px-4 py-12 lg:px-8">
+      
+      {/* --- HERO HEADER --- */}
+      <header className="flex flex-col gap-4 border-b pb-10">
+        <div className="flex flex-col gap-2">
+          <h1 className="flex items-center gap-3 text-4xl font-black tracking-tight text-foreground">
+            <Compass className="h-9 w-9 text-primary" />
+            Learning Paths
+          </h1>
+          <p className="max-w-2xl text-[16px] font-medium leading-relaxed text-muted-foreground">
+            Master English skills through curated collections. Explore specialized 
+            topics and start your practice journey with our latest lessons.
+          </p>
+        </div>
+        
+        {/* Local Search Component */}
+        <div className="mt-4">
+           {isLoading ? (
+             <div className="flex h-20 items-center justify-center rounded-xl border border-dashed">
+               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+             </div>
+           ) : (
+             <TopicFilterPanel topics={allTopics} />
+           )}
+        </div>
+      </header>
+
+      {/* --- CURATED LESSONS SECTION --- */}
+      <section className="flex flex-col gap-8">
+        <div className="flex flex-col gap-1.5">
+          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+            <Sparkles className="h-6 w-6 text-amber-500" />
+            Recently Updated
           </h2>
-          <p className="text-xs text-muted-foreground">
-            {allTopics.length} topic{allTopics.length !== 1 && "s"}
+          <p className="text-[14px] font-medium text-muted-foreground">
+            Freshly added lessons across your favorite categories.
           </p>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading topics...
-          </div>
-        ) : allTopics.length === 0 ? (
-          <div className="py-4 text-sm text-muted-foreground">
-            No topics available yet.
-          </div>
-        ) : (
-          <div>
-            <div className="flex flex-wrap gap-2 py-2">
-              {allTopics.map((topic) => {
-                const active = topic.slug === activeTopicSlug
-                return (
-                  <button
-                    key={topic.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveTopicSlug(topic.slug)
-                      // Điều hướng sang trang topic nếu bạn có
-                      navigate(`/topics/${topic.slug}`)
-                    }}
-                    className={[
-                      "flex whitespace-nowrap hover:cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition-all",
-                      active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-background hover:bg-muted",
-                    ].join(" ")}
-                  >
-                    <span className="text-base font-semibold ">#</span>
-                    <span className="font-medium underline">{topic.name}</span>
-                    <span className="text-[14px] text-muted-foreground">
-                      {topic.totalLessons || 0} lesson{topic.totalLessons !== 1 && "s"}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* SECTION 2: TOPICS + LESSONS */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-xl font-semibold">
-            <Headphones className="h-5 w-5 text-primary" />
-            Lessons by topic
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Up to 4 latest lessons per topic
-          </p>
-        </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading lessons...
+          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mb-3" />
+            <span className="text-sm font-semibold">Assembling your universe...</span>
           </div>
         ) : topicsWithLessons.length === 0 ? (
-          <div className="py-10 text-center text-sm text-muted-foreground">
-            No lessons available yet.
+          <div className="flex h-48 flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/20 text-sm font-medium text-muted-foreground">
+            No lessons available at the moment.
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="flex flex-col gap-12">
             {topicsWithLessons.map((topic) => (
               <TopicSection
                 key={topic.id}
                 topic={topic}
-                active={topic.slug === activeTopicSlug}
                 onLessonClick={handleLessonClick}
-                totalLessons={data.allTopics.find(t => t.slug === topic.slug)?.totalLessons || 0}
+                totalLessons={allTopics.find(t => t.slug === topic.slug)?.totalLessons || 0}
               />
             ))}
           </div>
         )}
       </section>
 
-      {/* DIALOG chọn chế độ lesson */}
       <LessonModeDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -183,8 +128,3 @@ const Topics = () => {
 }
 
 export default Topics
-
-// ===== Child components =====
-
-
-

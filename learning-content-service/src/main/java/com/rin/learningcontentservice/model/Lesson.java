@@ -13,7 +13,9 @@
     import java.util.List;
 
     @Entity
-    @Table(name = "lessons")
+    @Table(name = "lessons", indexes = {
+            @Index(name = "idx_lessons_topic_published", columnList = "topic_id, published_at DESC")
+    })
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder

@@ -8,6 +8,7 @@ import com.rin.learningcontentservice.exception.LearningContentErrorCode;
 import com.rin.learningcontentservice.model.*;
 import com.rin.learningcontentservice.repository.LessonRepository;
 import com.rin.learningcontentservice.repository.UserLessonProgressRepository;
+import com.rin.learningcontentservice.utils.SecurityUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,7 @@ public class LessonProcessingService {
     @Transactional
     public void updateProgress(ProgressUpdateRequest request) {
 
-        String userId = getCurrentUserId();
+        String userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
             throw new BaseException(BaseErrorCode.UNAUTHORIZED);
         }
@@ -147,11 +148,5 @@ public class LessonProcessingService {
                 lesson.getId(), total, completedCount);
     }
 
-    private String getCurrentUserId() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) return null;
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof Jwt jwt) return jwt.getSubject();
-        return null;
-    }
+
 }

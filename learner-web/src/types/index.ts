@@ -167,7 +167,7 @@ export interface ITopicSummaryResponse {
 
 export interface IHomeLessonResponse {
   id: number;
-  topicSlug: string;
+  topicSlug: string; // Đã map từ backend
   title: string;
   thumbnailUrl: string | null;
   slug: string;
@@ -176,6 +176,13 @@ export interface IHomeLessonResponse {
   durationSeconds: number | null;
   enableDictation: boolean | null;
   enableShadowing: boolean | null;
+  
+  // 👇 CÁC FIELD MỚI ĐỂ HIỂN THỊ TRẠNG THÁI VÀ PROGRESS BAR TẠI TRANG HOME
+  shadowingStatus: string;
+  dictationStatus: string;
+  shadowingProgressPercent: number;
+  dictationProgressPercent: number;
+  activeSentenceCount: number;
 }
 
 export interface IHomeTopicResponse {

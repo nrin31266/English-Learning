@@ -22,6 +22,7 @@ import com.rin.learningcontentservice.repository.TopicRepository;
 import com.rin.learningcontentservice.repository.UserLessonProgressRepository;
 import com.rin.learningcontentservice.repository.httpclient.LanguageProcessingClient;
 import com.rin.learningcontentservice.repository.specification.LessonSpecifications;
+import com.rin.learningcontentservice.utils.SecurityUtils;
 import com.rin.learningcontentservice.utils.TextUtils;
 import com.rin.learningcontentservice.utils.TimeUtils;
 import jakarta.transaction.Transactional;
@@ -188,7 +189,7 @@ public class LessonService {
         UserLessonProgressDto shadowingDto = buildEmptyProgressDto("SHADOWING");
         UserLessonProgressDto dictationDto = buildEmptyProgressDto("DICTATION");
 
-        String userId = getCurrentUserId();
+        String userId = SecurityUtils.getCurrentUserId();
 
         // 2. Chỉ thực hiện truy vấn và ghi đè dữ liệu nếu User đã đăng nhập
         if (userId != null) {
@@ -234,21 +235,6 @@ public class LessonService {
                 .completedSentenceIds(new HashSet<>())
                 .totalCompletedSentences(0)
                 .build();
-    }
-    private String getCurrentUserId() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return null;
-        }
-
-        Object principal = authentication.getPrincipal();
-
-        if (principal instanceof Jwt jwt) {
-            return jwt.getSubject(); // sub
-        }
-
-        return null;
     }
 
     public LessonSummaryResponse cancelLessonGeneration(Long lessonId) {
