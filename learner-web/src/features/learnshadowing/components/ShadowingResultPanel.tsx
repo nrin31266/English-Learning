@@ -1,13 +1,8 @@
-import React, { useState } from "react"
+import React, { useState, useRef, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Sparkles, Target, Mic2 } from "lucide-react"
 import type { IShadowingResult, IDiffToken } from "@/types"
-
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SHADOWING_THRESHOLD } from "./ActiveSentencePanel"
 import SkeletonBlock from "@/components/SkeletonBlock"
 
@@ -17,30 +12,31 @@ interface Props {
   isLoading: boolean
 }
 
-// 👉 UI Gọn Gàng: Màu sắc và hiệu ứng gạch chân mỏng, không rườm rà
+// ============ CONSTANTS ============
+const NOISE_PHONEMES = ["", " ", "ː", "ˑ"]
+
+// ============ UTILITY FUNCTIONS ============
 const getWordClass = (status: string, attempted: boolean) => {
   if (!attempted) return "text-muted-foreground/40"
   switch (status) {
     case "CORRECT": return "text-emerald-600 font-medium"
-    case "NEAR": return "text-blue-500 font-medium underline decoration-blue-300 underline-offset-2"
-    case "WRONG": return "text-red-500 font-medium underline decoration-red-300 underline-offset-2"
-    case "MISSING": return "text-slate-400 opacity-60 border-b border-dashed border-slate-300"
-    case "EXTRA": return "text-amber-500 text-xs line-through opacity-80"
+    case "NEAR": return "text-blue-500 font-medium underline decoration-blue-300 underline-offset-4"
+    case "WRONG": return "text-red-500 font-medium underline decoration-red-300 underline-offset-4"
+    case "MISSING": return "text-slate-400 border-b border-dashed border-slate-300"
+    case "EXTRA": return "text-amber-500 line-through opacity-80"
     default: return ""
   }
 }
-
-const NOISE_PHONEMES = ["", " ", "ː", "ˑ"]
 
 const getTokenColorClass = (token: IDiffToken): string => {
   switch (token.type) {
     case "MATCH": return "text-emerald-600"
     case "MISMATCH": return "text-red-500 font-medium"
     case "MISSING": return "text-slate-400 opacity-70"
-    case "EXTRA": return "text-amber-500 line-through text-[10px] opacity-80" 
+    case "EXTRA": return "text-amber-500 line-through text-[11px] opacity-80"
     case "STRESS_MATCH": return "text-emerald-600 font-bold"
-    case "STRESS_WRONG": return "text-red-600 font-bold" 
-    case "PUNCT": return "text-slate-300 font-light" 
+    case "STRESS_WRONG": return "text-red-600 font-bold"
+    case "PUNCT": return "text-slate-300"
     default: return "text-muted-foreground"
   }
 }
@@ -61,9 +57,9 @@ const normalizeStressTokens = (tokens: IDiffToken[]) => {
           used = true
           return true
         }
-        return false 
+        return false
       } else {
-        used = true 
+        used = true
         return true
       }
     }
@@ -71,199 +67,202 @@ const normalizeStressTokens = (tokens: IDiffToken[]) => {
   })
 }
 
-const renderSentenceIpaFromDiff = (compares: IShadowingResult['compares'], lastRecognizedPosition: number) => {
-  const elements: React.ReactNode[] = []
+// ============ IPA RENDERER ============
+const IpaRenderer = ({ compares, lastRecognizedPosition }: { compares: IShadowingResult['compares'], lastRecognizedPosition: number }) => {
+  return (
+    <div className="flex flex-wrap justify-center md:justify-start gap-x-2 gap-y-2 leading-relaxed">
+      {compares.map((c, idx) => {
+        const attempted = c.position <= lastRecognizedPosition
 
-  compares.forEach((c, idx) => {
-    const attempted = c.position <= lastRecognizedPosition
+        if (c.status === "EXTRA" && attempted) {
+          const extraIpa = c.phonemeDiff?.actual_ipa || c.recognizedWord || ""
+          return (
+            <span key={`ipa-${idx}`} className="inline-block text-amber-500 line-through opacity-70 font-mono text-[13px] sm:text-base px-0.5">
+              {extraIpa}
+            </span>
+          )
+        }
 
-    if (c.status === "EXTRA") {
-      if (attempted) {
-        const extraIpa = c.phonemeDiff?.actual_ipa || c.recognizedWord || ""
-        elements.push(
-          <span key={`ipa-${idx}`} className="inline-block mx-1 font-mono text-amber-500 line-through opacity-70">
-            {extraIpa}
+        if (!attempted) {
+          const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
+          return (
+            <span key={`ipa-${idx}`} className="inline-block text-muted-foreground/30 font-mono text-[13px] sm:text-base px-0.5">
+              {ipaText}
+            </span>
+          )
+        }
+
+        const diffTokens = c.phonemeDiff?.diff_tokens
+
+        if (!diffTokens || diffTokens.length === 0) {
+          const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
+          let colorClass = "text-emerald-600"
+          if (c.status === "MISSING") colorClass = "text-slate-400"
+          else if (c.status === "NEAR" || c.status === "WRONG") colorClass = "text-red-500"
+          return (
+            <span key={`ipa-${idx}`} className={cn("inline-block font-mono text-[13px] sm:text-base px-0.5", colorClass)}>
+              {ipaText}
+            </span>
+          )
+        }
+
+        const normalizedTokens = normalizeStressTokens(diffTokens)
+
+        return (
+          <span key={`ipa-${idx}`} className="inline-block font-mono text-[13px] sm:text-base px-0.5">
+            {normalizedTokens.map((token, tokenIdx) => {
+              const displayText = getTokenDisplayText(token)
+              if (!displayText) return null
+              if (token.type === "EXTRA" && NOISE_PHONEMES.includes(displayText)) return null
+              return (
+                <span key={`token-${idx}-${tokenIdx}`} className={getTokenColorClass(token)}>
+                  {displayText}
+                </span>
+              )
+            })}
           </span>
         )
-      }
-      return
-    }
-
-    if (!attempted) {
-      const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
-      elements.push(
-        <span key={`ipa-${idx}`} className="inline-block mx-1 font-mono text-muted-foreground/30">
-          {ipaText}
-        </span>
-      )
-      return
-    }
-
-    const diffTokens = c.phonemeDiff?.diff_tokens
-
-    if (!diffTokens || diffTokens.length === 0) {
-      const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
-      let colorClass = "text-emerald-600"
-      if (c.status === "MISSING") colorClass = "text-slate-400"
-      else if (c.status === "NEAR" || c.status === "WRONG") colorClass = "text-red-500"
-      elements.push(
-        <span key={`ipa-${idx}`} className={cn("inline-block mx-1 font-mono", colorClass)}>
-          {ipaText}
-        </span>
-      )
-      return
-    }
-
-    const normalizedTokens = normalizeStressTokens(diffTokens)
-    const tokenElements: React.ReactNode[] = []
-    
-    normalizedTokens.forEach((token, tokenIdx) => {
-      const displayText = getTokenDisplayText(token)
-      if (!displayText) return
-      if (token.type === "EXTRA" && NOISE_PHONEMES.includes(displayText)) return 
-
-      tokenElements.push(
-        <span key={`token-${idx}-${tokenIdx}`} className={cn("inline-block", getTokenColorClass(token))}>
-          {displayText}
-        </span>
-      )
-    })
-
-    elements.push(
-      <span key={`ipa-${idx}`} className="inline-flex mx-1 font-mono">
-        {tokenElements}
-      </span>
-    )
-  })
-
-  return <div className="font-mono text-sm sm:text-base tracking-wide leading-snug break-words">{elements}</div>
+      })}
+    </div>
+  )
 }
 
+// ============ WORD POPOVER ============
+const WordItem = ({ c, attempted }: { c: any, attempted: boolean, lastRecognizedPosition: number }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  
+  const isExtra = c.status === "EXTRA"
+  const hasError = !isExtra && c.status !== "CORRECT" && attempted && c.recognizedWord
+
+  const handleMouseEnter = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    setIsOpen(true)
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    timeoutRef.current = setTimeout(() => setIsOpen(false), 120)
+  }, [])
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <div className="flex flex-col items-center">
+        <PopoverTrigger asChild>
+          <div
+            className="flex flex-col items-center cursor-pointer group hover:bg-muted/30 rounded-md px-1 transition-colors"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            {/* Error line above */}
+            <div className="min-h-[16px] flex items-center justify-center mb-0.5">
+              {isExtra && c.recognizedWord ? (
+                <span className="text-[10px] sm:text-[12px] font-medium text-amber-500 leading-none">
+                  +{c.recognizedWord}
+                </span>
+              ) : hasError ? (
+                <span className="text-[10px] sm:text-[12px] text-muted-foreground/50 line-through leading-none">
+                  {c.recognizedWord}
+                </span>
+              ) : null}
+            </div>
+            
+            {/* Main word */}
+            <span className={cn(
+              "text-base sm:text-xl md:text-2xl font-medium leading-tight",
+              getWordClass(c.status, attempted)
+            )}>
+              {isExtra ? "" : c.expectedWord || "_"}
+            </span>
+          </div>
+        </PopoverTrigger>
+      </div>
+
+      <PopoverContent className="w-auto min-w-[140px] p-2 rounded-lg" sideOffset={6}>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-1">
+            <span className={cn("text-sm font-semibold", getWordClass(c.status, attempted))}>
+              {c.expectedWord || c.recognizedWord}
+            </span>
+            {c.phonemeDiff?.score !== undefined && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-muted">
+                {(c.phonemeDiff.score * 100).toFixed(0)}%
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 gap-1 text-xs">
+            {c.status !== "EXTRA" && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] uppercase text-muted-foreground">Expected</span>
+                <span className="font-mono text-emerald-600 text-[11px]">/{c.phonemeDiff?.expected_ipa || "—"}/</span>
+              </div>
+            )}
+            {(c.status === "NEAR" || c.status === "WRONG" || c.status === "EXTRA") && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] uppercase text-muted-foreground">You said</span>
+                <span className="font-mono text-red-500 text-[11px]">/{c.phonemeDiff?.actual_ipa || (c.status === "EXTRA" ? c.recognizedWord : "—")}/</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// ============ MAIN RESULT TAB ============
 const YourResultTab: React.FC<{ result: IShadowingResult }> = ({ result }) => {
   const { weightedAccuracy, fluencyScore, correctWords, totalWords, compares, lastRecognizedPosition } = result
   const isExcellent = weightedAccuracy >= SHADOWING_THRESHOLD.NEXT
   const isGood = weightedAccuracy >= SHADOWING_THRESHOLD.GOOD_SOUND
-  const [openPopoverPosition, setOpenPopoverPosition] = useState<number | null>(null)
-  const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   return (
     <div className="flex flex-col gap-3">
-      
-      {/* 🎯 SCORE STRIP: Thanh điểm số siêu gọn 1 hàng ngang */}
+      {/* Score Card */}
       <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 border border-border/50">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-1.5">
-            {isExcellent ? <Sparkles className="h-4 w-4 text-emerald-500" /> : <Target className={cn("h-4 w-4", isGood ? "text-amber-500" : "text-red-500")} />}
+            {isExcellent ? 
+              <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" /> : 
+              <Target className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", isGood ? "text-amber-500" : "text-red-500")} />
+            }
             <span className="text-base sm:text-lg font-bold leading-none">{weightedAccuracy.toFixed(0)}%</span>
-            <span className="text-[10px] uppercase text-muted-foreground hidden sm:inline-block">Accuracy ({correctWords}/{totalWords})</span>
+            <span className="text-[9px] sm:text-[10px] uppercase text-muted-foreground hidden sm:inline">
+              Accuracy ({correctWords}/{totalWords})
+            </span>
           </div>
           <div className="h-4 w-px bg-border" />
           <div className="flex items-center gap-1.5">
-            <Mic2 className="h-4 w-4 text-primary" />
+            <Mic2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
             <span className="text-base sm:text-lg font-bold text-primary leading-none">{Math.round((fluencyScore || 0) * 100)}%</span>
-            <span className="text-[10px] uppercase text-muted-foreground hidden sm:inline-block">Fluency</span>
+            <span className="text-[9px] sm:text-[10px] uppercase text-muted-foreground hidden sm:inline">Fluency</span>
           </div>
         </div>
       </div>
 
-      {/* 🎯 MAIN TEXT: Bố cục sát nhau nhưng KHÔNG BỊ DÍNH */}
-      {/* 👉 Dùng flex-wrap và tăng gap-y lên một chút để tránh các dòng đè lên nhau */}
-      <div className="flex flex-wrap items-end gap-x-1.5 sm:gap-x-2 gap-y-1.5 px-1 mt-1">
+      {/* Words Grid */}
+      <div className="flex flex-wrap justify-center md:justify-start gap-x-1.5 sm:gap-x-2.5 gap-y-2 sm:gap-y-3 px-1">
         {compares.map((c) => {
           const attempted = c.position <= lastRecognizedPosition
-          const isExtra = c.status === "EXTRA"
-          const hasError = !isExtra && c.status !== "CORRECT" && attempted && c.recognizedWord
-
           return (
-            <Popover
-              open={openPopoverPosition === c.position}
-              onOpenChange={(open) => setOpenPopoverPosition(open ? c.position : null)}
-              key={c.position}
-            >
-              <div className="flex flex-col items-center">
-                <PopoverTrigger
-                  asChild
-                  onClick={() => setOpenPopoverPosition((prev) => prev === c.position ? null : c.position)}
-                  onMouseEnter={() => {
-                    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-                    setOpenPopoverPosition(c.position)
-                  }}
-                  onMouseLeave={() => {
-                    hoverTimeoutRef.current = setTimeout(() => setOpenPopoverPosition(null), 120)
-                  }}
-                >
-                  {/* 👉 BỎ ABSOLUTE: Chia mỗi từ thành 1 cột chứa 2 dòng (Lỗi ở trên, Chữ chính ở dưới) */}
-                  <div className="flex flex-col items-center cursor-pointer group hover:bg-muted/30 rounded px-0.5 transition-colors">
-                    
-                    {/* KHU VỰC HIỂN THỊ LỖI (Dòng trên) */}
-                    {/* 👉 Set min-h-[16px] để đảm bảo dòng trên luôn chiếm chỗ, kể cả khi từ đó đúng. Điều này giữ baseline luôn thẳng. */}
-                    <div className="min-h-[16px] flex items-end justify-center mb-0.5 whitespace-nowrap">
-                      {isExtra && c.recognizedWord ? (
-                        <span className={cn(getWordClass(c.status, attempted), "text-[11px] font-semibold leading-none")}>
-                          +{c.recognizedWord}
-                        </span>
-                      ) : hasError ? (
-                        // Tăng size chữ gạch ngang lên text-[11px] để dễ nhìn
-                        <span className="text-muted-foreground/70 line-through text-[11px] font-medium leading-none">
-                          {c.recognizedWord}
-                        </span>
-                      ) : null}
-                    </div>
-                    
-                    {/* CHỮ CHÍNH (Dòng dưới) */}
-                    <span className={cn(
-                      "text-lg sm:text-xl md:text-2xl transition-colors leading-none", 
-                      getWordClass(c.status, attempted)
-                    )}>
-                      {isExtra ? "" : c.expectedWord || "_"}
-                    </span>
-                  </div>
-                </PopoverTrigger>
-              </div>
-
-              {/* 🎯 POPOVER: Nhỏ gọn, sát chữ */}
-              <PopoverContent className="w-auto min-w-[140px] p-2.5 rounded-lg shadow-md border-border/60" sideOffset={6}>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-1.5">
-                    <span className={cn("text-sm font-semibold", getWordClass(c.status, attempted))}>
-                      {c.expectedWord || c.recognizedWord}
-                    </span>
-                    {c.phonemeDiff?.score !== undefined && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                        {(c.phonemeDiff.score * 100).toFixed(0)}%
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-1.5 text-xs">
-                    {c.status !== "EXTRA" && (
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[9px] uppercase text-muted-foreground">Expected</span>
-                        <span className="font-mono text-emerald-600 font-medium">/{c.phonemeDiff?.expected_ipa || "—"}/</span>
-                      </div>
-                    )}
-                    {(c.status === "NEAR" || c.status === "WRONG" || c.status === "EXTRA") && (
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[9px] uppercase text-muted-foreground">You Said</span>
-                        <span className="font-mono text-red-500 font-medium">/{c.phonemeDiff?.actual_ipa || (c.status === "EXTRA" ? c.recognizedWord : "—")}/</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <WordItem 
+              key={c.position} 
+              c={c} 
+              attempted={attempted} 
+              lastRecognizedPosition={lastRecognizedPosition}
+            />
           )
         })}
       </div>
 
-      {/* 🎯 BẢNG PHIÊN ÂM (Sequence): Chuyển thành text block nhỏ */}
+      {/* IPA Section */}
       <div className="mt-2 pt-3 border-t border-border/40">
-        {renderSentenceIpaFromDiff(compares, lastRecognizedPosition)}
+        <IpaRenderer compares={compares} lastRecognizedPosition={lastRecognizedPosition} />
       </div>
     </div>
   )
 }
 
+// ============ MAIN COMPONENT ============
 const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading }) => {
   if (isLoading) {
     return (
@@ -274,6 +273,7 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading })
       </div>
     )
   }
+  
   if (!result) {
     return (
       <div className={cn("rounded-xl border bg-card p-3 flex flex-col w-full", className)}>
@@ -283,6 +283,7 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading })
       </div>
     )
   }
+  
   return (
     <div className={cn("rounded-xl border bg-card p-3 sm:p-4 w-full", className)}>
       <YourResultTab result={result} />

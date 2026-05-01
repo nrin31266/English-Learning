@@ -95,7 +95,7 @@ const RecordingControls = ({
         </div>
 
         {/* GIỮA: Nút Record (Lớp z-10, tách biệt hoàn toàn với 2 bên) */}
-        <div className="relative z-10 shrink-0">
+        <div className="relative z-10 shrink-0 ">
           <button
             className={cn(
               "transform-gpu relative w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-lg transition-all duration-300 ease-out",
@@ -175,8 +175,8 @@ const RecordingControls = ({
       <div className="h-6 flex items-center justify-center w-full mt-1">
         {/* 👉 LOGIC MỚI: Nhắc nhở người dùng nhấn Play thay vì để mờ nhạt gây tưởng nhầm là lỗi */}
         {!userInteracted ? (
-           <span className="text-xs sm:text-sm text-primary uppercase font-bold flex items-center gap-1">
-             ▶ Play audio to start
+           <span className="text-base text-primary uppercase font-semibold flex items-center gap-1">
+             ▶ Play audio to enable recording
            </span>
         ) : recordError ? (
           <span className="text-xs text-red-500 bg-red-50/80 px-3 py-1 rounded-full border border-red-200 shadow-sm">
