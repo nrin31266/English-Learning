@@ -165,7 +165,7 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
       {/* Lesson title + slug */}
       <TableCell className="px-3 py-1 align-middle">
         <div className="flex flex-col gap-0.5">
-          <Link className="underline" to={`/lessons/${row.slug}`}><span className="text-xs font-medium truncate max-w-[260px]">
+          <Link className="underline" to={`/lessons/${row.id}/${row.slug}`}><span className="text-xs font-medium truncate max-w-[260px]">
             {row.title}
           </span></Link>
           <span className="text-[11px] text-muted-foreground truncate max-w-[260px]">
@@ -195,18 +195,16 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
 
       {/* Dictation */}
       <TableCell className="px-3 py-1 align-middle">
-        <span className={`${
-          row.enableDictation ? "text-green-600" : "text-red-600"
-        }`}>
+        <span className={`${row.enableDictation ? "text-green-600" : "text-red-600"
+          }`}>
           {row.enableDictation ? "Yes" : "No"}
         </span>
       </TableCell>
 
       {/* Shadowing */}
       <TableCell className="px-3 py-1 align-middle">
-        <span className={`${
-          row.enableShadowing ? "text-green-600" : "text-red-600"
-        }`}>
+        <span className={`${row.enableShadowing ? "text-green-600" : "text-red-600"
+          }`}>
           {row.enableShadowing ? "Yes" : "No"}
         </span>
       </TableCell>

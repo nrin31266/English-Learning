@@ -44,10 +44,10 @@ const initialState: LessonDetailsState = {
 
 export const fetchLessonDetails = createAsyncThunk(
   "lessons/fetchLessons",
-  async ({ slug }: { slug: string }, { rejectWithValue }) => {
+  async ({ id }: { id: number }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonDetailsDto>({
-        endpoint: `/learning-contents/admin/lessons/${slug}`,
+        endpoint: `/learning-contents/admin/lessons/${id}`,
         method: "GET",
       });
       return res;
@@ -59,10 +59,10 @@ export const fetchLessonDetails = createAsyncThunk(
 
 export const reloadLessonDetails = createAsyncThunk(
   "lessons/reloadLessonDetails",
-  async ({ slug }: { slug: string }, { rejectWithValue }) => {
+  async ({ id }: { id: number }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonDetailsDto>({
-        endpoint: `/learning-contents/admin/lessons/${slug}`,
+        endpoint: `/learning-contents/admin/lessons/${id}`,
         method: "GET",
       });
       return res;
@@ -248,7 +248,7 @@ export const lessonDetailsSlice = createSlice({
       if (sourceReferenceId) lesson.sourceReferenceId = sourceReferenceId;
       if (thumbnailUrl) lesson.thumbnailUrl = thumbnailUrl;
       if (aiMessage) lesson.aiMessage = aiMessage;
-      if (durationSeconds !== null) lesson.durationSeconds = durationSeconds;
+      if (durationSeconds) lesson.durationSeconds = durationSeconds;
 
       // map step -> status
       if (processingStep === "FAILED") {

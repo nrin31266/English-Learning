@@ -2,7 +2,7 @@
 
 import { useAppDispatch, useAppSelector } from "@/store"
 import {
-    fetchLessonBySlugForDictation,
+    fetchLessonByIdForDictation,
     resetLessonState,
     submitBatchDictationScore,
     submitDictationScore,
@@ -39,7 +39,7 @@ import { CompletionModal, LoginIncentiveModal } from "@/components/ModeModals"
 const MODE_NAME = "DICTATION";
 
 const DictationMode = () => {
-    const { slug } = useParams<{ slug: string }>()
+    const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
     const { profile } = useAuth();
@@ -97,13 +97,13 @@ const DictationMode = () => {
     }
 
     useEffect(() => {
-        if (slug) {
-            dispatch(fetchLessonBySlugForDictation(slug))
+        if (id) {
+            dispatch(fetchLessonByIdForDictation(Number(id)))
         }
         return () => {
             dispatch(resetLessonState())
         }
-    }, [dispatch, slug])
+    }, [dispatch, id])
 
     useEffect(() => {
         setActiveIndex(0)
@@ -175,15 +175,15 @@ const DictationMode = () => {
             }));
         } else {
             // 👉 Truyền thêm mode
-            const currentLocal = getGuestProgress(slug!, MODE_NAME);
+            const currentLocal = getGuestProgress(id!, MODE_NAME);
             if (!currentLocal.includes(sentenceId)) {
                 const nextLocal = [...currentLocal, sentenceId];
-                saveGuestProgress(slug!, MODE_NAME, nextLocal);
+                saveGuestProgress(id!, MODE_NAME, nextLocal);
 
                 setShowLoginModal(true);
             }
         }
-    }, [dispatch, lesson?.id, profile, slug]);
+    }, [dispatch, lesson?.id, profile, id]);
 
     useEffect(() => {
         if (lesson && isLessonCompleted) {
@@ -193,9 +193,9 @@ const DictationMode = () => {
 
     // 🚀 LOGIC 0: Tái hiện tiến độ cho Guest khi F5
     useEffect(() => {
-        if (!profile && status === "succeeded" && slug) {
+        if (!profile && status === "succeeded" && id) {
             // 👉 Truyền thêm mode
-            const localData = getGuestProgress(slug, MODE_NAME);
+            const localData = getGuestProgress(id, MODE_NAME);
             if (localData.length > 0) {
                 console.log("Hydrating guest progress from localStorage...");
                 localData.forEach(sId => {
@@ -203,15 +203,15 @@ const DictationMode = () => {
                 });
             }
         }
-    }, [profile, status, slug, dispatch]);
+    }, [profile, status, id, dispatch]);
 
     // 🚀 LOGIC SYNC: Chạy khi Guest quyết định Login
     useEffect(() => {
         const performBatchSync = async () => {
             // 👉 Đảm bảo sentences đã load xong mới nhảy index
-            if (profile && lesson?.id && slug && sentences.length > 0 && !syncRef.current) {
+            if (profile && lesson?.id && id && sentences.length > 0 && !syncRef.current) {
                 // 👉 Truyền thêm mode
-                const localData = getGuestProgress(slug, MODE_NAME);
+                const localData = getGuestProgress(id, MODE_NAME);
 
                 if (localData.length > 0) {
                     syncRef.current = true;
@@ -250,18 +250,18 @@ const DictationMode = () => {
                     }
 
                     // 👉 Truyền thêm mode
-                    clearGuestProgress(slug, MODE_NAME);
+                    clearGuestProgress(id, MODE_NAME);
                 }
             }
         };
 
         performBatchSync();
-    }, [profile, lesson?.id, slug, dispatch, completedIdsSet, sentences]);
+    }, [profile, lesson?.id, id, dispatch, completedIdsSet, sentences]);
 
     // 3. Hàm Login kết hợp lưu trữ
     const handleLoginIncentive = () => {
         // 👉 Truyền thêm mode
-        saveGuestProgress(slug!, MODE_NAME, completedIdsArray);
+        saveGuestProgress(id!, MODE_NAME, completedIdsArray);
         keycloak.login();
     };
 
@@ -347,8 +347,8 @@ const DictationMode = () => {
                     {error?.message && (
                         <p className="max-w-md text-center text-xs text-destructive/80">{error.message}</p>
                     )}
-                    {slug && (
-                        <Button size="sm" variant="outline" onClick={() => dispatch(fetchLessonBySlugForDictation(slug))}>
+                    {id && (
+                        <Button size="sm" variant="outline" onClick={() => dispatch(fetchLessonByIdForDictation(Number(id)))}>
                             Retry
                         </Button>
                     )}

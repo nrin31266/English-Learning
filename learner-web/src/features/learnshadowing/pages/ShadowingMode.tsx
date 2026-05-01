@@ -2,7 +2,7 @@
 
 import { useAppDispatch, useAppSelector } from "@/store"
 import {
-  fetchLessonBySlugForShadowing,
+  fetchLessonByIdForShadowing,
   resetLessonState,
   submitBatchShadowingScore, // 👉 Đừng quên tạo Thunk này ở Slide nhé
   submitShadowingScore,
@@ -40,7 +40,7 @@ import { CompletionModal, LoginIncentiveModal } from "@/components/ModeModals"
 const MODE_NAME = "SHADOWING";
 
 const ShadowingMode = () => {
-  const { slug } = useParams<{ slug: string }>()
+  const { id } = useParams<{ id: string; }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { profile } = useAuth();
@@ -86,13 +86,13 @@ const ShadowingMode = () => {
   const effectiveShowTranscript = isDesktop ? showTranscriptToggle : true
 
   useEffect(() => {
-    if (slug) {
-      dispatch(fetchLessonBySlugForShadowing(slug))
+    if (id) {
+      dispatch(fetchLessonByIdForShadowing(Number(id)))
     }
     return () => {
       dispatch(resetLessonState())
     }
-  }, [dispatch, slug])
+  }, [dispatch, id])
 
   useEffect(() => {
     setActiveIndex(0)
@@ -143,14 +143,14 @@ const ShadowingMode = () => {
         score
       }));
     } else {
-      const currentLocal = getGuestProgress(slug!, MODE_NAME);
+      const currentLocal = getGuestProgress(id!, MODE_NAME);
       if (!currentLocal.includes(sentenceId)) {
         const nextLocal = [...currentLocal, sentenceId];
-        saveGuestProgress(slug!, MODE_NAME, nextLocal);
+        saveGuestProgress(id!, MODE_NAME, nextLocal);
         setShowLoginModal(true);
       }
     }
-  }, [dispatch, lesson?.id, profile, slug]);
+  }, [dispatch, lesson?.id, profile, id]);
 
   // 🚀 2. Hiển thị Modal khi hoàn thành toàn bộ bài
   useEffect(() => {
@@ -161,8 +161,8 @@ const ShadowingMode = () => {
 
   // 🚀 3. LOGIC 0: Tái hiện tiến độ cho Guest khi F5
   useEffect(() => {
-    if (!profile && status === "succeeded" && slug) {
-        const localData = getGuestProgress(slug, MODE_NAME);
+    if (!profile && status === "succeeded" && id) {
+        const localData = getGuestProgress(id!, MODE_NAME);
         if (localData.length > 0) {
             console.log("Hydrating guest progress from localStorage...");
             localData.forEach(sId => {
@@ -170,13 +170,13 @@ const ShadowingMode = () => {
             });
         }
     }
-  }, [profile, status, slug, dispatch]);
+  }, [profile, status, id, dispatch]);
 
   // 🚀 4. LOGIC SYNC: Chạy khi Guest quyết định Login
   useEffect(() => {
     const performBatchSync = async () => {
-        if (profile && lesson?.id && slug && sentences.length > 0 && !syncRef.current) {
-            const localData = getGuestProgress(slug, MODE_NAME);
+        if (profile && lesson?.id && id && sentences.length > 0 && !syncRef.current) {
+            const localData = getGuestProgress(id!, MODE_NAME);
 
             if (localData.length > 0) {
                 syncRef.current = true;
@@ -213,13 +213,13 @@ const ShadowingMode = () => {
                     }
                 }
 
-                clearGuestProgress(slug, MODE_NAME);
+                clearGuestProgress(id!, MODE_NAME);
             }
         }
     };
 
     performBatchSync();
-  }, [profile, lesson?.id, slug, dispatch, completedIdsSet, sentences]);
+  }, [profile, lesson?.id, id, dispatch, completedIdsSet, sentences]);
 
   const handleBackToTopic = () => {
     if (lesson?.topic) {
@@ -231,7 +231,7 @@ const ShadowingMode = () => {
 
   // 🚀 5. Hàm Login kết hợp lưu trữ
   const handleLoginIncentive = () => {
-    saveGuestProgress(slug!, MODE_NAME, completedIdsArray);
+    saveGuestProgress(id!, MODE_NAME, completedIdsArray);
     keycloak.login();
   };
 
@@ -343,7 +343,7 @@ const ShadowingMode = () => {
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm">
           <p className="text-destructive">Cannot load lesson. Please try again.</p>
           {error?.message && <p className="max-w-md text-center text-xs text-destructive/80">{error.message}</p>}
-          {slug && <Button size="sm" variant="outline" onClick={() => dispatch(fetchLessonBySlugForShadowing(slug))}>Retry</Button>}
+          {id && <Button size="sm" variant="outline" onClick={() => dispatch(fetchLessonByIdForShadowing(Number(id)))}>Retry</Button>}
         </div>
       ) : !lesson ? (
         <div className="flex flex-1 flex-col items-center justify-center text-sm text-muted-foreground">Lesson not found.</div>

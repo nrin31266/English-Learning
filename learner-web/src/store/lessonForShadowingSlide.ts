@@ -15,12 +15,12 @@ const initialState: ILessonReducer = {
   },
 };
 
-export const fetchLessonBySlugForShadowing = createAsyncThunk(
-  "lessonForShadowing/fetchLessonBySlug",
-  async (slug: string, { rejectWithValue }) => {
+export const fetchLessonByIdForShadowing = createAsyncThunk(
+  "lessonForShadowing/fetchLessonById",
+  async (id: number, { rejectWithValue }) => {
     try {
       return await handleAPI<ILessonDetailsResponse>({
-        endpoint: `/learning-contents/lessons/${slug}`,
+        endpoint: `/learning-contents/lessons/${id}`,
         method: "GET",
         isAuth: true,
         params: { mode: "SHADOWING" }
@@ -107,14 +107,14 @@ export const lessonForShadowingSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchLessonBySlugForShadowing.pending, (state) => {
+      .addCase(fetchLessonByIdForShadowing.pending, (state) => {
         state.lesson.status = "loading";
       })
-      .addCase(fetchLessonBySlugForShadowing.fulfilled, (state, action) => {
+      .addCase(fetchLessonByIdForShadowing.fulfilled, (state, action) => {
         state.lesson.status = "succeeded";
         state.lesson.data = action.payload;
       })
-      .addCase(fetchLessonBySlugForShadowing.rejected, (state, action) => {
+      .addCase(fetchLessonByIdForShadowing.rejected, (state, action) => {
         state.lesson.status = "failed";
         state.lesson.error = action.payload as IErrorState;
       })

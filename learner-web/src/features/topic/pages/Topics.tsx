@@ -62,7 +62,7 @@ const Topics = () => {
   const handleNavigate = (mode: "listening" | "shadowing" | "dictation") => {
     if (!selectedLesson) return
 
-    const base = `/learn/lessons/${selectedLesson.slug}` // chỉnh route nếu bạn muốn
+    const base = `/learn/lessons/${selectedLesson.id}/${selectedLesson.slug}`
     let url = base
 
     if (mode === "shadowing") {

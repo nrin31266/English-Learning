@@ -38,10 +38,6 @@ import ProcessingSection from "../components/ProcessingSection"
 import SentencesTab from "../components/SentencesTab"
 import ShadowingBadge from "../components/ShadowingBadge"
 
-// ───────────────────────────────────────────
-// Helpers
-// ───────────────────────────────────────────
-
 
 
 const renderSourceIcon = (sourceType: ILessonDetailsDto["sourceType"]) => {
@@ -136,7 +132,7 @@ const renderStatusBadge = (status: ILessonDetailsDto["status"]) => {
 // ───────────────────────────────────────────
 
 const LessonDetails: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>()
+  const { id, slug } = useParams<{ id: string; slug: string }>()
   const dispatch = useAppDispatch();
   // Mock: luôn dùng mockLessonDetails, chỉ chỉnh slug cho vui
   const [hydrating, setHydrating] = React.useState(true);
@@ -149,13 +145,12 @@ const LessonDetails: React.FC = () => {
 
   const { data, status, error } = useAppSelector(state => state.learningContent.lessonDetails.lessonDetails);
   const { status: mutationStatus, type: mutationType } = useAppSelector(state => state.learningContent.lessonDetails.lessonDetailsMutation);
-  //  const data = mockLessonDetails;
-  const [lesson] = useMemo(() => {
-    if (data && data.slug === slug) {
-      return [data];
-    }
-    return [null];
-  }, [data?.id, slug]);
+ const [lesson] = useMemo(() => {
+  if (data && id && data.id === Number(id)) {
+    return [data];
+  }
+  return [null];
+}, [data?.id, id]);
   const stompClient = useWebSocket();
   useEffect(() => {
     if (!stompClient) return;
@@ -170,7 +165,7 @@ const LessonDetails: React.FC = () => {
         console.log("LessonDetailsPage received event:", event);
 
         // If completed, reload full lesson details
-        if (event.processingStep === "COMPLETED") { dispatch(reloadLessonDetails({ slug: lesson.slug })) } else {
+        if (event.processingStep === "COMPLETED") { dispatch(reloadLessonDetails({ id: lesson.id })) } else {
           dispatch(updateLessonDetailsFromProcessingEvent(event));
         }
       } catch (e) {
@@ -185,17 +180,17 @@ const LessonDetails: React.FC = () => {
   }, [stompClient?.ws, dispatch, lesson?.id]);
 
   useEffect(() => {
-    if (slug) {
-      dispatch(fetchLessonDetails({ slug: slug }));
-    }
-  }, [dispatch, slug]);
+  if (id) {
+    dispatch(fetchLessonDetails({ id: Number(id) }));
+  }
+}, [dispatch, id]);
 
   const handleChangeTab = (tab: string) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set("tab", tab);
     setSearchParams(newParams);
   }
-  if (hydrating || status === "loading" || !data || data.slug !== slug) {
+  if (hydrating || status === "loading" || !data || Number(id) !== data.id) {
     return <SkeletonComponent />;
   }
   return (
@@ -444,7 +439,7 @@ const LessonDetails: React.FC = () => {
         <TabsContent value="transcript" className="mt-0">
           <SentencesTab lesson={data} />
         </TabsContent>
-        <TabsContent value="sitting" className="mt-0">  
+        <TabsContent value="sitting" className="mt-0">
           <LessonSitting lesson={data} />
         </TabsContent>
       </Tabs>

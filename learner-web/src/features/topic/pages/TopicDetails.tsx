@@ -73,7 +73,7 @@ const TopicDetails = () => {
   const handleNavigate = (mode: "listening" | "shadowing" | "dictation") => {
     if (!selectedLesson) return
 
-    const base = `/learn/lessons/${selectedLesson.slug}`
+    const base = `/learn/lessons/${selectedLesson.id}/${selectedLesson.slug}`
     let url = base
     if (mode === "shadowing") url = `${base}/shadowing`
     if (mode === "dictation") url = `${base}/dictation`
@@ -176,12 +176,12 @@ const TopicDetails = () => {
       {isLoading ? (
         <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
-          Đang tải dữ liệu topic...
+          Waiting for lessons to load...
         </div>
       ) : status === "failed" ? (
         <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm">
           <p className="font-medium text-destructive">
-            Không thể tải topic.
+            Failed to load topic details.
           </p>
           {error?.message && (
             <p className="mt-1 text-xs text-destructive/80">
@@ -199,7 +199,7 @@ const TopicDetails = () => {
         </div>
       ) : !topic ? (
         <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-          Topic không tồn tại hoặc đã bị xoá.
+          Sorry, we couldn't find the topic you're looking for.
         </div>
       ) : (
         <section className="space-y-4">
@@ -240,7 +240,7 @@ const TopicDetails = () => {
 
           {filteredLessons.length === 0 ? (
             <div className="flex min-h-[30vh] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-              Hiện không có lesson nào với filter hiện tại.
+              Sorry, there are no lessons available with the current filter.
             </div>
           ) : (
             <ScrollArea className="h-[calc(100vh-220px)] pr-1">

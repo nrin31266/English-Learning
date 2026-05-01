@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface LessonRepository extends JpaRepository<Lesson, Long>, JpaSpecificationExecutor<Lesson> {
 
-    Optional<Lesson> findBySlug(String slug);
+
 
     Optional<Lesson> findByAiJobId(String aiJobId);
 

@@ -46,11 +46,11 @@ public class AdminLessonController {
         return ApiResponse.success("Lesson deleted successfully");
     }
 
-    @GetMapping("/{slug}")
-    public ApiResponse<LessonDetailsResponse> getLessonBySlug(
-            @PathVariable String slug
+    @GetMapping("/{id}")
+    public ApiResponse<LessonDetailsResponse> getLessonById(
+            @PathVariable Long id
     ) {
-        return ApiResponse.success(lessonService.getLessonDetails(slug));
+        return ApiResponse.success(lessonService.getLessonDetails(id));
     }
 
     @PatchMapping("/{id}/cancellation")

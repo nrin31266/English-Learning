@@ -64,16 +64,13 @@ public class LessonService {
                 () -> new BaseException(LearningContentErrorCode.TOPIC_NOT_FOUND,
                         LearningContentErrorCode.TOPIC_NOT_FOUND.formatMessage(request.getTopicSlug()))
         );
-        String lessonSlug = TextUtils.createSlug(request.getTitle());
-        if (lessonRepository.findBySlug(lessonSlug).isPresent()) {
-            throw new BaseException(LearningContentErrorCode.LESSON_WITH_NAME_EXISTS,
-                    LearningContentErrorCode.LESSON_WITH_NAME_EXISTS.formatMessage(request.getTitle()));
-        }
+
         Lesson lesson = lessonMapper.toLesson(request);
+
         lesson.setTopic(topic);
         lesson.setProcessingStep(LessonProcessingStep.NONE);
         lesson.setStatus(LessonStatus.DRAFT);
-        lesson.setSlug(lessonSlug);
+        lesson.setSlug(TextUtils.createSlug(request.getTitle()));
 
         // If traditional, save and return
         if (request.getLessonType().equals(LessonType.TRADITIONAL)) {
@@ -151,13 +148,17 @@ public class LessonService {
 
 
     @Transactional
-    public LessonDetailsResponse getLessonDetails(String slug) {
-        Lesson lesson = lessonRepository.findBySlug(slug).orElseThrow(
-                () -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND,
-                        LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(slug))
+    public LessonDetailsResponse getLessonDetails(Long id) {
+        Lesson lesson = lessonRepository.findById(id).orElseThrow(
+                () -> new BaseException(
+                        LearningContentErrorCode.LESSON_NOT_FOUND,
+                        LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(id)
+                )
         );
+
         var ld = lessonMapper.toLessonDetailsResponse(lesson);
-        // sort
+
+        // sort sentences theo orderIndex
         ld.setSentences(
                 ld.getSentences().stream()
                         .sorted(Comparator.comparing(LessonSentenceDetailsResponse::getOrderIndex))
@@ -167,15 +168,16 @@ public class LessonService {
         return ld;
     }
     @Transactional
-    public LessonDetailsResponse getLessonDetailsWithoutInActivateSentences(String slug, String mode) {
-        var ld = getLessonDetails(slug);
+    public LessonDetailsResponse getLessonDetailsWithoutInActivateSentences(Long id) {
+        var ld = getLessonDetails(id);
+
         ld.setSentences(
                 ld.getSentences().stream()
                         .filter(s -> s.getIsActive() != null && s.getIsActive())
                         .toList()
         );
 
-        // Gọi hàm đính kèm Wrapper DTO
+        // attach progress
         attachProgressOverview(ld);
 
         return ld;
@@ -494,6 +496,7 @@ public class LessonService {
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(id))
         );
         lessonMapper.updateLessonFromRequest(request, lesson);
+        lesson.setSlug(TextUtils.createSlug(lesson.getSlug()));
         return lessonMapper.toLessonResponse(lesson);
     }
 

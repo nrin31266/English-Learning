@@ -211,7 +211,7 @@ const GenerateLessons = () => {
 
             console.log(data);
 
-            navigate("/lessons/" + data.slug);
+            navigate(`/lessons/${data.id}/${data.slug}`);
 
             form.reset(defaultValues)
         } catch (error) {

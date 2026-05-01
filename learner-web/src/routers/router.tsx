@@ -37,11 +37,11 @@ const router = createBrowserRouter([
         element: withSuspense(<TopicsDetailsPage />),
       },
       {
-        path: "/learn/lessons/:slug/shadowing",
+        path: "/learn/lessons/:id/:slug/shadowing",
         element: withSuspense(<ShadowingModePage />),
       },
       {
-        path: "/learn/lessons/:slug/dictation",
+        path: "/learn/lessons/:id/:slug/dictation",
         element: withSuspense(<DictationModePage />),
       },
       {
