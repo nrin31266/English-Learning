@@ -86,7 +86,7 @@ const TranscriptItem = React.memo(({
       </div>
 
       <p className={cn(
-        "text-sm leading-snug font-medium",
+        "text-sm leading-snug font-sans tracking-wide",
         isActive ? "text-primary" : "text-foreground"
       )}>
         {mainText}

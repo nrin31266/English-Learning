@@ -1,3 +1,4 @@
+// SentenceDisplay.tsx
 import type { ILessonWordResponse } from "@/types"
 import React, { useMemo } from "react"
 import { cn } from "@/lib/utils"
@@ -7,7 +8,7 @@ interface SentenceDisplayProps {
   fallbackText?: string
   onWordClick?: (word: ILessonWordResponse, el: HTMLElement) => void
   className?: string
-  phoneticUs?: string | null
+  activeWordId?: number | string | null
 }
 
 const SentenceDisplay = ({
@@ -15,61 +16,59 @@ const SentenceDisplay = ({
   fallbackText = "No sentence available.",
   onWordClick,
   className = "",
-  phoneticUs
+  activeWordId = null,
 }: SentenceDisplayProps) => {
   const hasWords = words && Array.isArray(words) && words.length > 0
 
   const sortedWords = useMemo(() => {
     if (!hasWords) return []
-    return [...words].sort(
-      (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)
-    )
+    return [...words].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
   }, [words, hasWords])
 
   return (
-    <div className={cn("flex flex-col items-center md:items-start gap-4 w-full", className)}>
-      
+    <div className={cn("flex flex-col items-center w-full", className)}>
       {!hasWords ? (
-        <p className="text-xl md:text-2xl font-semibold leading-relaxed text-center md:text-left text-foreground/80">
+        <p className="text-[15px] sm:text-[16px] font-medium tracking-wide text-center text-muted-foreground/60 py-4">
           {fallbackText}
         </p>
       ) : (
-        <div className="flex flex-wrap justify-center md:justify-start gap-x-2 sm:gap-x-3 gap-y-3 leading-relaxed">
-          {sortedWords.map((word, index) => (
-            <button
-              key={`${word.id || index}`}
-              className={cn(
-                "relative group text-xl sm:text-2xl md:text-3xl font-medium transition-all duration-200",
-                "text-foreground/85 hover:text-primary hover:scale-105 active:scale-95",
-                "px-0.5 rounded-md",
-                "focus:outline-none focus:ring-2 focus:ring-primary/20"
-              )}
-              onClick={(e) => onWordClick?.(word, e.currentTarget)}
-              title={`Click để xem chi tiết từ: ${word.wordText}`}
-            >
-              {word.wordText}
-            </button>
-          ))}
+        <div className="flex flex-wrap justify-center gap-x-1.5 sm:gap-x-2 gap-y-1.5 sm:gap-y-2 leading-tight">
+          {sortedWords.map((word, index) => {
+            const isActive = activeWordId === word.id
+
+            return (
+              <button
+                key={`${word.id || index}`}
+                className={cn(
+                  // 👉 Size chữ đồng bộ hoàn toàn với bản Result Panel
+                  "relative text-[17px] sm:text-[20px] md:text-[24px] transition-all duration-200 ease-out",
+                  isActive
+                    ? "text-primary font-semibold scale-[1.02]" // Đang active thì rực lên, nảy nhẹ một xíu
+                    : "text-foreground/75 font-medium hover:text-primary hover:scale-[1.02]",
+                  "px-0.5 rounded-md",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50" // Accessiblity tốt hơn
+                )}
+                onClick={(e) => {
+                  if (isActive) return
+                  onWordClick?.(word, e.currentTarget)
+                }}
+                title={`Click để xem chi tiết từ: ${word.wordText}`}
+                aria-pressed={isActive}
+              >
+                {word.wordText}
+              </button>
+            )
+          })}
         </div>
       )}
-
-      {/* Phonetic - Dịu mắt, thưa, dễ đọc */}
-      {phoneticUs && (
-        <div className="pt-2 border-t border-border/30 w-full">
-          <div className="flex items-center justify-center md:justify-start gap-2 text-sm sm:text-base">
-            <span className="h-3 w-px bg-border/30" />
-            <p className="font-mono text-base sm:text-lg text-muted-foreground/70 tracking-wide">
-              {phoneticUs}
-            </p>
-          </div>
-        </div>
-      )}
-
     </div>
   )
 }
 
 export default React.memo(SentenceDisplay, (prev, next) => {
+  // Check nhanh length trước cho đỡ tốn tài nguyên map
+  if (prev.words?.length !== next.words?.length) return false
+  
   const prevSignature = prev.words?.map(w => w.id).join('-') || ""
   const nextSignature = next.words?.map(w => w.id).join('-') || ""
 
@@ -77,6 +76,6 @@ export default React.memo(SentenceDisplay, (prev, next) => {
     prevSignature === nextSignature &&
     prev.fallbackText === next.fallbackText &&
     prev.className === next.className &&
-    prev.phoneticUs === next.phoneticUs
+    prev.activeWordId === next.activeWordId
   )
 })

@@ -14,6 +14,7 @@ import { useAppDispatch } from "@/store"
 import { updateSentenceCompletion } from "@/store/lessonForShadowingSlide"
 import { successSound } from "../../../utils/sound"
 import { CheckCircle2 } from "lucide-react"
+import CompletedBadge from "@/components/CompletedBadge"
 
 interface ActiveSentencePanelProps {
   lesson: ILessonDetailsResponse
@@ -403,12 +404,7 @@ const ActiveSentencePanel = ({
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
       <div className="flex flex-col items-center gap-4 px-4 py-4 relative">
         
-        {isCompleted && (
-          <div className="absolute right-4 top-4 flex items-center gap-1.5 text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-bold uppercase tracking-wider">Completed</span>
-          </div>
-        )}
+        {isCompleted && <CompletedBadge />}
 
         <MicrophoneSelector
           selectedDeviceId={selectedDeviceId}
@@ -441,13 +437,14 @@ const ActiveSentencePanel = ({
           <MemoSentenceDisplay
             words={currentSentenceWords}
             fallbackText={currentSentence?.textDisplay || "No sentence available."}
-            phoneticUs={currentSentence?.phoneticUs}
+            // phoneticUs={currentSentence?.phoneticUs}
             onWordClick={handleSentenceWordClick}
             className="items-center"
+            activeWordId={activeWord?.id}
           />
         </div>
 
-        <MemoShadowingResultPanel result={shadowing} isLoading={isUploading} />
+        <MemoShadowingResultPanel result={shadowing} isLoading={isUploading} expectedPhonetic={currentSentence?.phoneticUs} />
       </div>
       <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} onEnded={() => setIsPlayingRecorded(false)} />
       <WordPopup word={activeWord} anchorEl={anchorEl} onClose={closePopup} wordData={wordData} isLoading={loadingWordData} />

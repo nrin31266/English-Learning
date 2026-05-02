@@ -98,7 +98,7 @@ const TranscriptItem = React.memo(({
       </div>
 
       <p className={cn(
-        "text-[15px] leading-snug font-medium font-mono tracking-wide",
+        "text-[15px] leading-snug font-medium font-sans tracking-wide",
         isActive ? "text-primary" : "text-foreground"
       )}>
         {processedText}

@@ -6,8 +6,6 @@ import type { ILessonWordResponse } from "@/types"
 import LanguageLevelBadge from "./LanguageLevel"
 import type { IWordData } from "@/types/dictionary"
 
-
-
 interface WordPopupProps {
   word: ILessonWordResponse | null
   wordData?: IWordData | null
@@ -32,7 +30,7 @@ const WordPopup = ({
   const audioUkRef = useRef<HTMLAudioElement | null>(null)
   const audioUsRef = useRef<HTMLAudioElement | null>(null)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastClickRef = useRef(0) // 🔥 debounce
+  const lastClickRef = useRef(0)
 
   const { x, y, refs, strategy } = useFloating({
     placement: "top",
@@ -40,8 +38,6 @@ const WordPopup = ({
     whileElementsMounted: autoUpdate
   })
 
-
-  // mount animation
   useEffect(() => {
     if (word && anchorEl) {
       setIsVisible(true)
@@ -52,12 +48,10 @@ const WordPopup = ({
     }
   }, [word, anchorEl])
 
-  // set anchor
   useEffect(() => {
     if (anchorEl) refs.setReference(anchorEl)
   }, [anchorEl, refs])
 
-  // click outside + esc
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -93,16 +87,13 @@ const WordPopup = ({
     }, 120)
   }
 
-  // 🔥 FIX: Audio handlers - dùng ref có sẵn, pause cả 2 trước khi play
   const handlePlayUk = useCallback(() => {
-    // Debounce
     const now = Date.now()
     if (now - lastClickRef.current < 300) return
     lastClickRef.current = now
 
     if (!audioUkRef.current) return
 
-    // Pause the other one
     if (audioUsRef.current && !audioUsRef.current.paused) {
       audioUsRef.current.pause()
       audioUsRef.current.currentTime = 0
@@ -122,14 +113,12 @@ const WordPopup = ({
   }, [])
 
   const handlePlayUs = useCallback(() => {
-    // Debounce
     const now = Date.now()
     if (now - lastClickRef.current < 300) return
     lastClickRef.current = now
 
     if (!audioUsRef.current) return
 
-    // Pause the other one
     if (audioUkRef.current && !audioUkRef.current.paused) {
       audioUkRef.current.pause()
       audioUkRef.current.currentTime = 0
@@ -148,12 +137,10 @@ const WordPopup = ({
     audio.onerror = () => setIsPlayingUs(false)
   }, [])
 
-  // Helper để lấy flag emoji theo quốc gia
   const getFlagEmoji = (country: "uk" | "us") => {
     return country === "uk" ? "🇬🇧" : "🇺🇸"
   }
 
-  // Helper để lấy status UI
   const getStatusUI = () => {
     if (isLoading) {
       return {
@@ -173,7 +160,6 @@ const WordPopup = ({
           isBanner: false
         }
       case "FALLBACK":
-        // 🔥 FALLBACK: không hiển thị banner vàng, chỉ hiển thị note nhỏ
         return {
           icon: null,
           text: null,
@@ -201,33 +187,29 @@ const WordPopup = ({
   }
 
   const statusUI = getStatusUI()
-  // 🔥 READY hoặc FALLBACK đều show content
   const isReadyOrFallback = wordData?.status === "READY" || wordData?.status === "FALLBACK"
   const showContent = isReadyOrFallback && !isLoading
 
-  // Cambridge dictionary link - luôn hiển thị nếu có word
   const cambridgeLink = wordData?.word || word?.wordText
     ? `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent((wordData?.word || word?.wordText || "").toLowerCase())}`
     : null
 
-
-
   useEffect(() => {
     if (!wordData || !anchorEl) return
-
-    // chỉ auto play khi có data usable
     if (wordData.status !== "READY" && wordData.status !== "FALLBACK") return
-
-    // phải có audio US
     if (!wordData.phonetics?.usAudioUrl) return
 
     const timer = setTimeout(() => {
       handlePlayUs()
-    }, 200) // 👈 delay nhẹ để popup open xong
+    }, 200)
 
     return () => clearTimeout(timer)
   }, [wordData, anchorEl, handlePlayUs])
+
   if (!word || !anchorEl) return null
+
+  // 👉 Lấy phonetics an toàn, tránh null
+  const phonetics = wordData?.phonetics || { uk: null, us: null, ukAudioUrl: null, usAudioUrl: null }
 
   return (
     <div
@@ -263,7 +245,7 @@ const WordPopup = ({
                 </span>
               )}
               {wordData?.cefrLevel && (
-                <LanguageLevelBadge level={wordData.cefrLevel as "A1" | "A2" | "B1" | "B2" | "C1" | "C2"} hasBg />
+                <LanguageLevelBadge level={wordData.cefrLevel as "A1" | "A2" | "B1" | "B2" | "C1" | "C2"} />
               )}
             </div>
           </div>
@@ -276,7 +258,7 @@ const WordPopup = ({
           </button>
         </div>
 
-        {/* Status Banner - chỉ hiển thị cho PROCESSING, FAILED, READY (tùy chọn) */}
+        {/* Status Banner */}
         {statusUI?.isBanner && statusUI.text && (
           <div className={cn(
             "mb-3 p-2 rounded-md flex items-center gap-2 text-xs",
@@ -287,7 +269,7 @@ const WordPopup = ({
           </div>
         )}
 
-        {/* 🔥 FALLBACK note nhẹ nhàng */}
+        {/* FALLBACK note */}
         {wordData?.status === "FALLBACK" && statusUI?.note && showContent && (
           <div className="mb-3 text-xs text-muted-foreground flex items-start gap-1">
             <Clock className="h-3 w-3" />
@@ -295,40 +277,40 @@ const WordPopup = ({
           </div>
         )}
 
-        {/* Phonetics with flags and audio buttons */}
+        {/* Phonetics - đã fix lỗi null */}
         {showContent && (
           <div className="mb-3 space-y-2">
-             <div className="flex items-center gap-2">
-                <span className="text-base">{getFlagEmoji("uk")}</span>
-                <span className="text-sm font-mono">{wordData.phonetics.uk}</span>
-                <button
-                  onClick={handlePlayUk}
-                  disabled={isPlayingUk || !wordData.phonetics.ukAudioUrl}
-                  className="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isPlayingUk ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-base">{getFlagEmoji("uk")}</span>
+              <span className="text-sm font-mono">{phonetics.uk || "—"}</span>
+              <button
+                onClick={handlePlayUk}
+                disabled={isPlayingUk || !phonetics.ukAudioUrl}
+                className="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPlayingUk ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Volume2 className="h-4 w-4" />
+                )}
+              </button>
+            </div>
 
-           <div className="flex items-center gap-2">
-                <span className="text-base">{getFlagEmoji("us")}</span>
-                <span className="text-sm font-mono">{wordData.phonetics.us}</span>
-                <button
-                  onClick={handlePlayUs}
-                  disabled={isPlayingUs || !wordData.phonetics.usAudioUrl}
-                  className="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isPlayingUs ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-base">{getFlagEmoji("us")}</span>
+              <span className="text-sm font-mono">{phonetics.us || "—"}</span>
+              <button
+                onClick={handlePlayUs}
+                disabled={isPlayingUs || !phonetics.usAudioUrl}
+                className="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPlayingUs ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Volume2 className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
         )}
 
@@ -339,7 +321,7 @@ const WordPopup = ({
           </div>
         )}
 
-        {/* Definitions with scroll - loading skeleton */}
+        {/* Loading skeleton */}
         {isLoading && (
           <div className="space-y-3">
             <div className="animate-pulse h-4 bg-muted rounded w-3/4" />
@@ -349,7 +331,7 @@ const WordPopup = ({
           </div>
         )}
 
-        {/* Definitions content */}
+        {/* Definitions */}
         {showContent && !isLoading && wordData?.definitions && wordData.definitions.length > 0 && (
           <div className="max-h-64 overflow-y-auto space-y-3 pr-1">
             {wordData.definitions.map((def, i) => (
@@ -368,9 +350,7 @@ const WordPopup = ({
           </div>
         )}
 
-
-
-        {/* Footer with Cambridge link - LUÔN HIỂN THỊ nếu có word */}
+        {/* Footer */}
         {cambridgeLink && (
           <div className="mt-4 pt-3 border-t">
             <a
@@ -386,15 +366,15 @@ const WordPopup = ({
         )}
       </div>
 
-      {/* Audio elements - dùng ref, không tạo mới mỗi lần */}
+      {/* Audio elements */}
       <audio
         ref={audioUkRef}
-        src={wordData?.phonetics?.ukAudioUrl}
+        src={phonetics.ukAudioUrl || undefined}
         preload="none"
       />
       <audio
         ref={audioUsRef}
-        src={wordData?.phonetics?.usAudioUrl}
+        src={phonetics.usAudioUrl || undefined}
         preload="none"
       />
     </div>
