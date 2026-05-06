@@ -16,7 +16,7 @@ interface Props {
 
 const NOISE_PHONEMES = ["", " ", "ː", "ˑ", "None"]
 
-// 👉 Đã tinh chỉnh lại toàn bộ hệ thống Typography
+// Typography configs
 const IPA_TYPOGRAPHY = "font-sans text-[17px] sm:text-[19px] font-medium tracking-[0.03em]"
 const WORD_TYPOGRAPHY = "text-[17px] sm:text-[20px] md:text-[24px] font-medium leading-tight"
 const ERROR_TYPOGRAPHY = "text-[12px] sm:text-[13px] font-medium tracking-wide"
@@ -54,40 +54,6 @@ const getTokenDisplayText = (token: IDiffToken): string => {
   return ""
 }
 
-const normalizeStressTokens = (tokens: IDiffToken[], showExtra: boolean, expectedIpa: string = "") => {
-  const hasExpectedPrimary = expectedIpa.includes('ˈ') || expectedIpa.includes("'");
-  const hasExpectedSecondary = expectedIpa.includes('ˌ');
-
-  const hasCorrectPrimary = tokens.some(t => t.type === "STRESS_MATCH" && (t.expected === 'ˈ' || t.expected === "'"));
-  const hasCorrectSecondary = tokens.some(t => t.type === "STRESS_MATCH" && t.expected === 'ˌ');
-  
-  let usedPrimary = false;
-  let usedSecondary = false;
-  
-  return tokens.filter(t => {
-    if (t.type.startsWith("STRESS")) {
-      const isSecondary = t.expected === 'ˌ' || t.actual === 'ˌ';
-
-      if (isSecondary) {
-        if (!hasExpectedSecondary) return false;
-        if (usedSecondary) return false;
-        if (hasCorrectSecondary && t.type !== "STRESS_MATCH") return false;
-        usedSecondary = true;
-        return true;
-      } else {
-        if (!hasExpectedPrimary) return false;
-        if (usedPrimary) return false;
-        if (hasCorrectPrimary && t.type !== "STRESS_MATCH") return false;
-        usedPrimary = true;
-        return true;
-      }
-    }
-    
-    if (t.type === "EXTRA") return showExtra;
-    return true; 
-  })
-}
-
 const IpaRenderer = React.memo(({ 
   compares, 
   lastRecognizedPosition = 0, 
@@ -101,10 +67,10 @@ const IpaRenderer = React.memo(({
   showOriginal: boolean,
   showExtra: boolean
 }) => {
-  // Bật gạch chân nhóm và setup khoảng cách chuẩn (w-2 sm:w-2.5) như bạn muốn
   const wordGroupClass = "underline decoration-muted-foreground/40 underline-offset-[5px] decoration-1"
   const spaceElement = <span className="select-none inline-block w-2 sm:w-2.5" />
 
+  // Render raw IPA from dictionary if requested or no result available
   if (!compares || compares.length === 0 || showOriginal) {
     if (!expectedPhonetic) {
       return <span className="text-sm text-muted-foreground/50 italic">No phonetic data</span>
@@ -128,6 +94,7 @@ const IpaRenderer = React.memo(({
     )
   }
 
+  // Filter out completely EXTRA words if not requested
   const filteredCompares = showExtra 
     ? compares 
     : compares.filter(c => c.status !== "EXTRA")
@@ -139,6 +106,7 @@ const IpaRenderer = React.memo(({
       {filteredCompares.map((c, idx) => {
         const attempted = c.position <= lastRecognizedPosition
 
+        // Handle completely extra word recognized by user
         if (c.status === "EXTRA" && showExtra) {
           const extraText = c.phonemeDiff?.actual_ipa || c.recognizedWord || ""
           if (!extraText || extraText === "None") return null
@@ -154,6 +122,7 @@ const IpaRenderer = React.memo(({
 
         if (c.status === "EXTRA" && !showExtra) return null
 
+        // Handle unattempted words (grayed out)
         if (!attempted) {
           const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
           return (
@@ -166,6 +135,7 @@ const IpaRenderer = React.memo(({
           )
         }
 
+        // Handle words without specific diff tokens (fallback)
         const diffTokens = c.phonemeDiff?.diff_tokens
         if (!diffTokens || diffTokens.length === 0) {
           const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
@@ -183,14 +153,14 @@ const IpaRenderer = React.memo(({
           )
         }
 
-        const expectedIpa = c.phonemeDiff?.expected_ipa || ""
-        const normalizedTokens = normalizeStressTokens(diffTokens, showExtra, expectedIpa)
+        // Render phoneme diff tokens naturally
+        const displayTokens = showExtra ? diffTokens : diffTokens.filter(t => t.type !== "EXTRA")
         
         return (
           <React.Fragment key={`ipa-${idx}`}>
             {idx > 0 && spaceElement}
             <span className={cn("inline-block", wordGroupClass)}>
-              {normalizedTokens.map((token, tokenIdx) => {
+              {displayTokens.map((token, tokenIdx) => {
                 const displayText = getTokenDisplayText(token as IDiffToken)
                 if (!displayText || NOISE_PHONEMES.includes(displayText)) return null
                 return (
@@ -263,7 +233,6 @@ const WordItem = React.memo(({ c, attempted }: { c: any, attempted: boolean }) =
           </div>
         </PopoverTrigger>
       </div>
-      {/* 👉 Popup được tút lại Typography */}
       <PopoverContent className="w-auto min-w-[160px] p-3 rounded-lg border-border/60 shadow-md" sideOffset={6}>
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-2">
@@ -277,8 +246,8 @@ const WordItem = React.memo(({ c, attempted }: { c: any, attempted: boolean }) =
             )}
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-1">
-            <span className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground/70">Target</span>
-            <span className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground/70">Actual</span>
+            <span className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground/70">Correct</span>
+            <span className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground/70">You said</span>
             <span className="font-mono text-emerald-600 text-[14px] font-medium">/{c.phonemeDiff?.expected_ipa || "—"}/</span>
             <span className="font-mono text-red-500 text-[14px] font-medium">/{c.phonemeDiff?.actual_ipa || "—"}/</span>
           </div>
@@ -296,7 +265,6 @@ const YourResultTab = React.memo(({ result }: { result: IShadowingResult }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 👉 Typography Điểm số siêu bự, Label bao đẹp */}
       <div className="flex items-center gap-1 px-2 py-0.5">
         <div className="flex items-center gap-2">
           {isExcellent ? 
@@ -334,10 +302,9 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading, e
       {/* SECTION 1: PHONETIC */}
       <div className="flex flex-col gap-3 pb-4">
         <div className="flex items-center justify-between px-1">
-          {/* 👉 Tiêu đề làm nhỏ lại, in hoa, dãn chữ */}
           <div className="flex items-center gap-1.5">
             <BookA className="w-4 h-4 text-muted-foreground/70" />
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Phonetic</span>
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Pronunciation</span>
           </div>
           {(result && !isLoading) && (
             <div className="flex items-center gap-4">
@@ -348,7 +315,7 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading, e
                   onChange={(e) => setShowOriginalIpa(e.target.checked)}
                   className="w-4 h-4 rounded border-muted-foreground/30 accent-primary cursor-pointer"
                 />
-                <span className="text-[12px] font-semibold tracking-wide text-muted-foreground group-hover:text-foreground transition-colors">Original</span>
+                <span className="text-[12px] font-semibold tracking-wide text-muted-foreground group-hover:text-foreground transition-colors">Dictionary</span>
               </label>
               <label className="flex items-center gap-1.5 cursor-pointer group">
                 <input 
@@ -357,7 +324,7 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading, e
                   onChange={(e) => setShowExtraIpa(e.target.checked)}
                   className="w-4 h-4 rounded border-muted-foreground/30 accent-amber-500 cursor-pointer"
                 />
-                <span className="text-[12px] font-semibold tracking-wide text-amber-600 group-hover:text-amber-500 transition-colors">+Extra</span>
+                <span className="text-[12px] font-semibold tracking-wide text-amber-600 group-hover:text-amber-500 transition-colors">+ Extra sounds</span>
               </label>
             </div>
           )}

@@ -157,7 +157,7 @@ const RecordingControls = ({
               {shouldShowNextButton && (
                 <Button 
                   size="sm"
-                  className="gap-1.5 px-5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-bold shadow-sm hover:shadow-md animate-in fade-in zoom-in duration-300 tracking-wide" 
+                  className="gap-1.5 px-5 h-9 bg-primary text-primary-foreground rounded-full font-bold shadow-sm hover:shadow-md animate-in fade-in zoom-in duration-300 tracking-wide" 
                   onClick={onNext}
                 >
                   <span className="hidden sm:inline">Next</span> <ArrowRight className="h-4 w-4 stroke-[2.5]" />

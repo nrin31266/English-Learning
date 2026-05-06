@@ -325,7 +325,7 @@ const ActiveSentencePanel = ({
           })
           setTranscription(data)
         } catch (error) {
-          setRecordError("Upload hoặc chuyển đổi audio thất bại.")
+          setRecordError("Something went wrong while uploading or processing the recording.")
         } finally {
           setIsUploading(false)
         }

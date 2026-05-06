@@ -1,57 +1,49 @@
 # src/services/phoneme_alignment_service.py
 
 """
-Phoneme Alignment Service - ALIGNMENT & SCORING with OpenPhonemizer
-- Levenshtein alignment for correct phoneme matching
-- Semantic diff types: MATCH, MISMATCH, MISSING, EXTRA, STRESS_MATCH, STRESS_WRONG, PUNCT
-- STRESS and PUNCT do NOT affect score
-- PUNCT acts as visual anchor only (No diffs for missing/extra punctuation)
+Phoneme Alignment Service
+- Chịu trách nhiệm xử lý string IPA thành mảng Token.
+- Bóc tách Meta tokens (STRESS, PUNCT) khỏi luồng align.
+- Merge lại thành kết quả Diff hoàn chỉnh.
 """
 
-import re
-from typing import List, Dict, Tuple, Optional
+import os
+import sys
+from typing import List, Dict, Tuple
 
 if __name__ == "__main__":
-    import sys
-    import os
-
-    sys.path.insert(
-        0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-    )
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from src.services.phonemizer_service import get_ipa
 from src.utils.sequence_alignment import levenshtein_alignment_with_similarity
 
-
+# Định nghĩa các âm ghép. Quan trọng để tokenizer không chẻ đôi,
+# giúp ma trận SIMILAR_PHONEMES có thể bắt cặp chính xác (vd: eɪ -> aɪ).
 MULTI_CHAR_IPA = [
     "tʃ", "dʒ",
     "aɪ", "aʊ", "eɪ", "oʊ", "ɔɪ",
     "iː", "uː", "ɜː", "ɔː", "ɑː",
-    "æ",
     "ɪə", "ʊə", "eə",
-    "θ", "ð", "ʃ", "ʒ", "ŋ", "ər",
+    "ər",
 ]
 
 STRESS_MARKERS = {"ˈ", "ˌ"}
 PUNCT_MARKERS = {".", ",", "?", "!", ";", ":", '"', "(", ")", "[", "]", "{", "}", "-", "'"}
 
-
 def _get_token_type(token: str) -> str:
-    if token in STRESS_MARKERS:
-        return "STRESS"
-    if token in PUNCT_MARKERS:
-        return "PUNCT"
+    if token in STRESS_MARKERS: return "STRESS"
+    if token in PUNCT_MARKERS: return "PUNCT"
     return "PHONEME"
 
-
 def _ipa_to_token_list(ipa: str) -> List[Dict]:
-    if not ipa:
-        return []
+    """Tokenize chuỗi IPA thành Object phân loại (PHONEME/STRESS/PUNCT)"""
+    if not ipa: return []
 
     result = []
     i = 0
     while i < len(ipa):
         matched = False
+        # 1. Bắt các âm ghép nhiều ký tự
         for sym in MULTI_CHAR_IPA:
             if ipa.startswith(sym, i):
                 result.append({"value": sym, "type": "PHONEME"})
@@ -59,30 +51,32 @@ def _ipa_to_token_list(ipa: str) -> List[Dict]:
                 matched = True
                 break
 
+        # 2. Xử lý các ký tự đơn (Phụ âm, nguyên âm ngắn, dấu meta)
         if not matched:
             char = ipa[i]
-            token_type = _get_token_type(char)
-            result.append({"value": char, "type": token_type})
+            result.append({"value": char, "type": _get_token_type(char)})
             i += 1
 
     return result
 
-
 def _extract_phoneme_only(tokens: List[Dict]) -> List[str]:
     return [t["value"] for t in tokens if t["type"] == "PHONEME"]
-
 
 def compare_phonemes_with_alignment(
     expected_tokens: List[Dict],
     actual_tokens: List[Dict],
 ) -> Tuple[float, List[Dict]]:
-    
+    """
+    So sánh 2 mảng IPA tokens.
+    Sử dụng Levenshtein DP để map Phoneme, sau đó nhồi Meta tokens lại vào luồng.
+    """
     exp_phonemes = _extract_phoneme_only(expected_tokens)
     act_phonemes = _extract_phoneme_only(actual_tokens)
 
     if not exp_phonemes or not act_phonemes:
         return 0.0, [{"type": "NO_DATA", "expected": None, "actual": None, "position": None}]
 
+    # Align mảng âm thanh
     aligned_phoneme_pairs, distance = levenshtein_alignment_with_similarity(
         exp_phonemes, act_phonemes, similarity_threshold=0.5, anchor_first=False
     )
@@ -96,6 +90,7 @@ def compare_phonemes_with_alignment(
     act_token_idx = 0
 
     def _process_meta_tokens():
+        """Hàm nội bộ xử lý nhồi dấu nhấn, dấu câu vào lại vị trí gốc"""
         nonlocal exp_token_idx, act_token_idx, pos
         while True:
             exp_is_meta = exp_token_idx < len(expected_tokens) and expected_tokens[exp_token_idx]["type"] != "PHONEME"
@@ -105,22 +100,16 @@ def compare_phonemes_with_alignment(
                 e_tok = expected_tokens[exp_token_idx]
                 a_tok = actual_tokens[act_token_idx]
                 
-                # Cả hai đều là STRESS
                 if e_tok["type"] == "STRESS" and a_tok["type"] == "STRESS":
                     diff_type = "STRESS_MATCH" if e_tok["value"] == a_tok["value"] else "STRESS_WRONG"
                     diff_tokens.append({"type": diff_type, "expected": e_tok["value"], "actual": a_tok["value"], "position": pos})
                     pos += 1
-                # Cả hai đều là PUNCT
                 elif e_tok["type"] == "PUNCT" and a_tok["type"] == "PUNCT":
                     diff_tokens.append({"type": "PUNCT", "expected": e_tok["value"], "actual": a_tok["value"], "position": pos})
                     pos += 1
-                # Lệch kiểu (1 bên STRESS, 1 bên PUNCT)
                 else:
                     if e_tok["type"] == "STRESS":
                         diff_tokens.append({"type": "STRESS_WRONG", "expected": e_tok["value"], "actual": None, "position": pos})
-                        pos += 1
-                    if a_tok["type"] == "STRESS":
-                        diff_tokens.append({"type": "STRESS_WRONG", "expected": None, "actual": a_tok["value"], "position": pos})
                         pos += 1
                 
                 exp_token_idx += 1
@@ -128,22 +117,19 @@ def compare_phonemes_with_alignment(
 
             elif exp_is_meta:
                 e_tok = expected_tokens[exp_token_idx]
-                # CHỈ ĐẨY VÀO DIFF NẾU LÀ STRESS. BỎ QUA PUNCT.
+                # Phạt lỗi thiếu dấu nhấn. Bỏ qua dấu câu (PUNCT).
                 if e_tok["type"] == "STRESS":
                     diff_tokens.append({"type": "STRESS_WRONG", "expected": e_tok["value"], "actual": None, "position": pos})
                     pos += 1
                 exp_token_idx += 1
 
             elif act_is_meta:
-                a_tok = actual_tokens[act_token_idx]
-                # CHỈ ĐẨY VÀO DIFF NẾU LÀ STRESS. BỎ QUA PUNCT.
-                if a_tok["type"] == "STRESS":
-                    diff_tokens.append({"type": "STRESS_WRONG", "expected": None, "actual": a_tok["value"], "position": pos})
-                    pos += 1
+                # Bỏ qua meta rác từ Actual (vd: đọc sai nhấn âm nhưng gốc không có nhấn)
                 act_token_idx += 1
             else:
                 break
 
+    # Build mảng diff cuối cùng
     for exp_phoneme, act_phoneme in aligned_phoneme_pairs:
         _process_meta_tokens()
 
@@ -159,22 +145,19 @@ def compare_phonemes_with_alignment(
         diff_tokens.append({"type": diff_type, "expected": exp_phoneme, "actual": act_phoneme, "position": pos})
         pos += 1
 
-        if exp_phoneme is not None:
-            exp_token_idx += 1
-        if act_phoneme is not None:
-            act_token_idx += 1
+        if exp_phoneme is not None: exp_token_idx += 1
+        if act_phoneme is not None: act_token_idx += 1
 
     _process_meta_tokens()
 
     return round(score, 4), diff_tokens
-
 
 def compare_words_with_ipa(
     expected_word: str,
     actual_word: str,
     keep_stress: bool = True,
 ) -> Tuple[float, List[Dict], str, str]:
-
+    """Wrapper function xử lý từ text -> IPA -> Align Score"""
     exp_ipa_display = get_ipa(
         expected_word, keep_stress=keep_stress, normalize=True,
         remove_length=False, remove_punctuation=False, as_string=True,
@@ -199,60 +182,61 @@ def compare_words_with_ipa(
 
     return score, diff_tokens, exp_ipa_display, act_ipa_display
 
-
-
 # ========== MAIN TEST ==========
-from src.services.phonemizer_service import _tokenize_phonemes as tokenize_ipa
 if __name__ == "__main__":
     print("\n" + "=" * 80)
-    print("🔊 PHONEME ALIGNMENT SERVICE - TEST")
+    print("🔊 PHONEME ALIGNMENT SYSTEM - STRESS TEST REPORT")
     print("=" * 80)
 
     tests = [
-        ("practice", "fratic"), 
-        ("hello", "house"),
-        ("Hey", "Hi"),
-        ("Hello!", "hello"),
-        ("Hello, world!", "hello world"),
-        ("red.", "red"),
-        ("can't", "cant"),
-        ("butter", "budder"),
-        ("better", "bedder"),
-        ("sheep", "ship"),
-        ("banana", "bnana"),
-        ("cat", "cats"),
-        ("record", "record"),
-        ("chair", "share"),
-        ("photograph", "fotograph"),
-        ("", "hello"),
-        ("hello", ""),
-        ("favourable", "valuable"),
-        ("of", "reviews"),
+        # --- BASIC & SIMILARITY ---
+        ("better", "bedder"),       # Flapping T/D
+        ("sheep", "ship"),           # Tense/Lax Vowels
+        ("think", "sink"),           # Th-fronting (θ vs s)
+        
+        # --- CLUSTERS & ENDINGS (Thử thách Tie-breaking) ---
+        ("exercises", "exercise"),   # Missing plural ending
+        ("test", "tets"),            # Swap ending consonants
+        ("asked", "ast"),            # Consonant cluster reduction
+        ("months", "muns"),          # Complex cluster /nθs/
+        
+        # --- MULTI-SYLLABIC & REDUCTION ---
+        ("comfortable", "comf-table"), # Syllable deletion
+        ("probably", "prolly"),        # Standard spoken reduction
+        ("temperature", "tempritur"),  # Vowel reduction
+        
+        # --- WORD BOUNDARY & NOISE ---
+        ("the", "za"),               # Voiced th (ð vs z)
+        ("everything", "evritin"),    # Common mispronunciation
+        ("specifically", "specifly"), # Large syllable skip
+        
+        # --- EDGE CASES ---
+        ("a", "an"),                 # Addition
+        ("strength", "strenth"),     # /ŋθ/ vs /nθ/
+        ("rhythm", "ridim"),         # /ðm/ vs /dim/
     ]
 
     for idx, (exp, act) in enumerate(tests, 1):
         try:
             score, diffs, exp_ipa, act_ipa = compare_words_with_ipa(exp, act)
-            print(f"\n[{idx}] 📌 {exp}  vs  {act}")
-            print(f"   Expected IPA: {exp_ipa}")
-            print(f"   Actual IPA:   {act_ipa}")
-            print(f"   Score: {round(score, 4) if score is not None else 'N/A'}")
             
-            try:
-                print(f"   Tokens EXP: {tokenize_ipa(exp_ipa)}")
-                print(f"   Tokens ACT: {tokenize_ipa(act_ipa)}")
-            except Exception:
-                print("   ⚠️ Tokenize failed")
+            # Log gọn gàng theo dòng
+            status = "✅ PASS" if score >= 0.8 else "⚠️ REVIEW"
+            print(f"[{idx:02d}] {exp:15} vs {act:15} | Score: {score:.4f} | {status}")
+            print(f"    EXP: /{exp_ipa}/")
+            print(f"    ACT: /{act_ipa}/")
             
-            print("   Diffs:")
-            if not diffs:
-                print("     - (no diffs)")
-                continue
-            for d in diffs:
-                diff_type = d.get("type", "UNKNOWN")
-                exp_val = d.get("expected", "-")
-                act_val = d.get("actual", "-")
-                print(f"     - {diff_type:10}: '{exp_val}' vs '{act_val}'")
+            # Chỉ in các lỗi (Mismatch, Missing, Extra, Stress_wrong)
+            issues = [d for d in diffs if d['type'] not in ['MATCH', 'PUNCT', 'STRESS_MATCH']]
+            if issues:
+                diff_str = " | ".join([f"{i['type']}({i['expected']}->{i['actual']})" for i in issues])
+                print(f"    👉 Issues: {diff_str}")
+            else:
+                print(f"    ✨ Perfect Phoneme Match")
+            print("-" * 50)
+
         except Exception as e:
-            print(f"\n[{idx}] ❌ ERROR with test: {exp} vs {act}")
-            print(f"   → {e}")
+            print(f"[{idx:02d}] ❌ ERROR {exp} vs {act}: {e}")
+
+    print("=" * 80)
+    print("TEST COMPLETED")

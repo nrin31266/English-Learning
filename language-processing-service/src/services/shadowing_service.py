@@ -1,93 +1,56 @@
 import logging
 import os
-from typing import List, Tuple
-from src.services.phoneme_ipa_service import compare_phonemes_with_ipa, get_ipa_string_with_stress, compare_words_with_ipa
+from typing import List, Tuple, Dict, Any
+
+from src.services.phoneme_ipa_service import (
+    compare_phonemes_with_ipa, 
+    get_ipa_string_with_stress, 
+    compare_words_with_ipa
+)
 from src.dto import ShadowingResult, ShadowingWordCompare, ShadowingRequest, ShadowingWord
 from src.utils.text_normalizer import normalize_word_lower
 
-# Kiểu token: (raw, normalized)
-RecToken = Tuple[str, str]
+# Types for clarity
+RecToken = Tuple[str, str]  # (original, normalized)
 AlignedItem = Tuple[str | None, str | None, str | None, str | None, str]
 
+# Configuration Constants
 DEFAULT_EXTRA_PENALTY_ALPHA = 0.3
 EXTRA_PENALTY_ALPHA_ENV = "SHADOWING_EXTRA_PENALTY_ALPHA"
+
 logger = logging.getLogger(__name__)
 
-
-def get_pronunciation_score(expected_word: str, recognized_word: str) -> float:
-    """
-    Compatibility helper cho test Step 4:
-    - Neu co du lieu CMU o ca hai ben -> dung phoneme score.
-    - Neu thieu du lieu -> fallback char-level score.
-    """
-    score, diff_tokens = compare_phonemes_with_ipa(expected_word, recognized_word)
-    has_cmu_data = bool(diff_tokens) and diff_tokens[0].get("type") != "NO_DATA"
-    if has_cmu_data:
-        return score
-
-    exp = normalize_word_lower(expected_word) or ""
-    rec = normalize_word_lower(recognized_word) or ""
-
-    if not exp and not rec:
-        return 1.0
-    if not exp or not rec:
-        return 0.0
-
-    dist = _levenshtein_distance(exp, rec)
-    denom = max(len(exp), len(rec))
-    if denom <= 0:
-        return 0.0
-
-    return round(max(0.0, min(1.0, 1.0 - (dist / denom))), 4)
-
-
-# Levenshtein distance + similarity
 def _levenshtein_distance(a: str, b: str) -> int:
-    """
-    Levenshtein distance đơn giản O(len(a) * len(b)).
-    Dùng cho từ ngắn nên OK.
-    """
-    if a == b:
-        return 0
-    if not a:
-        return len(b)
-    if not b:
-        return len(a)
+    """Standard Levenshtein distance for short strings."""
+    if a == b: return 0
+    if not a: return len(b)
+    if not b: return len(a)
 
     la, lb = len(a), len(b)
     dp = [[0] * (lb + 1) for _ in range(la + 1)]
 
-    for i in range(la + 1):
-        dp[i][0] = i
-    for j in range(lb + 1):
-        dp[0][j] = j
+    for i in range(la + 1): dp[i][0] = i
+    for j in range(lb + 1): dp[0][j] = j
 
     for i in range(1, la + 1):
         for j in range(1, lb + 1):
             cost = 0 if a[i - 1] == b[j - 1] else 1
             dp[i][j] = min(
-                dp[i - 1][j] + 1,          # delete
-                dp[i][j - 1] + 1,          # insert
-                dp[i - 1][j - 1] + cost,   # replace
+                dp[i - 1][j] + 1,      # deletion
+                dp[i][j - 1] + 1,      # insertion
+                dp[i - 1][j - 1] + cost # substitution
             )
-
     return dp[la][lb]
 
-
-# Phân loại 1 từ (status + score)
-def _classify_word(
-    expected_norm: str | None,
-    recognized_norm: str | None,
-) -> tuple[str, float]:
+def _classify_word(expected_norm: str | None, recognized_norm: str | None) -> tuple[str, float]:
     """
-    Trả về (status, score) cho từng cặp từ:
-    - CORRECT: giống hệt → 1.0
-    - NEAR: khác rất ít (1–2 ký tự) → điểm 0.7–0.95
-    - WRONG: có từ ở cả 2 bên nhưng khác đáng kể → 0.0
-    - MISSING: thiếu từ → 0.0
-    - EXTRA: nói thừa từ → 0.0
+    Categorize word accuracy based on normalized text comparison.
+    Returns: (status, score)
+    - CORRECT: Perfect match
+    - NEAR: Small distance (e.g., typos, suffixes)
+    - WRONG: Significant difference
+    - MISSING/EXTRA: Missing or redundant words
     """
-    # Có cả 2 bên
     if expected_norm and recognized_norm:
         if expected_norm == recognized_norm:
             return "CORRECT", 1.0
@@ -95,67 +58,39 @@ def _classify_word(
         dist = _levenshtein_distance(expected_norm, recognized_norm)
         max_len = max(len(expected_norm), len(recognized_norm))
 
-        # 1) Rất gần: sai 1 ký tự (vd: news/new, learning/learnin)
+        # Heuristic for NEAR status
         if dist == 1:
-            # từ ngắn -> nương tay hơn
-            if max_len <= 4:
-                return "NEAR", 0.95
-            elif max_len <= 7:
-                return "NEAR", 0.9
-            else:
-                return "NEAR", 0.85
+            if max_len <= 4: return "NEAR", 0.95
+            if max_len <= 7: return "NEAR", 0.9
+            return "NEAR", 0.85
 
-        # 2) Hơi lệch hơn 1 tí nhưng vẫn khá giống
         sim = 1.0 - dist / max_len
         if sim >= 0.8:
             return "NEAR", 0.7
 
-        # 3) Còn lại -> sai hẳn
         return "WRONG", 0.0
 
-    # Thiếu từ
-    if expected_norm and not recognized_norm:
-        return "MISSING", 0.0
-
-    # Thừa từ
-    if not expected_norm and recognized_norm:
-        return "EXTRA", 0.0
-
-    # Fallback
+    if expected_norm and not recognized_norm: return "MISSING", 0.0
+    if not expected_norm and recognized_norm: return "EXTRA", 0.0
     return "WRONG", 0.0
 
-
-# Helper: lấy recognized text + tokens
 def _extract_recognized_tokens(transcription_result: dict) -> tuple[str, List[RecToken]]:
-    """
-    Lấy ra:
-    - recognized_text: string đầy đủ
-    - rec_items: list[(raw, normalized)]
-    """
-    recognized_text: str = transcription_result.get("text") or ""
+    """Extract and normalize tokens from WhisperX transcription."""
+    recognized_text = transcription_result.get("text") or ""
     segments = transcription_result.get("segments") or []
 
-    # Nếu text trống, build từ segments.words
+    # Fallback: Build text from word segments if main text is empty
     if not recognized_text:
-        words_tokens: List[str] = [
-            w.get("word", "")
-            for seg in segments
-            for w in seg.get("words", [])
-            if w.get("word")
-        ]
+        words_tokens = [w.get("word", "") for seg in segments for w in seg.get("words", []) if w.get("word")]
         recognized_text = " ".join(words_tokens)
 
     raw_tokens = recognized_text.split()
-    rec_items: List[RecToken] = []
-
+    rec_items = []
     for t in raw_tokens:
         n = normalize_word_lower(t)
-        if not n:
-            continue
-        rec_items.append((t, n))
+        if n: rec_items.append((t, n))
 
     return recognized_text, rec_items
-
 
 def _align_words(
     expected_words: list[ShadowingWord],
@@ -163,305 +98,151 @@ def _align_words(
     rec_items: List[RecToken],
 ) -> List[AlignedItem]:
     """
-    Sequence alignment (DP) giữa expected words và recognized words.
-
-    Output mỗi phần tử gồm:
-    (expected_word, expected_norm, recognized_raw, recognized_norm, op)
-    op ∈ {MATCH, SUBSTITUTE, INSERT, DELETE}
+    Align expected vs recognized words using Dynamic Programming.
+    Optimizes for global consistency.
     """
-    n = len(expected_norm)
-    m = len(rec_items)
-
-    # dp[i][j] = edit distance tối thiểu để align expected[:i] và recognized[:j]
+    n, m = len(expected_norm), len(rec_items)
     dp = [[0] * (m + 1) for _ in range(n + 1)]
 
-    for i in range(1, n + 1):
-        dp[i][0] = i
-    for j in range(1, m + 1):
-        dp[0][j] = j
+    for i in range(1, n + 1): dp[i][0] = i
+    for j in range(1, m + 1): dp[0][j] = j
 
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            exp_norm = expected_norm[i - 1] or ""
-            rec_norm = rec_items[j - 1][1] or ""
-            sub_cost = 0 if exp_norm == rec_norm else 1
-
+            sub_cost = 0 if expected_norm[i-1] == rec_items[j-1][1] else 1
             dp[i][j] = min(
-                dp[i - 1][j - 1] + sub_cost,  # match/substitute
-                dp[i - 1][j] + 1,             # delete (missing)
-                dp[i][j - 1] + 1,             # insert (extra)
+                dp[i - 1][j - 1] + sub_cost,
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1
             )
 
-    # Backtrack từ cuối để lấy alignment path
-    aligned_rev: List[AlignedItem] = []
+    # Backtrack path
+    aligned_rev = []
     i, j = n, m
-
     while i > 0 or j > 0:
-        # Ưu tiên đi chéo trước để alignment ổn định hơn.
         if i > 0 and j > 0:
             exp_norm = expected_norm[i - 1] or ""
             rec_raw, rec_norm = rec_items[j - 1]
-            sub_cost = 0 if exp_norm == (rec_norm or "") else 1
-
+            sub_cost = 0 if exp_norm == rec_norm else 1
             if dp[i][j] == dp[i - 1][j - 1] + sub_cost:
-                op = "MATCH" if sub_cost == 0 else "SUBSTITUTE"
-                aligned_rev.append(
-                    (
-                        expected_words[i - 1].wordText,
-                        expected_norm[i - 1],
-                        rec_raw,
-                        rec_norm,
-                        op,
-                    )
-                )
-                i -= 1
-                j -= 1
+                aligned_rev.append((expected_words[i-1].wordText, exp_norm, rec_raw, rec_norm, "MATCH" if sub_cost == 0 else "SUBSTITUTE"))
+                i, j = i - 1, j - 1
                 continue
-
-        # INSERT = recognized thừa
         if j > 0 and dp[i][j] == dp[i][j - 1] + 1:
             rec_raw, rec_norm = rec_items[j - 1]
             aligned_rev.append((None, None, rec_raw, rec_norm, "INSERT"))
             j -= 1
-            continue
-
-        # DELETE = expected bị thiếu
-        if i > 0:
-            aligned_rev.append(
-                (
-                    expected_words[i - 1].wordText,
-                    expected_norm[i - 1],
-                    None,
-                    None,
-                    "DELETE",
-                )
-            )
+        elif i > 0:
+            aligned_rev.append((expected_words[i-1].wordText, expected_norm[i-1], None, None, "DELETE"))
             i -= 1
 
     aligned_rev.reverse()
     return aligned_rev
 
-
-def _get_extra_penalty_alpha() -> float:
-    """
-    Alpha cho penalty tu EXTRA words.
-
-    - Doc tu env SHADOWING_EXTRA_PENALTY_ALPHA.
-    - Fallback ve DEFAULT_EXTRA_PENALTY_ALPHA khi env invalid.
-    - Clamp ve [0.0, 1.0] de tranh cau hinh qua cuc doan.
-
-    Backward compatibility: dat alpha=0 se ve cong thuc cu.
-    """
-    raw = os.getenv(EXTRA_PENALTY_ALPHA_ENV, str(DEFAULT_EXTRA_PENALTY_ALPHA))
-    try:
-        alpha = float(raw)
-    except (TypeError, ValueError):
-        alpha = DEFAULT_EXTRA_PENALTY_ALPHA
-
-    if alpha < 0.0:
-        return 0.0
-    if alpha > 1.0:
-        return 1.0
-    return alpha
-
-
-def _extract_word_timestamps(transcription_result: dict) -> list[dict]:
-    """
-    Trích word timestamps từ WhisperX segments.
-    Output: [{"word": str, "start": float, "end": float}, ...]
-    """
-    segments = transcription_result.get("segments") or []
-    items: list[dict] = []
-
-    for seg in segments:
-        words = seg.get("words") or []
-        for w in words:
-            start = w.get("start")
-            end = w.get("end")
-            word = w.get("word")
-
-            if word is None or start is None or end is None:
-                continue
-
-            try:
-                start_f = float(start)
-                end_f = float(end)
-            except (TypeError, ValueError):
-                continue
-
-            if end_f <= start_f:
-                continue
-
-            items.append({"word": str(word), "start": start_f, "end": end_f})
-
-    return items
-
-
 def _compute_fluency_score(word_timestamps: list[dict]) -> tuple[float, float, float]:
-    """
-    Heuristic fluency score (không dùng ML):
-    - avgPause: khoảng dừng trung bình giữa các từ (giây)
-    - speechRate: số từ/giây
-    - fluencyScore: [0, 1]
-    """
-    if not word_timestamps:
-        return 0.0, 0.0, 0.0
-
-    # Đảm bảo thứ tự theo thời gian.
+    """Heuristic fluency calculation based on pauses and speech rate."""
+    if not word_timestamps: return 0.0, 0.0, 0.0
+    
     words = sorted(word_timestamps, key=lambda x: x["start"])
-
     if len(words) == 1:
         duration = words[0]["end"] - words[0]["start"]
-        speech_rate = 1.0 / duration if duration > 0 else 0.0
-        return round(1.0, 4), 0.0, round(speech_rate, 4)
+        return 1.0, 0.0, round(1.0 / duration if duration > 0 else 0.0, 4)
 
-    pauses: list[float] = []
-    for i in range(1, len(words)):
-        gap = words[i]["start"] - words[i - 1]["end"]
-        pauses.append(max(0.0, gap))
-
-    avg_pause = sum(pauses) / len(pauses) if pauses else 0.0
-
+    pauses = [max(0.0, words[i]["start"] - words[i-1]["end"]) for i in range(1, len(words))]
+    avg_pause = sum(pauses) / len(pauses)
     duration = words[-1]["end"] - words[0]["start"]
     speech_rate = len(words) / duration if duration > 0 else 0.0
 
-    # Pause càng lớn -> điểm càng thấp.
+    # Normalization [0, 1]
     pause_score = max(0.0, min(1.0, 1.0 - (avg_pause / 1.2)))
-
-    # Speech rate lý tưởng xấp xỉ 2.5 w/s; càng lệch càng giảm điểm.
     target_rate = 2.5
     rate_score = max(0.0, min(1.0, 1.0 - abs(speech_rate - target_rate) / target_rate))
 
-    fluency_score = (0.55 * pause_score) + (0.45 * rate_score)
-    fluency_score = max(0.0, min(1.0, fluency_score))
+    fluency = (0.55 * pause_score) + (0.45 * rate_score)
+    return round(fluency, 4), round(avg_pause, 4), round(speech_rate, 4)
 
-    return round(fluency_score, 4), round(avg_pause, 4), round(speech_rate, 4)
-
-
-# Main: build_shadowing_result
-def build_shadowing_result(
-    rq: ShadowingRequest,
-    transcription_result: dict,
-) -> ShadowingResult:
+def build_shadowing_result(rq: ShadowingRequest, transcription_result: dict) -> ShadowingResult:
+    """Main orchestrator for building the shadowing result."""
     expected_words = rq.expectedWords
+    expected_norm = [normalize_word_lower(w.wordText) for w in expected_words]
 
-    # Câu chuẩn để hiển thị
-    expected_text = " ".join(w.wordText for w in expected_words)
-    # Defensive normalize: payload có thể gửi wordNormalized chưa sạch (vd: "let's").
-    # Ưu tiên wordNormalized nếu có, fallback sang wordText để tránh mismatch giả.
-    expected_norm = [
-        normalize_word_lower(w.wordText)  # CHỈ lowercase, KHÔNG xóa punctuation
-        for w in expected_words
-    ]
-
-    # Câu recognized + tokens chuẩn hóa
+    # STT extraction
     recognized_text, rec_items = _extract_recognized_tokens(transcription_result)
-    word_timestamps = _extract_word_timestamps(transcription_result)
+    
+    # Timestamps & Fluency
+    segments = transcription_result.get("segments") or []
+    word_timestamps = []
+    for seg in segments:
+        for w in seg.get("words", []):
+            if all(k in w for k in ("word", "start", "end")):
+                word_timestamps.append(w)
+    
     fluency_score, avg_pause, speech_rate = _compute_fluency_score(word_timestamps)
-
     aligned_items = _align_words(expected_words, expected_norm, rec_items)
 
     compares: List[ShadowingWordCompare] = []
-    correct_count = 0          # chỉ CORRECT
-    total_score = 0.0          # sum(score) cho các từ expected có mặt
-    extra_words = 0            # số từ recognized thừa
-
+    correct_count, total_score, extra_words = 0, 0.0, 0
     last_recognized_position = -1
 
-    for position, aligned in enumerate(aligned_items):
-        exp_word, exp_norm, rec_raw, rec_norm, align_type = aligned
-        phoneme_diff = None
+    alpha = float(os.getenv(EXTRA_PENALTY_ALPHA_ENV, DEFAULT_EXTRA_PENALTY_ALPHA))
 
+    for position, (exp_word, exp_norm, rec_raw, rec_norm, align_type) in enumerate(aligned_items):
         if rec_norm is not None:
             last_recognized_position = position
         
+        phoneme_diff = None
         if align_type == "INSERT":
             status, score = "EXTRA", 0.0
+            extra_words += 1
         elif align_type == "DELETE":
             status, score = "MISSING", 0.0
         else:
-            # MATCH/SUBSTITUTE đều dùng classifier cũ để giữ behavior hiện có.
             status, score = _classify_word(exp_norm, rec_norm)
             
+            # PHONEME UPGRADE LOGIC: Refine scoring using IPA comparison
             if status in ("NEAR", "WRONG") and exp_word and rec_raw:
-                phoneme_score, diff_tokens, expected_ipa, actual_ipa = compare_words_with_ipa(
-                    exp_word,
-                    rec_raw,
-                )
+                p_score, p_diff, exp_ipa, act_ipa = compare_words_with_ipa(exp_word, rec_raw)
                 phoneme_diff = {
-                    "score": phoneme_score,
-                    "diff_tokens": diff_tokens,
-                    "expected_ipa": expected_ipa or get_ipa_string_with_stress(exp_word),
-                    "actual_ipa": actual_ipa or get_ipa_string_with_stress(rec_raw),
+                    "score": p_score, "diff_tokens": p_diff,
+                    "expected_ipa": exp_ipa or get_ipa_string_with_stress(exp_word),
+                    "actual_ipa": act_ipa or get_ipa_string_with_stress(rec_raw),
                 }
                 
-                # 🔥 NÂNG CẤP DỰA TRÊN PHONEME_SCORE
-                if phoneme_score >= 0.9 and status == "NEAR":
-                    # chỉ upgrade nếu gần sẵn + phát âm rất tốt
-                    status = "CORRECT"
-                    score = 1.0
+                # Accuracy upgrade based on phonetic quality
+                if p_score >= 0.9 and status != "CORRECT":
+                    status, score = "CORRECT", 1.0
+                elif p_score >= 0.75 and status == "WRONG":
+                    status, score = "NEAR", 0.7
 
-                elif phoneme_score >= 0.75 and status == "WRONG":
-                    status = "NEAR"
-                    score = 0.7
-        
-        if status not in ("NEAR", "WRONG"):
-            expected_ipa, actual_ipa = None, None
-            if status == "EXTRA":
-                expected_ipa = None
-                actual_ipa = get_ipa_string_with_stress(rec_raw) if rec_raw else None
-            elif status == "MISSING":
-                expected_ipa = get_ipa_string_with_stress(exp_word) if exp_word else None
-                actual_ipa = None
-            else:  # CORRECT
-                ipa = get_ipa_string_with_stress(exp_word) if exp_word else None
-                expected_ipa = ipa
-                actual_ipa = ipa
-
+        # Fallback for phoneme IPA display
+        if not phoneme_diff:
+            e_ipa = get_ipa_string_with_stress(exp_word) if exp_word else None
+            a_ipa = get_ipa_string_with_stress(rec_raw) if rec_raw else None
             phoneme_diff = {
                 "score": 1.0 if status == "CORRECT" else 0.0,
                 "diff_tokens": [],
-                "expected_ipa": expected_ipa,
-                "actual_ipa": actual_ipa,
+                "expected_ipa": e_ipa if status != "EXTRA" else None,
+                "actual_ipa": a_ipa if status != "MISSING" else None,
             }
 
-        if status == "CORRECT":
-            correct_count += 1
+        if status == "CORRECT": correct_count += 1
+        if exp_norm is not None: total_score += score
 
-        if status == "EXTRA":
-            extra_words += 1
+        compares.append(ShadowingWordCompare(
+            position=position, expectedWord=exp_word, recognizedWord=rec_raw,
+            expectedNormalized=exp_norm, recognizedNormalized=rec_norm,
+            status=status, score=score, phonemeDiff=phoneme_diff
+        ))
 
-        if exp_norm is not None:
-            total_score += score
-
-        compares.append(
-            ShadowingWordCompare(
-                position=position,
-                expectedWord=exp_word,
-                recognizedWord=rec_raw,
-                expectedNormalized=exp_norm,
-                recognizedNormalized=rec_norm,
-                status=status,
-                score=score,
-                phonemeDiff=phoneme_diff,
-            )
-        )
-
+    # Final scoring calculation
     total_words = len(expected_norm)
-    if total_words > 0:
-        alpha = _get_extra_penalty_alpha()
-        accuracy = (correct_count / total_words) * 100.0
-        # Step 2: phạt nhẹ khi user nói thừa.
-        # alpha=0 -> giữ hành vi cũ, không phạt EXTRA (backward compatibility).
-        weighted_denominator = total_words + alpha * extra_words
-        weighted_accuracy = (total_score / weighted_denominator) * 100.0
-    else:
-        accuracy = 0.0
-        weighted_accuracy = 0.0
+    accuracy = (correct_count / total_words * 100.0) if total_words > 0 else 0.0
+    weighted_denominator = total_words + (alpha * extra_words)
+    weighted_accuracy = (total_score / weighted_denominator * 100.0) if weighted_denominator > 0 else 0.0
 
     return ShadowingResult(
         sentenceId=rq.sentenceId,
-        expectedText=expected_text,
+        expectedText=" ".join(w.wordText for w in expected_words),
         recognizedText=recognized_text,
         totalWords=total_words,
         correctWords=correct_count,

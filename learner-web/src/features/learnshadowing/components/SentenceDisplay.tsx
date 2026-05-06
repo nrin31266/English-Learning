@@ -40,11 +40,10 @@ const SentenceDisplay = ({
               <button
                 key={`${word.id || index}`}
                 className={cn(
-                  // 👉 Size chữ đồng bộ hoàn toàn với bản Result Panel
                   "relative text-[17px] sm:text-[20px] md:text-[24px] transition-all duration-200 ease-out",
                   isActive
-                    ? "text-primary font-semibold scale-[1.02]" // Đang active thì rực lên, nảy nhẹ một xíu
-                    : "text-foreground/75 font-medium hover:text-primary hover:scale-[1.02]",
+                    ? "text-primary font-semibold scale-[1.05]" 
+                    : "text-foreground/75 font-medium hover:text-primary hover:scale-[1.05]",
                   "px-0.5 rounded-md",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50" // Accessiblity tốt hơn
                 )}
