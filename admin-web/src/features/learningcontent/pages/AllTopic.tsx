@@ -21,11 +21,12 @@ import { useAppDispatch, useAppSelector } from "@/store"
 import { fetchTopics } from "@/store/learningcontent/topicSlide"
 import { getTextColorForHex } from "@/utils/colorUtils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
-import { BadgeCheckIcon, CircleX, SettingsIcon, SquarePlus } from "lucide-react"
+import { BadgeCheckIcon, CircleX, ExternalLink, SettingsIcon, SquarePlus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from 'react-i18next'
 import { Link } from "react-router-dom"
 import { TopicDialog } from "../components/TopicDialog"
+
 const AllTopic = () => {
     const { t } = useTranslation()
     const [open, setOpen] = useState(false);
@@ -35,67 +36,73 @@ const AllTopic = () => {
     const { topics } = useAppSelector((state) => state.learningContent.topics);
     const [hydrating, setHydrating] = useState(true);
     useEffect(() => {
-            const id = setTimeout(() => setHydrating(false), 50); // 10–120ms
-            return () => clearTimeout(id);
-        }, []);
+        const id = setTimeout(() => setHydrating(false), 50);
+        return () => clearTimeout(id);
+    }, []);
     useEffect(() => {
         if (topics.status === 'idle') {
             dispatch(fetchTopics());
         }
-        // if (topicOptions.status === 'idle') {
-            //     dispatch(fetchTopicOptions());
-            // }
-        
     }, [dispatch]);
+
     if (hydrating) {
-        return <SkeletonComponent/>;
+        return <SkeletonComponent />;
     }
+
     return (
-        <div className="flex flex-col gap-8">
-            <div className="flex justify-between items-center h-6">
+        <div className="space-y-3">
+            
+            {/* Header */}
+            <div className="flex justify-between items-center">
                 <Breadcrumb>
                     <BreadcrumbList>
-                        <BreadcrumbItem >
+                        <BreadcrumbItem>
                             <BreadcrumbPage>{t("appMenu.learningContent")}</BreadcrumbPage>
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
-
                         <BreadcrumbItem>
                             <BreadcrumbPage>{t("appMenu.topics")}</BreadcrumbPage>
                         </BreadcrumbItem>
                     </BreadcrumbList>
                 </Breadcrumb>
-                <div>
-                    <Button onClick={() => {
+
+                <Button
+                    onClick={() => {
                         setMode("add");
                         setOpen(true);
                         setTopic(undefined);
-                    }} variant={"outline"} className="h-6 text-xs">
-                        <SquarePlus />
-                        {t("allTopics.addButton")}</Button>
-                </div>
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                >
+                    <SquarePlus className="h-3.5 w-3.5" />
+                    {t("allTopics.addButton")}
+                </Button>
             </div>
-            <div className="border p-2 rounded-md">
-                <Table className="overflow-auto">
+
+            {/* Table */}
+            <div className="rounded-md border overflow-hidden">
+                <Table>
                     <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-4 max-w-8">{t("allTopics.table.columns.index")}</TableHead>
-                            <TableHead>{t("allTopics.table.columns.name")}</TableHead>
-                            <TableHead>{t("allTopics.table.columns.description")}</TableHead>
-                            <TableHead>{t("allTopics.table.columns.active")}</TableHead>
-                            <TableHead className="text-center">{t("allTopics.table.columns.lessons")}</TableHead>
-                            <TableHead>{t("allTopics.table.columns.time")}</TableHead>
-                            <TableHead className="text-right">{t("allTopics.table.columns.actions")}</TableHead>
+                        <TableRow className="h-9">
+                            <TableHead className="w-8 text-xs">{t("allTopics.table.columns.index")}</TableHead>
+                            <TableHead className="text-xs">{t("allTopics.table.columns.name")}</TableHead>
+                            <TableHead className="text-xs">{t("allTopics.table.columns.description")}</TableHead>
+                            <TableHead className="text-xs">{t("allTopics.table.columns.active")}</TableHead>
+                            <TableHead className="text-center text-xs w-[90px]">{t("allTopics.table.columns.lessons")}</TableHead>
+                            <TableHead className="text-xs">{t("allTopics.table.columns.time")}</TableHead>
+                            <TableHead className="text-right text-xs w-[60px]">{t("allTopics.table.columns.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {/* LOADING STATE */}
                         {topics.status === "loading" && (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-32 text-center">
-                                    <div className="flex justify-center items-center gap-2 text-stone-500">
+                                <TableCell colSpan={7} className="h-24 text-center">
+                                    <div className="flex justify-center items-center gap-2 text-muted-foreground">
                                         <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-400 border-t-transparent"></div>
-                                        <span>{t("allTopics.table.loading")}</span>
+                                        <span className="text-xs">{t("allTopics.table.loading")}</span>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -104,84 +111,101 @@ const AllTopic = () => {
                         {/* EMPTY STATE */}
                         {topics.status === "succeeded" && topics.data.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-32 text-center text-stone-500">
+                                <TableCell colSpan={7} className="h-20 text-center text-xs text-muted-foreground">
                                     {t("allTopics.table.noResults")}
                                 </TableCell>
                             </TableRow>
                         )}
 
                         {topics.data.map((item, index) => (
-                            <TableRow key={item.id}>
-                                <TableCell>{index + 1}</TableCell>
-                                <TableCell className="font-medium max-w-[200px]" style={{
-                                    background: item.color ? item.color : "white",
-                                    color: getTextColorForHex(item.color ? item.color : "#FFFFFF") === "light" ? "white" : "black"
-                                }}>
-                                    <Link className="hover:underline line-clamp-none truncate" to={`/topics/${item.slug}`}> # {item.name} </Link>
+                            <TableRow key={item.id} className="h-9">
+                                <TableCell className="text-xs text-muted-foreground">{index + 1}</TableCell>
+                                <TableCell
+                                    className="font-medium max-w-[200px] px-2.5 py-1"
+                                    style={{
+                                        background: item.color || "white",
+                                        color: getTextColorForHex(item.color || "#FFFFFF") === "light" ? "white" : "black"
+                                    }}
+                                >
+                                    <Link
+                                        to={`/all-lessons?topicSlug=${item.slug}&page=1`}
+                                        className="inline-flex items-center gap-1 hover:underline text-xs"
+                                    >
+                                        {item.name}
+                                        <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+                                    </Link>
                                 </TableCell>
-                                <TableCell className="max-w-[300px] text-stone-500">
-                                    <p className="truncate line-clamp-1">{item.description ? item.description : "-"}</p>
+                                <TableCell className="max-w-[300px] text-xs text-muted-foreground px-2.5 py-1">
+                                    <p className="truncate">{item.description || "-"}</p>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="px-2.5 py-1">
                                     <Badge
                                         variant="secondary"
-                                        className={`text-white ${item.isActive ? 'bg-green-600' : 'bg-red-600'}`}
+                                        className={`text-white text-[11px] h-5 px-1.5 gap-1 ${item.isActive ? 'bg-green-600' : 'bg-red-600'}`}
                                     >
-                                        {
-                                            item.isActive ? <BadgeCheckIcon className="inline-block mr-1" /> : <CircleX className="inline-block mr-1" />
+                                        {item.isActive
+                                            ? <BadgeCheckIcon className="h-3 w-3" />
+                                            : <CircleX className="h-3 w-3" />
                                         }
-                                        {
-                                            item.isActive ? t("allTopics.table.active") : t("allTopics.table.inactive")
-                                        }
-
+                                        {item.isActive ? t("allTopics.table.active") : t("allTopics.table.inactive")}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="text-center w-[100px]">
-                                    <Badge
-                                        className="h-5 min-w-5 rounded-full px-1 font-mono tabular-nums"
-                                        variant="outline"
+                                <TableCell className="text-center px-2.5 py-1">
+                                    <Link
+                                        to={`/all-lessons?topicSlug=${item.slug}&page=1`}
+                                        className="inline-flex"
                                     >
-                                        {item.lessonCount ?? 0}
-                                    </Badge>
+                                        <Badge
+                                            className="h-5 min-w-5 rounded-full px-1.5 font-mono tabular-nums text-xs hover:bg-primary/20 transition-colors cursor-pointer"
+                                            variant="outline"
+                                        >
+                                            {item.lessonCount ?? 0}
+                                        </Badge>
+                                    </Link>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="px-2.5 py-1">
                                     <Tooltip>
-                                        <TooltipTrigger>
-
-                                            <div className="text-xs text-stone-400 flex flex-col">
+                                        <TooltipTrigger asChild>
+                                            <div className="text-[11px] text-muted-foreground flex flex-col leading-tight">
                                                 <span>{t("allTopics.table.created", { date: new Date(item.createdAt).toLocaleDateString() })}</span>
                                                 <span>{t("allTopics.table.updated", { date: new Date(item.updatedAt).toLocaleDateString() })}</span>
                                             </div>
-
                                         </TooltipTrigger>
-                                        <TooltipContent>
-                                            <div className="text-xs text-stone-400 flex flex-col bg-black p-2 rounded-md">
-                                                <span>{t("allTopics.table.created", { date: new Date(item.createdAt).toLocaleString() })}</span>
-                                                <span>{t("allTopics.table.updated", { date: new Date(item.updatedAt).toLocaleString() })}</span>
+                                        <TooltipContent side="top" align="center">
+                                            <div className="text-[11px] bg-popover text-popover-foreground px-2 py-1.5 rounded-md shadow-md border">
+                                                <span className="block">{t("allTopics.table.created", { date: new Date(item.createdAt).toLocaleString() })}</span>
+                                                <span className="block">{t("allTopics.table.updated", { date: new Date(item.updatedAt).toLocaleString() })}</span>
                                             </div>
                                         </TooltipContent>
                                     </Tooltip>
                                 </TableCell>
-
-                                <TableCell className="text-right">
-                                    <Button onClick={() => {
-                                        setMode("edit");
-                                        setOpen(true);
-                                        setTopic(item);
-                                    }} size="icon-sm" >
-                                        <SettingsIcon className="size-4" />
+                                <TableCell className="text-right px-2.5 py-1">
+                                    <Button
+                                        onClick={() => {
+                                            setMode("edit");
+                                            setOpen(true);
+                                            setTopic(item);
+                                        }}
+                                        size="icon-sm"
+                                        variant="ghost"
+                                        className="h-7 w-7"
+                                    >
+                                        <SettingsIcon className="h-3.5 w-3.5" />
                                     </Button>
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                     <TableFooter>
-                        <TableRow>
-                            <TableCell colSpan={7}>{t("allTopics.table.total", { count: topics.data.length })}</TableCell>
+                        <TableRow className="h-8">
+                            <TableCell colSpan={7} className="text-xs text-muted-foreground px-2.5 py-1">
+                                {t("allTopics.table.total", { count: topics.data.length })}
+                            </TableCell>
                         </TableRow>
                     </TableFooter>
                 </Table>
             </div>
+
             <TopicDialog open={open} mode={mode} topic={topic} onClose={() => setOpen(false)} />
         </div>
     )

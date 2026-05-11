@@ -279,7 +279,10 @@ const LessonDetails: React.FC = () => {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <Link to="/all-lessons" className="flex underline items-center gap-1 text-muted-foreground">
+                <Link
+                  to={`/all-lessons?topicSlug=${data.topic.slug}&page=1`}
+                  className="flex underline items-center gap-1 text-muted-foreground"
+                >
                   {t("lessonDetails.breadcrumb.lessons")}
                 </Link>
               </BreadcrumbItem>
@@ -300,10 +303,12 @@ const LessonDetails: React.FC = () => {
             <StatusBadge status={data.status} />
             <LessonTypeBadge type={data.lessonType} />
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            {t("lessonDetails.topicLabel")}{" "}
+          <Link
+            to={`/all-lessons?topicSlug=${data.topic.slug}&page=1`}
+            className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-muted/90 transition-colors"
+          >
             <span className="font-medium">{data.topic.name}</span>
-          </p>
+          </Link>
         </div>
       </div>
 

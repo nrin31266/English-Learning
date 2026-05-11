@@ -12,7 +12,6 @@ interface RecordingControlsProps {
   hasRecordedAudio: boolean
   isPlayingRecorded: boolean
   userInteracted: boolean
-  isCompleted: boolean
   shouldShowSkipButton: boolean
   shouldShowNextButton: boolean
   recordError: string | null
@@ -31,7 +30,6 @@ const RecordingControls = ({
   hasRecordedAudio,
   isPlayingRecorded,
   userInteracted,
-  isCompleted,
   shouldShowSkipButton,
   shouldShowNextButton,
   recordError,

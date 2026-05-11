@@ -1,20 +1,18 @@
 // src/pages/shadowing/components/ActiveSentencePanel.tsx
 
 import handleAPI from "@/apis/handleAPI"
+import CompletedBadge from "@/components/CompletedBadge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import type { ILessonDetailsResponse, ILessonWordResponse, ITranscriptionResponse } from "@/types"
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import SentenceDisplay from "./SentenceDisplay"
-import ShadowingResultPanel from "./ShadowingResultPanel"
-import MicrophoneSelector from "./MicrophoneSelector"
-import RecordingControls from "./RecordingControls"
 import WordPopup from "@/components/WordPopup"
 import { useWordPopup } from "@/hooks/UseWordPopupReturn"
 import { useAppDispatch } from "@/store"
-import { updateSentenceCompletion } from "@/store/lessonForShadowingSlide"
+import type { ILessonDetailsResponse, ILessonWordResponse, ITranscriptionResponse } from "@/types"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { successSound } from "../../../utils/sound"
-import { CheckCircle2 } from "lucide-react"
-import CompletedBadge from "@/components/CompletedBadge"
+import MicrophoneSelector from "./MicrophoneSelector"
+import RecordingControls from "./RecordingControls"
+import SentenceDisplay from "./SentenceDisplay"
+import ShadowingResultPanel from "./ShadowingResultPanel"
 
 interface ActiveSentencePanelProps {
   lesson: ILessonDetailsResponse
@@ -159,8 +157,9 @@ const ActiveSentencePanel = ({
     }
     lastTranscriptionRef.current = transcriptionKey
 
-    const score = transcription.shadowingResult?.weightedAccuracy
+    const score = Math.round(transcription.shadowingResult?.weightedAccuracy ?? 0)
     if (score == null) return
+    
 
     const shouldPlayGood = score >= SHADOWING_THRESHOLD.GOOD_SOUND
     playFeedbackSound(shouldPlayGood)
@@ -420,7 +419,6 @@ const ActiveSentencePanel = ({
           hasRecordedAudio={hasRecordedAudio}
           isPlayingRecorded={isPlayingRecorded}
           userInteracted={userInteracted}
-          isCompleted={isCompleted} // 👉 Truyền biến isCompleted xuống
           shouldShowSkipButton={shouldShowSkipButton}
           shouldShowNextButton={shouldShowNextButton}
           recordError={recordError}
