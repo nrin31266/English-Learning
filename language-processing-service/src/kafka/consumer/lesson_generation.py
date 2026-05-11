@@ -1,6 +1,7 @@
 # src/kafka/consumer/lesson_generation.py
 import asyncio
 import json
+import logging
 import string
 from typing import List
 
@@ -15,9 +16,11 @@ from src.services import media_service, ai_job_service, speech_to_text_service
 from src.services.file_service import fetch_json_from_url, file_exists
 from src.s3_storage import cloud_service
 from src.utils.chunk_utils import chunk_list
-from src.gemini.analyzer import analyze_sentence_batch
+from src.llm.analyzer import analyze_sentence_batch
 from src.services.spaCy_service import analyze_word
 from src.utils.text_utils import clean_for_spacy
+
+logger = logging.getLogger(__name__)
 
 
 async def _is_cancelled(ai_job_id: str | None) -> bool:
@@ -177,7 +180,7 @@ async def _enrich_segments_with_nlp(
     max_concurrency: int = 3
 ) -> List[dto.SegmentDto]:
     """
-    Chỉ gửi text câu lên Gemini, nhận về phoneticUs và translationVi
+    Chỉ gửi text câu lên LLM, nhận về phoneticUs và translationVi
     Mapping orderIndex được xử lý hoàn toàn bên ngoài
     """
     if not segments:
@@ -186,12 +189,12 @@ async def _enrich_segments_with_nlp(
     # 1. Extract chỉ text từ segments
     sentence_texts = [seg.text for seg in segments]
     
-    # 2. Chunk và gửi lên Gemini
+    # 2. Chunk và gửi lên LLM
     chunks = list(chunk_list(sentence_texts, batch_size))
     all_results = []
     
     for i in range(0, len(chunks), max_concurrency):
-        print(f"Sending chunk {i // batch_size + 1} to Gemini for NLP analysis...")
+        print(f"Sending chunk {i // batch_size + 1} to LLM for NLP analysis...")
         wave = chunks[i:i + max_concurrency]
         results = await asyncio.gather(
             *[analyze_sentence_batch(chunk) for chunk in wave],
@@ -200,6 +203,11 @@ async def _enrich_segments_with_nlp(
         
         for chunk, result in zip(wave, results):
             if isinstance(result, Exception):
+                logger.exception(
+                    "NLP chunk failed (size=%s). First sentence preview: %s",
+                    len(chunk),
+                    chunk[0][:200] if chunk else "<empty>",
+                )
                 raise result
             all_results.extend(result)
     
@@ -358,6 +366,11 @@ async def handle_lesson_generation_requested(
         )
 
     except Exception as e:
+        logger.exception(
+            "lesson_generation_failed ai_job_id=%s err=%s",
+            event.ai_job_id,
+            e,
+        )
         print(f"lesson_generation_failed ai_job_id={event.ai_job_id} err={e}")
         await publish_lesson_processing_step_updated(
             LessonProcessingStepUpdatedEvent(

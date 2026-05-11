@@ -25,6 +25,7 @@ OUTPUT FORMAT:
   }
 ]
 """)
+
 WORD_ANALYSIS_PROMPT_TEMPLATE = Template("""
 You are an English lexical analysis engine.
 

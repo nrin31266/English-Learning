@@ -1,11 +1,14 @@
+from typing import Dict, List, Optional
+
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+
 
 class DefinitionItem(BaseModel):
     type: str
     definition: str
     vietnamese: str
     example: str
+
 
 class DictionaryWordDTO(BaseModel):
     word: str

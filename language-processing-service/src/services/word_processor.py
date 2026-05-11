@@ -1,7 +1,7 @@
 import logging
 from typing import Dict
 
-from src.gemini.analyzer import analyze_word
+from src.llm.analyzer import analyze_word
 from src.s3_storage.cloud_service import upload_file
 from src.tts.tts_service import generate_audio
 
