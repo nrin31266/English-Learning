@@ -31,7 +31,7 @@ const TopicFilterPanel = ({ topics }: TopicFilterPanelProps) => {
         <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Search for topics..."
+          placeholder="Search for playlists..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-[14px] font-medium transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
@@ -58,7 +58,7 @@ const TopicFilterPanel = ({ topics }: TopicFilterPanelProps) => {
           ))
         ) : (
           <p className="text-sm font-medium text-muted-foreground italic">
-            No topics found for "{searchQuery}"
+            No playlists found for "{searchQuery}"
           </p>
         )}
       </div>

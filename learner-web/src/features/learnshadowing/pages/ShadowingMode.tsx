@@ -94,11 +94,24 @@ const ShadowingMode = () => {
     }
   }, [dispatch, id])
 
+  // Resume: jump to first unfinished sentence (check once on lesson load)
+  // Keep autoPlayOnSentenceChange=true so user can play after interacting.
+  // The Player internally checks userInteracted before auto-playing,
+  // so it won't auto-play on initial load even with this flag = true.
   useEffect(() => {
-    setActiveIndex(0)
-    setAutoPlayOnSentenceChange(true)
-    setUserInteracted(false)
-  }, [lesson?.id])
+    if (sentences.length > 0 && completedIdsSet.size > 0) {
+      const firstUnfinished = sentences.findIndex(s => !completedIdsSet.has(s.id));
+      if (firstUnfinished > 0) {
+        setActiveIndex(firstUnfinished);
+      } else {
+        setActiveIndex(0);
+      }
+    } else {
+      setActiveIndex(0);
+    }
+    setAutoPlayOnSentenceChange(true);
+    setUserInteracted(false);
+  }, [lesson?.id]);
 
   const isLoading = status === "idle" || status === "loading"
 
@@ -147,15 +160,17 @@ const ShadowingMode = () => {
       if (!currentLocal.includes(sentenceId)) {
         const nextLocal = [...currentLocal, sentenceId];
         saveGuestProgress(id!, MODE_NAME, nextLocal);
-        setShowLoginModal(true);
+        // Delay login modal 600ms
+        setTimeout(() => setShowLoginModal(true), 600);
       }
     }
   }, [dispatch, lesson?.id, profile, id]);
 
-  // 🚀 2. Hiển thị Modal khi hoàn thành toàn bộ bài
+  // 🚀 2. Hiển thị Modal khi hoàn thành toàn bộ bài (delay 800ms)
   useEffect(() => {
     if (lesson && isLessonCompleted) {
-        setShowCompletionModal(true);
+      const timer = setTimeout(() => setShowCompletionModal(true), 800);
+      return () => clearTimeout(timer);
     }
   }, [isLessonCompleted, lesson]);
 

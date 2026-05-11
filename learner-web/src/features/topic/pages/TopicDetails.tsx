@@ -11,13 +11,13 @@ import { cefrLevelOptions } from "@/types"
 import LessonCard from "../components/LessonCard"
 import LessonModeDialog from "../components/LessonModeDialog"
 
-import { 
-  ArrowLeft, 
-  Loader2, 
-  Library, 
+import {
+  ArrowLeft,
+  Loader2,
+  Library,
   Calendar,
   Filter,
-  Sparkles
+  Star
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -106,9 +106,9 @@ const TopicDetails = () => {
               <>
                 <span className="text-border">•</span>
                 <div className="flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 text-amber-500" />
+                  <Star className="h-3 w-3 text-amber-500" />
                   <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                    Popular
+                    Featured
                   </span>
                 </div>
               </>
@@ -164,7 +164,7 @@ const TopicDetails = () => {
         ) : filteredLessons.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed bg-muted/10">
             <Library className="h-8 w-8 text-muted-foreground/30 mb-2" />
-            <p className="text-sm font-medium text-muted-foreground/60">No lessons found</p>
+            <p className="text-sm font-medium text-muted-foreground/60">No lessons in this playlist</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-16">

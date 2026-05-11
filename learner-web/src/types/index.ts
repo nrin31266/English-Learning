@@ -192,9 +192,31 @@ export interface IHomeTopicResponse {
   lessons: IHomeLessonResponse[];
 }
 
+export interface IResumeLessonDto {
+  id: number;
+  title: string;
+  slug: string;
+  thumbnailUrl: string | null;
+  languageLevel: typeof cefrLevelOptions[number];
+  sourceType: typeof sourceTypeOptions[number];
+  durationSeconds: number | null;
+  enableDictation: boolean | null;
+  enableShadowing: boolean | null;
+  mode: string;
+  progressPercent: number;
+  activeSentenceCount: number;
+}
+
+export interface IResumeLearningResponse {
+  totalInProgress: number;
+  hasMore: boolean;
+  recentLessons: IResumeLessonDto[];
+}
+
 export interface IHomeTopicsResponse {
   allTopics: ITopicSummaryResponse[];
   topics: IHomeTopicResponse[];
+  resumeLearning: IResumeLearningResponse | null;
 }
 
 export interface IUserProfile {

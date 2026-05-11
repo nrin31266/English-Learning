@@ -11,8 +11,8 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class HomeTopicsResponse {
-    List<TopicSummaryResponse> allTopics;
-    List<HomeTopicResponse> topics;
-    ResumeLearningResponse resumeLearning;
+public class ResumeLearningResponse {
+    private int totalInProgress;
+    private boolean hasMore;
+    private List<ResumeLessonDto> recentLessons;
 }

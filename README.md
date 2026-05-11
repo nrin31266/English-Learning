@@ -9,43 +9,6 @@ Monorepo cho hệ thống học tiếng Anh theo hướng thực hành, cá nhâ
 - Tra cứu và enrich từ vựng theo ngữ cảnh.
 - Có tách riêng admin, learner, gateway, notification, discovery và AI processing.
 
-## Kiến trúc
-
-```mermaid
-flowchart LR
-  subgraph UI[Frontend]
-    A[admin-web]
-    L[learner-web]
-  end
-
-  G[api-gateway]
-  D[discovery-service]
-  LC[learning-content-service]
-  DI[dictionary-service]
-  U[user-service]
-  N[notification-service]
-  AI[language-processing-service]
-  C[common]
-
-  A --> G
-  L --> G
-  G --> LC
-  G --> DI
-  G --> U
-  G --> N
-  G --> AI
-
-  LC <--> AI
-  DI <--> AI
-  LC --> N
-  DI --> N
-  N --> L
-  G -. service registry .- D
-  LC -. shared DTOs/utilities .- C
-  DI -. shared DTOs/utilities .- C
-  U -. shared DTOs/utilities .- C
-```
-
 ## Thành phần chính
 
 ### Frontend
@@ -108,20 +71,22 @@ Một số service hiện vẫn dùng thêm biến môi trường bên ngoài nh
 
 ## AI service
 
-`language-processing-service` là FastAPI service trung tâm của phần AI. Nó có các router chính:
+`language-processing-service` là FastAPI service trung tâm xử lý audio và ngôn ngữ. Nó có các router chính:
 
 - `/speech-to-text`: transcribe audio và chấm shadowing.
 - `/spacy`: phân tích ngữ pháp, lemma, POS, dependency và entity.
 - `/tts`: sinh audio phát âm.
 - `/ai-jobs`: quản lý job cho pipeline bất đồng bộ.
 
-Các thành phần bên trong đáng chú ý:
+Các thành phần bên trong:
 
 - `speech_to_text_service`: WhisperX, alignment và chuẩn hóa output.
-- `shadowing_service`: so khớp expected words với recognized words và tính score.
-- `spaCy_service`: phân tích NLP.
+- `shadowing_service`: so khớp expected words với recognized words, tính score dựa trên Levenshtein distance và IPA phoneme comparison.
+- `spaCy_service`: phân tích NLP (lemma, POS, dependency).
+- `gemini/`: enrich nội dung (IPA, translation, word analysis) qua Gemini API.
+- `phoneme_ipa_service` & `phonemizer_service`: xử lý phoneme và IPA cho scoring.
 - `word_processor` và `workers/word/word_worker.py`: xử lý pipeline từ vựng chạy nền.
-- `redis`, `kafka`, `s3_storage`, `gemini`, `tts`: tích hợp hạ tầng và AI services.
+- `redis`, `kafka`, `s3_storage`, `tts`: tích hợp hạ tầng và services.
 
 ## Prerequisites
 

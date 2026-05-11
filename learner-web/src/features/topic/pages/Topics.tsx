@@ -6,13 +6,15 @@ import type {
   ITopicSummaryResponse,
   IHomeLessonResponse,
   IHomeTopicResponse,
+  IResumeLessonDto,
 } from "@/types"
-import { Compass, Loader2, Sparkles } from "lucide-react"
+import { Loader2, Library, RefreshCw } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import TopicSection from "../components/TopicSection"
 import LessonModeDialog from "../components/LessonModeDialog"
 import TopicFilterPanel from "../components/TopicFilterPanel"
+import ResumeLearningSection from "@/features/home/components/ResumeLearningSection"
 
 const Topics = () => {
   const dispatch = useAppDispatch()
@@ -31,6 +33,7 @@ const Topics = () => {
 
   const allTopics: ITopicSummaryResponse[] = data?.allTopics ?? []
   const homeTopics: IHomeTopicResponse[] = data?.topics ?? []
+  const resumeLearning = data?.resumeLearning
 
   const topicsWithLessons = useMemo(
     () => homeTopics.filter((t) => t.lessons && t.lessons.length > 0),
@@ -51,29 +54,36 @@ const Topics = () => {
     setDialogOpen(false)
   }
 
+  const handleContinueResumeLesson = (lesson: IResumeLessonDto) => {
+    const mode = lesson.mode?.toLowerCase() || "shadowing"
+    const base = `/learn/lessons/${lesson.id}/${lesson.slug}`
+    const url = mode === "shadowing" || mode === "dictation"
+      ? `${base}/${mode}`
+      : base
+    navigate(url)
+  }
+
   const isLoading = status === "loading" || status === "idle"
 
   return (
-    <div className="mx-auto w-full flex flex-col gap-16 px-4 py-12 lg:px-8">
+    <div className="mx-auto w-full flex flex-col gap-12 px-4 py-10 lg:px-8">
       
-      {/* --- HERO HEADER --- */}
-      <header className="flex flex-col gap-4 border-b pb-10">
-        <div className="flex flex-col gap-2">
-          <h1 className="flex items-center gap-3 text-4xl font-black tracking-tight text-foreground">
-            <Compass className="h-9 w-9 text-primary" />
-            Learning Paths
+      {/* --- HEADER --- */}
+      <header className="flex flex-col gap-4 border-b pb-8">
+        <div className="flex flex-col gap-1">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+            <Library className="h-6 w-6 text-primary" />
+            Playlists
           </h1>
-          <p className="max-w-2xl text-[16px] font-medium leading-relaxed text-muted-foreground">
-            Master English skills through curated collections. Explore specialized 
-            topics and start your practice journey with our latest lessons.
+          <p className="text-sm text-muted-foreground">
+            Browse playlists and pick up where you left off.
           </p>
         </div>
         
-        {/* Local Search Component */}
-        <div className="mt-4">
+        <div className="mt-2">
            {isLoading ? (
-             <div className="flex h-20 items-center justify-center rounded-xl border border-dashed">
-               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+             <div className="flex h-16 items-center justify-center rounded-xl border border-dashed">
+               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
              </div>
            ) : (
              <TopicFilterPanel topics={allTopics} />
@@ -81,29 +91,37 @@ const Topics = () => {
         </div>
       </header>
 
-      {/* --- CURATED LESSONS SECTION --- */}
-      <section className="flex flex-col gap-8">
-        <div className="flex flex-col gap-1.5">
-          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
-            <Sparkles className="h-6 w-6 text-amber-500" />
+      {/* --- RESUME LEARNING --- */}
+      {!isLoading && resumeLearning && resumeLearning.recentLessons?.length > 0 && (
+        <ResumeLearningSection
+          data={resumeLearning}
+          onContinueLesson={handleContinueResumeLesson}
+        />
+      )}
+
+      {/* --- PLAYLISTS --- */}
+      <section className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-foreground">
+            <RefreshCw className="h-5 w-5 text-muted-foreground" />
             Recently Updated
           </h2>
-          <p className="text-[14px] font-medium text-muted-foreground">
-            Freshly added lessons across your favorite categories.
+          <p className="text-sm text-muted-foreground">
+            New lessons added across playlists.
           </p>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-            <Loader2 className="h-6 w-6 animate-spin mb-3" />
-            <span className="text-sm font-semibold">Assembling your universe...</span>
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin mb-2" />
+            <span className="text-sm">Loading...</span>
           </div>
         ) : topicsWithLessons.length === 0 ? (
-          <div className="flex h-48 flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/20 text-sm font-medium text-muted-foreground">
-            No lessons available at the moment.
+          <div className="flex h-40 flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/20 text-sm text-muted-foreground">
+            No playlists available.
           </div>
         ) : (
-          <div className="flex flex-col gap-12">
+          <div className="flex flex-col gap-10">
             {topicsWithLessons.map((topic) => (
               <TopicSection
                 key={topic.id}
