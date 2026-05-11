@@ -14,7 +14,7 @@ export default function Page() {
       <AppSidebar />
       <SidebarInset>
         <AppHeader/>
-        <div className="min-h-[56vh] px-2 py-2 dark:bg-gray-900 bg-gray-50">
+        <div className="min-h-[86vh] px-2 py-2 dark:bg-gray-900 bg-gray-50">
           <Outlet/>
         </div>
         <AppFooter />

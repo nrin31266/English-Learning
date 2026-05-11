@@ -21,55 +21,54 @@ const LessonDataTable = ({ data, loading }: LessonDataTableProps) => {
   const { t } = useTranslation();
   
   return (
-    <div className="rounded-md border">
-      <Table className="text-xs overflow-auto">
+    <div className="rounded-md border overflow-hidden">
+      <Table>
         <TableHeader>
-          <TableRow className="h-8">
-            <TableHead className="w-[60px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+          <TableRow className="h-9">
+            <TableHead className="w-[50px] px-2.5 py-1 text-xs font-semibold text-muted-foreground">
               {t("allLessons.table.columns.id")}
             </TableHead>
-            <TableHead className="min-w-[220px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+            <TableHead className="min-w-[180px] px-2.5 py-1 text-xs font-semibold text-muted-foreground">
               {t("allLessons.table.columns.lesson")}
             </TableHead>
-            <TableHead className="w-[70px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-center">
+            <TableHead className="w-[100px] px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+              {t("allLessons.table.columns.topic")}
+            </TableHead>
+            <TableHead className="w-[55px] px-2.5 py-1 text-xs font-semibold text-muted-foreground text-center">
               {t("allLessons.table.columns.level")}
             </TableHead>
-            {/* NEW: Type column */}
-            <TableHead className="w-[110px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+            <TableHead className="w-[70px] px-2.5 py-1 text-xs font-semibold text-muted-foreground">
               {t("allLessons.table.columns.type")}
             </TableHead>
-            <TableHead className="w-[110px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+            <TableHead className="w-[50px] px-2.5 py-1 text-xs font-semibold text-muted-foreground text-center">
               {t("allLessons.table.columns.source")}
             </TableHead>
-            <TableHead className="w-[90px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-center">
+            <TableHead className="w-[55px] px-2.5 py-1 text-xs font-semibold text-muted-foreground text-center">
               {t("allLessons.table.columns.dictation")}
             </TableHead>
-            <TableHead className="w-[90px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-center">
+            <TableHead className="w-[55px] px-2.5 py-1 text-xs font-semibold text-muted-foreground text-center">
               {t("allLessons.table.columns.shadowing")}
             </TableHead>
-            <TableHead className="w-[110px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+            <TableHead className="w-[80px] px-2.5 py-1 text-xs font-semibold text-muted-foreground">
               {t("allLessons.table.columns.status")}
             </TableHead>
-            <TableHead className="w-[130px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+            <TableHead className="w-[110px] px-2.5 py-1 text-xs font-semibold text-muted-foreground">
               {t("allLessons.table.columns.processing")}
             </TableHead>
-            <TableHead className="w-[120px] px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+            <TableHead className="w-[85px] px-2.5 py-1 text-xs font-semibold text-muted-foreground">
               {t("allLessons.table.columns.createdAt")}
             </TableHead>
-            <TableHead className="w-[120px] px-3 py-1 text-center text-[11px] font-semibold text-muted-foreground">
+            <TableHead className="w-[85px] px-2.5 py-1 text-center text-xs font-semibold text-muted-foreground">
               {t("allLessons.table.columns.published")}
             </TableHead>
-            {/* <TableHead className="w-[60px] px-3 py-1 text-[11px] font-semibold text-muted-foreground text-right">
-              Actions
-            </TableHead> */}
           </TableRow>
         </TableHeader>
 
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={11} className="h-40 text-center align-middle">
-                <div className="flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
+              <TableCell colSpan={12} className="h-24 text-center align-middle">
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>{t("allLessons.table.loading")}</span>
                 </div>
@@ -77,7 +76,7 @@ const LessonDataTable = ({ data, loading }: LessonDataTableProps) => {
             </TableRow>
           ) : data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={11} className="h-32 text-center text-[12px] text-muted-foreground">
+              <TableCell colSpan={12} className="h-20 text-center text-xs text-muted-foreground">
                 {t("allLessons.table.noResults")}
               </TableCell>
             </TableRow>

@@ -82,9 +82,9 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
 
 
     return (
-        <div className="p-2 space-y-2 text-xs bg-background rounded-md border border-border">
-            <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-2 items-center">
-                <span className="text-sm font-semibold">{t("allLessons.filter.label")}</span>
+        <div className="p-2.5 space-y-2 text-xs bg-background rounded-md border border-border">
+            <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold whitespace-nowrap">{t("allLessons.filter.label")}</span>
                 <SearchForm
                     value={searchTerm || ""}
                     onChange={(value) => {
@@ -93,12 +93,11 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
                 />
                 <Select value={searchParams.get("status") || "all"} onValueChange={(value) =>
                     handleChangeSearchParam("status", value === "all" ? null : value)}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-[160px] h-8">
                         <SelectValue placeholder="Lesson Status" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
-                            {/* No value */}
                             <SelectItem value="all">{t("allLessons.filter.allStatuses")}</SelectItem>
                             {
                                 lessonStatusSelectOptions.map((option) => (
@@ -112,7 +111,7 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
                 </Select>
                 <Select value={searchParams.get("topicSlug") || "all"} onValueChange={(value) =>
                     handleChangeSearchParam("topicSlug", value === "all" ? null : value)}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-[160px] h-8">
                         <SelectValue placeholder="Lesson Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -129,29 +128,16 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
                     </SelectContent>
                 </Select>
 
-                <Button onClick={() => handleBooleanParam("extendFilter", isExtendFilter ? false : true, false)} className="h-8" variant={"ghost"}><ChevronDown /> {isExtendFilter ? t("allLessons.filter.lessButton") : t("allLessons.filter.moreButton")}</Button>
+                <Button onClick={() => handleBooleanParam("extendFilter", isExtendFilter ? false : true, false)} className="h-8 px-2.5" variant="ghost" size="sm">
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isExtendFilter ? 'rotate-180' : ''}`} />
+                    {isExtendFilter ? t("allLessons.filter.lessButton") : t("allLessons.filter.moreButton")}
+                </Button>
             </div>
-            {isExtendFilter && <div>
-                {/* <Select value={searchParams.get("lessonType") || "all"} onValueChange={(value) =>
-                    handleChangeSearchParam("lessonType", value === "all" ? null : value)}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Lesson Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectGroup>
-                            <SelectItem value="all">{t("allLessons.filter.allTypes")}</SelectItem>
-                            {
-                                lessonTypeOptions.map((type) => (
-                                    <SelectItem key={type} value={type}>
-                                        {type}
-                                    </SelectItem>
-                                ))
-                            }
-                        </SelectGroup>
-                    </SelectContent>
-                </Select> */}
-                <p className="p-2text-sm text-gray-500 text-center">All Functions will be updated soon!</p>
-            </div>}
+            {isExtendFilter && (
+                <div className="pt-1 border-t border-border/50">
+                    <p className="py-1 text-xs text-muted-foreground text-center italic">All Functions will be updated soon!</p>
+                </div>
+            )}
         </div>
     )
 }

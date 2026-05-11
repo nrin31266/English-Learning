@@ -39,33 +39,18 @@ const formatDate = (value: string | null) => {
 const renderSourceIcon = (sourceType: ILessonDto["sourceType"]) => {
   switch (sourceType) {
     case "YOUTUBE":
-      return (
-        <div className="flex items-center gap-1.5">
-          <Youtube className="h-3.5 w-3.5 text-red-500" />
-          <span className="text-[11px]">YouTube</span>
-        </div>
-      )
+      return <Youtube className="h-4 w-4 text-red-500" />
     case "AUDIO_FILE":
-      return (
-        <div className="flex items-center gap-1.5">
-          <FileAudio2 className="h-3.5 w-3.5" />
-          <span className="text-[11px]">Audio file</span>
-        </div>
-      )
+      return <FileAudio2 className="h-4 w-4 text-muted-foreground" />
     default:
-      return (
-        <div className="flex items-center gap-1.5">
-          <FileQuestion className="h-3.5 w-3.5" />
-          <span className="text-[11px]">Other</span>
-        </div>
-      )
+      return <FileQuestion className="h-4 w-4 text-muted-foreground" />
   }
 }
 
 const renderStatusBadge = (status: ILessonDto["status"]) => {
   if (status === "READY") {
     return (
-      <Badge variant="outline" className="gap-1 border-emerald-400/60 text-emerald-600 text-[11px] px-2 py-0 h-5">
+      <Badge variant="outline" className="gap-1 border-emerald-400/60 text-emerald-600 text-[11px] px-1.5 py-0 h-5">
         <CheckCircle2 className="h-3 w-3" />
         Ready
       </Badge>
@@ -74,7 +59,7 @@ const renderStatusBadge = (status: ILessonDto["status"]) => {
 
   if (status === "PROCESSING") {
     return (
-      <Badge variant="outline" className="gap-1 border-amber-400/60 text-amber-600 text-[11px] px-2 py-0 h-5">
+      <Badge variant="outline" className="gap-1 border-amber-400/60 text-amber-600 text-[11px] px-1.5 py-0 h-5">
         <Loader2 className="h-3 w-3 animate-spin" />
         Processing
       </Badge>
@@ -83,7 +68,7 @@ const renderStatusBadge = (status: ILessonDto["status"]) => {
 
   if (status === "ERROR") {
     return (
-      <Badge variant="outline" className="gap-1 border-red-400/60 text-red-600 text-[11px] px-2 py-0 h-5">
+      <Badge variant="outline" className="gap-1 border-red-400/60 text-red-600 text-[11px] px-1.5 py-0 h-5">
         <AlertTriangle className="h-3 w-3" />
         Error
       </Badge>
@@ -92,23 +77,22 @@ const renderStatusBadge = (status: ILessonDto["status"]) => {
 
   // DRAFT
   return (
-    <Badge variant="outline" className="gap-1 border-slate-300 text-slate-600 text-[11px] px-2 py-0 h-5">
+    <Badge variant="outline" className="gap-1 border-slate-300 text-slate-500 text-[11px] px-1.5 py-0 h-5">
       <CircleDot className="h-3 w-3" />
       Draft
     </Badge>
   )
 }
 
-// NEW: hiển thị type (AI_ASSISTED vs TRADITIONAL)
 const renderLessonType = (type: ILessonDto["lessonType"]) => {
   if (type === "AI_ASSISTED") {
     return (
       <Badge
         variant="outline"
-        className="gap-1 border-purple-300/70 text-purple-700 bg-purple-50/60 text-[11px] px-2 py-0 h-5"
+        className="gap-1 border-purple-300/70 text-purple-700 bg-purple-50/60 text-[11px] px-1.5 py-0 h-5"
       >
         <Sparkles className="h-3 w-3" />
-        AI Assisted
+        AI
       </Badge>
     )
   }
@@ -116,10 +100,10 @@ const renderLessonType = (type: ILessonDto["lessonType"]) => {
   return (
     <Badge
       variant="outline"
-      className="gap-1 border-sky-300/70 text-sky-700 bg-sky-50/60 text-[11px] px-2 py-0 h-5"
+      className="gap-1 border-sky-300/70 text-sky-700 bg-sky-50/60 text-[11px] px-1.5 py-0 h-5"
     >
       <User2 className="h-3 w-3" />
-      Traditional
+      Manual
     </Badge>
   )
 }
@@ -156,125 +140,92 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
 
 
   return (
-    <TableRow className="h-9 text-xs">
+    <TableRow className="h-9">
       {/* ID */}
-      <TableCell className="px-3 py-1 align-middle text-[11px] text-muted-foreground">
+      <TableCell className="px-2.5 py-1 align-middle text-xs text-muted-foreground">
         #{row.id}
       </TableCell>
 
-      {/* Lesson title + slug */}
-      <TableCell className="px-3 py-1 align-middle">
-        <div className="flex flex-col gap-0.5">
-          <Link className="underline" to={`/lessons/${row.id}/${row.slug}`}><span className="text-xs font-medium truncate max-w-[260px]">
-            {row.title}
-          </span></Link>
-          <span className="text-[11px] text-muted-foreground truncate max-w-[260px]">
-            {row.topic.slug}
-          </span>
-        </div>
+      {/* Lesson title */}
+      <TableCell className="px-2.5 py-1 align-middle">
+        <Link className="underline hover:text-primary" to={`/lessons/${row.id}/${row.slug}`}>
+          <span className="text-sm font-medium truncate max-w-[200px] block">{row.title}</span>
+        </Link>
       </TableCell>
 
-
+      {/* Topic */}
+      <TableCell className="px-2.5 py-1 align-middle">
+        <span className="text-xs text-muted-foreground truncate max-w-[120px] block">{row.topic.slug}</span>
+      </TableCell>
 
       {/* Level */}
-      <TableCell className="px-3 py-1 align-middle text-center">
-        <Badge variant="outline" className="h-5 px-2 py-0 text-[11px]">
-          {row.languageLevel}
-        </Badge>
+      <TableCell className="px-2.5 py-1 align-middle text-center">
+        <span className="text-xs text-muted-foreground">{row.languageLevel}</span>
       </TableCell>
 
-      {/* NEW: Lesson Type */}
-      <TableCell className="px-3 py-1 align-middle">
+      {/* Lesson Type */}
+      <TableCell className="px-2.5 py-1 align-middle">
         {renderLessonType(row.lessonType)}
       </TableCell>
 
       {/* Source */}
-      <TableCell className="px-3 py-1 align-middle">
+      <TableCell className="px-2.5 py-1 align-middle text-center">
         {renderSourceIcon(row.sourceType)}
       </TableCell>
 
       {/* Dictation */}
-      <TableCell className="px-3 py-1 align-middle">
-        <span className={`${row.enableDictation ? "text-green-600" : "text-red-600"
-          }`}>
+      <TableCell className="px-2.5 py-1 align-middle text-center">
+        <span className={`text-xs font-medium ${row.enableDictation ? "text-green-600" : "text-red-400"}`}>
           {row.enableDictation ? "Yes" : "No"}
         </span>
       </TableCell>
 
       {/* Shadowing */}
-      <TableCell className="px-3 py-1 align-middle">
-        <span className={`${row.enableShadowing ? "text-green-600" : "text-red-600"
-          }`}>
+      <TableCell className="px-2.5 py-1 align-middle text-center">
+        <span className={`text-xs font-medium ${row.enableShadowing ? "text-green-600" : "text-red-400"}`}>
           {row.enableShadowing ? "Yes" : "No"}
         </span>
       </TableCell>
 
       {/* Status */}
-      <TableCell className="px-3 py-1 align-middle">
+      <TableCell className="px-2.5 py-1 align-middle">
         {renderStatusBadge(row.status)}
       </TableCell>
 
-      {/* NEW: Processing with progress bar */}
-      <TableCell className="px-3 py-1 align-middle">
+      {/* Processing with progress bar */}
+      <TableCell className="px-2.5 py-1 align-middle">
         {isError ? (
-          <div className="flex items-center gap-1.5 text-[11px] text-red-600">
-            <AlertTriangle className="h-3 w-3" />
+          <div className="flex items-center gap-1 text-xs text-red-600">
+            <AlertTriangle className="h-3.5 w-3.5" />
             Failed
           </div>
         ) : (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">
-                {processing.label}
-              </span>
-              {row.status === "PROCESSING" && (
-                <Loader2 className="h-3 w-3 animate-spin text-amber-500" />
-              )}
-              {isDone && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
-            </div>
-            <Progress
-              value={processing.progress}
-              className="h-1.5"
-            />
+          <div className="flex items-center gap-1.5">
+            <Progress value={processing.progress} className="h-1.5 w-14" />
+            <span className="text-xs text-muted-foreground truncate max-w-[80px]">
+              {processing.label}
+            </span>
+            {row.status === "PROCESSING" && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500 shrink-0" />
+            )}
+            {isDone && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
           </div>
         )}
       </TableCell>
 
       {/* Created at */}
-      <TableCell className="px-3 py-1 align-middle text-[11px] text-muted-foreground">
+      <TableCell className="px-2.5 py-1 align-middle text-xs text-muted-foreground">
         {formatDate(row.createdAt)}
       </TableCell>
 
       {/* Publish */}
-      <TableCell className="px-3 py-1 align-middle text-center">
+      <TableCell className="px-2.5 py-1 align-middle text-center">
         {row.publishedAt ? (
-          <Badge
-            variant="outline"
-            className="gap-1 border-emerald-300/70 text-emerald-600 text-[11px] px-2 py-0 h-5"
-          >
-            <CheckCircle2 className="h-3 w-3" />
-            Published at {formatDate(row.publishedAt)}
-          </Badge>
+          <span className="text-xs text-emerald-600 font-medium">{formatDate(row.publishedAt)}</span>
         ) : (
-          <Badge
-            variant="outline"
-            className="gap-1 border-slate-300 text-slate-600 text-[11px] px-2 py-0 h-5"
-          >
-            <AlertTriangle className="h-3 w-3" />
-            Unpublished
-          </Badge>
+          <span className="text-xs text-slate-400">—</span>
         )}
       </TableCell>
-      {/* <TableCell className="px-3 py-1 align-middle text-right">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => console.log("Row actions", row.id)}
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </TableCell> */}
     </TableRow>
   )
 }

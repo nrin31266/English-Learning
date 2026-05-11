@@ -29,7 +29,7 @@ import {
   User2,
   Youtube
 } from "lucide-react"
-import React, { useEffect, useMemo } from "react"
+import React, { useCallback, useEffect, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import DictationBadge from "../components/DictationBadge"
@@ -40,7 +40,13 @@ import ShadowingBadge from "../components/ShadowingBadge"
 
 
 
-const renderSourceIcon = (sourceType: ILessonDetailsDto["sourceType"]) => {
+// ── Memoized sub-components ──────────────────────────────────────────
+
+interface SourceIconProps {
+  sourceType: ILessonDetailsDto["sourceType"];
+}
+
+const SourceIcon = React.memo<SourceIconProps>(({ sourceType }) => {
   switch (sourceType) {
     case "YOUTUBE":
       return (
@@ -48,25 +54,30 @@ const renderSourceIcon = (sourceType: ILessonDetailsDto["sourceType"]) => {
           <Youtube className="h-3.5 w-3.5" />
           <span>YouTube</span>
         </div>
-      )
+      );
     case "AUDIO_FILE":
       return (
         <div className="inline-flex items-center gap-1.5 rounded-full border bg-slate-50 px-2 py-0.5 text-[11px]">
           <FileAudio2 className="h-3.5 w-3.5" />
           <span>Audio file</span>
         </div>
-      )
+      );
     default:
       return (
         <div className="inline-flex items-center gap-1.5 rounded-full border bg-slate-50 px-2 py-0.5 text-[11px]">
           <FileQuestion className="h-3.5 w-3.5" />
           <span>Other</span>
         </div>
-      )
+      );
   }
+});
+SourceIcon.displayName = "SourceIcon";
+
+interface LessonTypeBadgeProps {
+  type: ILessonDetailsDto["lessonType"];
 }
 
-const renderLessonType = (type: ILessonDetailsDto["lessonType"]) => {
+const LessonTypeBadge = React.memo<LessonTypeBadgeProps>(({ type }) => {
   if (type === "AI_ASSISTED") {
     return (
       <Badge
@@ -76,7 +87,7 @@ const renderLessonType = (type: ILessonDetailsDto["lessonType"]) => {
         <Sparkles className="h-3 w-3" />
         AI Assisted
       </Badge>
-    )
+    );
   }
 
   return (
@@ -87,17 +98,22 @@ const renderLessonType = (type: ILessonDetailsDto["lessonType"]) => {
       <User2 className="h-3 w-3" />
       Traditional
     </Badge>
-  )
+  );
+});
+LessonTypeBadge.displayName = "LessonTypeBadge";
+
+interface StatusBadgeProps {
+  status: ILessonDetailsDto["status"];
 }
 
-const renderStatusBadge = (status: ILessonDetailsDto["status"]) => {
+const StatusBadge = React.memo<StatusBadgeProps>(({ status }) => {
   if (status === "READY") {
     return (
       <Badge variant="outline" className="gap-1 border-emerald-400/60 px-2 py-0 text-[11px] text-emerald-600">
         <CheckCircle2 className="h-3 w-3" />
         Ready
       </Badge>
-    )
+    );
   }
 
   if (status === "PROCESSING") {
@@ -106,7 +122,7 @@ const renderStatusBadge = (status: ILessonDetailsDto["status"]) => {
         <Loader2 className="h-3 w-3 animate-spin" />
         Processing
       </Badge>
-    )
+    );
   }
 
   if (status === "ERROR") {
@@ -115,7 +131,7 @@ const renderStatusBadge = (status: ILessonDetailsDto["status"]) => {
         <AlertTriangle className="h-3 w-3" />
         Error
       </Badge>
-    )
+    );
   }
 
   return (
@@ -123,49 +139,74 @@ const renderStatusBadge = (status: ILessonDetailsDto["status"]) => {
       <CircleDot className="h-3 w-3" />
       Draft
     </Badge>
-  )
+  );
+});
+StatusBadge.displayName = "StatusBadge";
+
+
+// ── Memoized sub-components ──────────────────────────────────────────
+
+interface UrlRowProps {
+  label: string;
+  href: string | null | undefined;
 }
 
+const UrlRow = React.memo<UrlRowProps>(({ label, href }) => {
+  const url = href || "#";
+  return (
+    <p className="truncate text-muted-foreground">
+      <span className="font-medium">{label} </span>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="truncate text-[11px] text-blue-600 underline"
+      >
+        {url}
+      </a>
+    </p>
+  );
+});
+UrlRow.displayName = "UrlRow";
 
 // ───────────────────────────────────────────
 // Main page
 // ───────────────────────────────────────────
 
 const LessonDetails: React.FC = () => {
-  const { id, slug } = useParams<{ id: string; slug: string }>()
+  const { id } = useParams<{ id: string; slug: string }>()
   const dispatch = useAppDispatch();
-  // Mock: luôn dùng mockLessonDetails, chỉ chỉnh slug cho vui
   const [hydrating, setHydrating] = React.useState(true);
   useEffect(() => {
-    const id = setTimeout(() => setHydrating(false), 50); // 10–120ms
+    const id = setTimeout(() => setHydrating(false), 50);
     return () => clearTimeout(id);
   }, []);
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { data, status, error } = useAppSelector(state => state.learningContent.lessonDetails.lessonDetails);
+  const { data, status } = useAppSelector(state => state.learningContent.lessonDetails.lessonDetails);
   const { status: mutationStatus, type: mutationType } = useAppSelector(state => state.learningContent.lessonDetails.lessonDetailsMutation);
- const [lesson] = useMemo(() => {
-  if (data && id && data.id === Number(id)) {
-    return [data];
-  }
-  return [null];
-}, [data?.id, id]);
+  const [lesson] = useMemo(() => {
+    if (data && id && data.id === Number(id)) {
+      return [data];
+    }
+    return [null];
+  }, [data?.id, id]);
   const stompClient = useWebSocket();
+
+  // ── WebSocket subscription for real-time processing updates ──
   useEffect(() => {
-    if (!stompClient) return;
-    if (lesson === null) return;
+    if (!stompClient || lesson === null) return;
 
     const destination = `/topic/learning-contents/lessons/${lesson.id}/processing-step`;
-    console.log("📡 Subscribing:", destination);
 
     const subscription = stompClient.subscribe(destination, (msg) => {
       try {
         const event: any = JSON.parse(msg.body);
-        console.log("LessonDetailsPage received event:", event);
 
-        // If completed, reload full lesson details
-        if (event.processingStep === "COMPLETED") { dispatch(reloadLessonDetails({ id: lesson.id })) } else {
+        if (event.processingStep === "COMPLETED") {
+          dispatch(reloadLessonDetails({ id: lesson.id }));
+        } else {
           dispatch(updateLessonDetailsFromProcessingEvent(event));
         }
       } catch (e) {
@@ -174,59 +215,90 @@ const LessonDetails: React.FC = () => {
     });
 
     return () => {
-      console.log("❌ Unsubscribing:", destination);
       subscription.unsubscribe();
     };
   }, [stompClient?.ws, dispatch, lesson?.id]);
 
+  // ── Fetch lesson details on mount ──
   useEffect(() => {
-  if (id) {
-    dispatch(fetchLessonDetails({ id: Number(id) }));
-  }
-}, [dispatch, id]);
+    if (id) {
+      dispatch(fetchLessonDetails({ id: Number(id) }));
+    }
+  }, [dispatch, id]);
 
-  const handleChangeTab = (tab: string) => {
+  // ── Memoized handlers ──
+  const handleChangeTab = useCallback((tab: string) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set("tab", tab);
     setSearchParams(newParams);
-  }
+  }, [searchParams, setSearchParams]);
+
+  const handlePublishToggle = useCallback(() => {
+    if (!data) return;
+    if (!data.publishedAt) {
+      dispatch(publishLesson({ id: data.id }));
+    } else {
+      dispatch(unpublishLesson({ id: data.id }));
+    }
+  }, [data, dispatch]);
+
+  const handleRegenerate = useCallback(() => {
+    if (!data) return;
+    dispatch(retryLessonGeneration({ id: data.id, isRestart: false }));
+  }, [data, dispatch]);
+
+  const handleRestart = useCallback(() => {
+    if (!data) return;
+    dispatch(retryLessonGeneration({ id: data.id, isRestart: true }));
+  }, [data, dispatch]);
+
+  const handleStopProcessing = useCallback(() => {
+    if (!data) return;
+    dispatch(cancelLessonGeneration({ id: data.id }));
+  }, [data, dispatch]);
+
+  // ── Loading / hydration guard ──
   if (hydrating || status === "loading" || !data || Number(id) !== data.id) {
     return <SkeletonComponent />;
   }
+
+  const isPublishing = mutationStatus === "loading" && mutationType === "publish";
+  const isRegenerating = mutationStatus === "loading" && mutationType === "re-try";
+  const isStopping = mutationStatus === "loading" && mutationType === "stop-ai-processing";
+  const isMutating = mutationStatus === "loading";
+
   return (
     <div className="space-y-4">
-      {/* Header / Breadcrumb */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="space-y-1">
+      {/* ── Breadcrumb & Header ── */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItem >
+              <BreadcrumbItem>
                 <BreadcrumbPage>{t("appMenu.learningContent")}</BreadcrumbPage>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
-
-              <BreadcrumbItem >
-                <Link to="/all-lessons" className="flex underline items-center gap-1  text-muted-foreground">
+              <BreadcrumbItem>
+                <Link to="/all-lessons" className="flex underline items-center gap-1 text-muted-foreground">
                   {t("lessonDetails.breadcrumb.lessons")}
                 </Link>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>{data.title}</BreadcrumbPage>
+                <BreadcrumbPage className="line-clamp-1">{data.title}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-
 
           <h1 className="mt-1 line-clamp-2 text-base font-semibold">
             {data.title}
           </h1>
         </div>
 
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
           <div className="flex items-center gap-2">
-            {renderStatusBadge(data.status)}
-            {renderLessonType(data.lessonType)}
+            <StatusBadge status={data.status} />
+            <LessonTypeBadge type={data.lessonType} />
           </div>
           <p className="text-[11px] text-muted-foreground">
             {t("lessonDetails.topicLabel")}{" "}
@@ -235,29 +307,36 @@ const LessonDetails: React.FC = () => {
         </div>
       </div>
 
-
-      {/* Tabs: transcript / meta */}
+      {/* ── Tabs ── */}
       <Tabs defaultValue={searchParams.get("tab") || "summary"} className="space-y-3">
         <TabsList className="h-8">
-          <TabsTrigger onClick={() => {
-            handleChangeTab("summary");
-          }} value="summary" className="h-7 px-3 text-xs">
+          <TabsTrigger
+            onClick={() => handleChangeTab("summary")}
+            value="summary"
+            className="h-7 px-3 text-xs"
+          >
             {t("lessonDetails.tabs.summary")}
           </TabsTrigger>
-          <TabsTrigger onClick={() => {
-            handleChangeTab("transcript");
-          }} value="transcript" className="h-7 px-3 text-xs">
+          <TabsTrigger
+            onClick={() => handleChangeTab("transcript")}
+            value="transcript"
+            className="h-7 px-3 text-xs"
+          >
             {t("lessonDetails.tabs.transcript")}
           </TabsTrigger>
-          <TabsTrigger onClick={() => {
-            handleChangeTab("sitting");
-          }} value="sitting" className="h-7 px-3 text-xs">
+          <TabsTrigger
+            onClick={() => handleChangeTab("sitting")}
+            value="sitting"
+            className="h-7 px-3 text-xs"
+          >
             {t("lessonDetails.tabs.settings")}
           </TabsTrigger>
         </TabsList>
+
+        {/* ── Summary Tab ── */}
         <TabsContent value="summary" className="mt-0">
-          {/* Thumbnail + meta */}
           <div className="grid gap-4 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            {/* Thumbnail & Metadata Card */}
             <Card className="overflow-hidden">
               <div className="h-64 w-full bg-slate-100">
                 <img
@@ -268,67 +347,53 @@ const LessonDetails: React.FC = () => {
               </div>
               <CardContent className="space-y-3 p-4">
                 {data.description && (
-                  <p className="text-sm text-muted-foreground">{data.description}</p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {data.description}
+                  </p>
                 )}
 
+                {/* Source & URLs */}
                 <div className="grid gap-3 text-[11px] md:grid-cols-12">
-
-                  <div className="space-y-1 col-span-6 ">
+                  <div className="col-span-6 space-y-1.5">
                     <p className="flex items-center gap-1.5 font-medium">
                       <FileAudio2 className="h-3.5 w-3.5" />
                       {t("lessonDetails.summary.source")}
                     </p>
                     <div className="text-muted-foreground">
-                      {renderSourceIcon(data.sourceType)}
+                      <SourceIcon sourceType={data.sourceType} />
                     </div>
-                    <p className="truncate text-muted-foreground">
-                      <span className="font-medium">{t("lessonDetails.summary.sourceUrl")} </span>
-                      <a
-                        href={data.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="truncate text-[11px] text-blue-600 underline"
-                      >
-                        {data.sourceUrl}
-                      </a>
-                    </p>
-                    <p className="truncate text-muted-foreground">
-                      <span className="font-medium">{t("lessonDetails.summary.audioUrl")} </span>
-                      <a
-                        href={data.audioUrl || "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="truncate text-[11px] text-blue-600 underline"
-                      >
-                        {data.audioUrl || "#"}
-                      </a>
-                    </p>
-                    <p className="truncate text-muted-foreground">
-                      <span className="font-medium">{t("lessonDetails.summary.aiMetadataUrl")} </span>
-                      <a
-                        href={data.aiMetadataUrl || "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="truncate text-[11px] text-blue-600 underline"
-                      >
-                        {data.aiMetadataUrl || "#"}
-                      </a>
-                    </p>
+                    <UrlRow
+                      label={t("lessonDetails.summary.sourceUrl")}
+                      href={data.sourceUrl}
+                    />
+                    <UrlRow
+                      label={t("lessonDetails.summary.audioUrl")}
+                      href={data.audioUrl}
+                    />
+                    <UrlRow
+                      label={t("lessonDetails.summary.aiMetadataUrl")}
+                      href={data.aiMetadataUrl}
+                    />
                   </div>
-                  <div className="space-y-1 col-span-3">
+
+                  {/* Level & Language */}
+                  <div className="col-span-3 space-y-1.5">
                     <p className="flex items-center gap-1.5 font-medium">
                       <Languages className="h-3.5 w-3.5" />
                       {t("lessonDetails.summary.levelLanguage")}
                     </p>
                     <p className="text-muted-foreground">
-                      {t("lessonDetails.summary.level")} <span className="font-medium">{data.languageLevel}</span>
+                      {t("lessonDetails.summary.level")}{" "}
+                      <span className="font-medium">{data.languageLevel}</span>
                     </p>
                     <p className="text-muted-foreground">
-                      {t("lessonDetails.summary.sourceLanguage")} <span className="font-medium">{data.sourceLanguage}</span>
+                      {t("lessonDetails.summary.sourceLanguage")}{" "}
+                      <span className="font-medium">{data.sourceLanguage}</span>
                     </p>
                   </div>
 
-                  <div className="space-y-1 col-span-3">
+                  {/* Duration & Sentences */}
+                  <div className="col-span-3 space-y-1.5">
                     <p className="flex items-center gap-1.5 font-medium">
                       <Clock className="h-3.5 w-3.5" />
                       {t("lessonDetails.summary.duration")}
@@ -338,14 +403,16 @@ const LessonDetails: React.FC = () => {
                     </p>
                     <p className="text-muted-foreground">
                       {t("lessonDetails.summary.sentences")}{" "}
-                      <span className="font-medium">{data.totalSentences || (data.sentences && data.sentences.length) || 0}</span>
+                      <span className="font-medium">
+                        {data.totalSentences || data.sentences?.length || 0}
+                      </span>
                     </p>
                   </div>
-
                 </div>
 
                 <Separator className="my-2" />
 
+                {/* Feature Badges */}
                 <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                   <DictationBadge enabled={data.enableDictation} />
                   <ShadowingBadge enabled={data.enableShadowing} />
@@ -353,6 +420,7 @@ const LessonDetails: React.FC = () => {
 
                 <Separator className="my-2" />
 
+                {/* Timestamps */}
                 <div className="grid gap-3 text-[11px] md:grid-cols-3">
                   <div>
                     <p className="font-medium">{t("lessonDetails.summary.createdAt")}</p>
@@ -372,6 +440,7 @@ const LessonDetails: React.FC = () => {
               </CardContent>
             </Card>
 
+            {/* Sidebar: Processing + Actions */}
             <div className="space-y-4">
               <ProcessingSection lesson={data} />
 
@@ -386,65 +455,69 @@ const LessonDetails: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-2">
-                  {/* <Button size="sm" variant="default">
-                Preview learner view
-              </Button> */}
-                  <Button onClick={() => {
-                    if (!data.publishedAt) {
-                      dispatch(publishLesson({ id: data.id }));
-                    } else {
-                      dispatch(unpublishLesson({ id: data.id }));
+                  <Button
+                    onClick={handlePublishToggle}
+                    disabled={data.status !== "READY" || isMutating}
+                    size="sm"
+                    variant="outline"
+                    className={
+                      data.publishedAt
+                        ? "bg-gray-500 text-white hover:bg-gray-500/90 hover:text-white"
+                        : "bg-blue-500 text-white hover:bg-blue-500/90 hover:text-white"
                     }
-
-                  }} className={`${data.publishedAt ? "bg-gray-500 text-white hover:bg-gray-500/90 hover:text-white" : "bg-blue-500 text-white hover:bg-blue-500/90 hover:text-white"}`} disabled={data.status !== "READY" || mutationStatus === "loading"} size="sm" variant="outline">
-                    {mutationStatus === "loading" && mutationType === "publish" &&
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    }
-                    {data.publishedAt ? t("lessonDetails.actions.unpublishLesson") : t("lessonDetails.actions.publishLesson")}
+                  >
+                    {isPublishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {data.publishedAt
+                      ? t("lessonDetails.actions.unpublishLesson")
+                      : t("lessonDetails.actions.publishLesson")}
                   </Button>
-                  <Button onClick={() => {
-                    dispatch(retryLessonGeneration({ id: data.id, isRestart: false }));
-                  }} disabled={data.publishedAt != null || mutationStatus === "loading"} size="sm" variant="outline">
-                    {
-                      mutationStatus === "loading" && mutationType === "re-try" &&
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    }
+
+                  <Button
+                    onClick={handleRegenerate}
+                    disabled={data.publishedAt != null || isMutating}
+                    size="sm"
+                    variant="outline"
+                  >
+                    {isRegenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t("lessonDetails.actions.regenerate")}
                   </Button>
-                  <Button className="bg-orange-500 hover:bg-orange-600 text-white hover:text-white" onClick={() => {
-                    dispatch(retryLessonGeneration({ id: data.id, isRestart: true }));
-                  }} disabled={data.publishedAt != null || mutationStatus === "loading"} size="sm" variant="outline">
-                    {
-                      mutationStatus === "loading" && mutationType === "re-try" &&
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    }
+
+                  <Button
+                    onClick={handleRestart}
+                    disabled={data.publishedAt != null || isMutating}
+                    size="sm"
+                    variant="outline"
+                    className="bg-orange-500 text-white hover:bg-orange-600 hover:text-white"
+                  >
+                    {isRegenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t("lessonDetails.actions.restart")}
                   </Button>
-                  {/* Red button */}
-                  <Button onClick={() => {
-                    dispatch(cancelLessonGeneration({ id: data.id }))
-                  }} size="sm" variant="destructive" disabled={data.status !== "PROCESSING" || mutationStatus === "loading"}>
-                    {
-                      mutationStatus === "loading" && mutationType === "stop-ai-processing" &&
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    }
+
+                  <Button
+                    onClick={handleStopProcessing}
+                    disabled={data.status !== "PROCESSING" || isMutating}
+                    size="sm"
+                    variant="destructive"
+                  >
+                    {isStopping && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t("lessonDetails.actions.stopProcessing")}
                   </Button>
                 </CardContent>
               </Card>
             </div>
           </div>
-
         </TabsContent>
+
         <TabsContent value="transcript" className="mt-0">
           <SentencesTab lesson={data} />
         </TabsContent>
+
         <TabsContent value="sitting" className="mt-0">
           <LessonSitting lesson={data} />
         </TabsContent>
       </Tabs>
     </div>
-  )
-}
+  );
+};
 
 export default LessonDetails

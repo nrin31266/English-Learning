@@ -112,9 +112,9 @@ const AllLesson = () => {
         return <SkeletonComponent />;
     }
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             {/* Header */}
-            <div className="flex justify-between items-center h-6">
+            <div className="flex justify-between items-center">
                 <Breadcrumb>
                     <BreadcrumbList>
                         <BreadcrumbItem >
@@ -131,9 +131,10 @@ const AllLesson = () => {
                 <Button
                     onClick={() => navigate('/generate-lessons')}
                     variant="outline"
-                    className="h-6 text-xs"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
                 >
-                    <SquarePlus />
+                    <SquarePlus className="h-3.5 w-3.5" />
                     {t("allLessons.addButton")}
                 </Button>
             </div>
@@ -144,24 +145,21 @@ const AllLesson = () => {
                 setSearchParams={setSearchParams}
             />
 
-            <div>
-                <LessonDataTable data={data?.content || []} loading={loading} />
+            <LessonDataTable data={data?.content || []} loading={loading} />
 
-                {data && (
-                    <PaginationBar
-                        page={data.number}
-                        size={data.size}
-                        totalElements={data.totalElements}
-                        totalPages={data.totalPages}
-                        numberOfElements={data.numberOfElements}
-                        onPageChange={(newPage) => {
-                            handleChangeSearchParam("page", newPage + 1, false);
-                        }}
-                        hasBorderTop={true}
-                    />
-                )}
-
-            </div>
+            {data && (
+                <PaginationBar
+                    page={data.number}
+                    size={data.size}
+                    totalElements={data.totalElements}
+                    totalPages={data.totalPages}
+                    numberOfElements={data.numberOfElements}
+                    onPageChange={(newPage) => {
+                        handleChangeSearchParam("page", newPage + 1, false);
+                    }}
+                    hasBorderTop={true}
+                />
+            )}
         </div>
     )
 };

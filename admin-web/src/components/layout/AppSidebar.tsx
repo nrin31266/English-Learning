@@ -28,8 +28,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: t("appMenu.vocabulary"),
       children: [
-        { title: t("appMenu.allWords"), url: "/all-words", icon: CaseSensitive },
-        { title: "Word Queue", url: "/word-queue", icon: Inbox }
+        // { title: t("appMenu.allWords"), url: "/all-words", icon: CaseSensitive },
+        // { title: "Word Queue", url: "/word-queue", icon: Inbox }
       ]
     },
     {

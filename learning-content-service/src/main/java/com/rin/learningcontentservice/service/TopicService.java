@@ -7,7 +7,6 @@ import com.rin.learningcontentservice.dto.response.*;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
 import com.rin.learningcontentservice.mapper.LessonMapper;
 import com.rin.learningcontentservice.mapper.TopicMapper;
-import com.rin.learningcontentservice.model.Lesson;
 import com.rin.learningcontentservice.model.Topic;
 import com.rin.learningcontentservice.model.UserLessonProgress;
 import com.rin.learningcontentservice.repository.LessonRepository;

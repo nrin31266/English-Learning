@@ -165,6 +165,7 @@
       "columns": {
         "id": "ID",
         "lesson": "Bài học",
+        "topic": "Chủ đề",
         "level": "Cấp độ",
         "type": "Loại",
         "source": "Nguồn",

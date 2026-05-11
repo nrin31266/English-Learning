@@ -32,19 +32,17 @@ export default function PaginationBar({
   const end = page * size + numberOfElements;
 
   return (
-    <div className={`mt-4 flex items-center justify-between px-2 py-3 ${hasBorderTop ? 'border-t' : ''}`}>
-      {/* Bên trái: Showing X–Y of Z */}
-      <div className="text-sm text-muted-foreground">
+    <div className={`flex items-center justify-between px-2 py-1.5 ${hasBorderTop ? 'border-t' : ''}`}>
+      {/* Left: Showing X–Y of Z */}
+      <div className="text-xs text-muted-foreground">
         {totalElements === 0
           ? t("allLessons.pagination.noResults")
           : t("allLessons.pagination.showing", { start, end, total: totalElements })}
       </div>
 
-      {/* Bên phải: Pagination */}
-     <div >
-         <Pagination>
-        <PaginationContent>
-
+      {/* Right: Pagination */}
+      <Pagination className="w-auto">
+        <PaginationContent className="gap-0">
           <PaginationItem>
             <PaginationPrevious
               href="#"
@@ -53,6 +51,7 @@ export default function PaginationBar({
                 if (page > 0) onPageChange(page - 1);
               }}
               aria-disabled={page === 0}
+              className="h-7 text-xs"
             />
           </PaginationItem>
 
@@ -66,6 +65,7 @@ export default function PaginationBar({
                   e.preventDefault();
                   onPageChange(i);
                 }}
+                className="h-7 min-w-[28px] text-xs"
               >
                 {i + 1}
               </PaginationLink>
@@ -80,12 +80,11 @@ export default function PaginationBar({
                 if (page < totalPages - 1) onPageChange(page + 1);
               }}
               aria-disabled={page === totalPages - 1}
-              
+              className="h-7 text-xs"
             />
           </PaginationItem>
         </PaginationContent>
       </Pagination>
-     </div>
     </div>
   );
 }

@@ -150,6 +150,7 @@
       "columns": {
         "id": "ID",
         "lesson": "Lesson",
+        "topic": "Topic",
         "level": "Level",
         "type": "Type",
         "source": "Source",
