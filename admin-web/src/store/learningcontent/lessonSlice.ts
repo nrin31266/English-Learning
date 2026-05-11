@@ -82,7 +82,7 @@ export const lessonSlice = createSlice({
       if (audioUrl) lesson.audioUrl = audioUrl;
       if (sourceReferenceId) lesson.sourceReferenceId = sourceReferenceId;
       if (thumbnailUrl) lesson.thumbnailUrl = thumbnailUrl;
-      if (durationSeconds !== null) lesson.durationSeconds = durationSeconds;
+      if (durationSeconds !== null) lesson.durationSeconds = durationSeconds || lesson.durationSeconds; // chỉ update nếu có giá trị mới
 
       // map step -> status
       if (processingStep === "FAILED") {

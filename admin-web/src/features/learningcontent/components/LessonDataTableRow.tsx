@@ -149,7 +149,7 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
       {/* Lesson title */}
       <TableCell className="px-2.5 py-1 align-middle">
         <Link className="underline hover:text-primary" to={`/lessons/${row.id}/${row.slug}`}>
-          <span className="text-sm font-medium truncate max-w-[200px] block">{row.title}</span>
+          <span className="text-sm font-medium truncate max-w-[400px] block">{row.title}</span>
         </Link>
       </TableCell>
 

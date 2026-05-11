@@ -101,7 +101,7 @@ const AllLesson = () => {
         const filters = Object.fromEntries(uRLSearchParams.entries());
         // Has page: page -= 1;
         filters.page = filters.page ? String(Number(filters.page) - 1) : "0";
-        filters.size = filters.size || "12";
+        filters.size = filters.size || "20";
         filters.sort = filters.sort || "id,desc";
 
         dispatch(fetchLessons(filters));
