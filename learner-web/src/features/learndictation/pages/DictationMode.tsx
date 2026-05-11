@@ -10,6 +10,7 @@ import {
 } from "@/store/lessonForDictationSlide"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 
 import type { ILessonSentenceDetailsResponse } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,7 @@ import { CompletionModal, LoginIncentiveModal } from "@/components/ModeModals"
 const MODE_NAME = "DICTATION";
 
 const DictationMode = () => {
+    const { t } = useTranslation()
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
@@ -291,12 +293,12 @@ const DictationMode = () => {
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hidden sm:flex shrink-0" onClick={handleBackToTopic}>
-                        <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Back
+                        <ArrowLeft className="h-3.5 w-3.5 mr-1" /> {t("dictation.back")}
                     </Button>
 
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 whitespace-nowrap pr-2">
                         <span className="text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer shrink-0 transition-colors" onClick={() => navigate("/topics")}>
-                            Playlists
+                            {t("dictation.playlists")}
                         </span>
                         <span className="text-muted-foreground/40 shrink-0">/</span>
 
@@ -321,7 +323,7 @@ const DictationMode = () => {
                                 {isLessonCompleted && (
                                     <div className="flex items-center gap-1 text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100">
                                         <CheckCircle2 className="h-3 w-3" />
-                                        <span className="text-[10px] font-bold">Done</span>
+                                        <span className="text-[10px] font-bold">{t("dictation.done")}</span>
                                     </div>
                                 )}
 
@@ -331,7 +333,7 @@ const DictationMode = () => {
                                         onClick={handleLoginIncentive}
                                         className="ml-2 text-[11px] sm:text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors shrink-0"
                                     >
-                                        Sign in to save
+                                        {t("dictation.signInToSave")}
                                     </button>
                                 )}
                             </div>
@@ -347,7 +349,7 @@ const DictationMode = () => {
                         onClick={() => setShowTranscriptToggle((prev) => !prev)}
                     >
                         <FileText className="h-3.5 w-3.5 mr-1" />
-                        <span>Transcript</span>
+                        <span>{t("dictation.transcript")}</span>
                     </Button>
                 </div>
             </div>
@@ -355,23 +357,23 @@ const DictationMode = () => {
             {isLoading ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Loading lesson for dictation...
+                    {t("dictation.loadingLesson")}
                 </div>
             ) : status === "failed" ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm">
-                    <p className="text-destructive">Cannot load lesson. Please try again.</p>
+                    <p className="text-destructive">{t("dictation.cannotLoad")}</p>
                     {error?.message && (
                         <p className="max-w-md text-center text-xs text-destructive/80">{error.message}</p>
                     )}
                     {id && (
                         <Button size="sm" variant="outline" onClick={() => dispatch(fetchLessonByIdForDictation(Number(id)))}>
-                            Retry
+                            {t("dictation.retry")}
                         </Button>
                     )}
                 </div>
             ) : !lesson ? (
                 <div className="flex flex-1 flex-col items-center justify-center text-sm text-muted-foreground">
-                    Lesson not found.
+                    {t("dictation.lessonNotFound")}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 mt-1">

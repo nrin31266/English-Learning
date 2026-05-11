@@ -11,12 +11,14 @@ import type {
 import { Loader2, Library, RefreshCw } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import TopicSection from "../components/TopicSection"
 import LessonModeDialog from "../components/LessonModeDialog"
 import TopicFilterPanel from "../components/TopicFilterPanel"
 import ResumeLearningSection from "@/features/home/components/ResumeLearningSection"
 
 const Topics = () => {
+  const { t } = useTranslation()
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
 
@@ -73,10 +75,10 @@ const Topics = () => {
         <div className="flex flex-col gap-1">
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
             <Library className="h-6 w-6 text-primary" />
-            Playlists
+            {t("topics.title")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Browse playlists and pick up where you left off.
+            {t("topics.subtitle")}
           </p>
         </div>
         
@@ -104,21 +106,21 @@ const Topics = () => {
         <div className="flex flex-col gap-1">
           <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-foreground">
             <RefreshCw className="h-5 w-5 text-muted-foreground" />
-            Recently Updated
+            {t("topics.recentlyUpdated")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            New lessons added across playlists.
+            {t("topics.recentlyUpdatedDesc")}
           </p>
         </div>
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mb-2" />
-            <span className="text-sm">Loading...</span>
+            <span className="text-sm">{t("topics.loading")}</span>
           </div>
         ) : topicsWithLessons.length === 0 ? (
           <div className="flex h-40 flex-col items-center justify-center rounded-2xl border border-dashed bg-muted/20 text-sm text-muted-foreground">
-            No playlists available.
+            {t("topics.noPlaylists")}
           </div>
         ) : (
           <div className="flex flex-col gap-10">

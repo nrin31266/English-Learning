@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { fetchTopicBySlug } from "@/store/topicSlide"
+import { useTranslation } from "react-i18next"
 
 import type { IHomeLessonResponse } from "@/types"
 import { cefrLevelOptions } from "@/types"
@@ -22,6 +23,7 @@ import {
 import { cn } from "@/lib/utils"
 
 const TopicDetails = () => {
+  const { t } = useTranslation()
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -64,12 +66,12 @@ const TopicDetails = () => {
       
       {/* --- HEADER --- */}
       <header className="flex flex-col gap-4">
-        <button 
+        <button
           onClick={() => navigate("/topics")}
           className="group flex w-fit items-center gap-1.5 text-xs font-medium text-muted-foreground transition-all hover:text-primary"
         >
           <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
-          Back to Playlists
+          {t("topicDetails.backToPlaylists")}
         </button>
 
         <div className="flex flex-col gap-3">
@@ -85,7 +87,7 @@ const TopicDetails = () => {
             <div className="flex items-center gap-1.5">
               <Library className="h-4 w-4 text-primary/70" />
               <span className="font-medium">
-                {topic?.totalLessons || 0} lessons
+                {topic?.totalLessons || 0} {t("topicDetails.lessons")}
               </span>
             </div>
             
@@ -95,7 +97,7 @@ const TopicDetails = () => {
                 <div className="flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 text-muted-foreground/50" />
                   <span className="text-xs">
-                    Updated {new Date(topic.updatedAt).toLocaleDateString('en-GB')}
+                    {t("topicDetails.updated", { date: new Date(topic.updatedAt).toLocaleDateString('en-GB') })}
                   </span>
                 </div>
               </>
@@ -108,7 +110,7 @@ const TopicDetails = () => {
                 <div className="flex items-center gap-1">
                   <Star className="h-3 w-3 text-amber-500" />
                   <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                    Featured
+                    {t("topicDetails.featured")}
                   </span>
                 </div>
               </>
@@ -122,7 +124,7 @@ const TopicDetails = () => {
         <div className="flex items-center gap-2">
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Filter by level
+            {t("topicDetails.filterByLevel")}
           </span>
         </div>
 
@@ -131,12 +133,12 @@ const TopicDetails = () => {
             onClick={() => setLevelFilter("all")}
             className={cn(
               "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-              levelFilter === "all" 
-                ? "bg-foreground text-background" 
+              levelFilter === "all"
+                ? "bg-foreground text-background"
                 : "bg-muted/50 text-muted-foreground hover:bg-muted"
             )}
           >
-            All
+            {t("topicDetails.all")}
           </button>
           {cefrLevelOptions.map((lvl) => (
             <button
@@ -144,8 +146,8 @@ const TopicDetails = () => {
               onClick={() => setLevelFilter(lvl)}
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                levelFilter === lvl 
-                  ? "bg-primary text-primary-foreground" 
+                levelFilter === lvl
+                  ? "bg-primary text-primary-foreground"
                   : "bg-muted/50 text-muted-foreground hover:bg-muted"
               )}
             >
@@ -164,7 +166,7 @@ const TopicDetails = () => {
         ) : filteredLessons.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed bg-muted/10">
             <Library className="h-8 w-8 text-muted-foreground/30 mb-2" />
-            <p className="text-sm font-medium text-muted-foreground/60">No lessons in this playlist</p>
+            <p className="text-sm font-medium text-muted-foreground/60">{t("topicDetails.noLessons")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-16">

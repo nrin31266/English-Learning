@@ -3,6 +3,7 @@ import type { IResumeLearningResponse, IResumeLessonDto } from "@/types"
 import ResumeLessonItem from "./ResumeLessonItem"
 import handleAPI from "@/apis/handleAPI"
 import { Button } from "@/components/ui/button"
+import { useTranslation } from "react-i18next"
 import { ChevronDown, Loader2 } from "lucide-react"
 
 type ResumeLearningSectionProps = {
@@ -13,6 +14,7 @@ type ResumeLearningSectionProps = {
 const PAGE_SIZE = 10
 
 const ResumeLearningSection = ({ data, onContinueLesson }: ResumeLearningSectionProps) => {
+  const { t } = useTranslation()
   const [lessons, setLessons] = useState<IResumeLessonDto[]>(data.recentLessons)
   const [hasMore, setHasMore] = useState(data.hasMore)
   const [page, setPage] = useState(0)
@@ -51,7 +53,7 @@ const ResumeLearningSection = ({ data, onContinueLesson }: ResumeLearningSection
         <div className="flex items-center gap-2">
           <div className="h-6 w-1 shrink-0 rounded-full bg-amber-500" />
           <h2 className="text-base font-bold tracking-tight text-foreground">
-            Continue Learning
+            {t("resume.continueLearning")}
           </h2>
         </div>
         <div className="flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5">
@@ -59,7 +61,7 @@ const ResumeLearningSection = ({ data, onContinueLesson }: ResumeLearningSection
             {formattedCount}
           </span>
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
-            in progress
+            {t("resume.inProgress")}
           </span>
         </div>
       </div>
@@ -90,7 +92,7 @@ const ResumeLearningSection = ({ data, onContinueLesson }: ResumeLearningSection
             ) : (
               <ChevronDown className="h-3.5 w-3.5" />
             )}
-            {loading ? "Loading..." : "Xem thêm"}
+            {loading ? t("resume.loading") : t("resume.loadMore")}
           </Button>
         </div>
       )}

@@ -1,9 +1,9 @@
-import { 
-  BookA, 
-  Menu, 
-  Notebook, 
-  Library, 
-  X, 
+import {
+  BookA,
+  Menu,
+  Notebook,
+  Library,
+  X,
   ChevronDown,
   Users,
   Trophy,
@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import * as React from "react"
 import { Link, useLocation } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -31,34 +32,34 @@ type NavItem = {
   children?: NavChild[];
 };
 
-// Ốp type vào data
-const NAV_LINKS: NavItem[] = [
-  { name: "Playlists", path: "/topics", icon: Notebook },
-  { name: "Dictionary", path: "/dictionary", icon: BookA },
-  { 
-    name: "Practice", 
-    icon: Library,
-    children: [
-      { name: "Review Hub", path: "/review", description: "Review your saved words and sentences." },
-      { name: "Mock Test", path: "/mock-test", description: "Take a full CEFR standard test." },
-      { name: "Grammar", path: "/grammar", description: "Master English grammar rules." },
-    ]
-  },
-  { 
-    name: "Community", 
-    icon: Users,
-    children: [
-      { name: "Leaderboard", path: "/leaderboard", icon: Trophy, description: "Compete with other learners globally." },
-      { name: "Discussions", path: "/discussions", icon: MessageCircle, description: "Ask questions and share study tips." },
-    ]
-  },
-  { name: "Blog", path: "/blog", icon: Newspaper },
-]
-
 const HeadNav = () => {
+  const { t } = useTranslation();
   const pn = useLocation().pathname;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [expandedMobileMenus, setExpandedMobileMenus] = React.useState<string[]>([]);
+
+  const NAV_LINKS: NavItem[] = [
+    { name: t("header.playlists"), path: "/topics", icon: Notebook },
+    { name: t("header.dictionary"), path: "/dictionary", icon: BookA },
+    {
+      name: t("header.practice"),
+      icon: Library,
+      children: [
+        { name: t("header.reviewHub"), path: "/review", description: t("header.reviewHubDesc") },
+        { name: t("header.mockTest"), path: "/mock-test", description: t("header.mockTestDesc") },
+        { name: t("header.grammar"), path: "/grammar", description: t("header.grammarDesc") },
+      ]
+    },
+    {
+      name: t("header.community"),
+      icon: Users,
+      children: [
+        { name: t("header.leaderboard"), path: "/leaderboard", icon: Trophy, description: t("header.leaderboardDesc") },
+        { name: t("header.discussions"), path: "/discussions", icon: MessageCircle, description: t("header.discussionsDesc") },
+      ]
+    },
+    { name: t("header.blog"), path: "/blog", icon: Newspaper },
+  ];
 
   React.useEffect(() => {
     setIsMobileMenuOpen(false);

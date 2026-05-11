@@ -4,13 +4,14 @@ import { useAppDispatch, useAppSelector } from "@/store"
 import {
   fetchLessonByIdForShadowing,
   resetLessonState,
-  submitBatchShadowingScore, // 👉 Đừng quên tạo Thunk này ở Slide nhé
+  submitBatchShadowingScore,
   submitShadowingScore,
   updateSentenceCompletion,
 
 } from "@/store/lessonForShadowingSlide"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 
 import type { ILessonSentenceDetailsResponse } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -40,6 +41,7 @@ import { CompletionModal, LoginIncentiveModal } from "@/components/ModeModals"
 const MODE_NAME = "SHADOWING";
 
 const ShadowingMode = () => {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string; }>()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -50,7 +52,6 @@ const ShadowingMode = () => {
   const lessonState = useAppSelector((state) => state.lessonForShadowing.lesson)
   const { data: lesson, status, error } = lessonState
 
-  // 👉 Đồng bộ cơ chế Set/Array giống Dictation
   const shadowingProgress = useMemo(() => lesson?.progressOverview?.shadowing, [lesson])
   const completedIdsArray = useMemo(() => shadowingProgress?.completedSentenceIds || [], [shadowingProgress])
   const completedIdsSet = useMemo(() => new Set(completedIdsArray), [completedIdsArray])
@@ -62,12 +63,10 @@ const ShadowingMode = () => {
   const [autoPlayOnSentenceChange, setAutoPlayOnSentenceChange] = useState(true)
   const [userInteracted, setUserInteracted] = useState(false)
   
-  // State điều khiển UI
   const [showTranscriptToggle, setShowTranscriptToggle] = useState(false)
   const [showProgress, setShowProgress] = useState(true)
   const [isDesktop, setIsDesktop] = useState(true)
 
-  // 👉 Thêm State cho Modals & Sync
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const syncRef = useRef(false);
@@ -94,10 +93,6 @@ const ShadowingMode = () => {
     }
   }, [dispatch, id])
 
-  // Resume: jump to first unfinished sentence (check once on lesson load)
-  // Keep autoPlayOnSentenceChange=true so user can play after interacting.
-  // The Player internally checks userInteracted before auto-playing,
-  // so it won't auto-play on initial load even with this flag = true.
   useEffect(() => {
     if (sentences.length > 0 && completedIdsSet.size > 0) {
       const firstUnfinished = sentences.findIndex(s => !completedIdsSet.has(s.id));
@@ -143,7 +138,6 @@ const ShadowingMode = () => {
     setActiveIndex(index)
   }, [])
 
-  // 🚀 1. Logic xử lý khi hoàn thành 1 câu (Hỗ trợ Guest & User)
   const handleCompleteSentence = useCallback((sentenceId: number, _fluency: number, score: number) => {
     if (!lesson?.id) return;
 
@@ -160,13 +154,11 @@ const ShadowingMode = () => {
       if (!currentLocal.includes(sentenceId)) {
         const nextLocal = [...currentLocal, sentenceId];
         saveGuestProgress(id!, MODE_NAME, nextLocal);
-        // Delay login modal 600ms
         setTimeout(() => setShowLoginModal(true), 600);
       }
     }
   }, [dispatch, lesson?.id, profile, id]);
 
-  // 🚀 2. Hiển thị Modal khi hoàn thành toàn bộ bài (delay 800ms)
   useEffect(() => {
     if (lesson && isLessonCompleted) {
       const timer = setTimeout(() => setShowCompletionModal(true), 800);
@@ -174,7 +166,6 @@ const ShadowingMode = () => {
     }
   }, [isLessonCompleted, lesson]);
 
-  // 🚀 3. LOGIC 0: Tái hiện tiến độ cho Guest khi F5
   useEffect(() => {
     if (!profile && status === "succeeded" && id) {
         const localData = getGuestProgress(id!, MODE_NAME);
@@ -187,7 +178,6 @@ const ShadowingMode = () => {
     }
   }, [profile, status, id, dispatch]);
 
-  // 🚀 4. LOGIC SYNC: Chạy khi Guest quyết định Login
   useEffect(() => {
     const performBatchSync = async () => {
         if (profile && lesson?.id && id && sentences.length > 0 && !syncRef.current) {
@@ -205,7 +195,7 @@ const ShadowingMode = () => {
                         await dispatch(submitBatchShadowingScore({
                             lessonId: lesson.id,
                             sentenceIds: pendingIds,
-                            score: 100 // Thay bằng điểm mặc định ông muốn cho Shadowing
+                            score: 100
                         })).unwrap();
 
                         pendingIds.forEach(sId => {
@@ -244,7 +234,6 @@ const ShadowingMode = () => {
     }
   }
 
-  // 🚀 5. Hàm Login kết hợp lưu trữ
   const handleLoginIncentive = () => {
     saveGuestProgress(id!, MODE_NAME, completedIdsArray);
     keycloak.login();
@@ -276,22 +265,20 @@ const ShadowingMode = () => {
   return (
     <div className="flex min-h-[calc(100vh-64px)] flex-col gap-2 py-2 px-2 pb-8">
       
-      {/* 👉 HEADER TỐI ƯU 1 HÀNG DUY NHẤT (SIÊU ÉP) */}
       <div className="flex items-center justify-between gap-2 rounded-lg bg-card border px-2 sm:px-3 py-1.5 shadow-sm">
         
-        {/* Nửa trái: Nút Back + Nội dung (Cho phép scroll ngang nếu quá dài) */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
           
           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 sm:hidden" onClick={handleBackToTopic}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hidden sm:flex shrink-0" onClick={handleBackToTopic}>
-            <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Back
+            <ArrowLeft className="h-3.5 w-3.5 mr-1" /> {t("shadowing.back")}
           </Button>
 
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 whitespace-nowrap pr-2">
             <span className="text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer shrink-0 transition-colors" onClick={() => navigate("/topics")}>
-              Playlists
+              {t("shadowing.playlists")}
             </span>
             <span className="text-muted-foreground/40 shrink-0">/</span>
             
@@ -308,7 +295,6 @@ const ShadowingMode = () => {
               {lesson?.title ?? "Loading..."}
             </span>
 
-            {/* Các thẻ Tags được nhét vào cùng 1 dòng luôn */}
             {lesson && (
               <div className="flex items-center gap-1.5 border-l border-border/50 pl-2 ml-1 shrink-0">
                 <LanguageLevelBadge level={lesson.languageLevel} />
@@ -317,17 +303,16 @@ const ShadowingMode = () => {
                 {isLessonCompleted && (
                   <div className="flex items-center gap-1 text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100">
                     <CheckCircle2 className="h-3 w-3" />
-                    <span className="text-[10px] font-bold">Done</span>
+                    <span className="text-[10px] font-bold">{t("shadowing.done")}</span>
                   </div>
                 )}
 
-                {/* 👉 Nút Nhắc nhở Guest Mode tối giản */}
                 {!profile && (
                     <button
                         onClick={handleLoginIncentive}
                         className="ml-2 text-[11px] sm:text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors shrink-0"
                     >
-                        Sign in to save
+                        {t("shadowing.signInToSave")}
                     </button>
                 )}
               </div>
@@ -335,7 +320,6 @@ const ShadowingMode = () => {
           </div>
         </div>
 
-        {/* Nửa phải: Nút Toggle Transcript (CHỈ HIỆN TRÊN DESKTOP) */}
         <div className="hidden xl:flex items-center shrink-0">
           <Button 
             variant={showTranscriptToggle ? "secondary" : "outline"} 
@@ -344,7 +328,7 @@ const ShadowingMode = () => {
             onClick={() => setShowTranscriptToggle((prev) => !prev)}
           >
             <FileText className="h-3.5 w-3.5 mr-1" />
-            <span>Transcript</span>
+            <span>{t("shadowing.transcript")}</span>
           </Button>
         </div>
       </div>
@@ -352,16 +336,16 @@ const ShadowingMode = () => {
       {isLoading ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
-          Loading lesson for shadowing...
+          {t("shadowing.loadingLesson")}
         </div>
       ) : status === "failed" ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm">
-          <p className="text-destructive">Cannot load lesson. Please try again.</p>
+          <p className="text-destructive">{t("shadowing.cannotLoad")}</p>
           {error?.message && <p className="max-w-md text-center text-xs text-destructive/80">{error.message}</p>}
-          {id && <Button size="sm" variant="outline" onClick={() => dispatch(fetchLessonByIdForShadowing(Number(id)))}>Retry</Button>}
+          {id && <Button size="sm" variant="outline" onClick={() => dispatch(fetchLessonByIdForShadowing(Number(id)))}>{t("shadowing.retry")}</Button>}
         </div>
       ) : !lesson ? (
-        <div className="flex flex-1 flex-col items-center justify-center text-sm text-muted-foreground">Lesson not found.</div>
+        <div className="flex flex-1 flex-col items-center justify-center text-sm text-muted-foreground">{t("shadowing.lessonNotFound")}</div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 mt-1">
           <div className={cn("flex flex-col gap-3", effectiveShowTranscript ? "xl:col-span-8" : "xl:col-span-8 xl:col-start-3")}>
@@ -402,7 +386,6 @@ const ShadowingMode = () => {
             <KeyboardShortcutsHelp open={showHelp} onClose={() => setShowHelp(false)} />
           </div>
 
-          {/* Render Transcript dựa trên effectiveShowTranscript */}
           {effectiveShowTranscript && (
             <div className="xl:col-span-4 h-full">
               <ShadowingTranscript
@@ -410,7 +393,7 @@ const ShadowingMode = () => {
                 activeIndex={activeIndex}
                 onSelectSentence={handleSelectSentence}
                 visible={effectiveShowTranscript}
-                completedIds={completedIdsSet} // 👉 Đã đổi sang Set để đồng bộ giống Dictation
+                completedIds={completedIdsSet}
               />
             </div>
           )}
@@ -420,13 +403,12 @@ const ShadowingMode = () => {
       {showProgress && sentences.length > 0 && (
         <LessonProgressBar
           sentences={sentences as { id: number; }[]}
-          completedIds={completedIdsArray} // 👉 ProgressBar xài Array
+          completedIds={completedIdsArray}
           activeIndex={activeIndex}
           onSelect={handleSelectSentence}
         />
       )}
 
-      {/* 🚀 Render Modals */}
       <LoginIncentiveModal
           open={showLoginModal}
           onClose={() => setShowLoginModal(false)}

@@ -1,16 +1,15 @@
 import {
+  BookOpen,
+  Building2,
+  ExternalLink,
   Github,
   Mail,
-  Phone,
-  Building2,
-  BookOpen,
-  Server,
-  Heart,
-  ExternalLink,
-  Sparkles
+  Server
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const AppFooterContent = () => {
+  const { t } = useTranslation();
   return (
     <div className="w-full bg-background border-t border-border/40">
       {/* Main footer content */}
@@ -20,11 +19,10 @@ const AppFooterContent = () => {
         <div>
           <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
             <Building2 size={18} className="text-primary" />
-            About Fluenrin
+            {t("footer.aboutTitle")}
           </h3>
           <p className="leading-relaxed text-muted-foreground">
-            Fluenrin is your personal AI Language Coach — engineered to help you master English through active immersion, 
-            precise shadowing, and smart dictation practice.
+            {t("footer.aboutDesc")}
           </p>
         </div>
 
@@ -32,22 +30,22 @@ const AppFooterContent = () => {
         <div>
           <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
             <BookOpen size={18} className="text-primary" />
-            Learning Resources
+            {t("footer.resourcesTitle")}
           </h3>
           <ul className="space-y-3 text-muted-foreground">
             <li>
               <a className="flex items-center gap-2 hover:text-primary transition-colors" href="#">
-                Course catalog <ExternalLink size={14} />
+                {t("footer.courseCatalog")} <ExternalLink size={14} />
               </a>
             </li>
             <li>
               <a className="flex items-center gap-2 hover:text-primary transition-colors" href="#">
-                Shadowing paths <ExternalLink size={14} />
+                {t("footer.shadowingPaths")} <ExternalLink size={14} />
               </a>
             </li>
             <li>
               <a className="flex items-center gap-2 hover:text-primary transition-colors" href="#">
-                Help center <ExternalLink size={14} />
+                {t("footer.helpCenter")} <ExternalLink size={14} />
               </a>
             </li>
           </ul>
@@ -57,20 +55,20 @@ const AppFooterContent = () => {
         <div>
           <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
             <Server size={18} className="text-primary" />
-            Learner Tools
+            {t("footer.toolsTitle")}
           </h3>
           <ul className="space-y-3 text-muted-foreground">
             <li>
-              <a className="hover:text-primary transition-colors font-medium" href="/dashboard">My dashboard</a>
+              <a className="hover:text-primary transition-colors font-medium" href="/dashboard">{t("footer.myDashboard")}</a>
             </li>
             <li>
-              <a className="hover:text-primary transition-colors font-medium" href="/courses">My courses</a>
+              <a className="hover:text-primary transition-colors font-medium" href="/courses">{t("footer.myCourses")}</a>
             </li>
             <li>
-              <a className="hover:text-primary transition-colors font-medium" href="/progress">Progress & achievements</a>
+              <a className="hover:text-primary transition-colors font-medium" href="/progress">{t("footer.progress")}</a>
             </li>
             <li>
-              <a className="hover:text-primary transition-colors font-medium" href="/community">Community & discussions</a>
+              <a className="hover:text-primary transition-colors font-medium" href="/community">{t("footer.communityDiscussions")}</a>
             </li>
           </ul>
         </div>
@@ -78,7 +76,7 @@ const AppFooterContent = () => {
         {/* Column 4 - Contact */}
         <div>
           <h3 className="font-bold text-foreground mb-4">
-            Need support?
+            {t("footer.supportTitle")}
           </h3>
           <ul className="space-y-4 text-muted-foreground">
             <li className="flex items-center gap-3 group">
@@ -94,13 +92,9 @@ const AppFooterContent = () => {
                 <Github size={16} />
               </div>
               <a href="https://github.com/your-org" className="hover:text-primary transition-colors" target="_blank" rel="noreferrer">
-                Fluenrin Open Source
+                {t("footer.openSource")}
               </a>
             </li>
-            {/* <li className="flex items-center gap-2 text-xs opacity-70 italic">
-               <Sparkles size={12} className="text-amber-500" />
-               Built for serious learners.
-            </li> */}
           </ul>
         </div>
       </div>
@@ -108,9 +102,7 @@ const AppFooterContent = () => {
       {/* Bottom row */}
       <div className="border-t border-border/40 py-6 text-center text-muted-foreground text-sm flex flex-col sm:flex-row items-center justify-center gap-2">
         <div className="flex items-center gap-1">
-          © {new Date().getFullYear()} <span className="font-bold text-foreground">Fluenrin</span> — Made with
-          <Heart size={14} className="fill-red-500 text-red-500 mx-0.5" /> 
-          for learners.
+          {t("footer.copyright", { year: new Date().getFullYear() })}
         </div>
       </div>
     </div>

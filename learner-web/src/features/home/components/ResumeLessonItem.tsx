@@ -3,6 +3,7 @@ import LanguageLevelBadge from "@/components/LanguageLevel"
 import AudioFileTag from "@/components/AudioFileTag"
 import YouTubeTag from "@/components/YouTubeTag"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "react-i18next"
 import { Mic, Keyboard } from "lucide-react"
 
 type ResumeLessonItemProps = {
@@ -11,6 +12,7 @@ type ResumeLessonItemProps = {
 }
 
 const ResumeLessonItem = ({ lesson, onContinue }: ResumeLessonItemProps) => {
+  const { t } = useTranslation()
   const isShadowing = lesson.mode === "SHADOWING"
   const progressPercent = lesson.progressPercent ?? 0
 
@@ -48,13 +50,13 @@ const ResumeLessonItem = ({ lesson, onContinue }: ResumeLessonItemProps) => {
           <LanguageLevelBadge level={lesson.languageLevel} />
 
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-            {isShadowing ? "Shadowing" : "Dictation"}
+            {isShadowing ? t("resume.shadowing") : t("resume.dictation")}
           </span>
 
           {lesson.sourceType === "YOUTUBE" && <YouTubeTag />}
           {lesson.sourceType === "AUDIO_FILE" && <AudioFileTag />}
 
-          <span className="text-[10px] text-muted-foreground/40">·</span>
+          <span className="text-[10px] text-muted-foreground/40">|</span>
 
           <span className="text-[10px] font-bold tabular-nums text-muted-foreground">
             {progressPercent}%

@@ -4,20 +4,22 @@ import type { ITopicSummaryResponse } from "@/types"
 import { Search, Hash } from "lucide-react"
 import { useState, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 
 type TopicFilterPanelProps = {
   topics: ITopicSummaryResponse[]
 }
 
 const TopicFilterPanel = ({ topics }: TopicFilterPanelProps) => {
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState("")
   const navigate = useNavigate()
 
   const filteredTopics = useMemo(() => {
     if (!searchQuery.trim()) return topics
     const lowerQuery = searchQuery.toLowerCase()
-    return topics.filter(t => 
-      t.name.toLowerCase().includes(lowerQuery) || 
+    return topics.filter(t =>
+      t.name.toLowerCase().includes(lowerQuery) ||
       t.slug.toLowerCase().includes(lowerQuery)
     )
   }, [topics, searchQuery])
@@ -31,7 +33,7 @@ const TopicFilterPanel = ({ topics }: TopicFilterPanelProps) => {
         <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Search for playlists..."
+          placeholder={t("topics.searchPlaceholder")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-[14px] font-medium transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
@@ -58,7 +60,7 @@ const TopicFilterPanel = ({ topics }: TopicFilterPanelProps) => {
           ))
         ) : (
           <p className="text-sm font-medium text-muted-foreground italic">
-            No playlists found for "{searchQuery}"
+            {t("topics.noResults", { query: searchQuery })}
           </p>
         )}
       </div>
