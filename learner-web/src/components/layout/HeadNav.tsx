@@ -33,7 +33,7 @@ type NavItem = {
 
 // Ốp type vào data
 const NAV_LINKS: NavItem[] = [
-  { name: "Topics", path: "/topics", icon: Notebook },
+  { name: "Playlists", path: "/topics", icon: Notebook },
   { name: "Dictionary", path: "/dictionary", icon: BookA },
   { 
     name: "Practice", 
@@ -84,7 +84,7 @@ const HeadNav = () => {
       </Link>
 
       {/* 💻 DESKTOP NAVIGATION */}
-      <nav className="hidden lg:flex items-center gap-1.5">
+      <nav className="hidden lg:flex items-center gap-1">
         {NAV_LINKS.map((link) => {
           const isChildActive = link.children?.some(c => pn.startsWith(c.path));
           const isActive = (link.path && pn.startsWith(link.path)) || (link.path === '/topics' && pn.startsWith('/learn/lessons')) || isChildActive;
@@ -94,38 +94,41 @@ const HeadNav = () => {
             <div key={link.name} className="relative group">
               <button
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors outline-none",
-                  isActive 
-                    ? "bg-primary/10 text-primary" 
+                  "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold transition-colors outline-none",
+                  isActive
+                    ? "bg-primary text-primary-foreground font-bold shadow-sm"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={cn("h-4 w-4", isActive && "text-primary-foreground")} />
                 {link.name}
-                <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
+                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180", isActive && "text-primary-foreground")} />
               </button>
 
               <div className="absolute top-full left-0 mt-1 w-64 opacity-0 invisible -translate-y-2 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-200 z-50">
                 <div className="p-2 rounded-xl border bg-card text-card-foreground shadow-xl flex flex-col gap-1">
                   {link.children.map(child => {
-                    const ChildIcon = child.icon; // Đổi tên biến cho gọn
+                    const ChildIcon = child.icon;
+                    const childActive = pn.startsWith(child.path);
                     return (
                       <Link
                         key={child.path}
                         to={child.path}
                         className={cn(
-                          "block p-3 rounded-lg hover:bg-muted transition-colors",
-                          pn.startsWith(child.path) ? "bg-primary/5" : ""
+                          "block p-3 rounded-lg transition-colors",
+                          childActive
+                            ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                            : "hover:bg-muted text-foreground"
                         )}
                       >
                         <div className="flex items-center gap-2">
-                          {ChildIcon && <ChildIcon className="h-4 w-4 text-muted-foreground" />}
-                          <div className={cn("text-sm font-semibold", pn.startsWith(child.path) ? "text-primary" : "text-foreground")}>
+                          {ChildIcon && <ChildIcon className={cn("h-4 w-4", childActive ? "text-primary-foreground" : "text-muted-foreground")} />}
+                          <div className={cn("text-sm", childActive ? "font-bold text-primary-foreground" : "font-semibold text-foreground")}>
                             {child.name}
                           </div>
                         </div>
                         {child.description && (
-                          <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                          <div className={cn("text-xs mt-1 line-clamp-1", childActive ? "text-primary-foreground/80" : "text-muted-foreground")}>
                             {child.description}
                           </div>
                         )}
@@ -140,13 +143,13 @@ const HeadNav = () => {
               key={link.name}
               to={link.path!}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                isActive 
-                  ? "bg-primary/10 text-primary" 
+                "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold transition-colors",
+                isActive
+                  ? "bg-primary text-primary-foreground font-bold shadow-sm"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className={cn("h-4 w-4", isActive && "text-primary-foreground")} />
               {link.name}
             </Link>
           )

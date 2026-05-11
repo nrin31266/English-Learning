@@ -69,7 +69,7 @@ const TopicDetails = () => {
           className="group flex w-fit items-center gap-1.5 text-xs font-medium text-muted-foreground transition-all hover:text-primary"
         >
           <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
-          Back to Topics
+          Back to Playlists
         </button>
 
         <div className="flex flex-col gap-3">

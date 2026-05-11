@@ -276,7 +276,7 @@ const ShadowingMode = () => {
 
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 whitespace-nowrap pr-2">
             <span className="text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer shrink-0 transition-colors" onClick={() => navigate("/topics")}>
-              Topics
+              Playlists
             </span>
             <span className="text-muted-foreground/40 shrink-0">/</span>
             
