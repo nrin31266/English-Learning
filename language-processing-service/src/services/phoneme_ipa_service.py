@@ -20,10 +20,9 @@ def compare_phonemes_with_ipa(
 ) -> Tuple[float, List[Dict]]:
     """Backward compatibility."""
     score, diff_tokens, _, _ = compare_words_with_ipa(
-        expected_word, 
-        recognized_word, 
-        keep_stress=True, 
-        normalize=True,
+        expected_word,
+        recognized_word,
+        keep_stress=True,
     )
     return score, diff_tokens
 

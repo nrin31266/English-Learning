@@ -22,7 +22,7 @@ from src.utils.sequence_alignment import levenshtein_alignment_with_similarity
 MULTI_CHAR_IPA = [
     "tʃ", "dʒ",
     "aɪ", "aʊ", "eɪ", "oʊ", "ɔɪ",
-    "iː", "uː", "ɜː", "ɔː", "ɑː",
+    "iː", "uː", "ɜr", "ɔː", "ɑː",
     "ɪə", "ʊə", "eə",
     "ər",
 ]

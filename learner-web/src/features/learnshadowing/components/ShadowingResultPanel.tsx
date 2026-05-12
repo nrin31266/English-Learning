@@ -1,5 +1,5 @@
 // ShadowingResultPanel.tsx
-import React, { useState, useRef, useCallback } from "react"
+import React, { useState, useRef, useCallback, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Sparkles, Target, BookA } from "lucide-react"
 import type { IShadowingResult, IDiffToken } from "@/types"
@@ -79,7 +79,7 @@ const IpaRenderer = React.memo(({
     const originalWords = expectedPhonetic.split(/\s+/).filter(w => w.trim() !== "")
 
     return (
-      <div className={cn("w-full break-words text-center leading-loose", IPA_TYPOGRAPHY)}>
+      <div className={cn("w-full wrap-break-word text-center leading-loose", IPA_TYPOGRAPHY)}>
         <span className="text-muted-foreground/50 select-none mr-1.5">/</span>
         {originalWords.map((word, idx) => (
           <React.Fragment key={`orig-${idx}`}>
@@ -100,7 +100,7 @@ const IpaRenderer = React.memo(({
     : compares.filter(c => c.status !== "EXTRA")
 
   return (
-    <div className={cn("w-full break-words text-center leading-loose", IPA_TYPOGRAPHY)}>
+    <div className={cn("w-full wrap-break-word text-center leading-loose", IPA_TYPOGRAPHY)}>
       <span className="text-muted-foreground/50 select-none mr-1.5">/</span>
       
       {filteredCompares.map((c, idx) => {
@@ -187,6 +187,10 @@ const WordItem = React.memo(({ c, attempted }: { c: any, attempted: boolean }) =
   const isExtra = c.status === "EXTRA"
   const hasError = !isExtra && c.status !== "CORRECT" && attempted && c.recognizedWord
 
+  useEffect(() => {
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
+  }, [])
+
   const handleMouseEnter = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     setIsOpen(true)
@@ -233,7 +237,7 @@ const WordItem = React.memo(({ c, attempted }: { c: any, attempted: boolean }) =
           </div>
         </PopoverTrigger>
       </div>
-      <PopoverContent className="w-auto min-w-[160px] p-3 rounded-lg border-border/60 shadow-md" sideOffset={6}>
+      <PopoverContent className="w-auto min-w-40 p-3 rounded-lg border-border/60 shadow-md" sideOffset={6}>
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-2">
             <span className={cn("text-[15px] font-bold tracking-wide", getWordClass(c.status, attempted))}>
@@ -241,7 +245,7 @@ const WordItem = React.memo(({ c, attempted }: { c: any, attempted: boolean }) =
             </span>
             {c.phonemeDiff?.score !== undefined && (
               <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                {(c.phonemeDiff.score * 100).toFixed(0)}%
+                {Math.max(0, c.phonemeDiff.score * 100).toFixed(0)}%
               </span>
             )}
           </div>
