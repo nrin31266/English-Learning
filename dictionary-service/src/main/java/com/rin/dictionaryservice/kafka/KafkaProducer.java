@@ -1,6 +1,7 @@
 package com.rin.dictionaryservice.kafka;
 
 import com.rin.englishlearning.common.constants.KafkaTopics;
+import com.rin.englishlearning.common.event.VocabSubTopicProgressEvent;
 import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
 import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
 import lombok.RequiredArgsConstructor;
@@ -24,5 +25,10 @@ public class KafkaProducer {
     public void sendVocabSubtopicsGenerated(VocabSubtopicsGeneratedEvent event) {
         kafkaTemplate.send(KafkaTopics.VOCAB_SUBTOPICS_GENERATED_TOPIC, event.getTopicId(), event);
         log.info("[Kafka] VocabSubtopicsGenerated sent: topicId={}, count={}", event.getTopicId(), event.getSubtopicCount());
+    }
+
+    public void sendVocabSubTopicProgress(VocabSubTopicProgressEvent event) {
+        kafkaTemplate.send(KafkaTopics.VOCAB_SUBTOPIC_PROGRESS_TOPIC, event.getSubtopicId(), event);
+        log.info("[Kafka] VocabSubTopicProgress sent: subtopic={}, words={}/{}", event.getSubtopicId(), event.getReadyWordCount(), event.getWordCount());
     }
 }

@@ -98,7 +98,7 @@ export const NotificationHost = () => {
   if (items.length === 0) return null
 
   return (
-    <div className="pointer-events-none fixed left-1/2 -translate-x-1/2 z-50 flex w-80 flex-col gap-2 top-4 sm:top-6 sm:w-[420px]">
+    <div className="pointer-events-none fixed left-1/2 -translate-x-1/2 z-500 flex w-80 flex-col gap-2 top-4 sm:top-6 sm:w-[420px]">
       {items.map((n) => {
         const styles = getVariantStyles(n.variant)
 

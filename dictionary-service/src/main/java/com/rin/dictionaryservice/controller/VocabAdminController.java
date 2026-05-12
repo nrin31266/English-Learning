@@ -8,6 +8,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -90,5 +91,32 @@ public class VocabAdminController {
                 .build();
     }
 
+    @DeleteMapping("/subtopics/{subtopicId}")
+    public ApiResponse<String> deleteSubTopic(@PathVariable String subtopicId) {
+        vocabService.deleteSubTopic(subtopicId);
+        return ApiResponse.<String>builder().result("deleted").build();
+    }
+
+    @DeleteMapping("/subtopics/{subtopicId}/words")
+    public ApiResponse<String> deleteAllWordsInSubTopic(@PathVariable String subtopicId) {
+        vocabService.deleteAllWordsInSubTopic(subtopicId);
+        return ApiResponse.<String>builder().result("deleted").build();
+    }
+
+    @PostMapping("/topics/{topicId}/recalculate")
+    public ApiResponse<String> recalculateTopic(@PathVariable String topicId) {
+        vocabService.recalculateTopic(topicId);
+        return ApiResponse.<String>builder().result("recalculated").build();
+    }
+
+    // ─── IMAGE UPLOAD (proxied to language-processing-service) ─────────────────
+    @PostMapping("/topics/{topicId}/upload-image")
+    public ApiResponse<String> uploadTopicImage(
+            @PathVariable String topicId,
+            @RequestParam("file") MultipartFile file) {
+        String publicId = "vocab_topic_" + topicId;
+        String url = vocabService.uploadTopicImage(publicId, file);
+        return ApiResponse.<String>builder().result(url).build();
+    }
 
 }

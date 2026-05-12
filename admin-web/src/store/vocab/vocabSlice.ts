@@ -1,5 +1,5 @@
 import handleAPI from "@/apis/handleAPI";
-import type { IAsyncState, IVocabSubTopic, IVocabSubTopicReadyEvent, IVocabSubtopicsGeneratedEvent, IVocabTopic, IVocabWordEntry } from "@/types";
+import type { IAsyncState, IVocabSubTopic, IVocabSubTopicProgressEvent, IVocabSubTopicReadyEvent, IVocabSubtopicsGeneratedEvent, IVocabTopic, IVocabWordEntry } from "@/types";
 import { extractError } from "@/utils/reduxUtils";
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
@@ -66,6 +66,16 @@ const vocabSlice = createSlice({
       const { topicId, subtopicCount } = action.payload;
       const topic = state.topics.data.find((t) => t.id === topicId);
       if (topic) { topic.status = "READY_FOR_WORD_GEN"; topic.subtopicCount = subtopicCount; }
+    },
+    // WS: live subtopic word‑processing progress (0/25 → 5/25 → … → 25/25)
+    updateSubtopicProgress(state, action: PayloadAction<IVocabSubTopicProgressEvent>) {
+      const { subtopicId, readyWordCount, wordCount, subtopicStatus } = action.payload;
+      const sub = state.subtopics.data.find((s) => s.id === subtopicId);
+      if (sub) {
+        sub.readyWordCount = readyWordCount;
+        sub.wordCount = wordCount;
+        sub.status = subtopicStatus as IVocabSubTopic["status"];
+      }
     },
   },
   extraReducers: (builder) => {
@@ -135,11 +145,31 @@ const vocabSlice = createSlice({
       // fetchWords
       .addCase(fetchWords.pending, (s) => { s.words.status = "loading"; })
       .addCase(fetchWords.fulfilled, (s, a) => { s.words.status = "succeeded"; s.words.data = a.payload; })
-      .addCase(fetchWords.rejected, (s, a) => { s.words.status = "failed"; s.words.error = a.payload as any; });
+      .addCase(fetchWords.rejected, (s, a) => { s.words.status = "failed"; s.words.error = a.payload as any; })
+      // deleteAllWordsInSubTopic — reset subtopic back to PENDING_WORDS
+      .addCase(deleteAllWordsInSubTopic.fulfilled, (s, a) => {
+        const subtopicId = a.meta.arg;
+        const sub = s.subtopics.data.find((st) => st.id === subtopicId);
+        if (sub) {
+          sub.wordCount = 0;
+          sub.readyWordCount = 0;
+          sub.status = "PENDING_WORDS";
+        }
+        s.words = asyncIdle([]);
+      })
+      // deleteSubTopic
+      .addCase(deleteSubTopic.fulfilled, (s, a) => {
+        const subtopicId = a.meta.arg;
+        s.subtopics.data = s.subtopics.data.filter((st) => st.id !== subtopicId);
+        if (s.activeSubtopicId === subtopicId) {
+          s.activeSubtopicId = null;
+          s.words = asyncIdle([]);
+        }
+      });
   },
 });
 
-export const { setActiveTopicId, setActiveSubtopicId, updateSubtopicFromWs, onSubtopicsGenerated } = vocabSlice.actions;
+export const { setActiveTopicId, setActiveSubtopicId, updateSubtopicFromWs, onSubtopicsGenerated, updateSubtopicProgress } = vocabSlice.actions;
 export default vocabSlice.reducer;
 
 const BASE = "/dictionaries/vocab";
@@ -183,5 +213,20 @@ export const updateVocabTopic = createAsyncThunk("vocab/updateTopic", async ({ t
 
 export const deleteVocabTopic = createAsyncThunk("vocab/deleteTopic", async (topicId: string, { rejectWithValue }) => {
   try { return await handleAPI<string>({ endpoint: `${BASE}/topics/${topicId}`, method: "DELETE" }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const deleteAllWordsInSubTopic = createAsyncThunk("vocab/deleteAllWords", async (subtopicId: string, { rejectWithValue }) => {
+  try { return await handleAPI<string>({ endpoint: `${BASE}/subtopics/${subtopicId}/words`, method: "DELETE" }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const deleteSubTopic = createAsyncThunk("vocab/deleteSubTopic", async (subtopicId: string, { rejectWithValue }) => {
+  try { return await handleAPI<string>({ endpoint: `${BASE}/subtopics/${subtopicId}`, method: "DELETE" }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const recalculateTopic = createAsyncThunk("vocab/recalculateTopic", async (topicId: string, { rejectWithValue }) => {
+  try { return await handleAPI<string>({ endpoint: `${BASE}/topics/${topicId}/recalculate`, method: "POST" }); }
   catch (e) { return rejectWithValue(extractError(e)); }
 });

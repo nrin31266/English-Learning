@@ -18,7 +18,7 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain internalChain(HttpSecurity http, WorkerKeyFilter workerKeyFilter) throws Exception {
         // Match chính xác đường dẫn mà Python đang gọi
-        http.securityMatcher("/vocab/internal/**", "/api/internal/**");
+        http.securityMatcher( "/api/internal/**");
 
         http.csrf(AbstractHttpConfigurer::disable);
 

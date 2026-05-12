@@ -73,16 +73,31 @@ export interface IVocabWordEntry {
   wordReady: boolean;
   note?: string;
   wordDetail?: {
+    id?: string;
     text: string;
+    key?: string;
     summaryVi: string;
     cefrLevel: string;
     phonetics: { us: string; usAudioUrl: string };
     definitions: { definition: string; meaningVi: string; example: string; viExample: string; level: string }[];
   };
   // Context-matched definition (Polysemy resolution from VocabWordEntryResponse)
-  contextMeaningVi?: string;
-  contextExample?: string;
-  contextLevel?: string;
+  contextDefinition?: string;  // EN definition
+  contextMeaningVi?: string;   // VI meaning
+  contextExample?: string;     // EN Example
+  contextViExample?: string;   // VI Example
+  contextLevel?: string;       // e.g. "B1"
+  subtopicId?: string;         // for delete/reference
+  topicId?: string;
+}
+
+export interface IVocabSubTopicProgressEvent {
+  topicId: string;
+  subtopicId: string;
+  subtopicTitle: string;
+  readyWordCount: number;
+  wordCount: number;
+  subtopicStatus: string; // PROCESSING_WORDS or READY
 }
 
 export interface IVocabSubTopicReadyEvent {

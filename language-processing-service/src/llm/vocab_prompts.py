@@ -6,7 +6,7 @@ VOCAB_SYSTEM_PROMPT = (
 def build_subtopic_prompt(topic_title: str, cefr_range: str, n: int, tags: list[str] | None = None) -> str:
     tags_str = ", ".join(tags) if tags else "none"
     return f"""Generate a comprehensive list of vocabulary sub-topics for the following topic.
-Target minimum: {n} sub-topics. If the topic is broad, generate MORE to fully cover it.
+Target number of sub-topics: {n}
 
 Topic: "{topic_title}"
 Tags: [{tags_str}]
@@ -48,7 +48,7 @@ def build_word_gen_prompt(
         else ""
     )
     return f"""Generate a comprehensive list of English vocabulary words for this sub-topic.
-Quantity: AT LEAST 20 words. If the sub-topic is rich in vocabulary, generate up to 30-40 words to ensure thorough coverage.
+Quantity: AT LEAST 16 words. If the sub-topic is rich in vocabulary, generate up to 25 words to ensure thorough coverage.
 
 Parent topic: "{topic_title}"
 Sub-topic: "{subtopic_title}"

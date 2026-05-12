@@ -95,7 +95,7 @@ async def on_word_ready(key: str, pos: str) -> None:
     Java sẽ lo việc cập nhật tiến độ Subtopic và bắn tin qua WebSocket/Kafka.
     """
     # Lấy URL của Dictionary Service từ .env
-    api_url = os.getenv("DICTIONARY_SERVICE_URL", "http://localhost:8081")
+    api_url = os.getenv("DICTIONARY_SERVICE_URL", "http://localhost:8082")
     endpoint = f"{api_url}/api/internal/vocab/words-ready"
     
     # Lấy Worker API Key từ .env (phải giống với worker.api-key bên Java)

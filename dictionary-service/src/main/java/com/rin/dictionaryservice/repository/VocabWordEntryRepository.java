@@ -11,6 +11,7 @@ public interface VocabWordEntryRepository extends MongoRepository<VocabWordEntry
     List<VocabWordEntry> findAllByTopicId(String topicId);
     Optional<VocabWordEntry> findByTopicIdAndWordKeyAndPos(String topicId, String wordKey, String pos);
     List<VocabWordEntry> findAllByWordKeyAndPos(String wordKey, String pos);
+    long countBySubtopicId(String subtopicId);
     long countBySubtopicIdAndWordReadyTrue(String subtopicId);
     boolean existsByTopicIdAndWordKeyAndPos(String topicId, String wordKey, String pos);
 }

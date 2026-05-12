@@ -4,6 +4,7 @@ import com.rin.englishlearning.common.constants.KafkaTopics;
 import com.rin.englishlearning.common.constants.LessonProcessingStep;
 import com.rin.englishlearning.common.constants.LessonStatus;
 import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
+import com.rin.englishlearning.common.event.VocabSubTopicProgressEvent;
 import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
 import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
@@ -52,5 +53,14 @@ public class KafkaConsumer {
         // Broadcast to a flat topic path (STOMP simple broker does NOT support wildcards like * or +)
         // The topicId is carried in the event payload — Frontend filters by topicId if needed.
         messagingTemplate.convertAndSend("/topic/vocab/subtopics-generated", event);
+    }
+
+    @KafkaListener(
+            topics = KafkaTopics.VOCAB_SUBTOPIC_PROGRESS_TOPIC,
+            containerFactory = "vocabSubTopicProgressEventContainerFactory"
+    )
+    public void handleVocabSubTopicProgress(VocabSubTopicProgressEvent event) {
+        log.info("Received VocabSubTopicProgress: subtopic={}, words={}/{}", event.getSubtopicId(), event.getReadyWordCount(), event.getWordCount());
+        messagingTemplate.convertAndSend("/topic/vocab/subtopic-progress", event);
     }
 }

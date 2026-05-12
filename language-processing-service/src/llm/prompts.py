@@ -29,17 +29,21 @@ _WORD_RULES = """RULES (strict):
 1. isValid=false ONLY if: numbers/URLs/invalid chars/not real English. Never false for POS mismatch.
 2. cefrLevel: The OVERALL CEFR level of the word. Calculate this as the average/highest difficulty across all definitions. DO NOT underestimate: formal, academic, specialized, or rare words MUST be rated B2, C1, or C2. Do NOT limit this global level to just the provided context.
 3. summaryVi: ≤5 words total, meanings split by "," or "/" for multiple meanings.
-4. phonetics: both UK+US IPA. CRITICAL: Use the provided 'context' and 'pos' to disambiguate the correct pronunciation (e.g., noun vs verb stress shift). audioUrl always "".
-5. definitions: Return a comprehensive array of MULTIPLE definitions (TARGET: at least 3 distinct definitions for polysemous words).
-   - Index [0] (First definition) MUST perfectly match the exact 'context' and 'pos' provided.
-   - Index [1], [2], etc. MUST provide OTHER completely DIFFERENT common meanings, nuances, or secondary usages.
-   - 'definition': MUST be a strong, precise, and advanced dictionary-grade English explanation.
+4. phonetics: both UK+US IPA. CRITICAL: Use the provided 'context' and 'pos' to disambiguate the correct pronunciation. Return raw IPA ONLY, WITHOUT slash wrappers "/" or brackets "[]". Example: "ˈrekərd", NOT "/ˈrekərd/". audioUrl always "".
+5. definitions: EXHAUSTIVE POLYSEMY IS MANDATORY, BUT STRICTLY CONFINED TO THE REQUESTED 'pos'.
+   - CRITICAL POS LOCK: EVERY single definition in the array MUST strictly belong to the EXACT 'pos' requested. If pos="NOUN", ALL definitions MUST be Noun meanings. DO NOT include VERB/ADJ/ADV meanings.
+   - If the word is highly polysemous WITHIN the requested POS (e.g., "bank" as a NOUN), generate an EXTENSIVE array of distinct definitions (TARGET: 5 to 10). Do not be lazy.
+   - If the word is highly specific or has limited meanings within that exact POS, generate ONLY its genuine meanings. DO NOT hallucinate or borrow meanings from other POS just to hit a quota.
+   - Index [0] (First definition) MUST perfectly match both the exact 'context' AND the 'pos' provided.
+   - Index [1] onwards MUST explore completely DIFFERENT common meanings, nuances, or secondary usages OF THAT SAME 'pos'.
+   - 'definition': MUST be a strong, precise, dictionary-grade English explanation. It MUST structurally match the POS (e.g., Verb definitions should start with "to...", Noun definitions with "a/the...", Adjective definitions with describing words).
    - 'meaningVi': MUST be extremely concise (1-3 words max), direct, and optimized for mobile UI display.
 6. definitions[].level: The specific CEFR level for that exact meaning.
 7. definitions[].viExample: Natural Vietnamese translation of the example sentence.
 8. isPhrase=true when pos=PHRASE or word is a collocation/idiom/phrasal verb.
 9. phraseType: COLLOCATION|IDIOM|PHRASAL_VERB|FIXED_EXPRESSION — "" for regular words.
 10. Return ONLY JSON. No markdown. No extra fields. No null values."""
+
 
 WORD_ANALYSIS_PROMPT_TEMPLATE = Template(
     f"""English lexical analysis engine. Analyze ONE word.

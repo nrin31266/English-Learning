@@ -2,6 +2,7 @@ package com.rin.notificationservice.config;
 
 import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
+import com.rin.englishlearning.common.event.VocabSubTopicProgressEvent;
 import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
 import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -79,6 +80,23 @@ public class KafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, VocabSubtopicsGeneratedEvent> vocabSubtopicsGeneratedEventContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, VocabSubtopicsGeneratedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(vocabSubtopicsGeneratedEventConsumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, VocabSubTopicProgressEvent> vocabSubTopicProgressEventConsumerFactory() {
+        Map<String, Object> props = baseProps();
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new StringDeserializer(),
+                new JsonDeserializer<>(VocabSubTopicProgressEvent.class)
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, VocabSubTopicProgressEvent> vocabSubTopicProgressEventContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, VocabSubTopicProgressEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(vocabSubTopicProgressEventConsumerFactory());
         return factory;
     }
 }

@@ -10,6 +10,7 @@ import com.rin.dictionaryservice.kafka.KafkaProducer;
 import com.rin.dictionaryservice.model.*;
 import com.rin.dictionaryservice.repository.httpclient.LanguageProcessingClient;
 import com.rin.dictionaryservice.repository.*;
+import com.rin.englishlearning.common.event.VocabSubTopicProgressEvent;
 import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
 import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +20,13 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,10 +48,15 @@ public class VocabService {
     LanguageProcessingClient lpsClient;
     KafkaProducer kafkaProducer;
     MongoTemplate mongoTemplate;
+    RestTemplate restTemplate;
 
     @lombok.experimental.NonFinal
     @org.springframework.beans.factory.annotation.Value("${language-processing.worker-key}")
     String workerKey;
+
+    @lombok.experimental.NonFinal
+    @org.springframework.beans.factory.annotation.Value("${language-processing.url}")
+    String lpsBaseUrl;
 
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -246,7 +257,7 @@ public class VocabService {
                         readyCount++;
 
                         // FIX LỖI CACHE: Nếu từ đã READY, tính luôn ngữ cảnh cho Entry này
-                        Word.Definition matchedDef = selectDefinition(w, subtopic.getCefrLevel());
+                        Word.Definition matchedDef = selectDefinition(w, subtopic);
                         ctxDef = matchedDef.getDefinition();
                         ctxMean = matchedDef.getMeaningVi();
                         ctxEx = matchedDef.getExample();
@@ -285,6 +296,17 @@ public class VocabService {
             subtopic.setStatus(entries.size() > 0 && entries.size() == readyCount
                     ? VocabSubTopicStatus.READY : VocabSubTopicStatus.PROCESSING_WORDS);
             subtopicRepo.save(subtopic);
+
+            // Send progress event so UI immediately shows 0/N or N/N counts
+            kafkaProducer.sendVocabSubTopicProgress(VocabSubTopicProgressEvent.builder()
+                    .topicId(subtopic.getTopicId())
+                    .subtopicId(subtopicId)
+                    .subtopicTitle(subtopic.getTitle())
+                    .readyWordCount(readyCount)
+                    .wordCount(entries.size())
+                    .subtopicStatus(subtopic.getStatus().name())
+                    .build());
+
             if (subtopic.getStatus() == VocabSubTopicStatus.READY) checkTopicCompletion(subtopic);
             log.info("[VocabSubTopic] {} entries ({} ready) for: {}", entries.size(), readyCount, subtopicId);
         } catch (Exception e) {
@@ -306,6 +328,7 @@ public class VocabService {
         if (subtopic == null || subtopic.getStatus() == VocabSubTopicStatus.READY) return;
 
         long readyCount = wordEntryRepo.countBySubtopicIdAndWordReadyTrue(subtopicId);
+        boolean alreadyReady = subtopic.getStatus() == VocabSubTopicStatus.READY;
         subtopic.setReadyWordCount((int) readyCount);
 
         if (subtopic.getWordCount() > 0 && readyCount >= subtopic.getWordCount()) {
@@ -313,14 +336,144 @@ public class VocabService {
             log.info("[VocabSubTopic] READY: {}", subtopicId);
         }
         subtopicRepo.save(subtopic);
-        // Always push progress update via Kafka → WebSocket for real-time UI update
-        checkTopicCompletion(subtopic);
+
+        // Send progress event for every word‑ready update so frontend shows live counts
+        kafkaProducer.sendVocabSubTopicProgress(VocabSubTopicProgressEvent.builder()
+                .topicId(subtopic.getTopicId())
+                .subtopicId(subtopicId)
+                .subtopicTitle(subtopic.getTitle())
+                .readyWordCount((int) readyCount)
+                .wordCount(subtopic.getWordCount())
+                .subtopicStatus(subtopic.getStatus().name())
+                .build());
+
+        // Only notify completion (ReadyEvent) on actual transition to READY
+        if (subtopic.getStatus() == VocabSubTopicStatus.READY && !alreadyReady) {
+            checkTopicCompletion(subtopic);
+        }
     }
 
 
     public List<VocabWordEntryResponse> listWords(String subtopicId) {
         // Tối ưu: Chỉ truyền vào subtopicId, logic chọn nghĩa đã được tính sẵn và lưu ở VocabWordEntry
         return buildWordEntryResponses(subtopicId);
+    }
+
+    // ─── DELETE / RECALCULATE ────────────────────────────────────────────────
+
+    public void deleteAllWordsInSubTopic(String subtopicId) {
+        VocabSubTopic subtopic = subtopicRepo.findById(subtopicId)
+                .orElseThrow(() -> new RuntimeException("SubTopic not found: " + subtopicId));
+        String topicId = subtopic.getTopicId();
+
+        // Delete all word entries belonging to this subtopic
+        mongoTemplate.remove(
+                new Query(Criteria.where("subtopicId").is(subtopicId)),
+                VocabWordEntry.class
+        );
+        log.info("[VocabSubTopic] Deleted all words for subtopic: {}", subtopicId);
+
+        // Reset subtopic back to PENDING_WORDS so "Gen Từ" button reappears
+        subtopic.setWordCount(0);
+        subtopic.setReadyWordCount(0);
+        subtopic.setStatus(VocabSubTopicStatus.PENDING_WORDS);
+        subtopicRepo.save(subtopic);
+
+        // Recalculate parent topic counts
+        VocabTopic topic = topicRepo.findById(topicId).orElse(null);
+        if (topic != null) {
+            recalculateTopicCounts(topicId);
+
+            // If this was the last READY subtopic, topic may need status downgrade
+            topicRepo.findById(topicId).ifPresent(t -> {
+                t.setSubtopicCount((int) subtopicRepo.countByTopicId(topicId));
+                topicRepo.save(t);
+            });
+        }
+    }
+
+    public void deleteSubTopic(String subtopicId) {
+        VocabSubTopic subtopic = subtopicRepo.findById(subtopicId)
+                .orElseThrow(() -> new RuntimeException("SubTopic not found: " + subtopicId));
+        String topicId = subtopic.getTopicId();
+
+        // Delete all word entries belonging to this subtopic
+        mongoTemplate.remove(
+                new Query(Criteria.where("subtopicId").is(subtopicId)),
+                VocabWordEntry.class
+        );
+        subtopicRepo.delete(subtopic);
+        log.info("[VocabSubTopic] Deleted: {}", subtopicId);
+
+        // Recalculate topic
+        VocabTopic topic = topicRepo.findById(topicId).orElse(null);
+        if (topic != null) {
+            long count = subtopicRepo.countByTopicId(topicId);
+            topic.setSubtopicCount((int) count);
+            topicRepo.save(topic);
+            recalculateTopicCounts(topicId);
+        }
+    }
+
+    public void recalculateTopic(String topicId) {
+        recalculateTopicCounts(topicId);
+    }
+
+    /**
+     * Proxy image upload through dictionary-service to avoid exposing worker key to browser.
+     * Forwards the MultipartFile to language-processing-service with authenticated worker key.
+     */
+    public String uploadTopicImage(String publicId, MultipartFile file) {
+        String uploadUrl = lpsBaseUrl + "/internal/upload/image?public_id=" + publicId;
+
+        // Build multipart request for RestTemplate
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", file.getResource());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.set("X-Worker-Key", workerKey);
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        log.info("[VocabTopic] Proxy-uploading image: publicId={}, size={} bytes", publicId, file.getSize());
+
+        try {
+            ResponseEntity<Map> response = restTemplate.postForEntity(uploadUrl, requestEntity, Map.class);
+            Map<String, Object> respBody = response.getBody();
+            String url = respBody != null ? (String) respBody.get("url") : null;
+            if (url == null || url.isEmpty()) {
+                throw new RuntimeException("Upload response missing 'url' field: " + respBody);
+            }
+            log.info("[VocabTopic] Image uploaded: {}", url);
+            return url;
+        } catch (Exception e) {
+            log.error("[VocabTopic] Image upload failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Image upload failed: " + e.getMessage(), e);
+        }
+    }
+
+    private void recalculateTopicCounts(String topicId) {
+        VocabTopic topic = topicRepo.findById(topicId).orElse(null);
+        if (topic == null) return;
+
+        // Recalculate ready subtopic count
+        long readySubtopics = subtopicRepo.countByTopicIdAndStatus(topicId, VocabSubTopicStatus.READY);
+        topic.setReadySubtopicCount((int) readySubtopics);
+
+        // Determine topic status
+        long totalSubtopics = subtopicRepo.countByTopicId(topicId);
+        topic.setSubtopicCount((int) totalSubtopics);
+
+        if (totalSubtopics == 0) {
+            topic.setStatus(VocabTopicStatus.DRAFT);
+        } else if (readySubtopics >= totalSubtopics) {
+            topic.setStatus(VocabTopicStatus.READY);
+        } else {
+            topic.setStatus(VocabTopicStatus.PROCESSING);
+        }
+        topicRepo.save(topic);
+        log.info("[VocabTopic] Recalculated {}: {}/{} ready, status={}", topicId, readySubtopics, totalSubtopics, topic.getStatus());
     }
 
     // ─── CALLED BY PYTHON WORKER (via MongoDB) ───────────────────────────────
@@ -339,10 +492,7 @@ public class VocabService {
 
             // Lấy Subtopic tương ứng của Entry để biết target CEFR Level
             VocabSubTopic subtopic = subtopicRepo.findById(entry.getSubtopicId()).orElse(null);
-            CefrLevel targetLevel = subtopic != null ? subtopic.getCefrLevel() : null;
-
-            // 3. THUẬT TOÁN CHỌN NGHĨA (Chỉ chạy 1 lần duy nhất tại đây)
-            Word.Definition matchedDef = selectDefinition(word, targetLevel);
+            Word.Definition matchedDef = selectDefinition(word, subtopic);
 
             // 4. Lưu Cache thẳng vào Entry
             entry.setWordReady(true);
@@ -514,20 +664,38 @@ public class VocabService {
         }).toList();
     }
 
-    private Word.Definition selectDefinition(Word word, CefrLevel targetLevel) {
-        if (targetLevel != null && word.getDefinitions() != null) {
-            for (Word.Definition def : word.getDefinitions()) {
-                if (def.getLevel() == targetLevel) {
-                    return def;
-                }
-            }
+    private Word.Definition selectDefinition(Word word, VocabSubTopic subtopic) {
+        if (word.getDefinitions() == null || word.getDefinitions().isEmpty()) {
+            return Word.Definition.builder().definition("").meaningVi("").example("").viExample("").build();
         }
-        // Fallback an toàn tránh NullPointerException
-        if (word.getDefinitions() != null && !word.getDefinitions().isEmpty()) {
+
+        // 1. NẾU LÀ TỪ ĐƯỢC AI TẠO RIÊNG CHO BÀI NÀY -> Lấy chính xác nghĩa số 0 (Đã được AI đo ni đóng giày)
+        if (subtopic != null && subtopic.getDescription() != null
+                && subtopic.getDescription().equals(word.getContext())) {
             return word.getDefinitions().get(0);
         }
-        // Trả về một object rỗng đỡ lỗi nếu Word bị hỏng data
-        return Word.Definition.builder().definition("").meaningVi("").example("").viExample("").build();
+
+        // 2. NẾU LÀ TỪ DÙNG LẠI (TỪ BÀI KHÁC) -> Lọc theo Level và Random để tạo sự đa dạng
+        CefrLevel targetLevel = subtopic != null ? subtopic.getCefrLevel() : null;
+
+        if (targetLevel != null) {
+            List<Word.Definition> matchingDefs = word.getDefinitions().stream()
+                    .filter(def -> def.getLevel() == targetLevel)
+                    .toList();
+
+            if (!matchingDefs.isEmpty()) {
+                // Có nhiều nghĩa cùng Level -> Bốc Random
+                if (matchingDefs.size() > 1) {
+                    int randomIndex = new java.util.Random().nextInt(matchingDefs.size());
+                    return matchingDefs.get(randomIndex);
+                }
+                return matchingDefs.get(0); // Chỉ có 1 nghĩa thì lấy luôn
+            }
+        }
+
+        // 3. Fallback: Nếu không có level nào khớp, bốc random toàn bộ các nghĩa để học đa dạng
+        int randomFallback = new java.util.Random().nextInt(word.getDefinitions().size());
+        return word.getDefinitions().get(randomFallback);
     }
 
     private VocabTopicResponse toTopicResponse(VocabTopic t) {
