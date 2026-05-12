@@ -42,6 +42,23 @@ def _levenshtein_distance(a: str, b: str) -> int:
             )
     return dp[la][lb]
 
+def _word_sub_cost(exp_norm: str | None, rec_norm: str) -> float:
+    """
+    Similarity-based substitution cost for word alignment.
+    Range: 0.0 (exact match) → 1.0 (completely different).
+    Similar words (e.g. 'want' vs 'wanna') get low cost so the DP
+    prefers pairing them over pairing unrelated words.
+    """
+    if not exp_norm: return 1.0
+    if exp_norm == rec_norm: return 0.0
+    dist = _levenshtein_distance(exp_norm, rec_norm)
+    max_len = max(len(exp_norm), len(rec_norm))
+    if max_len == 0: return 0.0
+    sim = 1.0 - dist / max_len
+    # Scale: similar words get cost ~0.2, unrelated words get cost ~1.0
+    return round(1.0 - sim * 0.8, 4)
+
+
 def _classify_word(expected_norm: str | None, recognized_norm: str | None) -> tuple[str, float]:
     """
     Categorize word accuracy based on normalized text comparison.
@@ -102,33 +119,33 @@ def _align_words(
     Optimizes for global consistency.
     """
     n, m = len(expected_norm), len(rec_items)
-    dp = [[0] * (m + 1) for _ in range(n + 1)]
-
-    for i in range(1, n + 1): dp[i][0] = i
-    for j in range(1, m + 1): dp[0][j] = j
+    dp = [[0.0] * (m + 1) for _ in range(n + 1)]
+    for i in range(1, n + 1): dp[i][0] = float(i)
+    for j in range(1, m + 1): dp[0][j] = float(j)
 
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            sub_cost = 0 if expected_norm[i-1] == rec_items[j-1][1] else 1
+            cost = _word_sub_cost(expected_norm[i-1], rec_items[j-1][1])
             dp[i][j] = min(
-                dp[i - 1][j - 1] + sub_cost,
-                dp[i - 1][j] + 1,
-                dp[i][j - 1] + 1
+                dp[i - 1][j - 1] + cost,
+                dp[i - 1][j] + 1.0,
+                dp[i][j - 1] + 1.0
             )
 
     # Backtrack path
+    EPS = 1e-6
     aligned_rev = []
     i, j = n, m
     while i > 0 or j > 0:
         if i > 0 and j > 0:
-            exp_norm = expected_norm[i - 1] or ""
             rec_raw, rec_norm = rec_items[j - 1]
-            sub_cost = 0 if exp_norm == rec_norm else 1
-            if dp[i][j] == dp[i - 1][j - 1] + sub_cost:
-                aligned_rev.append((expected_words[i-1].wordText, exp_norm, rec_raw, rec_norm, "MATCH" if sub_cost == 0 else "SUBSTITUTE"))
+            cost = _word_sub_cost(expected_norm[i - 1], rec_norm)
+            if abs(dp[i][j] - (dp[i - 1][j - 1] + cost)) < EPS:
+                exp_norm_val = expected_norm[i - 1] or ""
+                aligned_rev.append((expected_words[i-1].wordText, exp_norm_val, rec_raw, rec_norm, "MATCH" if cost == 0.0 else "SUBSTITUTE"))
                 i, j = i - 1, j - 1
                 continue
-        if j > 0 and dp[i][j] == dp[i][j - 1] + 1:
+        if j > 0 and abs(dp[i][j] - (dp[i][j - 1] + 1.0)) < EPS:
             rec_raw, rec_norm = rec_items[j - 1]
             aligned_rev.append((None, None, rec_raw, rec_norm, "INSERT"))
             j -= 1

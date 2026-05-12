@@ -81,9 +81,10 @@ Một số service hiện vẫn dùng thêm biến môi trường bên ngoài nh
 Các thành phần bên trong:
 
 - `speech_to_text_service`: WhisperX, alignment và chuẩn hóa output.
-- `shadowing_service`: so khớp expected words với recognized words, tính score dựa trên Levenshtein distance và IPA phoneme comparison.
+- `shadowing_service`: so khớp expected words với recognized words bằng DP alignment dùng **similarity-based substitution cost** (thay vì binary 0/1), tính score dựa trên Levenshtein distance và IPA phoneme comparison.
 - `spaCy_service`: phân tích NLP (lemma, POS, dependency).
 - `gemini/`: enrich nội dung (IPA, translation, word analysis) qua Gemini API.
+- `phoneme_alignment_service`: tokenize IPA và align theo phoneme, có xử lý multi-char IPA (bao gồm `ɜr` sau normalize). Score phoneme được clamp về `[0.0, 1.0]` ở UI.
 - `phoneme_ipa_service` & `phonemizer_service`: xử lý phoneme và IPA cho scoring.
 - `word_processor` và `workers/word/word_worker.py`: xử lý pipeline từ vựng chạy nền.
 - `redis`, `kafka`, `s3_storage`, `tts`: tích hợp hạ tầng và services.
@@ -155,6 +156,90 @@ npm run dev
 - thông tin Cloudinary / Google credentials cho AI service
 - issuer Keycloak: `http://localhost:8080/realms/english-learning-realm`
 
+## Tài liệu kỹ thuật: Shadowing Scoring
+
+### Tổng quan pipeline
+
+```
+Audio (user) → WhisperX STT → word tokens + timestamps
+                                    ↓
+                          _align_words() [DP similarity]
+                                    ↓
+                         _classify_word() [text-level]
+                                    ↓
+                      compare_words_with_ipa() [phoneme-level]
+                                    ↓
+               _compute_fluency_score() [pause + speech rate]
+                                    ↓
+                    ShadowingResult { accuracy, weightedAccuracy, fluencyScore, compares[] }
+```
+
+### 1. Word Alignment — `_align_words`
+
+Dùng **Dynamic Programming (Levenshtein)** để căn chỉnh chuỗi từ expected vs recognized. Chi phí substitution được tính theo **similarity-based cost** thay vì binary:
+
+```
+_word_sub_cost(exp, rec) = 1.0 - sim(exp, rec) × 0.8
+  trong đó sim = 1 - levenshtein(exp, rec) / max(len(exp), len(rec))
+```
+
+Range: `0.0` (exact match) → `1.0` (hoàn toàn khác). Nhờ đó DP ưu tiên ghép các từ gần nhau (vd: `want↔wanna` cost ≈ 0.38) trước khi ghép các từ xa (vd: `to↔wanna` cost ≈ 0.82), tránh sai lệch alignment khi user bỏ/thay từ giữa câu.
+
+Output alignment gồm 5 loại: `MATCH`, `SUBSTITUTE`, `INSERT`, `DELETE`.
+
+### 2. Word Classification — `_classify_word`
+
+Sau alignment, từng cặp (expected, recognized) được phân loại:
+
+| Status | Điều kiện |
+|--------|-----------|
+| `CORRECT` | Exact match sau normalize |
+| `NEAR` | Levenshtein distance ≤ 2 hoặc score phoneme ≥ ngưỡng |
+| `WRONG` | Khác biệt lớn, không đạt NEAR |
+| `MISSING` | DELETE — expected word không được nhận ra |
+| `EXTRA` | INSERT — user nói thêm từ ngoài expected |
+
+### 3. Phoneme Comparison — `compare_words_with_ipa`
+
+Với các từ NEAR hoặc WRONG, hệ thống thực hiện so sánh ở cấp độ phoneme:
+
+1. **IPA conversion:** `OpenPhonemizer` (trained on CMU dict) → IPA string, áp dụng `IPA_RULES` normalize (vd: `ɜː → ɜr`, `ɹ → r`).
+2. **Tokenization:** Tách IPA thành list token, ưu tiên multi-char symbols (`tʃ`, `dʒ`, `eɪ`, `ɜr`, ...), phân loại `PHONEME / STRESS / PUNCT`.
+3. **Alignment:** DP với `SIMILAR_PHONEMES` matrix — các phoneme gần nhau (vd: `p↔b`, `t↔d`, `s↔z`) có cost thấp hơn. Áp dụng `penalty_scale=1.5` cho 2 vị trí đầu từ để nhạy hơn với lỗi onset.
+4. **Score:** `phoneme_score = max(0, 1 - distance / max_phoneme_len)` → `[0.0, 1.0]`.
+
+### 4. Scoring Metrics
+
+**Accuracy** (text-level):
+```
+accuracy = correct_words / total_expected_words
+```
+
+**Weighted Accuracy** (penalize extra words):
+```
+extra_ratio   = extra_word_count / max(recognized_count, expected_count)
+extra_penalty = alpha × extra_ratio          (alpha = 0.3 mặc định)
+weightedAccuracy = accuracy × (1 - extra_penalty)
+```
+
+**Fluency Score** (từ timestamps WhisperX):
+```
+pause_score = max(0, 1 - avg_pause / 1.2)        # ngưỡng 1.2s
+rate_score  = max(0, 1 - |rate - 2.5| / 2.5)     # target 2.5 words/sec
+fluency     = 0.55 × pause_score + 0.45 × rate_score
+```
+
+### 5. IPA Normalization Rules (`phonemizer_service`)
+
+Một số rule quan trọng trước khi so sánh phoneme:
+
+| Pattern | Thay bằng | Lý do |
+|---------|-----------|-------|
+| `ɜː` | `ɜr` | Chuẩn hóa về dạng rhotic |
+| `ɹ` | `r` | Đơn giản hóa |
+| `ː` | `` | Bỏ dấu trường độ |
+| stress markers | `` | Tùy option `keep_stress` |
+
 ## Ghi chú vận hành
 
 - `api-gateway` đang route trực tiếp tới các service nội bộ, đồng thời có route WebSocket cho notification.
@@ -164,7 +249,11 @@ npm run dev
 
 ## Tài liệu liên quan
 
-- `system-design/ai-service.md`
 - `system-design/dev-commands.md`
-- `system-design/decisions.md`
-- `system-design/update_pronunciation_scroring.md`
+
+
+## Tài liệu tham khảo
+
+Xem đầy đủ tại [`system-design/references.md`](system-design/references.md).
+
+Bao gồm: WhisperX, Whisper, Levenshtein, spaCy, Gemini, DeepSeek, Kafka, Docker, Keycloak/OAuth 2.0, OpenID Connect, Microservices.
