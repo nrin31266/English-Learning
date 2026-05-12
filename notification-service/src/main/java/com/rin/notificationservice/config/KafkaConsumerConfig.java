@@ -2,6 +2,8 @@ package com.rin.notificationservice.config;
 
 import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
+import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
+import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +45,40 @@ public class KafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, LessonProcessingStepNotifyEvent> lessonProcessingStepNotifyEventConcurrentKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, LessonProcessingStepNotifyEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(lessonProcessingStepNotifyEventConsumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, VocabSubTopicReadyEvent> vocabSubTopicReadyEventConsumerFactory() {
+        Map<String, Object> props = baseProps();
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new StringDeserializer(),
+                new JsonDeserializer<>(VocabSubTopicReadyEvent.class)
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, VocabSubTopicReadyEvent> vocabSubTopicReadyEventContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, VocabSubTopicReadyEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(vocabSubTopicReadyEventConsumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, VocabSubtopicsGeneratedEvent> vocabSubtopicsGeneratedEventConsumerFactory() {
+        Map<String, Object> props = baseProps();
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new StringDeserializer(),
+                new JsonDeserializer<>(VocabSubtopicsGeneratedEvent.class)
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, VocabSubtopicsGeneratedEvent> vocabSubtopicsGeneratedEventContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, VocabSubtopicsGeneratedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(vocabSubtopicsGeneratedEventConsumerFactory());
         return factory;
     }
 }

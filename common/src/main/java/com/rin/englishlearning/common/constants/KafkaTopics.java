@@ -11,6 +11,8 @@ public final class KafkaTopics {
     public static final String LESSON_PROCESSING_STEP_NOTIFY_TOPIC = "lesson-processing-step-notify-v1";
     public static final String WORD_ANALYZED_TOPIC= "word-analyzed-v1";
 
-
+    public static final String VOCAB_SUBTOPIC_READY_TOPIC = "vocab-subtopic-ready-v1";
+    public static final String VOCAB_TOPIC_READY_TOPIC = "vocab-topic-ready-v1";
+    public static final String VOCAB_SUBTOPICS_GENERATED_TOPIC = "vocab-subtopics-generated-v1";
 
 }

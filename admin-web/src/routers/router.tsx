@@ -6,6 +6,8 @@ import LessonDetails from "@/features/learningcontent/pages/LessonDetails"
 
 
 const AllTopic = lazy(() => import("@/features/learningcontent/pages/AllTopic"))
+const VocabTopicsPage = lazy(() => import("@/features/vocab/pages/VocabTopicsPage"))
+const VocabSubTopicsPage = lazy(() => import("@/features/vocab/pages/VocabSubTopicsPage"))
 const GenerateLessons = lazy(() => import("@/features/learningcontent/pages/GenerateLessons"))
 const AllLesson = lazy(() => import("@/features/learningcontent/pages/AllLesson"))
 
@@ -52,6 +54,14 @@ const router = createBrowserRouter([
       // },
 
 
+      {
+        path: "/vocab/topics",
+        element: withSuspense(<VocabTopicsPage />),
+      },
+      {
+        path: "/vocab/topics/:topicId/subtopics",
+        element: withSuspense(<VocabSubTopicsPage />),
+      },
       {
         path: "/system/health",
         element: <div>Health Check Page</div>,

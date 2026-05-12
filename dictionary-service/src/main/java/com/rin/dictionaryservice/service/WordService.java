@@ -3,7 +3,6 @@ package com.rin.dictionaryservice.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rin.dictionaryservice.dto.*;
 import com.rin.dictionaryservice.mapper.DictionaryMapper;
-import com.rin.dictionaryservice.model.CefrLevel;
 import com.rin.dictionaryservice.model.Word;
 import com.rin.dictionaryservice.constant.WordCreationStatus;
 import com.rin.dictionaryservice.repository.WordRepository;
@@ -14,10 +13,7 @@ import com.rin.englishlearning.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -27,7 +23,9 @@ import org.springframework.stereotype.Service;
 
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @FieldDefaults(makeFinal = true, level = lombok.AccessLevel.PRIVATE)
@@ -296,102 +294,6 @@ public class WordService {
 
         return true;
     }
-    public Word claimOne(String workerId) {
-
-        Query query = new Query(
-                Criteria.where("status").is(WordCreationStatus.PENDING)
-                        .and("retryCount").lt(MAX_RETRY)
-        );
-
-        // FIFO theo createdAt
-        query.with(Sort.by(Sort.Direction.ASC, "createdAt"));
-
-        Update update = new Update()
-                .set("status", WordCreationStatus.PROCESSING)
-                .set("processingStartedAt", LocalDateTime.now())
-                .set("lockedBy", workerId)
-                .inc("retryCount", 1);
-
-        return mongoTemplate.findAndModify(
-                query,
-                update,
-                FindAndModifyOptions.options().returnNew(true),
-                Word.class
-        );
-    }
-    public List<Word> claimBatch(int limit, String workerId) {
-        List<Word> results = new ArrayList<>();
-
-        for (int i = 0; i < limit; i++) {
-            Word word = claimOne(workerId);
-            if (word == null) break;
-            results.add(word);
-        }
-
-        return results;
-    }
-    @CacheEvict(value = "wordsByWordKey", key = "#textLower + '_' + #pos")
-    public void updateWordToReady(String textLower, String pos,
-                                  String summaryVi,
-                                  Word.Phonetics phonetics,
-                                  CefrLevel cefrLevel, // CEFR level (A1, A2, B1, B2, C1, C2)
-                                  List<Word.Definition> definitions) {
-        Query query = new Query(
-                Criteria.where("key").is(textLower)
-                        .and("pos").is(pos)
-        );
-
-        Update update = new Update()
-                .set("summaryVi", summaryVi)
-                .set("cefrLevel", cefrLevel)
-                .set("phonetics", phonetics)
-                .set("definitions", definitions)
-                .set("status", WordCreationStatus.READY)
-                .set("lockedBy", null)
-                .set("updatedAt", LocalDateTime.now());
-
-        mongoTemplate.updateFirst(query, update, Word.class);
-    }
-    public void markFail(String textLower, String pos) {
-        Query query = new Query(
-                Criteria.where("key").is(textLower)
-                        .and("pos").is(pos)
-        );
-        Word word = mongoTemplate.findOne(query, Word.class);
-
-        if (word == null) return;
-
-        int retry = word.getRetryCount() != null ? word.getRetryCount() : 0;
-
-        Update update = new Update()
-                .set("lastRetryAt", LocalDateTime.now())
-                .set("lockedBy", null);
-
-        if (retry >= MAX_RETRY) {
-            update.set("status", WordCreationStatus.FAILED);
-            log.info("Word {}_{} marked as FAILED (retry count {})", textLower, pos, retry);
-        } else {
-            update.set("status", WordCreationStatus.PENDING);
-        }
-
-        mongoTemplate.updateFirst(query, update, Word.class);
-    }
-
-    public void markFailImmediately(String textLower, String pos) {
-        Query query = new Query(
-                Criteria.where("key").is(textLower)
-                        .and("pos").is(pos)
-        );
-
-        Update update = new Update()
-                .set("status", WordCreationStatus.FAILED)
-                .set("lockedBy", null)
-                .set("updatedAt", LocalDateTime.now());
-
-        mongoTemplate.updateFirst(query, update, Word.class);
-        log.info("Word {}_{} marked as FAILED (invalid)", textLower, pos);
-    }
-
     @Scheduled(fixedDelay = 60000)
     public void recoverStuckJobs() {
 

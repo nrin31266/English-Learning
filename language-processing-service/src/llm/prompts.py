@@ -1,115 +1,63 @@
+import json
 from string import Template
 
-SENTENCE_PROMPT_TEMPLATE = Template("""
-You are a deterministic English phonetics and translation engine.
+SENTENCE_PROMPT_TEMPLATE = Template("""You are a deterministic English phonetics+translation engine.
+For each sentence return US IPA (no slashes) and Vietnamese translation.
+Input: $sentences_json
+Output: JSON array, same count and order: [{"phoneticUs":"","translationVi":""}]
+Rules: valid JSON only, no markdown, preserve order, raw IPA like "ˈsentəns".""")
 
-TASK:
-For each sentence, generate:
-- US IPA pronunciation (without enclosing slashes)
-- Vietnamese translation
-
-INPUT:
-$sentences_json
-
-HARD CONSTRAINTS (MUST FOLLOW):
-1) Output MUST be valid JSON ONLY. No markdown, no explanations.
-2) Number of output items MUST equal number of input items.
-3) Preserve the exact order of input sentences.
-4) DO NOT add slashes "/" around IPA values. Return raw IPA like "ˈsentəns"
-
-OUTPUT FORMAT:
-[
-  {
-    "phoneticUs": "",
-    "translationVi": ""
-  }
-]
-""")
-
-WORD_ANALYSIS_PROMPT_TEMPLATE = Template("""
-You are an English lexical analysis engine.
-
-TASK:
-Analyze ONE English word using POS and context.
-
-INPUT:
-{
-  "word": "$word",
-  "pos": "$pos",
-  "context": "$context"
-}
-
-OUTPUT REQUIREMENTS (VERY STRICT):
-1) Output MUST be valid JSON ONLY. No markdown. No code fences.
-2) DO NOT omit any fields.
-3) If unknown → use "" or [].
-4) Keep structure EXACTLY as defined.
-
-OUTPUT FORMAT:
-{
-  "summaryVi": "",
-  "phonetics": {
-    "uk": "",
-    "ukAudioUrl": "",
-    "us": "",
-    "usAudioUrl": ""
-  },
+_WORD_SCHEMA = """{
+  "summaryVi": "≤5-word Vietnamese meanings separated by /",
+  "phonetics": {"uk":"IPA","ukAudioUrl":"","us":"IPA","usAudioUrl":""},
   "definitions": [
     {
-      "definition": "",
-      "meaningVi": "",
-      "example": ""
+      "definition": "EN meaning",
+      "meaningVi": "Extremely short direct VI meaning for UI/Learner",
+      "example": "EN sentence",
+      "viExample": "VI translation",
+      "level": "B1"
     }
   ],
+  "isPhrase": false,
+  "phraseType": "",
   "isValid": true,
-  "cefrLevel": ""
-}
+  "cefrLevel": "B1"
+}"""
 
-RULES:
+_WORD_RULES = """RULES (strict):
+1. isValid=false ONLY if: numbers/URLs/invalid chars/not real English. Never false for POS mismatch.
+2. cefrLevel: This base level MUST accurately reflect the specific provided 'context', not just the general word level.
+3. summaryVi: ≤5 words total, meanings split by "/".
+4. phonetics: both UK+US IPA; audioUrl always "".
+5. definitions: Generate ALL distinct, commonly used meanings for this word (DO NOT limit to 2 or 3).
+   - CORE RULE: The FIRST definition MUST perfectly match the exact 'context' and 'pos' provided if available.
+   - meaningVi MUST be extremely concise, direct, and optimized for mobile UI display (no long explanations).
+6. definitions[].level: CEFR level for that specific meaning.
+7. definitions[].viExample: Natural Vietnamese translation of the example sentence.
+8. isPhrase=true when pos=PHRASE or word is a collocation/idiom/phrasal verb.
+9. phraseType: COLLOCATION|IDIOM|PHRASAL_VERB|FIXED_EXPRESSION — "" for regular words.
+10. Return ONLY JSON. No markdown. No extra fields. No null values."""
 
-1) isValid:
-- false if:
-  - contains numbers, URLs, emails
-  - invalid characters
-  - not a real English word
-- DO NOT mark false just because POS does not match context
+WORD_ANALYSIS_PROMPT_TEMPLATE = Template(
+    f"""English lexical analysis engine. Analyze ONE word.
+Input: {{"word":"$word","pos":"$pos","context":"$context"}}
+Output schema:
+{_WORD_SCHEMA}
+{_WORD_RULES}"""
+)
 
-2) cefrLevel:
-- MUST be one of: A1, A2, B1, B2, C1, C2
-- Based on common CEFR classification of the word
-- If unsure → choose the closest level
-- DO NOT leave empty
 
-3) summaryVi:
-- VERY SHORT Vietnamese meanings
-- separated by "," or "/"
-- NO full sentence
-
-4) phonetics:
-- Provide BOTH UK and US IPA
-- Based on correct POS
-- audioUrl MUST be "" (do NOT invent URLs)
-
-5) definitions:
-- MUST return as MANY definitions as possible (up to 3)
-- Prefer 2–3 definitions whenever possible
-- Returning only 1 definition when multiple meanings exist is NOT preferred
-- definition: clear English meaning
-- meaningVi: natural Vietnamese
-- example:
-  - FIRST definition MUST match context
-  - MUST use correct POS
-
-6) context usage:
-- MUST use context to choose correct meaning
-
-7) DO NOT:
-- add extra fields
-- return null
-- generate long explanations
-
-IMPORTANT:
-Return ONLY JSON object.
-
-NOW ANALYZE.
-""")
+def build_batch_word_prompt(words: list[dict]) -> str:
+    """
+    words: [{"word": "...", "pos": "...", "context": "..."}, ...]
+    One AI call to analyze N words. Returns compact prompt.
+    """
+    words_json = json.dumps(words, ensure_ascii=False, separators=(",", ":"))
+    return (
+        f"English lexical analysis engine. Analyze {len(words)} words.\n"
+        f"Input JSON array: {words_json}\n\n"
+        f"Return a JSON ARRAY of {len(words)} objects in the SAME ORDER. Each object:\n"
+        f"{_WORD_SCHEMA}\n\n"
+        f"{_WORD_RULES}"
+    )

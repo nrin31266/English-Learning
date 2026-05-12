@@ -94,13 +94,13 @@ async def generate_audio(
     logger.info(f"[TTS] Generate: {word}")
 
     us_ssml = build_ssml(word, ipa_us)
-    uk_ssml = build_ssml(word, ipa_uk)
+    us_audio = await _synthesize_ssml(us_ssml, "us")
 
-    uk_task = _synthesize_ssml(uk_ssml, "uk")
-    us_task = _synthesize_ssml(us_ssml, "us")
-
-    uk_audio, us_audio = await asyncio.gather(uk_task, us_task)
+    # UK TTS disabled — en-GB Wavenet does not reliably follow IPA for
+    # context-specific words. Only US audio is generated for now.
+    # uk_ssml = build_ssml(word, ipa_uk)
+    # uk_audio = await _synthesize_ssml(uk_ssml, "uk")
 
     logger.info(f"[TTS] Done: {word}")
 
-    return uk_audio, us_audio
+    return b"", us_audio

@@ -6,10 +6,12 @@ import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux
 import learningContentReducer from './learningcontent/index';
 import systemReducer from './system/index';
 import wordReducer from './word/index';
+import vocabReducer from './vocab/index';
 const rootReducer = combineReducers({
   learningContent: learningContentReducer,
   system: systemReducer,
   word: wordReducer,
+  vocab: vocabReducer,
 });
 
 

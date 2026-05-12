@@ -35,6 +35,68 @@ export interface IErrorState {
   message: string | null;
 }
 
+export interface IVocabTopic {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  cefrRange: string;
+  estimatedWordCount: number;
+  subtopicCount: number;
+  readySubtopicCount: number;
+  status: "DRAFT" | "GENERATING_SUBTOPICS" | "READY_FOR_WORD_GEN" | "PROCESSING" | "READY";
+  thumbnailUrl?: string;
+  publishedAt?: string;
+  createdAt: string;
+}
+
+export interface IVocabSubTopic {
+  id: string;
+  topicId: string;
+  title: string;
+  titleVi: string;
+  description: string;
+  cefrLevel: string;
+  order: number;
+  wordCount: number;
+  readyWordCount: number;
+  status: "PENDING_WORDS" | "GENERATING_WORDS" | "PROCESSING_WORDS" | "READY";
+  createdAt: string;
+}
+
+export interface IVocabWordEntry {
+  id: string;
+  wordKey: string;
+  pos: string;
+  order: number;
+  wordReady: boolean;
+  note?: string;
+  wordDetail?: {
+    text: string;
+    summaryVi: string;
+    cefrLevel: string;
+    phonetics: { us: string; usAudioUrl: string };
+    definitions: { definition: string; meaningVi: string; example: string; viExample: string; level: string }[];
+  };
+}
+
+export interface IVocabSubTopicReadyEvent {
+  topicId: string;
+  subtopicId: string;
+  subtopicTitle: string;
+  topicTitle: string;
+  topicReady: boolean;
+  readyWordCount: number;
+  wordCount: number;
+  readySubtopicCount: number;
+}
+
+export interface IVocabSubtopicsGeneratedEvent {
+  topicId: string;
+  topicTitle: string;
+  subtopicCount: number;
+}
+
 export interface IAsyncState<T> {
   data: T;
   status: "idle" | "loading" | "succeeded" | "failed";

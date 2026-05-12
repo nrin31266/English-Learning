@@ -9,6 +9,7 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI}
+      database: ${MONGODB_DB:dictionary_db}
       auto-index-creation: true
     redis:
       url: ${REDIS_URL}
@@ -30,8 +31,9 @@ logging:
   level:
     org.springframework.security: DEBUG
 
-worker:
-  api-key: ${WORKER_API_KEY}
+language-processing:
+  url: ${LANGUAGE_PROCESSING_URL:http://localhost:8089}
+  worker-key: ${WORKER_API_KEY}
 
 server:
   port: 8082

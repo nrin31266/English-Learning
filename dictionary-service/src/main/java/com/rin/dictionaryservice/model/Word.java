@@ -50,6 +50,10 @@ public class Word {
     private LocalDateTime lastRetryAt;
     private String lockedBy;
 
+    @Builder.Default
+    boolean isPhrase = false;  // true nếu là cụm từ (collocation, idiom...)
+    String phraseType;         // COLLOCATION, IDIOM, PHRASAL_VERB, FIXED_EXPRESSION
+
     @CreatedDate
     LocalDateTime createdAt;
 
@@ -74,7 +78,8 @@ public class Word {
     public static class Definition {
         String definition;   // EN
         String meaningVi;    // VI - Ép AI gen cực kỳ ngắn gọn
-        String example;      // Câu ví dụ ngắn
-        CefrLevel level;     // 🔥 Thêm trường này: A1, A2, B1...
+        String example;      // Câu ví dụ ngắn (EN)
+        String viExample;    // Dịch câu ví dụ sang VI
+        CefrLevel level;     // A1, A2, B1...
     }
 }

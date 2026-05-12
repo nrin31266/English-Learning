@@ -12,24 +12,25 @@ async def process_word_logic(
     text: str,
     pos: str,
     context: str,
+    _ai_result: Dict = None,
 ) -> Dict:
     """
     Pipeline xử lý 1 word (SEQUENTIAL):
-    - AI analyze
+    - AI analyze (skipped if _ai_result is provided — batch mode)
     - generate audio
     - upload audio
-    - return SuccessRequest
+    - return result dict
 
     ❗ Fail ở bất kỳ bước nào → throw exception
     """
 
     logger.info(f"[START] {text}_{pos}")
 
-    # --- 1. AI ---
-    ai_result = await analyze_word(text, pos, context)
+    # --- 1. AI (skip if batch pre-computed) ---
+    ai_result = _ai_result if _ai_result is not None else await analyze_word(text, pos, context)
 
     if not ai_result.get("isValid", False):
-        logger.info(f"[INVALID] {text}_{pos}")
+        logger.info(f"[INVALID] {text}_x{pos}")
         return ai_result
 
     phonetics = ai_result.get("phonetics", {})
@@ -49,14 +50,15 @@ async def process_word_logic(
     # --- 3. UPLOAD (TUẦN TỰ) ---
     logger.info(f"[UPLOAD] {text}_{pos}")
 
-    uk_public_id = f"words/{text}_{pos}_uk"
     us_public_id = f"words/{text}_{pos}_us"
-
-    uk_url = await upload_file(uk_audio, uk_public_id, resource_type="video")
     us_url = await upload_file(us_audio, us_public_id, resource_type="video")
 
+    # UK TTS disabled — uk_audio is always b"", skip upload.
+    # uk_public_id = f"words/{text}_{pos}_uk"
+    # uk_url = await upload_file(uk_audio, uk_public_id, resource_type="video")
+
     # --- 4. FINALIZE ---
-    ai_result["phonetics"]["ukAudioUrl"] = uk_url
+    ai_result["phonetics"]["ukAudioUrl"] = ""
     ai_result["phonetics"]["usAudioUrl"] = us_url
 
     logger.info(f"[DONE] {text}_{pos}")
