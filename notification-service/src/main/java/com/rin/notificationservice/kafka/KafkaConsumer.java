@@ -49,6 +49,8 @@ public class KafkaConsumer {
     )
     public void handleVocabSubtopicsGenerated(VocabSubtopicsGeneratedEvent event) {
         log.info("Received VocabSubtopicsGeneratedEvent: topicId={}, count={}", event.getTopicId(), event.getSubtopicCount());
-        messagingTemplate.convertAndSend("/topic/vocab/subtopics-generated/" + event.getTopicId(), event);
+        // Broadcast to a flat topic path (STOMP simple broker does NOT support wildcards like * or +)
+        // The topicId is carried in the event payload — Frontend filters by topicId if needed.
+        messagingTemplate.convertAndSend("/topic/vocab/subtopics-generated", event);
     }
 }

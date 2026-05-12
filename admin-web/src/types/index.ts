@@ -67,6 +67,7 @@ export interface IVocabSubTopic {
 export interface IVocabWordEntry {
   id: string;
   wordKey: string;
+  wordText: string;  // display text with proper casing & diacritics (e.g. "C++", "Node.js", "déjà")
   pos: string;
   order: number;
   wordReady: boolean;
@@ -78,6 +79,10 @@ export interface IVocabWordEntry {
     phonetics: { us: string; usAudioUrl: string };
     definitions: { definition: string; meaningVi: string; example: string; viExample: string; level: string }[];
   };
+  // Context-matched definition (Polysemy resolution from VocabWordEntryResponse)
+  contextMeaningVi?: string;
+  contextExample?: string;
+  contextLevel?: string;
 }
 
 export interface IVocabSubTopicReadyEvent {

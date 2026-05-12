@@ -39,4 +39,15 @@ public class VocabWordEntry {
 
     @CreatedDate
     LocalDateTime createdAt;
+
+    // ─── CACHED CONTEXT DATA (Được gen ra từ onWordReady) ───
+    String wordText;           // Chữ đẹp có dấu (chargé d'affaires)
+    String contextDefinition;  // EN meaning
+    String contextMeaningVi;   // VI meaning ngắn
+    String contextExample;     // Câu ví dụ EN
+    String contextViExample;   // Dịch câu ví dụ VI
+    CefrLevel contextLevel;    // Trình độ của nghĩa này
 }
+
+    
+

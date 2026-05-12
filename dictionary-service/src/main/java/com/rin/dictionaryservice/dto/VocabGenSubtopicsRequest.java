@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 public class VocabGenSubtopicsRequest {
@@ -11,4 +13,5 @@ public class VocabGenSubtopicsRequest {
     @JsonProperty("description")  String description;
     @JsonProperty("cefr_range")   String cefrRange;
     @JsonProperty("n")            int n;
+    @JsonProperty("tags")         List<String> tags;
 }

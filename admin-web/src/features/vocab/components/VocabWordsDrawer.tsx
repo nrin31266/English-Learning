@@ -26,7 +26,7 @@ export default function VocabWordsDrawer({ open, onClose }: Props) {
             <div key={entry.id} className="border rounded-lg p-3 space-y-1">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold">{entry.wordKey.replace(/_/g, " ")}</span>
+                  <span className="font-semibold">{entry.wordText || entry.wordKey.replace(/_/g, " ")}</span>
                   <Badge variant="outline" className="text-xs">{entry.pos}</Badge>
                   {entry.wordReady
                     ? <CheckCircle2 size={14} className="text-green-500" />
@@ -37,11 +37,29 @@ export default function VocabWordsDrawer({ open, onClose }: Props) {
 
               {entry.wordDetail && (
                 <div className="text-xs text-muted-foreground space-y-1 pl-1">
-                  <div>{entry.wordDetail.summaryVi}</div>
-                  {entry.wordDetail.definitions?.[0] && (
+                  {/* Context-matched definition (Polysemy) takes priority */}
+                  {entry.contextMeaningVi && (
+                    <div className="font-medium text-foreground/80">{entry.contextMeaningVi}</div>
+                  )}
+                  {entry.contextExample ? (
+                    <div className="italic">"{entry.contextExample}"</div>
+                  ) : entry.wordDetail.definitions?.[0] && (
                     <div className="italic">"{entry.wordDetail.definitions[0].example}"</div>
                   )}
-                  <Badge variant="secondary" className="text-xs">{entry.wordDetail.cefrLevel}</Badge>
+                  <div className="flex items-center gap-2">
+                    {entry.contextLevel ? (
+                      <Badge variant="secondary" className="text-xs">{entry.contextLevel}</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">{entry.wordDetail.cefrLevel}</Badge>
+                    )}
+                    {/* Always show the generic summary as fallback subtitle */}
+                    {entry.contextMeaningVi && entry.wordDetail.summaryVi && (
+                      <span className="text-muted-foreground/60">{entry.wordDetail.summaryVi}</span>
+                    )}
+                  </div>
+                  {!entry.contextMeaningVi && entry.wordDetail.summaryVi && (
+                    <div>{entry.wordDetail.summaryVi}</div>
+                  )}
                 </div>
               )}
             </div>

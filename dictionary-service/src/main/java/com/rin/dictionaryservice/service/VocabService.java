@@ -6,12 +6,10 @@ import com.rin.dictionaryservice.constant.VocabSubTopicStatus;
 import com.rin.dictionaryservice.constant.VocabTopicStatus;
 import com.rin.dictionaryservice.constant.WordCreationStatus;
 import com.rin.dictionaryservice.dto.*;
-import com.rin.dictionaryservice.dto.AiGenerateRequest;
 import com.rin.dictionaryservice.kafka.KafkaProducer;
 import com.rin.dictionaryservice.model.*;
 import com.rin.dictionaryservice.repository.httpclient.LanguageProcessingClient;
 import com.rin.dictionaryservice.repository.*;
-import com.rin.englishlearning.common.constants.KafkaTopics;
 import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
 import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +22,6 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,9 +42,11 @@ public class VocabService {
     LanguageProcessingClient lpsClient;
     KafkaProducer kafkaProducer;
     MongoTemplate mongoTemplate;
+
     @lombok.experimental.NonFinal
     @org.springframework.beans.factory.annotation.Value("${language-processing.worker-key}")
     String workerKey;
+
     ObjectMapper objectMapper = new ObjectMapper();
 
 
@@ -65,6 +64,33 @@ public class VocabService {
         topicRepo.save(topic);
         log.info("[VocabTopic] Created: {}", topic.getId());
         return toTopicResponse(topic);
+    }
+
+    public VocabTopicResponse updateTopic(String topicId, UpdateVocabTopicRequest req) {
+        VocabTopic topic = topicRepo.findById(topicId)
+                .orElseThrow(() -> new RuntimeException("Topic not found: " + topicId));
+        if (req.getTitle() != null) topic.setTitle(req.getTitle());
+        if (req.getDescription() != null) topic.setDescription(req.getDescription());
+        if (req.getTags() != null) topic.setTags(req.getTags());
+        if (req.getCefrRange() != null) topic.setCefrRange(req.getCefrRange());
+        if (req.getThumbnailUrl() != null) topic.setThumbnailUrl(req.getThumbnailUrl());
+        topicRepo.save(topic);
+        log.info("[VocabTopic] Updated: {}", topicId);
+        return toTopicResponse(topic);
+    }
+
+    public void deleteTopic(String topicId) {
+        if (!topicRepo.existsById(topicId)) {
+            throw new RuntimeException("Topic not found: " + topicId);
+        }
+        // Cascade delete: sub-topics and word entries for this topic
+        subtopicRepo.deleteByTopicId(topicId);
+        mongoTemplate.remove(
+                new Query(Criteria.where("topicId").is(topicId)),
+                VocabWordEntry.class
+        );
+        topicRepo.deleteById(topicId);
+        log.info("[VocabTopic] Deleted: {}", topicId);
     }
 
     public List<VocabTopicResponse> listTopics() {
@@ -102,8 +128,18 @@ public class VocabService {
             AiGenerateResponse aiResp = lpsClient.genSubtopics(workerKey,
                     new VocabGenSubtopicsRequest(topic.getTitle(),
                             topic.getDescription() != null ? topic.getDescription() : "",
-                            topic.getCefrRange(), n));
-            List<VocabSubTopic> subtopics = parseSubTopics(topicId, serializeAiResult(aiResp));
+                            topic.getCefrRange(), n,
+                            topic.getTags() != null ? topic.getTags() : List.of()));
+            String aiJson = serializeAiResult(aiResp);
+
+            // Parse AI-generated topic description and map it back to the topic
+            String aiDescription = parseTopicDescription(aiJson);
+            if (aiDescription != null && !aiDescription.isBlank()) {
+                topic.setDescription(aiDescription);
+                log.info("[VocabTopic] AI-generated description for {}: {}", topicId, aiDescription);
+            }
+
+            List<VocabSubTopic> subtopics = parseSubTopics(topicId, aiJson);
             subtopicRepo.saveAll(subtopics);
             topic.setSubtopicCount(subtopics.size());
             topic.setStatus(VocabTopicStatus.READY_FOR_WORD_GEN);
@@ -171,17 +207,14 @@ public class VocabService {
                 String rawWord = aiWord.getOrDefault("word", "").trim();
                 if (rawWord.isBlank()) continue;
 
-                // Display text: giữ casing gốc từ AI, chỉ đổi "_" thành space
-                String wordText = rawWord
-                        .replace("_", " ")
-                        .replaceAll("\\s+", " ")
-                        .trim();
+                // 1. Text hiển thị: Giữ nguyên bản gốc từ AI (có dấu, nháy đơn)
+                String wordText = rawWord.replaceAll("\\s+", " ").trim();
 
-                // Key: dùng để unique/search/id, lowercase nhưng không phá C++, C#, Node.js, AI/ML
-                String wordKey = wordText
-                        .toLowerCase()
-                        .replaceAll("[^\\p{L}\\p{N}+#./ _-]", "")
+                // 2. Tạo Key: Không dùng Normalizer, giữ nguyên Unicode \p{L}
+                String wordKey = wordText.toLowerCase()
+                        .replace("'", "_")
                         .replaceAll("[\\s-]+", "_")
+                        .replaceAll("[^\\p{L}\\p{N}+#./_]", "")
                         .replaceAll("_+", "_")
                         .replaceAll("^_|_$", "");
 
@@ -192,6 +225,10 @@ public class VocabService {
 
                 Optional<Word> existingWord = wordRepository.findById(wordKey + "|" + pos);
                 boolean wordReady = false;
+
+                // Các biến chứa data cache ngữ cảnh (Mặc định null nếu từ mới tinh)
+                String ctxDef = null, ctxMean = null, ctxEx = null, ctxViEx = null;
+                CefrLevel ctxLevel = null;
 
                 if (existingWord.isEmpty()) {
                     wordRepository.save(Word.builder()
@@ -207,6 +244,15 @@ public class VocabService {
                     if (w.getStatus() == WordCreationStatus.READY) {
                         wordReady = true;
                         readyCount++;
+
+                        // FIX LỖI CACHE: Nếu từ đã READY, tính luôn ngữ cảnh cho Entry này
+                        Word.Definition matchedDef = selectDefinition(w, subtopic.getCefrLevel());
+                        ctxDef = matchedDef.getDefinition();
+                        ctxMean = matchedDef.getMeaningVi();
+                        ctxEx = matchedDef.getExample();
+                        ctxViEx = matchedDef.getViExample();
+                        ctxLevel = matchedDef.getLevel();
+
                     } else if (w.getStatus() == WordCreationStatus.FAILED) {
                         mongoTemplate.updateFirst(
                                 new Query(Criteria.where("_id").is(w.getId())),
@@ -220,9 +266,16 @@ public class VocabService {
                         .subtopicId(subtopicId)
                         .topicId(subtopic.getTopicId())
                         .wordKey(wordKey)
+                        .wordText(wordText) // Lưu luôn wordText vào cache
                         .pos(pos)
                         .order(order++)
                         .wordReady(wordReady)
+                        // Bơm data ngữ cảnh vào (sẽ có data nếu từ đã READY sẵn, null nếu từ PENDING)
+                        .contextDefinition(ctxDef)
+                        .contextMeaningVi(ctxMean)
+                        .contextExample(ctxEx)
+                        .contextViExample(ctxViEx)
+                        .contextLevel(ctxLevel)
                         .build());
             }
 
@@ -244,26 +297,7 @@ public class VocabService {
         return CompletableFuture.completedFuture(null);
     }
 
-    public List<VocabWordEntryResponse> listWords(String subtopicId) {
-        return buildWordEntryResponses(subtopicId);
-    }
 
-    // ─── CALLED BY PYTHON WORKER (via MongoDB) ───────────────────────────────
-
-    public void onWordReady(String wordKey, String pos) {
-        // Update all VocabWordEntry that link to this word
-        Query q = new Query(Criteria.where("wordKey").is(wordKey)
-                .and("pos").is(pos).and("wordReady").is(false));
-        Update u = new Update().set("wordReady", true);
-        mongoTemplate.updateMulti(q, u, VocabWordEntry.class);
-
-        // Find distinct subtopicIds affected and check completion
-        List<VocabWordEntry> affected = wordEntryRepo.findAllByWordKeyAndPos(wordKey, pos);
-        affected.stream()
-                .map(VocabWordEntry::getSubtopicId)
-                .distinct()
-                .forEach(this::checkSubTopicCompletion);
-    }
 
     // ─── COMPLETION CHECKS ───────────────────────────────────────────────────
 
@@ -276,12 +310,58 @@ public class VocabService {
 
         if (subtopic.getWordCount() > 0 && readyCount >= subtopic.getWordCount()) {
             subtopic.setStatus(VocabSubTopicStatus.READY);
-            subtopicRepo.save(subtopic);
             log.info("[VocabSubTopic] READY: {}", subtopicId);
-            checkTopicCompletion(subtopic);
-        } else {
-            subtopicRepo.save(subtopic);
         }
+        subtopicRepo.save(subtopic);
+        // Always push progress update via Kafka → WebSocket for real-time UI update
+        checkTopicCompletion(subtopic);
+    }
+
+
+    public List<VocabWordEntryResponse> listWords(String subtopicId) {
+        // Tối ưu: Chỉ truyền vào subtopicId, logic chọn nghĩa đã được tính sẵn và lưu ở VocabWordEntry
+        return buildWordEntryResponses(subtopicId);
+    }
+
+    // ─── CALLED BY PYTHON WORKER (via MongoDB) ───────────────────────────────
+
+    public void onWordReady(String wordKey, String pos) {
+        // 1. Lấy data Word chuẩn sau khi AI đã xử lý xong
+        Word word = wordRepository.findById(wordKey + "|" + pos).orElse(null);
+        if (word == null) return;
+
+        // 2. Tìm tất cả các Entry (ở nhiều Subtopic khác nhau) đang cần từ này
+        List<VocabWordEntry> affected = wordEntryRepo.findAllByWordKeyAndPos(wordKey, pos);
+        if (affected.isEmpty()) return;
+
+        for (VocabWordEntry entry : affected) {
+            if (entry.isWordReady()) continue; // Bỏ qua nếu đã được tính toán từ trước
+
+            // Lấy Subtopic tương ứng của Entry để biết target CEFR Level
+            VocabSubTopic subtopic = subtopicRepo.findById(entry.getSubtopicId()).orElse(null);
+            CefrLevel targetLevel = subtopic != null ? subtopic.getCefrLevel() : null;
+
+            // 3. THUẬT TOÁN CHỌN NGHĨA (Chỉ chạy 1 lần duy nhất tại đây)
+            Word.Definition matchedDef = selectDefinition(word, targetLevel);
+
+            // 4. Lưu Cache thẳng vào Entry
+            entry.setWordReady(true);
+            entry.setWordText(word.getText());
+            entry.setContextDefinition(matchedDef.getDefinition());
+            entry.setContextMeaningVi(matchedDef.getMeaningVi());
+            entry.setContextExample(matchedDef.getExample());
+            entry.setContextViExample(matchedDef.getViExample());
+            entry.setContextLevel(matchedDef.getLevel());
+        }
+
+        // Lưu toàn bộ updates trong 1 query duy nhất
+        wordEntryRepo.saveAll(affected);
+
+        // Find distinct subtopicIds affected and check completion (Kích hoạt Kafka)
+        affected.stream()
+                .map(VocabWordEntry::getSubtopicId)
+                .distinct()
+                .forEach(this::checkSubTopicCompletion);
     }
 
     private void checkTopicCompletion(VocabSubTopic readySubtopic) {
@@ -376,24 +456,78 @@ public class VocabService {
         }
     }
 
+    private String parseTopicDescription(String json) {
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            JsonNode desc = root.path("topic_description");
+            if (!desc.isMissingNode() && !desc.asText("").isBlank()) {
+                return desc.asText().trim();
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("[VocabService] Could not parse topic_description from AI response: {}", e.getMessage());
+            return null;
+        }
+    }
+
     // ─── RESPONSE BUILDERS ───────────────────────────────────────────────────
 
     private List<VocabWordEntryResponse> buildWordEntryResponses(String subtopicId) {
+        // Lấy danh sách Entry theo thứ tự (Chỉ tốn 1 query)
         List<VocabWordEntry> entries = wordEntryRepo.findAllBySubtopicIdOrderByOrder(subtopicId);
+
+        // TỐI ƯU N+1 QUERY: Gom ID lại và Fetch 1 lần duy nhất bằng $in
+        List<String> wordIds = entries.stream()
+                .filter(VocabWordEntry::isWordReady)
+                .map(e -> e.getWordKey() + "|" + e.getPos())
+                .toList();
+
+        // Tạo Map lookup siêu nhanh O(1)
+        Map<String, Word> wordMap = wordRepository.findAllById(wordIds).stream()
+                .collect(Collectors.toMap(Word::getId, w -> w));
+
         return entries.stream().map(entry -> {
-            Word word = entry.isWordReady()
-                    ? wordRepository.findById(entry.getWordKey() + "|" + entry.getPos()).orElse(null)
-                    : null;
+            // Chỉ móc ra từ bộ nhớ, không chọc xuống DB nữa
+            Word word = entry.isWordReady() ? wordMap.get(entry.getWordKey() + "|" + entry.getPos()) : null;
+
+            // Xử lý text hiển thị tạm khi từ chưa Ready
+            String wordText = (entry.getWordText() != null)
+                    ? entry.getWordText()
+                    : entry.getWordKey().replace('_', ' ');
+
             return VocabWordEntryResponse.builder()
                     .id(entry.getId())
                     .wordKey(entry.getWordKey())
+                    .wordText(wordText)
                     .pos(entry.getPos())
                     .order(entry.getOrder())
                     .wordReady(entry.isWordReady())
                     .note(entry.getNote())
-                    .wordDetail(word)
+                    // Bê thẳng Cache từ Entry ra, miễn nhiễm với tính toán nặng
+                    .contextDefinition(entry.getContextDefinition())
+                    .contextMeaningVi(entry.getContextMeaningVi())
+                    .contextExample(entry.getContextExample())
+                    .contextViExample(entry.getContextViExample())
+                    .contextLevel(entry.getContextLevel() != null ? entry.getContextLevel().name() : null)
+                    .wordDetail(word) // Truyền full cục Word xuống cho FE phát âm, phiên âm
                     .build();
         }).toList();
+    }
+
+    private Word.Definition selectDefinition(Word word, CefrLevel targetLevel) {
+        if (targetLevel != null && word.getDefinitions() != null) {
+            for (Word.Definition def : word.getDefinitions()) {
+                if (def.getLevel() == targetLevel) {
+                    return def;
+                }
+            }
+        }
+        // Fallback an toàn tránh NullPointerException
+        if (word.getDefinitions() != null && !word.getDefinitions().isEmpty()) {
+            return word.getDefinitions().get(0);
+        }
+        // Trả về một object rỗng đỡ lỗi nếu Word bị hỏng data
+        return Word.Definition.builder().definition("").meaningVi("").example("").viExample("").build();
     }
 
     private VocabTopicResponse toTopicResponse(VocabTopic t) {

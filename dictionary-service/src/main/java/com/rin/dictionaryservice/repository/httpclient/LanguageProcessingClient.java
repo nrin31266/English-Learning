@@ -15,11 +15,11 @@ public interface LanguageProcessingClient {
             @RequestBody SpaCyWordAnalysisRequest request
     );
 
-    @PostMapping(value = "/internal/ai/generate", headers = "Content-Type=application/json")
-    AiGenerateResponse generateJson(
-            @RequestHeader("X-Worker-Key") String workerKey,
-            @RequestBody AiGenerateRequest request
-    );
+//    @PostMapping(value = "/internal/ai/generate", headers = "Content-Type=application/json")
+//    AiGenerateResponse generateJson(
+//            @RequestHeader("X-Worker-Key") String workerKey,
+//            @RequestBody AiGenerateRequest request
+//    );
 
     @PostMapping(value = "/internal/vocab/gen-subtopics", headers = "Content-Type=application/json")
     AiGenerateResponse genSubtopics(

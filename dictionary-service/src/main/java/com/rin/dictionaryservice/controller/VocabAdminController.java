@@ -43,6 +43,21 @@ public class VocabAdminController {
                 .build();
     }
 
+    @PutMapping("/topics/{topicId}")
+    public ApiResponse<VocabTopicResponse> updateTopic(
+            @PathVariable String topicId,
+            @RequestBody UpdateVocabTopicRequest req) {
+        return ApiResponse.<VocabTopicResponse>builder()
+                .result(vocabService.updateTopic(topicId, req))
+                .build();
+    }
+
+    @DeleteMapping("/topics/{topicId}")
+    public ApiResponse<String> deleteTopic(@PathVariable String topicId) {
+        vocabService.deleteTopic(topicId);
+        return ApiResponse.<String>builder().result("deleted").build();
+    }
+
     @PostMapping("/topics/{topicId}/generate-subtopics")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResponse<VocabTopicResponse> generateSubTopics(@PathVariable String topicId) {
@@ -74,4 +89,6 @@ public class VocabAdminController {
                 .result(vocabService.listWords(subtopicId))
                 .build();
     }
+
+
 }

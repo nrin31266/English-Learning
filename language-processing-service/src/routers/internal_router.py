@@ -1,10 +1,11 @@
 import os
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, UploadFile, File, status
 from pydantic import BaseModel
 from typing import Any
 
 from src.llm.llm_service import generate_json
 from src.llm.vocab_prompts import VOCAB_SYSTEM_PROMPT, build_subtopic_prompt, build_word_gen_prompt
+from src.s3_storage.cloud_service import upload_file
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -37,9 +38,9 @@ async def ai_generate(
 
 class GenSubtopicsRequest(BaseModel):
     topic_title: str
-    description: str = ""
     cefr_range: str = "B1-B2"
     n: int = 10
+    tags: list[str] = []
 
 
 class GenWordsRequest(BaseModel):
@@ -56,7 +57,7 @@ async def gen_subtopics(
     x_worker_key: str | None = Header(default=None, alias="X-Worker-Key"),
 ):
     _verify_worker_key(x_worker_key)
-    prompt = f"[SYSTEM]\n{VOCAB_SYSTEM_PROMPT}\n\n[USER]\n{build_subtopic_prompt(req.topic_title, req.description, req.cefr_range, req.n)}"
+    prompt = f"[SYSTEM]\n{VOCAB_SYSTEM_PROMPT}\n\n[USER]\n{build_subtopic_prompt(req.topic_title, req.cefr_range, req.n, req.tags)}"
     result = await generate_json(prompt)
     return AiGenerateResponse(result=result)
 
@@ -70,3 +71,19 @@ async def gen_words(
     prompt = f"[SYSTEM]\n{VOCAB_SYSTEM_PROMPT}\n\n[USER]\n{build_word_gen_prompt(req.topic_title, req.subtopic_title, req.subtopic_description, req.cefr_level, req.existing_keys)}"
     result = await generate_json(prompt)
     return AiGenerateResponse(result=result)
+
+
+class UploadResponse(BaseModel):
+    url: str
+
+
+@router.post("/upload/image", response_model=UploadResponse)
+async def upload_image(
+    file: UploadFile = File(...),
+    public_id: str | None = None,
+    x_worker_key: str | None = Header(default=None, alias="X-Worker-Key"),
+):
+    _verify_worker_key(x_worker_key)
+    pid = public_id or f"vocab_topic_{file.filename}"
+    url = await upload_file(file.file, pid, resource_type="image")
+    return UploadResponse(url=url)

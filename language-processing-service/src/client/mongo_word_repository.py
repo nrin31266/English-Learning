@@ -1,5 +1,7 @@
 import logging
 import os
+import requests
+import asyncio
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -88,76 +90,45 @@ async def report_fail(key: str, pos: str) -> None:
 
 
 async def on_word_ready(key: str, pos: str) -> None:
-    col = _get_collection()
-    db_name = os.getenv("MONGODB_DB", "dictionary_db")
-    db = _client[db_name]
+    """
+    Thông báo cho Java Backend rằng từ đã xử lý xong.
+    Java sẽ lo việc cập nhật tiến độ Subtopic và bắn tin qua WebSocket/Kafka.
+    """
+    # Lấy URL của Dictionary Service từ .env
+    api_url = os.getenv("DICTIONARY_SERVICE_URL", "http://localhost:8081")
+    endpoint = f"{api_url}/api/internal/vocab/words-ready"
+    
+    # Lấy Worker API Key từ .env (phải giống với worker.api-key bên Java)
+    worker_key = os.getenv("WORKER_API_KEY", "16092005")
+    
+    payload = {
+        "wordKey": key,
+        "pos": pos
+    }
 
-    # 1. Mark all VocabWordEntry linked to this word as ready
-    entry_col = db["vocab_word_entries"]
-    result = await entry_col.update_many(
-        {"wordKey": key, "pos": pos, "wordReady": False},
-        {"$set": {"wordReady": True}},
-    )
+    # BẮT BUỘC: Truyền X-Worker-Key vào Headers để pass qua Filter của Java
+    headers = {
+        "X-Worker-Key": worker_key,
+        "Content-Type": "application/json"
+    }
 
-    if result.modified_count == 0:
-        return
-
-    logger.info(f"[VocabWordEntry] Marked {result.modified_count} entries ready for {key}_{pos}")
-
-    # 2. Find distinct subtopicIds affected and check completion
-    affected = await entry_col.distinct("subtopicId", {"wordKey": key, "pos": pos})
-    for subtopic_id in affected:
-        await _check_subtopic_completion(db, subtopic_id)
-
-
-async def _check_subtopic_completion(db, subtopic_id: str) -> None:
-    subtopic_col = db["vocab_subtopics"]
-    entry_col = db["vocab_word_entries"]
-    topic_col = db["vocab_topics"]
-
-    subtopic = await subtopic_col.find_one({"_id": subtopic_id})
-    if not subtopic or subtopic.get("status") == "READY":
-        return
-
-    ready_count = await entry_col.count_documents({"subtopicId": subtopic_id, "wordReady": True})
-    word_count = subtopic.get("wordCount", 0)
-
-    update = {"$set": {"readyWordCount": ready_count, "updatedAt": datetime.now(tz=timezone.utc)}}
-
-    if word_count > 0 and ready_count >= word_count:
-        update["$set"]["status"] = "READY"
-        await subtopic_col.update_one({"_id": subtopic_id}, update)
-        logger.info(f"[VocabSubTopic] READY: {subtopic_id}")
-        await _check_topic_completion(db, subtopic)
-    else:
-        await subtopic_col.update_one({"_id": subtopic_id}, update)
-
-
-async def _check_topic_completion(db, subtopic: dict) -> None:
-    topic_id = subtopic.get("topicId")
-    if not topic_id:
-        return
-
-    topic_col = db["vocab_topics"]
-    subtopic_col = db["vocab_subtopics"]
-
-    topic = await topic_col.find_one({"_id": topic_id})
-    if not topic:
-        return
-
-    ready_subtopics = await subtopic_col.count_documents({"topicId": topic_id, "status": "READY"})
-    subtopic_count = topic.get("subtopicCount", 0)
-    topic_ready = subtopic_count > 0 and ready_subtopics >= subtopic_count
-
-    new_status = "READY" if topic_ready else "PROCESSING"
-    await topic_col.update_one(
-        {"_id": topic_id},
-        {"$set": {"status": new_status, "readySubtopicCount": ready_subtopics,
-                  "updatedAt": datetime.now(tz=timezone.utc)}},
-    )
-    if topic_ready:
-        logger.info(f"[VocabTopic] READY: {topic_id}")
-
+    try:
+        # Nhớ thêm headers=headers vào hàm requests.post
+        response = await asyncio.to_thread(
+            requests.post, 
+            endpoint, 
+            json=payload, 
+            headers=headers, 
+            timeout=5
+        )
+        
+        if response.status_code in (200, 201, 202):
+            logger.info(f"🚀 [Notify Java] Gửi tín hiệu READY thành công cho {key}_{pos}")
+        else:
+            logger.error(f"⚠️ [Notify Java] Java Backend trả về lỗi {response.status_code} cho {key}_{pos}")
+            
+    except Exception as e:
+        logger.error(f"❌ [Notify Java] Không thể kết nối tới Dictionary Service: {str(e)}")
 
 async def close() -> None:
     global _client

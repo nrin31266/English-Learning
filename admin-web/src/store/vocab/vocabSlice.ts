@@ -40,11 +40,20 @@ const vocabSlice = createSlice({
       state.activeSubtopicId = action.payload;
       state.words = asyncIdle([]);
     },
-    // WS: subtopic word processing complete
+    // WS: subtopic word processing progress (called for every word ready, not just READY subtopic)
     updateSubtopicFromWs(state, action: PayloadAction<IVocabSubTopicReadyEvent>) {
       const { subtopicId, topicId, topicReady, readyWordCount, wordCount, readySubtopicCount } = action.payload;
       const sub = state.subtopics.data.find((s) => s.id === subtopicId);
-      if (sub) { sub.status = "READY"; sub.readyWordCount = readyWordCount; sub.wordCount = wordCount; }
+      if (sub) {
+        sub.readyWordCount = readyWordCount;
+        sub.wordCount = wordCount;
+        // Subtopic is only READY when all words are accounted for
+        if (wordCount > 0 && readyWordCount >= wordCount) {
+          sub.status = "READY";
+        } else if (sub.status !== "PROCESSING_WORDS" && sub.status !== "READY") {
+          sub.status = "PROCESSING_WORDS";
+        }
+      }
       const topic = state.topics.data.find((t) => t.id === topicId);
       if (topic) {
         topic.readySubtopicCount = readySubtopicCount;
@@ -107,6 +116,22 @@ const vocabSlice = createSlice({
         const sub = s.subtopics.data.find((st) => st.id === subtopicId);
         if (sub) sub.status = "PENDING_WORDS";
       })
+      // updateVocabTopic
+      .addCase(updateVocabTopic.fulfilled, (s, a) => {
+        const updated = a.payload as IVocabTopic;
+        const idx = s.topics.data.findIndex((t) => t.id === updated.id);
+        if (idx !== -1) s.topics.data[idx] = updated;
+      })
+      // deleteVocabTopic
+      .addCase(deleteVocabTopic.fulfilled, (s, a) => {
+        const topicId = a.meta.arg;
+        s.topics.data = s.topics.data.filter((t) => t.id !== topicId);
+        if (s.activeTopicId === topicId) {
+          s.activeTopicId = null;
+          s.subtopics = asyncIdle([]);
+          s.words = asyncIdle([]);
+        }
+      })
       // fetchWords
       .addCase(fetchWords.pending, (s) => { s.words.status = "loading"; })
       .addCase(fetchWords.fulfilled, (s, a) => { s.words.status = "succeeded"; s.words.data = a.payload; })
@@ -148,5 +173,15 @@ export const generateWords = createAsyncThunk("vocab/genWords", async (subtopicI
 
 export const fetchWords = createAsyncThunk("vocab/fetchWords", async (subtopicId: string, { rejectWithValue }) => {
   try { return await handleAPI<IVocabWordEntry[]>({ endpoint: `${BASE}/subtopics/${subtopicId}/words` }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const updateVocabTopic = createAsyncThunk("vocab/updateTopic", async ({ topicId, body }: { topicId: string; body: object }, { rejectWithValue }) => {
+  try { return await handleAPI<IVocabTopic>({ endpoint: `${BASE}/topics/${topicId}`, method: "PUT", body }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const deleteVocabTopic = createAsyncThunk("vocab/deleteTopic", async (topicId: string, { rejectWithValue }) => {
+  try { return await handleAPI<string>({ endpoint: `${BASE}/topics/${topicId}`, method: "DELETE" }); }
   catch (e) { return rejectWithValue(extractError(e)); }
 });
