@@ -101,7 +101,7 @@ const RecordingControls = ({
               isRecording
                 ? "bg-red-500 border-red-400 hover:bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.5)]"
                 : "bg-primary border-primary/40 hover:bg-primary/90 shadow-[0_8px_20px_var(--tw-shadow-color)] shadow-primary/30 active:scale-95",
-              (!userInteracted || isUploading) && "opacity-50 cursor-not-allowed pointer-events-none grayscale-[40%]"
+              (!userInteracted || isUploading) && "opacity-50 cursor-not-allowed pointer-events-none grayscale-40"
             )}
             onClick={onRecordClick}
             disabled={isUploading || !userInteracted}
@@ -132,7 +132,7 @@ const RecordingControls = ({
             )}
 
             {showRecordingEffect && (
-              <span className="absolute inset-0 rounded-full border-[4px] border-primary-foreground/30 animate-ping pointer-events-none" style={{ animationDuration: "1.5s" }} />
+              <span className="absolute inset-0 rounded-full border-4 border-primary-foreground/30 animate-ping pointer-events-none" style={{ animationDuration: "1.5s" }} />
             )}
           </button>
         </div>
@@ -178,7 +178,7 @@ const RecordingControls = ({
             ⚠️ {recordError}
           </span>
         ) : isRecording ? (
-          <span className="text-[16px] sm:text-[18px] font-bold text-red-500 font-mono tracking-[0.1em] flex items-center gap-2">
+          <span className="text-[16px] sm:text-[18px] font-bold text-red-500 font-mono tracking-widest flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
             00:{timeLeft.toString().padStart(2, '0')}
           </span>
@@ -188,11 +188,11 @@ const RecordingControls = ({
           </span>
         ) : hasRecordedAudio ? (
           <span className="text-[13px] sm:text-[15px] text-muted-foreground font-semibold tracking-wide flex items-center gap-1.5">
-            Tap mic to try again <span className="text-primary/90 font-bold">({defaultTime}s)</span>
+            Tap /&nbsp;<kbd className="px-1 py-0.5 bg-muted/60 border border-border/60 rounded text-[10px] font-mono leading-none">Space</kbd>&nbsp;to try again <span className="text-primary/90 font-bold">({defaultTime}s)</span>
           </span>
         ) : (
           <span className="text-[13px] sm:text-[15px] text-muted-foreground font-semibold tracking-wide flex items-center gap-1.5">
-            Tap to record <span className="text-primary/90 font-bold">({defaultTime}s)</span>
+            Tap /&nbsp;<kbd className="px-1 py-0.5 bg-muted/60 border border-border/60 rounded text-[10px] font-mono leading-none">Space</kbd>&nbsp;to record <span className="text-primary/90 font-bold">({defaultTime}s)</span>
           </span>
         )}
       </div>

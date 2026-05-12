@@ -113,7 +113,7 @@ const WordChip = ({
       text: "text-rose-600/80 dark:text-rose-400/80",
     },
     untyped: {
-      base: "border-slate-200/50 bg-slate-50/30 dark:bg-slate-900/20 hover:border-primary/30",
+      base: "dark:border-slate-200/50 border-gray-500/30 bg-slate-50/30 dark:bg-slate-900/20 hover:border-primary/30",
       text: "text-slate-400/70 dark:text-slate-500/70",
     },
   }
@@ -148,7 +148,7 @@ const WordChip = ({
         className={cn(
           "font-normal tracking-wide whitespace-nowrap",
           current.text,
-          status === "untyped" && "tracking-widest opacity-60"
+          status === "untyped" && "tracking-widest opacity-80"
         )}
       >
         {finalDisplayText}

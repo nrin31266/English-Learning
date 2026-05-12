@@ -101,13 +101,13 @@ const ActiveSentencePanel = ({
     handleWordClick(word, el, currentSentenceTextDisplay)
   }, [currentSentenceTextDisplay, handleWordClick])
 
-  // 👉 LOGIC MỚI: Nếu đã completed thì show NEXT luôn, khỏi cần xét điểm hiện tại
+  // Nếu đã completed thì show NEXT luôn, khỏi cần xét điểm hiện tại
   const shouldShowNextButton = useMemo(
     () => isCompleted || (transcription?.shadowingResult?.weightedAccuracy ?? 0) >= SHADOWING_THRESHOLD.NEXT,
     [isCompleted, transcription]
   )
 
-  // 👉 LOGIC MỚI: Skip chỉ hiện khi KHÔNG completed và (chưa có điểm pass)
+  // Skip chỉ hiện khi KHÔNG completed và (chưa có điểm pass)
   const shouldShowSkipButton = useMemo(
     () => !isCompleted && hasRecordedAudio && !shouldShowNextButton,
     [isCompleted, hasRecordedAudio, shouldShowNextButton]
@@ -387,6 +387,18 @@ const ActiveSentencePanel = ({
       setIsPlayingRecorded(false)
     }
   }
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return
+      const target = e.target as HTMLElement | null
+      if (target?.tagName === "BUTTON" || target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") return
+      e.preventDefault()
+      handleRecordClick()
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [handleRecordClick])
 
   useEffect(() => {
     return () => {
