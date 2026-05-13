@@ -119,4 +119,39 @@ public class VocabAdminController {
         return ApiResponse.<String>builder().result(url).build();
     }
 
+    // ─── TOGGLE ACTIVE ───────────────────────────────────────────────────────
+
+    @PutMapping("/topics/{topicId}/toggle-active")
+    public ApiResponse<VocabTopicResponse> toggleTopicActive(@PathVariable String topicId) {
+        return ApiResponse.<VocabTopicResponse>builder()
+                .result(vocabService.toggleTopicActive(topicId))
+                .build();
+    }
+
+    @PutMapping("/subtopics/{subtopicId}/toggle-active")
+    public ApiResponse<VocabSubTopicResponse> toggleSubtopicActive(@PathVariable String subtopicId) {
+        return ApiResponse.<VocabSubTopicResponse>builder()
+                .result(vocabService.toggleSubtopicActive(subtopicId))
+                .build();
+    }
+
+    // ─── HUMAN-IN-THE-LOOP ─────────────────────────────────────────────────
+
+    @PutMapping("/word-entries/{entryId}/context")
+    public ApiResponse<VocabWordEntryResponse> updateEntryContext(
+            @PathVariable String entryId,
+            @RequestBody UpdateEntryContextRequest req) {
+        return ApiResponse.<VocabWordEntryResponse>builder()
+                .result(vocabService.updateEntryContextManual(entryId, req))
+                .build();
+    }
+
+    @PostMapping("/word-entries/{entryId}/generate-meaning")
+    public ApiResponse<VocabWordEntryResponse> generateMeaning(
+            @PathVariable String entryId) {
+        return ApiResponse.<VocabWordEntryResponse>builder()
+                .result(vocabService.generateSingleMeaningSync(entryId))
+                .build();
+    }
+
 }

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Any
 
 from src.llm.llm_service import generate_json
-from src.llm.vocab_prompts import VOCAB_SYSTEM_PROMPT, build_subtopic_prompt, build_word_gen_prompt
+from src.llm.vocab_prompts import VOCAB_SYSTEM_PROMPT, build_subtopic_prompt, build_word_gen_prompt, build_single_meaning_prompt
 from src.s3_storage.cloud_service import upload_file
 
 router = APIRouter(prefix="/internal", tags=["internal"])
@@ -68,6 +68,28 @@ async def gen_words(
 ):
     _verify_worker_key(x_worker_key)
     prompt = f"[SYSTEM]\n{VOCAB_SYSTEM_PROMPT}\n\n[USER]\n{build_word_gen_prompt(req.topic_title, req.subtopic_title, req.subtopic_description, req.cefr_level)}"
+    result = await generate_json(prompt)
+    return AiGenerateResponse(result=result)
+
+
+class GenSingleMeaningRequest(BaseModel):
+    word: str
+    pos: str
+    topic_title: str
+    subtopic_title: str
+    subtopic_description: str
+
+
+@router.post("/vocab/generate-single-meaning", response_model=AiGenerateResponse)
+async def gen_single_meaning(
+    req: GenSingleMeaningRequest,
+    x_worker_key: str | None = Header(default=None, alias="X-Worker-Key"),
+):
+    _verify_worker_key(x_worker_key)
+    prompt = (
+        f"[SYSTEM]\n{VOCAB_SYSTEM_PROMPT}\n\n[USER]\n"
+        f"{build_single_meaning_prompt(req.word, req.pos, req.topic_title, req.subtopic_title, req.subtopic_description)}"
+    )
     result = await generate_json(prompt)
     return AiGenerateResponse(result=result)
 

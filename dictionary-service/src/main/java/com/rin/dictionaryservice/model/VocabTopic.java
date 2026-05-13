@@ -39,6 +39,9 @@ public class VocabTopic {
     @Builder.Default
     VocabTopicStatus status = VocabTopicStatus.DRAFT;
 
+    @Builder.Default
+    boolean isActive = false;
+
     String thumbnailUrl;
     LocalDateTime publishedAt;
 

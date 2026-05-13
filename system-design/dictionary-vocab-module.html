@@ -3,674 +3,292 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Dictionary & Vocab Module — System Design</title>
+<title>System Design - Dictionary & Vocab Module</title>
 <style>
   :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #21263a;
-    --border: #2e3452;
-    --accent: #5b8cff;
-    --accent2: #a78bfa;
-    --accent3: #34d399;
-    --accent4: #fb923c;
-    --accent5: #f472b6;
-    --text: #e2e8f0;
-    --muted: #8892a4;
-    --danger: #f87171;
-    --warn: #fbbf24;
+    --bg-page: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-surface-hover: #f1f5f9;
+    --border: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --primary: #2563eb;
+    --primary-bg: #eff6ff;
+    --success: #059669;
+    --success-bg: #ecfdf5;
+    --warning: #d97706;
+    --warning-bg: #fffbeb;
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --purple: #7c3aed;
+    --purple-bg: #f5f3ff;
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.6; display: flex; min-height: 100vh; }
+  body { 
+    background-color: var(--bg-page); 
+    color: var(--text-main); 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+    font-size: 15px; 
+    line-height: 1.6; 
+    display: flex; 
+  }
 
   /* SIDEBAR */
-  nav { width: 240px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); padding: 24px 0; position: sticky; top: 0; overflow-y: auto; flex-shrink: 0; }
-  nav h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); padding: 0 20px 8px; }
-  nav a { display: block; padding: 7px 20px; color: var(--muted); text-decoration: none; font-size: 13px; border-left: 2px solid transparent; transition: all .15s; }
-  nav a:hover, nav a.active { color: var(--text); border-left-color: var(--accent); background: rgba(91,140,255,.07); }
-  nav .nav-group { margin-bottom: 20px; }
+  nav { 
+    width: 260px; 
+    height: 100vh; 
+    background-color: var(--bg-surface); 
+    border-right: 1px solid var(--border); 
+    padding: 32px 0; 
+    position: sticky; 
+    top: 0; 
+    overflow-y: auto; 
+    flex-shrink: 0;
+  }
+  nav .logo { padding: 0 24px 24px; font-weight: 700; font-size: 18px; color: var(--primary); border-bottom: 1px solid var(--border); margin-bottom: 24px;}
+  nav h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); margin: 24px 24px 8px; }
+  nav a { 
+    display: block; 
+    padding: 8px 24px; 
+    color: var(--text-main); 
+    text-decoration: none; 
+    font-size: 14px; 
+    border-left: 3px solid transparent; 
+    transition: all 0.2s;
+  }
+  nav a:hover { background-color: var(--bg-surface-hover); color: var(--primary); }
+  nav a.active { border-left-color: var(--primary); background-color: var(--primary-bg); color: var(--primary); font-weight: 500; }
 
-  /* MAIN */
-  main { flex: 1; padding: 40px 48px; max-width: 1100px; }
-  h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 6px; }
-  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 40px; }
-  h2.section { font-size: 18px; font-weight: 600; color: var(--accent); margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-  h3 { font-size: 15px; font-weight: 600; color: var(--text); margin: 24px 0 10px; }
-  p { color: var(--muted); margin-bottom: 12px; }
-  strong { color: var(--text); }
-  code { background: var(--surface2); color: var(--accent3); padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 12.5px; }
-  ul { list-style: none; padding-left: 0; }
-  ul li { color: var(--muted); padding: 3px 0 3px 16px; position: relative; }
-  ul li::before { content: '–'; position: absolute; left: 0; color: var(--accent); }
+  /* MAIN CONTENT */
+  main { flex: 1; padding: 48px; max-width: 1000px; margin: 0 auto; background: var(--bg-surface); min-height: 100vh; border-left: 1px solid var(--border); border-right: 1px solid var(--border); box-shadow: 0 0 20px rgba(0,0,0,0.02);}
+  
+  h1 { font-size: 32px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; letter-spacing: -0.5px; }
+  .subtitle { font-size: 16px; color: var(--text-muted); margin-bottom: 48px; }
+  
+  h2 { font-size: 22px; font-weight: 700; color: var(--text-main); margin: 48px 0 24px; padding-bottom: 12px; border-bottom: 2px solid var(--border); }
+  h3 { font-size: 18px; font-weight: 600; margin: 24px 0 12px; color: var(--text-main); }
+  p { margin-bottom: 16px; color: var(--text-main); }
+  
+  code { background-color: var(--bg-surface-hover); color: var(--danger); padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; }
+  ul { padding-left: 24px; margin-bottom: 24px; }
+  li { margin-bottom: 8px; }
 
-  /* CARDS */
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
-  .card-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
-  .badge-blue { background: rgba(91,140,255,.2); color: var(--accent); }
-  .badge-purple { background: rgba(167,139,250,.2); color: var(--accent2); }
-  .badge-green { background: rgba(52,211,153,.2); color: var(--accent3); }
-  .badge-orange { background: rgba(251,146,60,.2); color: var(--accent4); }
-  .badge-pink { background: rgba(244,114,182,.2); color: var(--accent5); }
-  .badge-red { background: rgba(248,113,113,.2); color: var(--danger); }
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.5; }
+  .badge-primary { background-color: var(--primary-bg); color: var(--primary); }
+  .badge-success { background-color: var(--success-bg); color: var(--success); }
+  .badge-warning { background-color: var(--warning-bg); color: var(--warning); }
+  .badge-danger { background-color: var(--danger-bg); color: var(--danger); }
+  .badge-purple { background-color: var(--purple-bg); color: var(--purple); }
 
-  /* ENTITY */
-  .entity { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
-  .entity-header { background: var(--surface2); padding: 12px 18px; font-weight: 700; color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: space-between; }
-  .entity-body { padding: 0; }
-  table { width: 100%; border-collapse: collapse; }
-  th { background: rgba(91,140,255,.08); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .8px; padding: 8px 16px; text-align: left; }
-  td { padding: 8px 16px; border-top: 1px solid var(--border); font-size: 13px; }
-  td:first-child { color: var(--accent3); font-family: monospace; }
-  td:nth-child(2) { color: var(--accent2); }
-  td:last-child { color: var(--muted); }
-  tr:hover td { background: rgba(255,255,255,.02); }
+  /* TABLES */
+  .table-wrapper { overflow-x: auto; margin-bottom: 32px; border: 1px solid var(--border); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; text-align: left; }
+  th { background-color: var(--bg-page); color: var(--text-muted); font-size: 13px; font-weight: 600; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  td.field-name { font-weight: 600; color: var(--primary); font-family: monospace; }
 
-  /* FLOW */
-  .flow { display: flex; align-items: flex-start; gap: 0; flex-wrap: wrap; margin: 16px 0; }
-  .flow-step { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; min-width: 140px; max-width: 180px; flex-shrink: 0; }
-  .flow-step .step-num { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-  .flow-step .step-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; }
-  .flow-step .step-sub { font-size: 11px; color: var(--muted); }
-  .flow-arrow { color: var(--border); font-size: 20px; padding: 0 6px; margin-top: 18px; flex-shrink: 0; }
+  /* CALLOUTS (Cards/Notes) */
+  .callout { padding: 20px; border-radius: 8px; margin-bottom: 24px; border: 1px solid var(--border); }
+  .callout-title { font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+  
+  .callout-info { background-color: var(--primary-bg); border-color: #bfdbfe; }
+  .callout-info .callout-title { color: var(--primary); }
+  
+  .callout-success { background-color: var(--success-bg); border-color: #bbf7d0; }
+  .callout-success .callout-title { color: var(--success); }
+  
+  .callout-warning { background-color: var(--warning-bg); border-color: #fde68a; }
+  .callout-warning .callout-title { color: var(--warning); }
 
-  /* STATUS FLOW */
-  .status-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
-  .status-node { padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+  /* WORKFLOW STEPS */
+  .step-container { margin: 24px 0; padding-left: 16px; border-left: 3px solid var(--border); }
+  .step { position: relative; margin-bottom: 24px; }
+  .step::before {
+    content: ''; position: absolute; left: -24px; top: 4px; width: 11px; height: 11px;
+    border-radius: 50%; background-color: var(--primary); border: 3px solid var(--bg-surface);
+  }
+  .step-title { font-weight: 700; font-size: 16px; color: var(--text-main); margin-bottom: 4px; }
+  .step-desc { font-size: 14px; color: var(--text-muted); }
 
-  /* GRID */
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-
-  /* PROBLEM BOX */
-  .problem { background: rgba(248,113,113,.05); border: 1px solid rgba(248,113,113,.2); border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; }
-  .problem-title { color: var(--danger); font-weight: 600; font-size: 13px; margin-bottom: 6px; }
-  .solution { background: rgba(52,211,153,.05); border: 1px solid rgba(52,211,153,.2); border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; }
-  .solution-title { color: var(--accent3); font-weight: 600; font-size: 13px; margin-bottom: 6px; }
-  .note { background: rgba(251,146,60,.05); border: 1px solid rgba(251,146,60,.2); border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; }
-  .note-title { color: var(--warn); font-weight: 600; font-size: 13px; margin-bottom: 6px; }
-
-  /* PIPELINE */
-  .pipeline { position: relative; padding-left: 28px; margin: 16px 0; }
-  .pipeline::before { content: ''; position: absolute; left: 10px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
-  .pipeline-step { position: relative; margin-bottom: 16px; }
-  .pipeline-step::before { content: ''; position: absolute; left: -22px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
-  .pipeline-step.ai::before { background: var(--accent2); }
-  .pipeline-step.worker::before { background: var(--accent3); }
-  .pipeline-step.event::before { background: var(--accent4); }
-  .pipeline-label { font-size: 12px; font-weight: 700; color: #fff; }
-  .pipeline-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  /* DIVIDER */
-  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
-  .tag { display: inline-block; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
-
-  @media (max-width: 900px) {
+  @media (max-width: 768px) {
     nav { display: none; }
-    .grid2, .grid3 { grid-template-columns: 1fr; }
-    main { padding: 24px 20px; }
+    main { padding: 24px; border: none; }
   }
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="nav-group">
-    <h2>Tổng quan</h2>
-    <a href="#overview">Hiện tại & Mục tiêu</a>
-    <a href="#entities">Entity Design</a>
-  </div>
-  <div class="nav-group">
-    <h2>Luồng xử lý</h2>
-    <a href="#flow-lookup">Single Word Lookup</a>
-    <a href="#flow-topic">Tạo Topic & Sub-topics</a>
-    <a href="#flow-gen-words">Gen Word List</a>
-    <a href="#flow-worker">Worker Enrichment</a>
-    <a href="#flow-ready">Completion Check</a>
-  </div>
-  <div class="nav-group">
-    <h2>Vấn đề & Giải pháp</h2>
-    <a href="#dedup">Tránh trùng từ</a>
-    <a href="#difficulty">Phân bổ trình độ</a>
-    <a href="#phrase">Từ nhiều chữ</a>
-    <a href="#economy">Gen tiết kiệm</a>
-  </div>
-  <div class="nav-group">
-    <h2>Learning Module</h2>
-    <a href="#study-modes">Study Modes</a>
-    <a href="#progress">User Progress</a>
-    <a href="#api">API Endpoints</a>
-  </div>
-  <div class="nav-group">
-    <h2>Khác</h2>
-    <a href="#migration">Migration Plan</a>
-    <a href="#todo">Pending Decisions</a>
-  </div>
+  <div class="logo">EdTech Vocab System</div>
+  
+  <h3>Kiến trúc chung</h3>
+  <a href="#overview">Tổng quan Mục tiêu</a>
+  <a href="#entities">Thiết kế Database (Entities)</a>
+  
+  <h3>Lõi AI & Prompting</h3>
+  <a href="#ai-strategy">Chiến thuật Ranh giới & Tiết kiệm</a>
+  
+  <h3>Luồng Vận hành (Admin)</h3>
+  <a href="#flow-auto">1. Gen Tự động (Async)</a>
+  <a href="#flow-manual">2. Ghi đè Ngữ cảnh (Sync)</a>
+  <a href="#flow-publish">3. Kiểm duyệt & Xuất bản</a>
+  
+  <h3>Học tập (Learner)</h3>
+  <a href="#study-modes">Phương thức Học & Ôn tập</a>
+  <a href="#tracking">Theo dõi Tiến độ (Progress)</a>
+
+  <h3>Tài liệu API</h3>
+  <a href="#apis">Danh sách API Endpoints</a>
 </nav>
 
 <main>
-  <h1>Dictionary & Vocabulary Module</h1>
-  <p class="subtitle">System design cho dictionary-service — tích hợp lookup từ đơn (shadowing/dictation) và module học từ vựng theo chủ đề.</p>
+  <h1>Tổng quan Hệ thống Học Từ Vựng AI</h1>
+  <p class="subtitle">Tài liệu mô tả chi tiết toàn bộ vòng đời của dữ liệu: Từ thiết kế Database, tự động hóa bằng AI (Python Worker + Kafka), can thiệp của Admin (Human-in-the-loop), đến trải nghiệm của Người học (React Frontend).</p>
 
   <!-- OVERVIEW -->
-  <h2 class="section" id="overview">Hiện tại & Mục tiêu</h2>
-  <div class="grid2">
-    <div class="card">
-      <div class="card-title"><span class="badge badge-blue">HIỆN TẠI</span> Dictionary Lookup</div>
-      <ul>
-        <li>User click từ trong câu shadowing/dictation</li>
-        <li>API nhận <code>text + pos + lemma + context</code></li>
-        <li>Nếu READY → trả về ngay (cached Redis)</li>
-        <li>Nếu chưa có → tạo PENDING, trả PROCESSING + fallback từ free Dictionary API</li>
-        <li>Python workers <code>word_worker.py</code> claim batch, gọi Gemini/DeepSeek enrich</li>
-        <li>Lưu MongoDB: <code>Word {text, pos, summaryVi, phonetics, cefrLevel, definitions[]}</code></li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="badge badge-purple">MỤC TIÊU</span> Vocab Learning Module</div>
-      <ul>
-        <li>Topics lớn: TOEIC các cấp, IELTS, Daily Life, Communication, ...</li>
-        <li>Mỗi topic lớn: 500–2000 từ, chia ~N sub-topics (~20 từ/sub-topic)</li>
-        <li>Sub-topic có mô tả riêng → AI gen word list theo mô tả đó</li>
-        <li>Từ được enrich qua pipeline worker hiện có (tái sử dụng)</li>
-        <li>User học qua nhiều chế độ: flashcard, fill-blank, quiz, spelling</li>
-        <li>Progress tracking per user per sub-topic</li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- ENTITIES -->
-  <h2 class="section" id="entities">Entity Design</h2>
-  <p>Giữ nguyên collection <code>words</code> hiện tại. Thêm 3 collection mới cho vocab module. Các collection mới đều dùng <strong>MongoDB</strong> (nhất quán với dictionary-service).</p>
-
-  <div class="entity">
-    <div class="entity-header">
-      Word <span class="badge badge-green">collection: words — GIỮ NGUYÊN</span>
-    </div>
-    <div class="entity-body">
-      <table>
-        <tr><th>Field</th><th>Type</th><th>Ghi chú</th></tr>
-        <tr><td>id</td><td>String</td><td>Composite key — hiện là "text|pos"</td></tr>
-        <tr><td>text</td><td>String</td><td>Từ gốc (đã normalize soft)</td></tr>
-        <tr><td>key</td><td>String</td><td>Lowercase normalized (e.g. "don't" → "dont")</td></tr>
-        <tr><td>pos</td><td>String</td><td>VERB, NOUN, ADJ, ADV, … (spaCy POS)</td></tr>
-        <tr><td>lemma</td><td>String</td><td>Dạng từ điển</td></tr>
-        <tr><td>context</td><td>String</td><td>Câu gốc — dùng lúc AI enrich</td></tr>
-        <tr><td>summaryVi</td><td>String</td><td>Nghĩa VI tóm tắt ngắn gọn (hiển thị nhanh)</td></tr>
-        <tr><td>phonetics</td><td>Phonetics</td><td>{uk, ukAudioUrl, us, usAudioUrl}</td></tr>
-        <tr><td>cefrLevel</td><td>CefrLevel</td><td>Trình độ tổng của từ (A1–C2)</td></tr>
-        <tr><td>definitions</td><td>List&lt;Definition&gt;</td><td>[{<strong>definition</strong> (EN), <strong>meaningVi</strong> (VI ngắn gọn), <strong>example</strong> (EN), <strong>viExample</strong> (dịch câu ví dụ sang VI), <strong>level</strong> (CEFR per nghĩa)}]</td></tr>
-        <tr><td>status</td><td>WordCreationStatus</td><td>PENDING → PROCESSING → READY / FAILED</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <div class="entity">
-    <div class="entity-header">
-      VocabTopic <span class="badge badge-blue">collection: vocab_topics — MỚI</span>
-    </div>
-    <div class="entity-body">
-      <table>
-        <tr><th>Field</th><th>Type</th><th>Ghi chú</th></tr>
-        <tr><td>id</td><td>String</td><td>Auto ObjectId</td></tr>
-        <tr><td>title</td><td>String</td><td>VD: "TOEIC — Part 5 Grammar & Vocab"</td></tr>
-        <tr><td>titleVi</td><td>String</td><td>Tên tiếng Việt</td></tr>
-        <tr><td>description</td><td>String</td><td>Mô tả tổng topic (dùng để AI gen sub-topic descriptions)</td></tr>
-        <tr><td>tags</td><td>List&lt;String&gt;</td><td>Nhãn tự do, VD: ["TOEIC", "B1", "Business"]. Không dùng Enum cứng — linh hoạt hơn cho filter và hiển thị.</td></tr>
-        <tr><td>cefrRange</td><td>String</td><td>"A2-B1", "B2-C1" — định hướng trình độ tổng</td></tr>
-        <tr><td>estimatedWordCount</td><td>int</td><td>500–2000</td></tr>
-        <tr><td>subtopicCount</td><td>int</td><td>Số sub-topic đã gen</td></tr>
-        <tr><td>status</td><td>TopicStatus</td><td>DRAFT → GENERATING_SUBTOPICS → READY_FOR_WORD_GEN → PROCESSING → READY</td></tr>
-        <tr><td>thumbnailUrl</td><td>String</td><td>Optional</td></tr>
-        <tr><td>publishedAt</td><td>LocalDateTime</td><td>Null nếu chưa public</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <div class="entity">
-    <div class="entity-header">
-      VocabSubTopic <span class="badge badge-blue">collection: vocab_subtopics — MỚI</span>
-    </div>
-    <div class="entity-body">
-      <table>
-        <tr><th>Field</th><th>Type</th><th>Ghi chú</th></tr>
-        <tr><td>id</td><td>String</td><td>Auto ObjectId</td></tr>
-        <tr><td>topicId</td><td>String</td><td>Ref VocabTopic.id</td></tr>
-        <tr><td>title</td><td>String</td><td>VD: "Từ vựng về hợp đồng và giao dịch"</td></tr>
-        <tr><td>titleVi</td><td>String</td><td></td></tr>
-        <tr><td>description</td><td>String</td><td><strong>Mô tả do AI gen</strong> — dùng để AI gen word list sau này</td></tr>
-        <tr><td>cefrLevel</td><td>CefrLevel</td><td>Trình độ target của sub-topic (A2, B1, …)</td></tr>
-        <tr><td>order</td><td>int</td><td>Thứ tự trong topic lớn</td></tr>
-        <tr><td>wordCount</td><td>int</td><td>Tổng từ đã assign</td></tr>
-        <tr><td>readyWordCount</td><td>int</td><td>Số từ đã READY (dùng để check completion)</td></tr>
-        <tr><td>status</td><td>SubTopicStatus</td><td>PENDING_WORDS → GENERATING_WORDS → PROCESSING_WORDS → READY</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <div class="entity">
-    <div class="entity-header">
-      VocabWordEntry <span class="badge badge-blue">collection: vocab_word_entries — MỚI</span>
-    </div>
-    <div class="entity-body">
-      <table>
-        <tr><th>Field</th><th>Type</th><th>Ghi chú</th></tr>
-        <tr><td>id</td><td>String</td><td></td></tr>
-        <tr><td>subtopicId</td><td>String</td><td>Ref VocabSubTopic.id</td></tr>
-        <tr><td>topicId</td><td>String</td><td>Denormalized — dùng để dedup check nhanh</td></tr>
-        <tr><td>wordKey</td><td>String</td><td>Matches Word.key (normalized text)</td></tr>
-        <tr><td>pos</td><td>String</td><td>POS của word entry này (NOUN, VERB, …)</td></tr>
-        <tr><td>order</td><td>int</td><td>Thứ tự trong sub-topic</td></tr>
-        <tr><td>wordReady</td><td>boolean</td><td>Cache cờ — true khi Word đã READY. Worker update cờ này.</td></tr>
-        <tr><td>note</td><td>String</td><td>Optional: chú thích riêng cho từ trong context chủ đề này</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <div class="entity">
-    <div class="entity-header">
-      UserVocabProgress <span class="badge badge-orange">collection: user_vocab_progress — MỚI (nên để user-service hoặc dictionary-service)</span>
-    </div>
-    <div class="entity-body">
-      <table>
-        <tr><th>Field</th><th>Type</th><th>Ghi chú</th></tr>
-        <tr><td>id</td><td>String</td><td></td></tr>
-        <tr><td>userId</td><td>String</td><td></td></tr>
-        <tr><td>subtopicId</td><td>String</td><td></td></tr>
-        <tr><td>learnedWordKeys</td><td>Set&lt;String&gt;</td><td>Danh sách wordKey đã học xong</td></tr>
-        <tr><td>reviewWordKeys</td><td>Set&lt;String&gt;</td><td>Từ cần ôn lại (sai nhiều)</td></tr>
-        <tr><td>completionRate</td><td>float</td><td>0.0 – 1.0</td></tr>
-        <tr><td>lastStudiedAt</td><td>LocalDateTime</td><td></td></tr>
-        <tr><td>studyMode</td><td>String</td><td>Mode đang học gần nhất</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <hr />
-
-  <!-- FLOW 1: LOOKUP -->
-  <h2 class="section" id="flow-lookup">Luồng 1 — Single Word Lookup (Không đổi)</h2>
-  <p>Flow này <strong>giữ nguyên</strong> — user click từ trong câu shadowing/dictation, frontend gọi API.</p>
-  <div class="flow">
-    <div class="flow-step"><div class="step-num">1</div><div class="step-title">User click từ</div><div class="step-sub">Frontend gửi text + pos + lemma + context</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step"><div class="step-num">2</div><div class="step-title">addOrGetWord</div><div class="step-sub">Check MongoDB theo key + pos</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step" style="border-color: var(--accent3);"><div class="step-num">3a</div><div class="step-title" style="color:var(--accent3)">READY</div><div class="step-sub">Trả về ngay (Redis cache)</div></div>
-    <div class="flow-arrow">|</div>
-    <div class="flow-step" style="border-color: var(--accent4);"><div class="step-num">3b</div><div class="step-title" style="color:var(--accent4)">PENDING/PROCESSING</div><div class="step-sub">Tạo word + trả PROCESSING + fallback DictionaryAPI</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step" style="border-color: var(--accent2);"><div class="step-num">4</div><div class="step-title">Worker enrich</div><div class="step-sub">Python worker gọi Gemini/DeepSeek → READY</div></div>
-  </div>
-
-  <hr />
-
-  <!-- FLOW 2: CREATE TOPIC -->
-  <h2 class="section" id="flow-topic">Luồng 2 — Admin tạo Topic & Gen Sub-topics</h2>
-  <p>Admin nhập thông tin topic lớn, hệ thống dùng AI gen toàn bộ mô tả sub-topics <strong>trong 1 lần gọi AI</strong> (tiết kiệm nhất).</p>
-
-  <div class="pipeline">
-    <div class="pipeline-step">
-      <div class="pipeline-label">① Admin tạo VocabTopic</div>
-      <div class="pipeline-desc">Nhập: title, category, cefrRange, description, estimatedWordCount. Status = DRAFT.</div>
-    </div>
-    <div class="pipeline-step ai">
-      <div class="pipeline-label">② Trigger gen sub-topics (1 AI call)</div>
-      <div class="pipeline-desc">Gọi Gemini/DeepSeek với prompt: <em>"Dựa vào topic '{description}' trình độ {cefrRange}, gen {N} sub-topic nhỏ. Mỗi sub-topic: title, titleVi, description (2–3 câu mô tả chủ đề từ vựng), cefrLevel target. Đảm bảo đa dạng, không overlap chủ đề."</em><br/>
-      AI trả về JSON array → save toàn bộ VocabSubTopic với status = PENDING_WORDS.</div>
-    </div>
-    <div class="pipeline-step event">
-      <div class="pipeline-label">③ Update VocabTopic status</div>
-      <div class="pipeline-desc">Status → READY_FOR_WORD_GEN. Admin review danh sách sub-topics, có thể edit/xoá trước khi gen words.</div>
-    </div>
-  </div>
-
-  <div class="note">
-    <div class="note-title">⚠ Lưu ý số lượng sub-topics</div>
-    <p>Với 500–2000 từ, mỗi sub-topic ~20 từ → cần 25–100 sub-topics. Prompt nên yêu cầu AI gen đúng số lượng theo công thức: <code>N = estimatedWordCount / 20</code> (làm tròn lên). Nếu AI gen thiếu, có thể trigger lại.</p>
-  </div>
-
-  <hr />
-
-  <!-- FLOW 3: GEN WORDS -->
-  <h2 class="section" id="flow-gen-words">Luồng 3 — Gen Word List cho Sub-topic</h2>
-  <p>Admin chọn 1 hoặc nhiều sub-topics để gen words. Có thể gen từng cái hoặc bulk toàn topic.</p>
-
-  <div class="pipeline">
-    <div class="pipeline-step ai">
-      <div class="pipeline-label">① AI gen word list (per sub-topic)</div>
-      <div class="pipeline-desc">
-        Prompt: <em>"Topic cha: '{topicDescription}'. Sub-topic: '{subtopicDescription}'. Trình độ: {cefrLevel}. Gen đúng 20 từ vựng phù hợp. Ưu tiên từ THỰC SỰ DÙNG trong ngữ cảnh này. Tránh các từ: [{existingWordKeysInTopic}]. Trả về JSON: [{word, pos, briefContext}]."</em><br/>
-        <strong>Key point:</strong> Truyền <code>existingWordKeysInTopic</code> vào prompt để tránh trùng từ trong cùng topic lớn.
-      </div>
-    </div>
-    <div class="pipeline-step">
-      <div class="pipeline-label">② Dedup check phía server</div>
-      <div class="pipeline-desc">
-        Sau khi AI trả về, server check lại: với mỗi <code>(wordKey, pos)</code> → nếu đã có trong <code>vocab_word_entries</code> của cùng <code>topicId</code> → bỏ qua. Đây là lớp bảo vệ thứ 2 nếu AI vẫn trùng.
-      </div>
-    </div>
-    <div class="pipeline-step">
-      <div class="pipeline-label">③ Decision tree — Word đã tồn tại trong DB chưa?</div>
-      <div class="pipeline-desc">
-        Với mỗi <code>(wordKey, pos)</code> sau dedup, server chạy cây quyết định:<br/><br/>
-        <strong style="color:#e2e8f0">CASE A — Word chưa có trong DB:</strong><br/>
-        &nbsp;&nbsp;→ Tạo <code>Word {status=PENDING}</code><br/>
-        &nbsp;&nbsp;→ Tạo <code>VocabWordEntry {wordReady=false}</code><br/>
-        &nbsp;&nbsp;→ Worker sẽ enrich sau.<br/><br/>
-        <strong style="color:#34d399">CASE B — Word đã READY:</strong><br/>
-        &nbsp;&nbsp;→ Tạo <code>VocabWordEntry {wordReady=true}</code> ngay<br/>
-        &nbsp;&nbsp;→ Increment <code>subtopic.readyWordCount</code> ngay — <strong>không cần worker</strong>.<br/><br/>
-        <strong style="color:#fb923c">CASE C — Word đã có nhưng PENDING / PROCESSING:</strong><br/>
-        &nbsp;&nbsp;→ Tạo <code>VocabWordEntry {wordReady=false}</code><br/>
-        &nbsp;&nbsp;→ Không tạo Word mới. Worker đang/sẽ xử lý → sau khi READY sẽ update cờ này.<br/><br/>
-        <strong style="color:#f87171">CASE D — Word đã FAILED:</strong><br/>
-        &nbsp;&nbsp;→ Reset Word về <code>PENDING</code> (topic module đáng retry hơn ad-hoc lookup)<br/>
-        &nbsp;&nbsp;→ Tạo <code>VocabWordEntry {wordReady=false}</code>. Worker sẽ thử lại.
-      </div>
-    </div>
-    <div class="pipeline-step event">
-      <div class="pipeline-label">④ Update SubTopic status</div>
-      <div class="pipeline-desc">status → PROCESSING_WORDS. wordCount = số từ đã insert.</div>
-    </div>
-  </div>
-
-  <hr />
-
-  <!-- FLOW 4: WORKER -->
-  <h2 class="section" id="flow-worker">Luồng 4 — Worker Enrichment (Tái sử dụng)</h2>
-  <p>Pipeline worker <strong>không cần thay đổi</strong>. Worker hiện tại đã xử lý bất kỳ Word nào có status PENDING.</p>
-  <div class="flow">
-    <div class="flow-step"><div class="step-num">1</div><div class="step-title">Python worker</div><div class="step-sub">claimBatch(10) từ MongoDB</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step"><div class="step-num">2</div><div class="step-title">Gemini/DeepSeek</div><div class="step-sub">Enrich: summaryVi, phonetics, cefrLevel, definitions[]</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step"><div class="step-num">3</div><div class="step-title">updateWordToReady</div><div class="step-sub">Word.status = READY</div></div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-step" style="border-color: var(--accent4);"><div class="step-num">4 ★</div><div class="step-title" style="color:var(--accent4)">NEW: Trigger check</div><div class="step-sub">Gửi Kafka event hoặc update VocabWordEntry.wordReady</div></div>
-  </div>
-
-  <div class="note">
-    <div class="note-title">⚠ Phần mở rộng worker cần thêm</div>
-    <p>Sau khi <code>updateWordToReady</code>, worker cần thêm bước: <strong>update tất cả VocabWordEntry có wordKey + pos này</strong> thành <code>wordReady=true</code>, rồi check xem SubTopic tương ứng có đủ từ READY chưa.</p>
-  </div>
-
-  <hr />
-
-  <!-- FLOW 5: COMPLETION -->
-  <h2 class="section" id="flow-ready">Luồng 5 — Completion Check</h2>
-  <p>Khi worker đánh dấu một word là READY, cần kiểm tra xem sub-topic / topic cha có hoàn thành chưa.</p>
-
-  <div class="pipeline">
-    <div class="pipeline-step event">
-      <div class="pipeline-label">① Worker update VocabWordEntry.wordReady = true</div>
-      <div class="pipeline-desc">Query: <code>vocab_word_entries WHERE wordKey=? AND pos=?</code> → set wordReady=true. Atomic increment <code>subtopic.readyWordCount</code>.</div>
-    </div>
-    <div class="pipeline-step">
-      <div class="pipeline-label">② Check SubTopic completion</div>
-      <div class="pipeline-desc">Nếu <code>readyWordCount >= wordCount</code> → SubTopic.status = READY.</div>
-    </div>
-    <div class="pipeline-step">
-      <div class="pipeline-label">③ Check Topic completion</div>
-      <div class="pipeline-desc">Đếm <code>vocab_subtopics WHERE topicId=? AND status=READY</code>. Nếu bằng <code>subtopicCount</code> → VocabTopic.status = READY.</div>
-    </div>
-  </div>
-
-  <h3>Status Flow tóm tắt</h3>
-  <div class="status-flow">
-    <span class="status-node badge-orange">DRAFT</span>
-    <span>→</span>
-    <span class="status-node badge-purple">GENERATING_SUBTOPICS</span>
-    <span>→</span>
-    <span class="status-node badge-blue">READY_FOR_WORD_GEN</span>
-    <span>→</span>
-    <span class="status-node badge-orange">PROCESSING</span>
-    <span>→</span>
-    <span class="status-node badge-green">READY</span>
-  </div>
-
-  <hr />
-
-  <!-- DEDUP -->
-  <h2 class="section" id="dedup">Vấn đề 1 — Tránh trùng từ</h2>
-  <div class="grid2">
-    <div class="problem">
-      <div class="problem-title">🔴 Vấn đề</div>
-      <p>Trong 1 topic lớn 100 sub-topics, nếu AI không biết đã gen từ nào → từ phổ biến như "contract", "agreement" sẽ xuất hiện ở nhiều sub-topic. Gây nhàm chán cho người học.</p>
-    </div>
-    <div class="solution">
-      <div class="solution-title">✅ Giải pháp 2 lớp</div>
-      <ul>
-        <li><strong>Lớp 1 (Prompt):</strong> Truyền <code>existingWordKeys</code> vào mỗi lần gen. Hiệu quả nhưng prompt sẽ dài khi topic đã có nhiều từ.</li>
-        <li><strong>Lớp 2 (Server):</strong> Sau khi AI trả về, query <code>vocab_word_entries</code> theo topicId để loại bỏ trùng.</li>
-        <li><strong>Index:</strong> <code>compound_index(topicId, wordKey, pos)</code> để query nhanh.</li>
-      </ul>
-    </div>
-  </div>
-  <div class="note">
-    <div class="note-title">💡 Tối ưu prompt khi topic lớn</div>
-    <p>Khi topic có &gt;200 từ, thay vì truyền toàn bộ word list → chỉ truyền list <strong>key concepts</strong> theo nhóm semantic (e.g., "đã có: finance, banking, loan...") để tiết kiệm token. Có thể dùng <code>summaryVi</code> nhóm từ.</p>
-  </div>
-
-  <hr />
-
-  <!-- DIFFICULTY -->
-  <h2 class="section" id="difficulty">Vấn đề 2 — Phân bổ trình độ</h2>
-  <div class="problem">
-    <div class="problem-title">🔴 Câu hỏi: Biết word nào phù hợp sub-topic nào theo CEFR?</div>
-    <p>Vấn đề: Khi AI gen word list cho sub-topic có <code>cefrLevel=B1</code>, AI có thể gen ra từ A1 hoặc C1.</p>
-  </div>
-  <div class="solution">
-    <div class="solution-title">✅ Chiến lược phân bổ</div>
-    <p><strong>Bước 1 (Khi gen):</strong> Prompt rõ ràng: <em>"Gen 20 từ phù hợp với người học trình độ {cefrLevel}. Từ không được quá dễ (dưới 2 bậc) hay quá khó (trên 1 bậc)."</em></p>
-    <p><strong>Bước 2 (Sau khi enrich):</strong> Sau khi word có <code>cefrLevel</code> từ AI enrich → so sánh với <code>subtopic.cefrLevel</code>. Nếu lệch &gt; 1 bậc → flag word để admin review (không xoá tự động).</p>
-    <p><strong>Bước 3 (Tương lai):</strong> Dùng cefrLevel của word để suggest cho learner sub-topic nào phù hợp nhất với trình độ hiện tại của họ.</p>
-  </div>
-
-  <hr />
-
-  <!-- PHRASE -->
-  <h2 class="section" id="phrase">Vấn đề 3 — Từ nhiều chữ (Collocations / Phrases)</h2>
-  <div class="problem">
-    <div class="problem-title">🔴 Vấn đề: "take care of", "in accordance with", "due to"</div>
-    <p>Entity Word hiện tại thiết kế cho từ đơn. Unique index là <code>(key, pos)</code> — nhưng phrase thì key = "take care of", pos = ? (không rõ ràng).</p>
-  </div>
-  <div class="solution">
-    <div class="solution-title">✅ Giải pháp</div>
+  <h2 id="overview">1. Tổng quan Mục tiêu</h2>
+  <div class="callout callout-info">
+    <div class="callout-title">Hệ sinh thái Từ vựng Toàn diện</div>
+    <p>Hệ thống kết hợp 2 tính năng chính vào một kiến trúc duy nhất:</p>
     <ul>
-      <li>Thêm field <code>isPhrase: boolean</code> vào Word entity.</li>
-      <li>Với phrase, pos dùng giá trị cố định <code>"PHRASE"</code>.</li>
-      <li>Thêm field <code>phraseType: String</code> (COLLOCATION, IDIOM, PHRASAL_VERB, FIXED_EXPRESSION) để AI enrich đúng nghĩa.</li>
-      <li>Unique index vẫn hoạt động vì <code>(key="take_care_of", pos="PHRASE")</code> là unique.</li>
-      <li>Worker enrich phrase: prompt bổ sung context "đây là cụm từ, không phải từ đơn".</li>
+      <li><strong>Tra từ điển tự do (Dictionary Lookup):</strong> Người dùng bôi đen từ lạ trong bài Reading/Shadowing. Hệ thống tra AI tức thì và lưu vào kho dùng chung.</li>
+      <li><strong>Học theo Chủ đề (Vocab Course):</strong> Admin chỉ cần nhập Tên Chủ Đề (Ví dụ: <em>TOEIC Part 1, Web Development</em>). AI sẽ tự động phân rã thành các bài học nhỏ (Subtopic) và sinh danh sách từ vựng chuyên ngành.</li>
     </ul>
   </div>
 
-  <hr />
+  <!-- ENTITIES -->
+  <h2 id="entities">2. Thiết kế Database (Entities)</h2>
+  <p>Kiến trúc tách bạch rõ ràng giữa <strong>Dữ liệu tĩnh (Dictionary)</strong> và <strong>Dữ liệu động (Contextual Course)</strong>, sử dụng MongoDB.</p>
 
-  <!-- ECONOMY -->
-  <h2 class="section" id="economy">Vấn đề 4 — Tối ưu chi phí AI & Server</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Collection</th><th>Vai trò cốt lõi</th><th>Các trường quan trọng</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="field-name">words</td>
+          <td>Kho từ điển gốc (Dùng chung toàn hệ thống). Lưu mọi nghĩa có thể có của một từ.</td>
+          <td><code>id (key|pos)</code>, <code>text</code>, <code>phonetics</code>, <code>definitions[]</code></td>
+        </tr>
+        <tr>
+          <td class="field-name">vocab_topics</td>
+          <td>Chủ đề lớn (Chứa nhiều Subtopic).</td>
+          <td><code>title</code>, <code>cefrRange</code>, <code>tags[]</code>, <code style="color:var(--success)">isActive</code></td>
+        </tr>
+        <tr>
+          <td class="field-name">vocab_subtopics</td>
+          <td>Bài học nhỏ (Ranh giới ngữ cảnh hẹp).</td>
+          <td><code>title</code>, <code>description (AI Gen)</code>, <code style="color:var(--success)">isActive</code></td>
+        </tr>
+        <tr>
+          <td class="field-name">vocab_word_entries</td>
+          <td><strong>Bộ nhớ đệm Ngữ cảnh.</strong> Link từ Subtopic đến Word. Fix cứng nghĩa của từ cho đúng bài học đó, giúp Load giao diện O(1).</td>
+          <td><code>subtopicId</code>, <code>wordKey</code>, <code>pos</code>, <code style="color:var(--warning)">contextDefinition</code>, <code style="color:var(--warning)">contextExample...</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-  <h3>📊 So sánh số AI calls — Topic 1000 từ / 50 sub-topics</h3>
-  <div class="entity" style="margin-bottom:20px">
-    <div class="entity-body">
-      <table>
-        <tr><th>Bước</th><th>Naive (1 call/từ)</th><th>Optimized</th><th>Tiết kiệm</th></tr>
-        <tr><td>Gen sub-topic descriptions</td><td>50 calls</td><td><strong style="color:#34d399">1 call</strong></td><td>50×</td></tr>
-        <tr><td>Gen word list per sub-topic</td><td>50 calls</td><td>50 calls</td><td>—</td></tr>
-        <tr><td>Enrich words (batch 15)</td><td>1000 calls</td><td><strong style="color:#34d399">~67 calls</strong></td><td>~15×</td></tr>
-        <tr><td>Words đã READY trong DB (Case B)</td><td>—</td><td><strong style="color:#34d399">0 calls</strong></td><td>100%</td></tr>
-        <tr><td><strong>Tổng ước tính</strong></td><td><strong>~1100 calls</strong></td><td><strong style="color:#34d399">~118 calls</strong></td><td><strong>~9×</strong></td></tr>
-      </table>
+  <!-- STRATEGY -->
+  <h2 id="ai-strategy">3. Lõi AI & Chiến thuật Prompting</h2>
+  
+  <div class="callout callout-success">
+    <div class="callout-title">Thiết kế Ranh giới Độc lập (Mutually Exclusive)</div>
+    <p>Thay vì truyền hàng ngàn từ vào biến <code>avoid</code> để cấm AI sinh trùng lặp (gây tốn Token và AI bị ảo giác), hệ thống dùng chiến thuật "INCLUDES / EXCLUDES":</p>
+    <ul>
+      <li>Khi sinh Subtopic, ép AI viết 3-4 câu <code>description</code> mô tả cực rõ ranh giới.</li>
+      <li>Ví dụ: <em>"Chỉ tập trung vào HTML/CSS. <strong>Strictly Excludes</strong> Figma, Backend, Database."</em></li>
+      <li>Kết quả: Các Subtopic không dẫm chân lên nhau, từ vựng sinh ra cực kỳ ngách và chính xác.</li>
+    </ul>
+  </div>
+
+  <!-- ADMIN FLOW -->
+  <h2 id="flow-auto">4. Luồng Vận hành: Tự động hóa (Auto Gen)</h2>
+  <div class="step-container">
+    <div class="step">
+      <div class="step-title">Bước 1: Tạo Topic & Phân rã Subtopic (Java -> AI)</div>
+      <div class="step-desc">Admin tạo 1 Topic. Java gọi AI để đẻ ra N Subtopics. Mỗi Subtopic có một đoạn <code>description</code> làm ranh giới ngữ cảnh tuyệt đối.</div>
+    </div>
+    <div class="step">
+      <div class="step-title">Bước 2: Sinh danh sách từ vựng (Async Kafka)</div>
+      <div class="step-desc">Admin bấm "Gen Words". Java loop qua các Subtopics. AI dựa vào `description` để đẻ ra 20 từ (Over-fetching để bù trừ). Java lưu các từ này dưới dạng `VocabWordEntry` (Status = PENDING).</div>
+    </div>
+    <div class="step">
+      <div class="step-title">Bước 3: Công nhân lấp đầy dữ liệu (Python Worker)</div>
+      <div class="step-desc">Python Worker chạy ngầm, bốc các từ PENDING đem lên AI tra từ điển chuẩn (Phát âm, Nghĩa, Ví dụ). Khi tra xong, Worker bắn Kafka về Java để update cache <code>context</code> vào <code>VocabWordEntry</code>. UI hiển thị số đếm % tiến độ.</div>
     </div>
   </div>
 
-  <div class="grid2">
-    <div class="solution">
-      <div class="solution-title">✅ Chiến lược 1 — Batch enrichment (quan trọng nhất)</div>
-      <p>Thay vì worker enrich 1 từ/call, gom <strong>15 từ</strong> vào 1 prompt:</p>
-      <ul>
-        <li>Prompt truyền array <code>[{word, pos, context}]</code>, AI trả về array JSON đầy đủ</li>
-        <li>Server parse và <code>updateWordToReady</code> từng entry trong batch</li>
-        <li>Sau batch, update toàn bộ <code>VocabWordEntry.wordReady</code> trong 1 bulk write</li>
-        <li>Batch size 15 là cân bằng tốt: không quá dài prompt, không quá nhiều calls</li>
-      </ul>
+  <h2 id="flow-manual">5. Luồng Vận hành: Ghi đè Ngữ cảnh (Human-in-the-loop)</h2>
+  <p>Tính năng cứu cánh khi AI lấy sai nghĩa (Ví dụ: Bài học Web Dev nhưng từ "layout" lại dịch thành "Sơ đồ kiến trúc phòng ốc"). Quá trình này diễn ra <strong>Đồng bộ (Sync)</strong>.</p>
+  
+  <div class="step-container">
+    <div class="step">
+      <div class="step-title">Ghi đè thủ công (Overwrite)</div>
+      <div class="step-desc">Trên UI Frontend, Admin bấm "Sửa Ngữ Cảnh". Hệ thống liệt kê toàn bộ các nghĩa có sẵn của bảng <code>Word</code>. Admin chọn 1 nghĩa đúng -> Update vào cache <code>VocabWordEntry</code>.</div>
     </div>
-    <div class="solution">
-      <div class="solution-title">✅ Chiến lược 2 — Dùng DeepSeek toàn bộ</div>
-      <ul>
-        <li><strong>DeepSeek V3</strong> cho tất cả tasks: gen sub-topic descriptions, gen word list, batch enrich</li>
-        <li>Rẻ ~$0.28/M output tokens — tiết kiệm hơn Gemini ~5–8×</li>
-        <li>JSON output chuẩn, ổn định — phù hợp cho pipeline tự động</li>
-        <li>Rate limit cao hơn Gemini → ít bị throttle khi chạy batch</li>
-        <li>Không cần quản lý nhiều API key từ nhiều nhà cung cấp</li>
-      </ul>
+    <div class="step">
+      <div class="step-title">Sinh nghĩa mới bằng AI (Generate Sync Meaning)</div>
+      <div class="step-desc">Nếu kho không có nghĩa đúng, Admin bấm "Tạo nghĩa bằng AI". Backend gọi API Sync sang Python. Python dùng <code>SINGLE_MEANING_PROMPT</code> soi kỹ <code>subtopicDescription</code> để đẻ ra ĐÚNG 1 nghĩa chuyên ngành -> Lưu bổ sung vào kho <code>Word</code> và update Cache.</div>
     </div>
   </div>
 
-  <div class="grid2">
-    <div class="note">
-      <div class="note-title">💡 Chiến lược 3 — Word reuse tối đa</div>
-      <ul>
-        <li>Word READY cached Redis (TTL dài) — lookup cost = 0 cho từ phổ biến</li>
-        <li>Từ phổ biến như "provide", "increase" sẽ xuất hiện nhiều topic → enrich 1 lần dùng mãi</li>
-        <li>Ước tính 20–30% từ trong topic mới đã có sẵn trong DB từ feature lookup → Case B → 0 calls</li>
-      </ul>
-    </div>
-    <div class="note">
-      <div class="note-title">💡 Chiến lược 4 — Lazy + rate limiting</div>
-      <ul>
-        <li>Gen words <strong>lazy</strong>: admin chủ động kích hoạt từng sub-topic</li>
-        <li>Worker poll mỗi 5–10s, không spam DB</li>
-        <li>Tối đa 3 worker instances song song → tránh rate limit API</li>
-        <li>DeepSeek rate limit cao hơn Gemini → ưu tiên cho batch enrich</li>
-      </ul>
-    </div>
+  <h2 id="flow-publish">6. Luồng Kiểm duyệt & Xuất bản (Publishing)</h2>
+  <p>Hệ thống AI không tự ý đưa bài học ra cho sinh viên. Nó tuân thủ quy trình kiểm duyệt:</p>
+  <ul>
+    <li>Dù AI đã chạy xong 100% (Trạng thái <code>READY</code>), cờ hiển thị <code>isActive</code> mặc định vẫn là <code>false</code>.</li>
+    <li>Admin vào rà soát nội dung. Dùng luồng <strong>Human-in-the-loop</strong> để nắn lại các từ chệch ngữ cảnh.</li>
+    <li>Hoàn tất, Admin bật Toggle <code>isActive = true</code>. Lúc này API bên Learner mới fetch được Data.</li>
+  </ul>
+
+  <!-- LEARNING & TRACKING -->
+  <h2 id="study-modes">7. Trải nghiệm Học tập (Study Modes)</h2>
+  <div class="callout callout-warning">
+    <div class="callout-title">Đa dạng phương thức ôn luyện</div>
+    <p>Do cấu trúc <code>Definition</code> chứa đủ Text, Ví dụ tiếng Anh, Bản dịch tiếng Việt, hệ thống Frontend có thể render ra nhiều Game học tập:</p>
+    <ul>
+      <li><strong>Flashcard:</strong> Lật thẻ Nhìn tiếng Anh -> Nhớ tiếng Việt.</li>
+      <li><strong>Fill-in-the-blank:</strong> Hệ thống đục lỗ từ vựng trong câu `contextExample`, yêu cầu học viên gõ lại.</li>
+      <li><strong>Dictation:</strong> Nghe phát âm `phonetics` và gõ lại từ.</li>
+      <li><strong>Quiz Choice:</strong> Chọn đáp án dịch nghĩa đúng.</li>
+    </ul>
   </div>
 
-  <hr />
+  <h2 id="tracking">8. Theo dõi Tiến độ (Progress Tracking)</h2>
+  <p>Lưu ở collection <code>user_vocab_progress</code> (có thể nằm ở User Service hoặc Dictionary Service).</p>
+  <ul>
+    <li>Tracking cấp độ Subtopic: Lưu mảng <code>learnedWordKeys</code> (từ đã học), <code>reviewWordKeys</code> (từ sai nhiều cần ôn lại).</li>
+    <li>Thuộc tính <code>completionRate (0% -> 100%)</code>.</li>
+    <li>Tracking thời gian: <code>lastStudiedAt</code> để tính chuỗi Streak và gửi Notification nhắc nhở.</li>
+  </ul>
 
-  <!-- STUDY MODES -->
-  <h2 class="section" id="study-modes">Learning Module — Study Modes</h2>
-  <div class="grid3">
-    <div class="card">
-      <div class="card-title"><span class="badge badge-blue">1</span> Flashcard</div>
-      <p>Hiện từ → user đoán nghĩa → flip card → tick BIẾT / CẦN ÔN. Spaced repetition đơn giản.</p>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="badge badge-purple">2</span> Multiple Choice</div>
-      <p>Hiện definition (hoặc example) → chọn 1/4 từ đúng. Gen câu hỏi từ definitions[] có sẵn.</p>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="badge badge-green">3</span> Fill in the Blank</div>
-      <p>Lấy example của Word → blank out từ đó → user điền. Dữ liệu đã có trong Definition.example.</p>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="badge badge-orange">4</span> Spelling / Dictation</div>
-      <p>Phát audio (us/uk audio) → user gõ từ. Kết hợp với TTS nếu không có audio sẵn.</p>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="badge badge-pink">5</span> Word Quiz</div>
-      <p>Hiện từ + pos → user chọn nghĩa VI (chọn từ summaryVi). Phù hợp để học nhanh.</p>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="badge badge-red">6</span> Context Match</div>
-      <p>Hiện câu (example) với từ bị ẩn → match từ vào câu (drag or type). Nâng cao nhất.</p>
-    </div>
+  <!-- APIs -->
+  <h2 id="apis">9. Danh sách API Tổng quan</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Endpoint</th><th>Mô tả</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="badge badge-primary">POST</span></td><td><code>/topics/{id}/generate-subtopics</code></td><td><span class="badge badge-warning">Async</span> AI chia nhỏ chủ đề</td></tr>
+        <tr><td><span class="badge badge-primary">POST</span></td><td><code>/subtopics/{id}/generate-words</code></td><td><span class="badge badge-warning">Async</span> AI sinh danh sách từ vựng</td></tr>
+        <tr><td><span class="badge badge-danger">PUT</span></td><td><code>/topics/{id}/toggle-active</code></td><td><span class="badge badge-success">Admin</span> Bật tắt hiển thị Topic</td></tr>
+        <tr><td><span class="badge badge-danger">PUT</span></td><td><code>/word-entries/{id}/context</code></td><td><span class="badge badge-success">Admin</span> Ghi đè nghĩa thủ công</td></tr>
+        <tr><td><span class="badge badge-purple">POST</span></td><td><code>/word-entries/{id}/generate-meaning</code></td><td><span class="badge badge-success">Admin</span> Ép AI đẻ nghĩa mới chuyên ngành</td></tr>
+        <tr><td><span class="badge badge-success">GET</span></td><td><code>/topics?active=true</code></td><td><span class="badge badge-primary">Learner</span> Lấy danh sách khóa học</td></tr>
+        <tr><td><span class="badge badge-success">GET</span></td><td><code>/progress/me</code></td><td><span class="badge badge-primary">Learner</span> Lấy tiến độ học tập</td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <hr />
-
-  <!-- PROGRESS -->
-  <h2 class="section" id="progress">User Progress Tracking</h2>
-  <div class="grid2">
-    <div class="card">
-      <div class="card-title">Per Sub-topic Progress</div>
-      <ul>
-        <li>Track từng word: UNSEEN → LEARNING → LEARNED → MASTERED</li>
-        <li>Sai nhiều → vào reviewWordKeys</li>
-        <li>completionRate = learnedWords / totalWords</li>
-        <li>lastStudiedAt → tính streak và remind</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="card-title">Per Topic Progress (tổng hợp)</div>
-      <ul>
-        <li>Aggregate từ các sub-topic completionRate</li>
-        <li>Không lưu riêng — tính on-the-fly hoặc cache Redis</li>
-        <li>Badge/unlock khi topic đạt 100%</li>
-      </ul>
-    </div>
-  </div>
-
-  <hr />
-
-  <!-- API ENDPOINTS -->
-  <h2 class="section" id="api">API Endpoints mới cần thêm</h2>
-  <div class="entity">
-    <div class="entity-header">dictionary-service — REST Endpoints</div>
-    <div class="entity-body">
-      <table>
-        <tr><th>Method</th><th>Path</th><th>Mô tả</th></tr>
-        <tr><td>POST</td><td>/vocab/topics</td><td>Admin tạo topic lớn</td></tr>
-        <tr><td>POST</td><td>/vocab/topics/{id}/generate-subtopics</td><td>Trigger AI gen sub-topics</td></tr>
-        <tr><td>GET</td><td>/vocab/topics/{id}/subtopics</td><td>Lấy danh sách sub-topics</td></tr>
-        <tr><td>POST</td><td>/vocab/subtopics/{id}/generate-words</td><td>Trigger AI gen word list cho sub-topic</td></tr>
-        <tr><td>GET</td><td>/vocab/subtopics/{id}/words</td><td>Lấy danh sách word entries (kèm Word data nếu READY)</td></tr>
-        <tr><td>GET</td><td>/vocab/topics</td><td>Public — list topics (filter by tags[], cefrRange)</td></tr>
-        <tr><td>GET</td><td>/vocab/topics/{id}</td><td>Public — topic detail</td></tr>
-        <tr><td>POST</td><td>/vocab/progress/{subtopicId}</td><td>Update user progress</td></tr>
-        <tr><td>GET</td><td>/vocab/progress/me</td><td>Lấy progress của user hiện tại</td></tr>
-        <tr><td>GET</td><td>/words/{key}/{pos}</td><td>Hiện tại — giữ nguyên cho lookup đơn</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <hr />
-
-  <!-- MIGRATION -->
-  <h2 class="section" id="migration">Migration Plan</h2>
-  <div class="pipeline">
-    <div class="pipeline-step">
-      <div class="pipeline-label">Phase 1 — Entity & Indexes</div>
-      <div class="pipeline-desc">Tạo 3 collection mới (vocab_topics, vocab_subtopics, vocab_word_entries). Thêm index compound(topicId, wordKey, pos) cho dedup. Thêm <code>isPhrase, phraseType</code> vào Word entity (backward compatible — null là từ đơn).</div>
-    </div>
-    <div class="pipeline-step">
-      <div class="pipeline-label">Phase 2 — Admin API & AI gen pipeline</div>
-      <div class="pipeline-desc">Implement endpoint tạo topic, gen subtopics, gen words. Tích hợp Gemini/DeepSeek service có sẵn. Test với 1 topic nhỏ (~100 từ).</div>
-    </div>
-    <div class="pipeline-step worker">
-      <div class="pipeline-label">Phase 3 — Worker extension</div>
-      <div class="pipeline-desc">Mở rộng word_worker.py: sau khi updateWordToReady → update VocabWordEntry.wordReady → check SubTopic completion. Không break existing flow.</div>
-    </div>
-    <div class="pipeline-step">
-      <div class="pipeline-label">Phase 4 — Learner API & Study Modes</div>
-      <div class="pipeline-desc">Public API lấy topics/subtopics/words. Progress tracking. Frontend implement các study modes từ dữ liệu Word.definitions[] có sẵn.</div>
-    </div>
-  </div>
-
-  <hr />
-
-  <!-- PENDING DECISIONS -->
-  <h2 class="section" id="todo">Pending Decisions cần quyết định</h2>
-  <div class="problem">
-    <div class="problem-title">❓ UserVocabProgress để ở service nào?</div>
-    <p>Để trong <code>dictionary-service</code> cho tiện query kết hợp với word data, hoặc tách ra <code>user-service</code>? Khuyến nghị: giữ trong dictionary-service nếu không muốn thêm service mới.</p>
-  </div>
-  <div class="problem">
-    <div class="problem-title">❓ Gen words lazy hay bulk?</div>
-    <p>Lazy (gen từng sub-topic khi admin kích hoạt) → kiểm soát chi phí tốt hơn. Bulk (gen hết ngay) → admin đỡ phải làm nhiều bước nhưng tốn nhiều AI call cùng lúc.</p>
-  </div>
-  <div class="problem">
-    <div class="problem-title">❓ Topic có public ngay hay cần duyệt?</div>
-    <p>Nên có trạng thái <code>PUBLISHED</code> riêng để admin kiểm tra trước khi user thấy. Hiện tại <code>publishedAt</code> đã được thêm vào entity.</p>
-  </div>
-  <div class="problem">
-    <div class="problem-title">❓ Khi Word đã READY ở sub-topic A, sub-topic B cùng topic muốn dùng lại?</div>
-    <p>Cho phép — VocabWordEntry chỉ là link. Nhưng cần quyết định: có đếm là "duplicate" không hay ổn? Khuyến nghị: cho phép overlap giữa sub-topics khác nhau trong cùng topic nhưng tối thiểu hóa bằng prompt.</p>
-  </div>
-
-  <p style="margin-top: 40px; color: var(--muted); font-size: 12px;">Cập nhật lần cuối: 2026-05</p>
+  <p style="text-align: center; margin-top: 64px; color: var(--text-muted); font-size: 13px;">
+    Tài liệu thiết kế bởi Kỹ sư trưởng & AI Assistant • Cập nhật lần cuối: Tháng 5, 2026
+  </p>
 </main>
 
 </body>

@@ -32,4 +32,10 @@ public interface LanguageProcessingClient {
             @RequestHeader("X-Worker-Key") String workerKey,
             @RequestBody VocabGenWordsRequest request
     );
+
+    @PostMapping(value = "/internal/vocab/generate-single-meaning", headers = "Content-Type=application/json")
+    AiGenerateResponse generateSingleMeaning(
+            @RequestHeader("X-Worker-Key") String workerKey,
+            @RequestBody SingleMeaningRequest request
+    );
 }

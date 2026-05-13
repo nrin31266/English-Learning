@@ -202,7 +202,6 @@ public class VocabService {
 
             log.info("[VocabSubTopic] Async generating words for: {}", subtopicId);
             
-            // ĐÃ XÓA logic lấy existingKeys. Tạm truyền List.of() vào cho khỏi lỗi Constructor (Bác có thể xóa param này ở DTO sau).
             AiGenerateResponse aiResp = lpsClient.genWords(workerKey,
                     new VocabGenWordsRequest(topic.getTitle(), subtopic.getTitle(),
                             subtopic.getDescription() != null ? subtopic.getDescription() : "",
@@ -213,7 +212,6 @@ public class VocabService {
             List<VocabWordEntry> entries = new ArrayList<>();
             int readyCount = 0;
             int order = 0;
-            int targetWordCount = 20; // Chốt KPI 20 từ đẹp đội hình (Tuyệt chiêu Over-fetching)
 
             // Dùng Set để chặn AI đẻ trùng từ trong CÙNG 1 subtopic (phòng AI ngáo)
             java.util.Set<String> seenInBatch = new java.util.HashSet<>();
@@ -237,13 +235,12 @@ public class VocabService {
 
                 if (wordKey.isBlank()) continue;
 
-                // 3. Chặn trùng lặp trong CÙNG MỘT MẺ gen (BỎ check DB cấp Topic)
+                // 3. Chặn trùng lặp trong CÙNG MỘT MẺ gen
                 String uniqueCheckKey = wordKey + "|" + pos;
                 if (seenInBatch.contains(uniqueCheckKey)) continue;
                 seenInBatch.add(uniqueCheckKey);
 
-                // 4. Chốt sổ: Đủ 20 từ là đóng cửa nghỉ khỏe, ko lấy đồ thừa của AI
-                if (entries.size() >= targetWordCount) break;
+                // ĐÃ XÓA logic chốt sổ 20 từ. AI cho bao nhiêu gom bấy nhiêu!
 
                 Optional<Word> existingWord = wordRepository.findById(uniqueCheckKey);
                 boolean wordReady = false;
@@ -424,6 +421,130 @@ public class VocabService {
 
     public void recalculateTopic(String topicId) {
         recalculateTopicCounts(topicId);
+    }
+
+    // ─── TOGGLE ACTIVE ───────────────────────────────────────────────────────
+
+    public VocabTopicResponse toggleTopicActive(String topicId) {
+        VocabTopic topic = topicRepo.findById(topicId)
+                .orElseThrow(() -> new RuntimeException("Topic not found: " + topicId));
+        topic.setActive(!topic.isActive());
+        topicRepo.save(topic);
+        log.info("[VocabTopic] Toggled isActive to {} for: {}", topic.isActive(), topicId);
+        return toTopicResponse(topic);
+    }
+
+    public VocabSubTopicResponse toggleSubtopicActive(String subtopicId) {
+        VocabSubTopic subtopic = subtopicRepo.findById(subtopicId)
+                .orElseThrow(() -> new RuntimeException("SubTopic not found: " + subtopicId));
+        subtopic.setActive(!subtopic.isActive());
+        subtopicRepo.save(subtopic);
+        log.info("[VocabSubTopic] Toggled isActive to {} for: {}", subtopic.isActive(), subtopicId);
+        return toSubTopicResponse(subtopic);
+    }
+
+    // ─── HUMAN-IN-THE-LOOP: MANUAL OVERRIDE & SYNC GENERATION ──────────────
+
+    public VocabWordEntryResponse updateEntryContextManual(String entryId, UpdateEntryContextRequest req) {
+        VocabWordEntry entry = wordEntryRepo.findById(entryId)
+                .orElseThrow(() -> new RuntimeException("Word entry not found: " + entryId));
+        entry.setContextDefinition(req.getDefinition());
+        entry.setContextMeaningVi(req.getMeaningVi());
+        entry.setContextExample(req.getExample());
+        entry.setContextViExample(req.getViExample());
+        entry.setContextLevel(parseCefrLevel(req.getLevel()));
+        entry.setWordReady(true);
+        wordEntryRepo.save(entry);
+        log.info("[VocabWordEntry] Manual context update for entry: {}", entryId);
+        return buildSingleWordEntryResponse(entry);
+    }
+
+    public VocabWordEntryResponse generateSingleMeaningSync(String entryId) {
+        VocabWordEntry entry = wordEntryRepo.findById(entryId)
+                .orElseThrow(() -> new RuntimeException("Word entry not found: " + entryId));
+        VocabTopic topic = topicRepo.findById(entry.getTopicId())
+                .orElseThrow(() -> new RuntimeException("Topic not found: " + entry.getTopicId()));
+        VocabSubTopic subtopic = subtopicRepo.findById(entry.getSubtopicId())
+                .orElseThrow(() -> new RuntimeException("SubTopic not found: " + entry.getSubtopicId()));
+
+        log.info("[VocabWordEntry] Sync generating single meaning for entry: {}", entryId);
+        AiGenerateResponse aiResp = lpsClient.generateSingleMeaning(workerKey,
+                new SingleMeaningRequest(entry.getWordKey(), entry.getPos(),
+                        topic.getTitle(), subtopic.getTitle(),
+                        subtopic.getDescription() != null ? subtopic.getDescription() : ""));
+
+        Word.Definition newDef = parseSingleMeaningResult(aiResp);
+        String wordId = entry.getWordKey() + "|" + entry.getPos();
+        Word word = wordRepository.findById(wordId).orElse(null);
+        if (word == null) {
+            word = Word.builder()
+                    .id(wordId)
+                    .text(entry.getWordText() != null ? entry.getWordText() : entry.getWordKey().replace('_', ' '))
+                    .key(entry.getWordKey())
+                    .pos(entry.getPos())
+                    .context(subtopic.getDescription())
+                    .definitions(new ArrayList<>())
+                    .build();
+        }
+        if (word.getDefinitions() == null) {
+            word.setDefinitions(new ArrayList<>());
+        }
+        word.getDefinitions().add(newDef);
+        word.setContext(subtopic.getDescription());
+        wordRepository.save(word);
+        log.info("[VocabWordEntry] Appended new definition to word: {}", wordId);
+
+        entry.setWordReady(true);
+        entry.setWordText(word.getText());
+        entry.setContextDefinition(newDef.getDefinition());
+        entry.setContextMeaningVi(newDef.getMeaningVi());
+        entry.setContextExample(newDef.getExample());
+        entry.setContextViExample(newDef.getViExample());
+        entry.setContextLevel(newDef.getLevel());
+        wordEntryRepo.save(entry);
+        log.info("[VocabWordEntry] Updated context cache for entry: {}", entryId);
+
+        return buildSingleWordEntryResponse(entry);
+    }
+
+    private Word.Definition parseSingleMeaningResult(AiGenerateResponse aiResp) {
+        try {
+            String json = objectMapper.writeValueAsString(aiResp.getResult());
+            JsonNode node = objectMapper.readTree(json);
+            return Word.Definition.builder()
+                    .definition(node.path("definition").asText(""))
+                    .meaningVi(node.path("meaning_vi").asText(""))
+                    .example(node.path("example").asText(""))
+                    .viExample(node.path("vi_example").asText(""))
+                    .level(parseCefrLevel(node.path("level").asText("B1")))
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse single meaning AI result", e);
+        }
+    }
+
+    private VocabWordEntryResponse buildSingleWordEntryResponse(VocabWordEntry entry) {
+        Word word = entry.isWordReady()
+                ? wordRepository.findById(entry.getWordKey() + "|" + entry.getPos()).orElse(null)
+                : null;
+        String wordText = (entry.getWordText() != null)
+                ? entry.getWordText()
+                : entry.getWordKey().replace('_', ' ');
+        return VocabWordEntryResponse.builder()
+                .id(entry.getId())
+                .wordKey(entry.getWordKey())
+                .wordText(wordText)
+                .pos(entry.getPos())
+                .order(entry.getOrder())
+                .wordReady(entry.isWordReady())
+                .note(entry.getNote())
+                .contextDefinition(entry.getContextDefinition())
+                .contextMeaningVi(entry.getContextMeaningVi())
+                .contextExample(entry.getContextExample())
+                .contextViExample(entry.getContextViExample())
+                .contextLevel(entry.getContextLevel() != null ? entry.getContextLevel().name() : null)
+                .wordDetail(word)
+                .build();
     }
 
     /**
@@ -716,6 +837,7 @@ public class VocabService {
                 .subtopicCount(t.getSubtopicCount())
                 .readySubtopicCount(t.getReadySubtopicCount())
                 .status(t.getStatus())
+                .isActive(t.isActive())
                 .thumbnailUrl(t.getThumbnailUrl())
                 .publishedAt(t.getPublishedAt())
                 .createdAt(t.getCreatedAt())
@@ -734,6 +856,7 @@ public class VocabService {
                 .wordCount(s.getWordCount())
                 .readyWordCount(s.getReadyWordCount())
                 .status(s.getStatus())
+                .isActive(s.isActive())
                 .createdAt(s.getCreatedAt())
                 .build();
     }

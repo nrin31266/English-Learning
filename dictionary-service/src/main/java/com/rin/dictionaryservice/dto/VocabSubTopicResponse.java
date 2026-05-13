@@ -20,5 +20,6 @@ public class VocabSubTopicResponse {
     int wordCount;
     int readyWordCount;
     VocabSubTopicStatus status;
+    boolean isActive;
     LocalDateTime createdAt;
 }

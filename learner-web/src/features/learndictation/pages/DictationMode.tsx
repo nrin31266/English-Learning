@@ -34,6 +34,7 @@ const DictationMode = () => {
     progressKey: "dictation",
     modeName: "DICTATION",
     captureKeysInEditable: true,
+    
   })
 
   const {
@@ -46,6 +47,8 @@ const DictationMode = () => {
     handleCompleteSentence,
     handleSelectSentence,
     effectiveShowTranscript,
+    handleTogglePlayPause,
+    isPlaying
   } = mode
 
   return (
@@ -65,6 +68,8 @@ const DictationMode = () => {
               tempAnswersRef.current[currentSentence.id] = val
             }}
             userInteracted={userInteracted}
+            onTogglePlayPause={handleTogglePlayPause}
+            isPlaying={isPlaying}
           />
         )
       }

@@ -45,6 +45,7 @@ export interface IVocabTopic {
   subtopicCount: number;
   readySubtopicCount: number;
   status: "DRAFT" | "GENERATING_SUBTOPICS" | "READY_FOR_WORD_GEN" | "PROCESSING" | "READY";
+  isActive: boolean;
   thumbnailUrl?: string;
   publishedAt?: string;
   createdAt: string;
@@ -61,7 +62,24 @@ export interface IVocabSubTopic {
   wordCount: number;
   readyWordCount: number;
   status: "PENDING_WORDS" | "GENERATING_WORDS" | "PROCESSING_WORDS" | "READY";
+  isActive: boolean;
   createdAt: string;
+}
+
+export interface IUpdateEntryContextRequest {
+  definition: string;
+  meaningVi: string;
+  example: string;
+  viExample: string;
+  level: string;
+}
+
+export interface IWordDefinition {
+  definition: string;
+  meaningVi: string;
+  example: string;
+  viExample: string;
+  level: string;
 }
 
 export interface IVocabWordEntry {
@@ -79,7 +97,7 @@ export interface IVocabWordEntry {
     summaryVi: string;
     cefrLevel: string;
     phonetics: { us: string; usAudioUrl: string };
-    definitions: { definition: string; meaningVi: string; example: string; viExample: string; level: string }[];
+    definitions: IWordDefinition[];
   };
   // Context-matched definition (Polysemy resolution from VocabWordEntryResponse)
   contextDefinition?: string;  // EN definition

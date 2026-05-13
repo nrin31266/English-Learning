@@ -1,5 +1,5 @@
 import handleAPI from "@/apis/handleAPI";
-import type { IAsyncState, IVocabSubTopic, IVocabSubTopicProgressEvent, IVocabSubTopicReadyEvent, IVocabSubtopicsGeneratedEvent, IVocabTopic, IVocabWordEntry } from "@/types";
+import type { IAsyncState, IUpdateEntryContextRequest, IVocabSubTopic, IVocabSubTopicProgressEvent, IVocabSubTopicReadyEvent, IVocabSubtopicsGeneratedEvent, IVocabTopic, IVocabWordEntry } from "@/types";
 import { extractError } from "@/utils/reduxUtils";
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
@@ -165,6 +165,30 @@ const vocabSlice = createSlice({
           s.activeSubtopicId = null;
           s.words = asyncIdle([]);
         }
+      })
+      // toggleTopicActive
+      .addCase(toggleTopicActive.fulfilled, (s, a) => {
+        const updated = a.payload as IVocabTopic;
+        const idx = s.topics.data.findIndex((t) => t.id === updated.id);
+        if (idx !== -1) s.topics.data[idx] = updated;
+      })
+      // toggleSubtopicActive
+      .addCase(toggleSubtopicActive.fulfilled, (s, a) => {
+        const updated = a.payload as IVocabSubTopic;
+        const idx = s.subtopics.data.findIndex((st) => st.id === updated.id);
+        if (idx !== -1) s.subtopics.data[idx] = updated;
+      })
+      // updateEntryContextManual
+      .addCase(updateEntryContextManual.fulfilled, (s, a) => {
+        const updated = a.payload as IVocabWordEntry;
+        const idx = s.words.data.findIndex((w) => w.id === updated.id);
+        if (idx !== -1) s.words.data[idx] = updated;
+      })
+      // generateSingleMeaningSync
+      .addCase(generateSingleMeaningSync.fulfilled, (s, a) => {
+        const updated = a.payload as IVocabWordEntry;
+        const idx = s.words.data.findIndex((w) => w.id === updated.id);
+        if (idx !== -1) s.words.data[idx] = updated;
       });
   },
 });
@@ -228,5 +252,25 @@ export const deleteSubTopic = createAsyncThunk("vocab/deleteSubTopic", async (su
 
 export const recalculateTopic = createAsyncThunk("vocab/recalculateTopic", async (topicId: string, { rejectWithValue }) => {
   try { return await handleAPI<string>({ endpoint: `${BASE}/topics/${topicId}/recalculate`, method: "POST" }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const toggleTopicActive = createAsyncThunk("vocab/toggleTopicActive", async (topicId: string, { rejectWithValue }) => {
+  try { return await handleAPI<IVocabTopic>({ endpoint: `${BASE}/topics/${topicId}/toggle-active`, method: "PUT" }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const toggleSubtopicActive = createAsyncThunk("vocab/toggleSubtopicActive", async (subtopicId: string, { rejectWithValue }) => {
+  try { return await handleAPI<IVocabSubTopic>({ endpoint: `${BASE}/subtopics/${subtopicId}/toggle-active`, method: "PUT" }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const updateEntryContextManual = createAsyncThunk("vocab/updateEntryContext", async ({ entryId, body }: { entryId: string; body: IUpdateEntryContextRequest }, { rejectWithValue }) => {
+  try { return await handleAPI<IVocabWordEntry>({ endpoint: `${BASE}/word-entries/${entryId}/context`, method: "PUT", body }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const generateSingleMeaningSync = createAsyncThunk("vocab/generateSingleMeaning", async (entryId: string, { rejectWithValue }) => {
+  try { return await handleAPI<IVocabWordEntry>({ endpoint: `${BASE}/word-entries/${entryId}/generate-meaning`, method: "POST", timeout: 30000 }); }
   catch (e) { return rejectWithValue(extractError(e)); }
 });

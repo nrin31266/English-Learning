@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@CompoundIndex(name = "topic_word_dedup_idx", def = "{'topicId': 1, 'wordKey': 1, 'pos': 1}", unique = true)
+@CompoundIndex(name = "topic_word_search_idx", def = "{'topicId': 1, 'wordKey': 1, 'pos': 1}")
 @CompoundIndex(name = "subtopic_word_idx", def = "{'subtopicId': 1, 'order': 1}")
 @CompoundIndex(name = "word_ready_check_idx", def = "{'wordKey': 1, 'pos': 1, 'wordReady': 1}")
 public class VocabWordEntry {

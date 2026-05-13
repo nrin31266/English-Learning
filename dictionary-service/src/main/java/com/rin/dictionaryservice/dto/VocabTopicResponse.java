@@ -19,6 +19,7 @@ public class VocabTopicResponse {
     int subtopicCount;
     int readySubtopicCount;
     VocabTopicStatus status;
+    boolean isActive;
     String thumbnailUrl;
     LocalDateTime publishedAt;
     LocalDateTime createdAt;

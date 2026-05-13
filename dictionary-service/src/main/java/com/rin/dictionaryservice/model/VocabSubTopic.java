@@ -43,6 +43,9 @@ public class VocabSubTopic {
     @Builder.Default
     VocabSubTopicStatus status = VocabSubTopicStatus.PENDING_WORDS;
 
+    @Builder.Default
+    boolean isActive = false;
+
     @CreatedDate
     LocalDateTime createdAt;
 

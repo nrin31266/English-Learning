@@ -11,13 +11,20 @@ import {
 } from "@/components/ui/dialog";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { showNotification } from "@/store/system/notificationSlice";
-import { deleteAllWordsInSubTopic, fetchWords } from "@/store/vocab/vocabSlice";
-import type { IVocabSubTopic, IVocabWordEntry } from "@/types";
+import {
+  deleteAllWordsInSubTopic,
+  fetchWords,
+  updateEntryContextManual,
+  generateSingleMeaningSync,
+} from "@/store/vocab/vocabSlice";
+import type { IWordDefinition, IVocabSubTopic, IVocabWordEntry } from "@/types";
 import {
   CheckCircle2,
   Clock,
   Loader2,
+  Pencil,
   RefreshCw,
+  Sparkles,
   Trash2,
   Volume2,
 } from "lucide-react";
@@ -45,6 +52,8 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [reloading, setReloading] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
 
   const readyCount = subtopic?.readyWordCount ?? words.data.filter((w) => w.wordReady).length;
   const totalCount = subtopic?.wordCount ?? words.data.length;
@@ -86,6 +95,42 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
     }
 
     setDeletingAll(false);
+  };
+
+  const handlePickDefinition = async (
+    entryId: string,
+    def: IWordDefinition
+  ) => {
+    const res = await dispatch(
+      updateEntryContextManual({
+        entryId,
+        body: {
+          definition: def.definition,
+          meaningVi: def.meaningVi,
+          example: def.example ?? "",
+          viExample: def.viExample ?? "",
+          level: def.level ?? "B1",
+        },
+      })
+    );
+    if (updateEntryContextManual.fulfilled.match(res)) {
+      dispatch(showNotification({ message: "Đã cập nhật ngữ cảnh", variant: "success" }));
+      setEditEntryId(null);
+    } else {
+      dispatch(showNotification({ message: "Cập nhật ngữ cảnh thất bại", variant: "error" }));
+    }
+  };
+
+  const handleGenerateMeaning = async (entryId: string) => {
+    setGeneratingId(entryId);
+    const res = await dispatch(generateSingleMeaningSync(entryId));
+    setGeneratingId(null);
+    if (generateSingleMeaningSync.fulfilled.match(res)) {
+      dispatch(showNotification({ message: "Đã tạo nghĩa mới từ AI", variant: "success" }));
+      setEditEntryId(null);
+    } else {
+      dispatch(showNotification({ message: "Tạo nghĩa từ AI thất bại", variant: "error" }));
+    }
   };
 
   const handlePlayUsAudio = async (entry: IVocabWordEntry) => {
@@ -169,7 +214,7 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
                   Reload
                 </Button>
 
-                {subtopic && subtopic.wordCount > 0 && (
+                {subtopic && words.data.length > 0 && (
                   <Button
                     size="sm"
                     variant="destructive"
@@ -261,6 +306,17 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
                         ) : (
                           <Volume2 size={14} />
                         )}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 shrink-0 px-2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setEditEntryId(entry.id)}
+                        title="Sửa ngữ cảnh"
+                      >
+                        <Pencil size={14} className="mr-1" />
+                        Sửa ngữ cảnh
                       </Button>
                     </div>
 
@@ -362,6 +418,111 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
               Đóng
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── EDIT CONTEXT DIALOG ─────────────────────────────────────────── */}
+      <Dialog open={!!editEntryId} onOpenChange={(v) => !v && setEditEntryId(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {(() => {
+            const entry = words.data.find((w) => w.id === editEntryId);
+            if (!entry) return null;
+            const defs = entry.wordDetail?.definitions ?? [];
+            const isGenerating = generatingId === entry.id;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <span className="truncate">Sửa ngữ cảnh — {getWordDisplay(entry)}</span>
+                    <Badge variant="outline">{entry.pos}</Badge>
+                  </DialogTitle>
+                  <DialogDescription>
+                    Chọn một nghĩa có sẵn hoặc yêu cầu AI tạo nghĩa mới phù hợp ngữ cảnh.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="mt-4 space-y-4">
+                  {/* Existing definitions */}
+                  {defs.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-muted-foreground">
+                        Các nghĩa có sẵn ({defs.length})
+                      </h4>
+                      {defs.map((def, idx) => (
+                        <div
+                          key={idx}
+                          className="rounded-md border bg-card p-3 space-y-1.5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              {def.meaningVi && (
+                                <div className="text-sm font-medium">{def.meaningVi}</div>
+                              )}
+                              <div className="text-xs leading-relaxed text-muted-foreground">
+                                {def.definition}
+                              </div>
+                              {def.example && (
+                                <div className="text-xs italic text-muted-foreground">
+                                  “{def.example}”
+                                </div>
+                              )}
+                              {def.viExample && (
+                                <div className="text-xs italic text-muted-foreground">
+                                  “{def.viExample}”
+                                </div>
+                              )}
+                              {def.level && (
+                                <Badge variant="secondary" className="text-[11px]">
+                                  {def.level}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => handlePickDefinition(entry.id, def)}
+                          >
+                            <CheckCircle2 size={14} className="mr-1" />
+                            Chọn nghĩa này
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {defs.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground">
+                      Không có nghĩa nào được tra cứu. Bạn có thể yêu cầu AI tạo nghĩa mới.
+                    </div>
+                  )}
+
+                  {/* AI generate button */}
+                  <div className="border-t pt-4">
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      disabled={isGenerating}
+                      onClick={() => handleGenerateMeaning(entry.id)}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 size={14} className="mr-1 animate-spin" />
+                          Đang sinh nghĩa qua AI…
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={14} className="mr-1" />
+                          ✨ Generate Contextual Meaning via AI
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

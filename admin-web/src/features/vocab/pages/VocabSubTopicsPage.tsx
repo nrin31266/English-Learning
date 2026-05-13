@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -7,6 +6,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -34,10 +34,9 @@ import {
   fetchVocabTopics,
   fetchWords,
   generateWords,
-  recalculateTopic,
   setActiveSubtopicId,
   updateSubtopicFromWs,
-  updateSubtopicProgress,
+  updateSubtopicProgress
 } from "@/store/vocab/vocabSlice";
 import type {
   IVocabSubTopic,
@@ -50,9 +49,8 @@ import {
   ChevronRight,
   Layers3,
   Loader2,
-  RefreshCw,
   Trash2,
-  Wand2,
+  Wand2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -384,7 +382,7 @@ export default function VocabSubTopicsPage() {
                           size="icon"
                           variant={hasWords ? "default" : "outline"}
                           className="h-8 w-8"
-                          disabled={!hasWords && sub.status === "PENDING_WORDS"}
+                          // disabled={!hasWords && sub.status === "PENDING_WORDS"}
                           onClick={() => handleViewWords(sub.id)}
                           title={hasWords ? "Xem từ" : "Chưa có từ"}
                         >

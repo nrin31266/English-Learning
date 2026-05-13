@@ -34,6 +34,37 @@ Return JSON object:
   ]
 }}"""
 
+def build_single_meaning_prompt(
+    word: str,
+    pos: str,
+    topic_title: str,
+    subtopic_title: str,
+    subtopic_description: str,
+) -> str:
+    return f"""You are a precision English vocabulary engine.
+Generate EXACTLY ONE (1) definition for the following word, tailored STRICTLY to the provided sub-topic context.
+
+Input:
+- word: "{word}"
+- pos: "{pos}"
+- topic: "{topic_title}"
+- subtopic: "{subtopic_title}"
+- subtopic_context: "{subtopic_description}"
+
+CRITICAL RULES:
+1. OUTPUT MUST BE a single JSON OBJECT (not an array). The object must follow this schema:
+{{
+  "definition": "Strong, precise, dictionary-grade EN meaning that strictly matches the subtopic context",
+  "meaning_vi": "Extremely short direct VI meaning (1-3 words max)",
+  "example": "A short, natural English sentence using the word in the EXACT subtopic context",
+  "vi_example": "Natural Vietnamese translation of the example",
+  "level": "B1"
+}}
+2. The definition MUST be tightly bound to the subtopic context. For example, if subtopic is "IT Security", "firewall" must be explained in that domain, not a general wall-fire meaning.
+3. POS must strictly match the provided pos. Do NOT switch POS.
+4. Return ONLY the JSON object. No markdown, no explanation, no extra fields."""
+
+
 def build_word_gen_prompt(
     topic_title: str,
     subtopic_title: str,

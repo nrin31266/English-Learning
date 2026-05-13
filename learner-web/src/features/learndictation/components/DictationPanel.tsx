@@ -7,6 +7,8 @@ import {
     CheckCircle2,
     ChevronRight,
     Eye,
+    Pause,
+    Play,
     RotateCcw
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -27,7 +29,9 @@ type DictationPanelProps = {
     completed?: boolean
     currentTemporaryAnswer?: string
     onTemporaryAnswerChange?: (tempAnswer: string) => void
-    userInteracted?: boolean
+    userInteracted?: boolean,
+    onTogglePlayPause?: () => void,
+    isPlaying?: boolean
 }
 
 const getWordDisplay = (w: ILessonWordResponse): string =>
@@ -38,7 +42,9 @@ const DictationPanel = ({
     loading = false, 
     completed = false,
     currentTemporaryAnswer, onTemporaryAnswerChange,
-    userInteracted
+    userInteracted,
+    onTogglePlayPause,
+    isPlaying
 }: DictationPanelProps) => {
     const [answer, setAnswer] = useState("")
     const [revealState, setRevealState] = useState<RevealState>({})
@@ -248,19 +254,45 @@ const DictationPanel = ({
                 ))}
             </div>  
 
-            {/* FOOTER - Nút dùng primary */}
+            {/* FOOTER */}
             <div className="flex justify-between items-center pt-1 z-10">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleReset}
-                    disabled={!userInteracted || loading || answer.length === 0}
-                    className="h-8 px-2 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                >
-                    <RotateCcw className="h-3.5 w-3.5 sm:mr-1" />
-                    <span className="hidden sm:inline">Reset</span>
-                </Button>
+                
+                {/* NHÓM BÊN TRÁI: Các công cụ */}
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleReset}
+                        disabled={!userInteracted || loading || answer.length === 0}
+                        className="h-8 px-2 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                        <RotateCcw className="h-3.5 w-3.5 sm:mr-1" />
+                        <span className="hidden sm:inline">Reset</span>
+                    </Button>
 
+                    {/* <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onTogglePlayPause}
+                        disabled={!userInteracted}
+                        className="h-8 px-3 border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/50 hidden sm:flex transition-all w-24 justify-center"
+                        title="Press ` (Backtick) to Play/Pause"
+                    >
+                        {isPlaying ? (
+                            <Pause className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+                        ) : (
+                            <Play className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                        )}
+                        <span className="text-xs font-medium w-10 text-left">
+                            {isPlaying ? "Pause" : "Play"}
+                        </span>
+                        <kbd className="ml-1 px-1.5 py-0.5 rounded bg-muted text-[11px] font-mono border border-border font-bold">
+                            `
+                        </kbd>
+                    </Button> */}
+                </div>
+
+                {/* NHÓM BÊN PHẢI: Chuyển câu */}
                 <Button
                     onClick={onNext}
                     disabled={loading || (!userInteracted && !completed)}

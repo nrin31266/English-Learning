@@ -219,34 +219,59 @@ export function useLessonMode(config: UseLessonModeConfig) {
     if (lessonId) dispatch(fetchAction(Number(lessonId)) as any)
   }, [dispatch, fetchAction, lessonId])
 
+  const handleTogglePlayPause = useCallback(() => {
+    if (isPlaying) {
+      playerRef.current?.pause()
+    } else {
+      playerRef.current?.play()
+    }
+  }, [isPlaying])
+
+  // Trong src/features/learnmode/hooks/useLessonMode.ts
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
+      const isEditable = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable
+      
       const isNavKey = e.key === "Tab" || e.key === "PageDown" || e.key === "PageUp"
-      const isCtrlKey = e.code === "ControlLeft" || e.code === "ControlRight"
+      
+      // Bắt thêm e.key === "`" phòng trường hợp bàn phím khác layout
+      const isPlayPauseKey = e.code === "Backquote" || e.key === "`" 
+      const isCtrlKey = e.key === "Control" || e.code === "ControlLeft" || e.code === "ControlRight"
 
-      if (captureKeysInEditable) {
-        if (isNavKey || isCtrlKey) {
-          e.preventDefault()
-          if (isCtrlKey) playerRef.current?.playCurrentSegment()
-          else if (e.key === "PageDown" || e.key === "Tab") handleNext()
-          else if (e.key === "PageUp") handlePrev()
-        }
-      } else {
-        const isEditable =
-          target?.tagName === "INPUT" ||
-          target?.tagName === "TEXTAREA" ||
-          target?.isContentEditable
-        if (isEditable) return
-        if (isCtrlKey) { e.preventDefault(); playerRef.current?.playCurrentSegment() }
-        else if (e.key === "PageDown" || e.key === "Tab") { e.preventDefault(); handleNext() }
-        else if (e.key === "PageUp") { e.preventDefault(); handlePrev() }
+      // 1. LUÔN BẮT GỌN PHÍM ` VÀ CTRL TRƯỚC TIÊN
+      if (isPlayPauseKey) {
+        e.preventDefault() 
+        e.stopPropagation() // Khóa mõm, không cho event đi tiếp xuống Textarea
+        handleTogglePlayPause()
+        return
+      }
+
+      if (isCtrlKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        playerRef.current?.playCurrentSegment() // Chạy lại câu hiện tại
+        return
+      }
+
+      // 2. LOGIC CHO PHÍM ĐIỀU HƯỚNG
+      if (isEditable && !captureKeysInEditable) {
+        return // Đang gõ text thì không bắt phím Tab/PageUp/PageDown
+      }
+
+      if (isNavKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (e.key === "PageDown" || e.key === "Tab") handleNext()
+        else if (e.key === "PageUp") handlePrev()
       }
     }
 
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [handleNext, handlePrev, captureKeysInEditable])
+    // 🔴 BÍ QUYẾT LÀ ĐÂY: Thêm { capture: true } để chặn event từ trên không
+    window.addEventListener("keydown", onKeyDown, { capture: true })
+    return () => window.removeEventListener("keydown", onKeyDown, { capture: true })
+  }, [handleNext, handlePrev, handleTogglePlayPause, captureKeysInEditable])
 
   return {
     lessonId,
@@ -292,5 +317,6 @@ export function useLessonMode(config: UseLessonModeConfig) {
     handleLoginIncentive,
     handleRetry,
     profile,
+    handleTogglePlayPause
   }
 }

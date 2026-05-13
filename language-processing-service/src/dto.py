@@ -199,3 +199,19 @@ class LessonGenerationAiMetadataDto(BaseModel):
 class SpaCyWordAnalysisRequest(BaseModel):
     word: str
     context: str | None = None
+
+
+class SingleMeaningRequest(BaseModel):
+    word: str
+    pos: str
+    topic_title: str
+    subtopic_title: str
+    subtopic_description: str
+
+
+class SingleMeaningDefinition(BaseModel):
+    definition: str
+    meaning_vi: str
+    example: str
+    vi_example: str
+    level: str
