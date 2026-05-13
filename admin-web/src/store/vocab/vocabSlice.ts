@@ -63,9 +63,9 @@ const vocabSlice = createSlice({
     },
     // WS: subtopics generation complete — update topic header, subtopics re-fetched by page
     onSubtopicsGenerated(state, action: PayloadAction<IVocabSubtopicsGeneratedEvent>) {
-      const { topicId, subtopicCount } = action.payload;
+      const { topicId, subtopicCount, topicDescription } = action.payload;
       const topic = state.topics.data.find((t) => t.id === topicId);
-      if (topic) { topic.status = "READY_FOR_WORD_GEN"; topic.subtopicCount = subtopicCount; }
+      if (topic) { topic.status = "READY_FOR_WORD_GEN"; topic.subtopicCount = subtopicCount; topic.description = topicDescription; }
     },
     // WS: live subtopic word‑processing progress (0/25 → 5/25 → … → 25/25)
     updateSubtopicProgress(state, action: PayloadAction<IVocabSubTopicProgressEvent>) {

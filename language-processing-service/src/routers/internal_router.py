@@ -48,7 +48,6 @@ class GenWordsRequest(BaseModel):
     subtopic_title: str
     subtopic_description: str = ""
     cefr_level: str = "B1"
-    existing_keys: list[str] = []
 
 
 @router.post("/vocab/gen-subtopics", response_model=AiGenerateResponse)
@@ -68,7 +67,7 @@ async def gen_words(
     x_worker_key: str | None = Header(default=None, alias="X-Worker-Key"),
 ):
     _verify_worker_key(x_worker_key)
-    prompt = f"[SYSTEM]\n{VOCAB_SYSTEM_PROMPT}\n\n[USER]\n{build_word_gen_prompt(req.topic_title, req.subtopic_title, req.subtopic_description, req.cefr_level, req.existing_keys)}"
+    prompt = f"[SYSTEM]\n{VOCAB_SYSTEM_PROMPT}\n\n[USER]\n{build_word_gen_prompt(req.topic_title, req.subtopic_title, req.subtopic_description, req.cefr_level)}"
     result = await generate_json(prompt)
     return AiGenerateResponse(result=result)
 

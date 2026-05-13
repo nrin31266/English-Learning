@@ -13,4 +13,5 @@ public class VocabSubtopicsGeneratedEvent {
     private String topicId;
     private String topicTitle;
     private int subtopicCount;
+    private String topicDescription;
 }

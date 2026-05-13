@@ -1,3 +1,4 @@
+// src/features/vocab/components/VocabWordsDialog.tsx
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

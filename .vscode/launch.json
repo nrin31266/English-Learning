@@ -1,24 +1,83 @@
 {
-    "configurations": [
-        {
-            "type": "java",
-            "name": "Spring Boot-ApiGatewayApplication<api-gateway>",
-            "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "mainClass": "com.rin.apigateway.ApiGatewayApplication",
-            "projectName": "api-gateway",
-            "args": "",
-            "envFile": "${workspaceFolder}/.env"
-        },
-        {
-            "type": "java",
-            "name": "Spring Boot-UserServiceApplication<user-service>",
-            "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "mainClass": "com.rin.userservice.UserServiceApplication",
-            "projectName": "user-service",
-            "args": "",
-            "envFile": "${workspaceFolder}/.env"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Discovery Service",
+      "request": "launch",
+      "mainClass": "com.rin.discoveryservice.DiscoveryServiceApplication",
+      "projectName": "discovery-service",
+      "cwd": "${workspaceFolder}/discovery-service",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "API Gateway",
+      "request": "launch",
+      "mainClass": "com.rin.apigateway.ApiGatewayApplication",
+      "projectName": "api-gateway",
+      "cwd": "${workspaceFolder}/api-gateway",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "User Service",
+      "request": "launch",
+      "mainClass": "com.rin.userservice.UserServiceApplication",
+      "projectName": "user-service",
+      "cwd": "${workspaceFolder}/user-service",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Dictionary Service",
+      "request": "launch",
+      "mainClass": "com.rin.dictionaryservice.DictionaryServiceApplication",
+      "projectName": "dictionary-service",
+      "cwd": "${workspaceFolder}/dictionary-service",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Learning Content Service",
+      "request": "launch",
+      "mainClass": "com.rin.learningcontentservice.LearningContentServiceApplication",
+      "projectName": "learning-content-service",
+      "cwd": "${workspaceFolder}/learning-content-service",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Notification Service",
+      "request": "launch",
+      "mainClass": "com.rin.notificationservice.NotificationServiceApplication",
+      "projectName": "notification-service",
+      "cwd": "${workspaceFolder}/notification-service",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ],
+  "compounds": [
+    // {
+    //   "name": "Run Minimal Backend",
+    //   "configurations": [
+    //     "Discovery Service",
+    //     "API Gateway",
+    //     "User Service",
+    //     "Dictionary Service"
+    //   ],
+    //   "stopAll": true
+    // },
+    {
+      "name": "Run All Backend",
+      "configurations": [
+        // "Discovery Service",
+        "API Gateway",
+        "User Service",
+        "Dictionary Service",
+        "Learning Content Service",
+        "Notification Service"
+      ],
+      "stopAll": true
+    }
+  ]
 }

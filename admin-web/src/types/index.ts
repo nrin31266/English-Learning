@@ -115,6 +115,7 @@ export interface IVocabSubtopicsGeneratedEvent {
   topicId: string;
   topicTitle: string;
   subtopicCount: number;
+  topicDescription: string;
 }
 
 export interface IAsyncState<T> {

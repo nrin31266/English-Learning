@@ -12,57 +12,49 @@ Topic: "{topic_title}"
 Tags: [{tags_str}]
 CEFR range: {cefr_range}
 
-First, auto-generate a concise 1-2 sentence description of this vocabulary topic based on the title and tags. This description will be used as the topic's summary in the system.
+First, auto-generate a concise 1-2 sentence description of this vocabulary topic based on the title and tags.
 
-Requirements:
-- "topic_description": a concise 1-2 sentence English description summarizing the topic's vocabulary scope.
-- Each sub-topic covers a distinct semantic cluster (no overlap).
+CRITICAL Requirements for Sub-topics:
+- STRICTLY MUTUALLY EXCLUSIVE: Each sub-topic MUST cover a completely distinct semantic cluster. There must be ZERO conceptual overlap between them.
+- DEFINING BOUNDARIES (INCLUDES & EXCLUDES): The "description" MUST be a highly detailed 3-4 sentence explanation. It MUST explicitly state what specific aspects are INCLUDED and what related aspects are strictly EXCLUDED. (e.g., "Focuses strictly on the flight booking process and ticketing. Strictly excludes airport security, luggage, or boarding procedures.").
 - Spread CEFR levels evenly across the range {cefr_range}.
 - "titleVi" must be a natural, concise Vietnamese translation.
-- Each sub-topic should be broad enough to represent AT LEAST 20 vocabulary words.
+- Each sub-topic should be broad enough to represent AT LEAST 20-30 unique vocabulary words.
 
-Return JSON object with keys "topic_description" and "subtopics":
+Return JSON object:
 {{
   "topic_description": "1-2 sentence English summary of the overall topic",
   "subtopics": [
     {{
       "title": "...",
       "titleVi": "...",
-      "description": "2-3 sentence description of vocabulary theme",
+      "description": "3-4 sentence detailed boundary description. Must clearly state INCLUDES and EXCLUDES to prevent any word overlap.",
       "cefrLevel": "B1"
     }}
   ]
 }}"""
-
 
 def build_word_gen_prompt(
     topic_title: str,
     subtopic_title: str,
     subtopic_description: str,
     cefr_level: str,
-    existing_keys: list[str],
 ) -> str:
-    avoid = (
-        "Avoid these already-used words: " + ", ".join(existing_keys[:100])
-        if existing_keys
-        else ""
-    )
-    return f"""Generate a comprehensive list of English vocabulary words for this sub-topic.
-Quantity: AT LEAST 16 words. If the sub-topic is rich in vocabulary, generate up to 25 words to ensure thorough coverage.
+    return f"""Generate a highly specific list of English vocabulary words for this targeted sub-topic.
+Quantity: Generate exactly 20 to 25 words to ensure thorough coverage.
 
 Parent topic: "{topic_title}"
 Sub-topic: "{subtopic_title}"
-Sub-topic description: "{subtopic_description}"
+Sub-topic Context/Boundaries: "{subtopic_description}"
 Target CEFR level: {cefr_level}
 
-{avoid}
-
 Requirements:
-- Words must be genuinely and frequently used in this specific context.
+- STRICT CONTEXTUAL ALIGNMENT: Words MUST belong exclusively to the highly specific "Sub-topic Context/Boundaries" described above. DO NOT generate generic words from the broader Parent topic.
 - POS must be one of: NOUN, VERB, ADJ, ADV, PHRASE.
 - Provide a good mix of single words and useful collocations/phrases.
 - IMPORTANT: Keep natural spelling, spaces, apostrophes, and accents (e.g., "chargé d'affaires", "take into account"). DO NOT use underscores for phrases.
 - All "word" values must be strictly lowercase.
+
 Return JSON object:
 {{
   "words": [

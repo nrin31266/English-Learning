@@ -160,6 +160,7 @@ public class VocabService {
                     .topicId(topicId)
                     .topicTitle(topic.getTitle())
                     .subtopicCount(subtopics.size())
+                    .topicDescription(topic.getDescription() != null ? topic.getDescription() : "")
                     .build());
         } catch (Exception e) {
             log.error("[VocabTopic] Async subtopic gen failed for {}: {}", topicId, e.getMessage());
@@ -199,29 +200,32 @@ public class VocabService {
             VocabTopic topic = topicRepo.findById(subtopic.getTopicId())
                     .orElseThrow(() -> new RuntimeException("Topic not found"));
 
-            List<String> existingKeys = wordEntryRepo.findAllByTopicId(subtopic.getTopicId())
-                    .stream().map(e -> e.getWordKey() + "_" + e.getPos()).toList();
-
             log.info("[VocabSubTopic] Async generating words for: {}", subtopicId);
+            
+            // ĐÃ XÓA logic lấy existingKeys. Tạm truyền List.of() vào cho khỏi lỗi Constructor (Bác có thể xóa param này ở DTO sau).
             AiGenerateResponse aiResp = lpsClient.genWords(workerKey,
                     new VocabGenWordsRequest(topic.getTitle(), subtopic.getTitle(),
                             subtopic.getDescription() != null ? subtopic.getDescription() : "",
                             subtopic.getCefrLevel() != null ? subtopic.getCefrLevel().name() : "B1",
-                            existingKeys.stream().limit(100).toList()));
+                            List.of())); 
 
             List<Map<String, String>> aiWords = parseWordList(serializeAiResult(aiResp));
             List<VocabWordEntry> entries = new ArrayList<>();
             int readyCount = 0;
             int order = 0;
+            int targetWordCount = 20; // Chốt KPI 20 từ đẹp đội hình (Tuyệt chiêu Over-fetching)
+
+            // Dùng Set để chặn AI đẻ trùng từ trong CÙNG 1 subtopic (phòng AI ngáo)
+            java.util.Set<String> seenInBatch = new java.util.HashSet<>();
 
             for (Map<String, String> aiWord : aiWords) {
                 String rawWord = aiWord.getOrDefault("word", "").trim();
                 if (rawWord.isBlank()) continue;
 
-                // 1. Text hiển thị: Giữ nguyên bản gốc từ AI (có dấu, nháy đơn)
+                // 1. Text hiển thị
                 String wordText = rawWord.replaceAll("\\s+", " ").trim();
 
-                // 2. Tạo Key: Không dùng Normalizer, giữ nguyên Unicode \p{L}
+                // 2. Tạo Key
                 String wordKey = wordText.toLowerCase()
                         .replace("'", "_")
                         .replaceAll("[\\s-]+", "_")
@@ -232,31 +236,35 @@ public class VocabService {
                 String pos = aiWord.getOrDefault("pos", "NOUN").trim().toUpperCase();
 
                 if (wordKey.isBlank()) continue;
-                if (wordEntryRepo.existsByTopicIdAndWordKeyAndPos(subtopic.getTopicId(), wordKey, pos)) continue;
 
-                Optional<Word> existingWord = wordRepository.findById(wordKey + "|" + pos);
+                // 3. Chặn trùng lặp trong CÙNG MỘT MẺ gen (BỎ check DB cấp Topic)
+                String uniqueCheckKey = wordKey + "|" + pos;
+                if (seenInBatch.contains(uniqueCheckKey)) continue;
+                seenInBatch.add(uniqueCheckKey);
+
+                // 4. Chốt sổ: Đủ 20 từ là đóng cửa nghỉ khỏe, ko lấy đồ thừa của AI
+                if (entries.size() >= targetWordCount) break;
+
+                Optional<Word> existingWord = wordRepository.findById(uniqueCheckKey);
                 boolean wordReady = false;
 
-                // Các biến chứa data cache ngữ cảnh (Mặc định null nếu từ mới tinh)
                 String ctxDef = null, ctxMean = null, ctxEx = null, ctxViEx = null;
                 CefrLevel ctxLevel = null;
 
                 if (existingWord.isEmpty()) {
                     wordRepository.save(Word.builder()
-                            .id(wordKey + "|" + pos)
+                            .id(uniqueCheckKey)
                             .text(wordText)
                             .key(wordKey)
                             .pos(pos)
-                            .context(subtopic.getDescription())
+                            .context(subtopic.getDescription()) // Lưu context gốc để AI học
                             .build());
                 } else {
                     Word w = existingWord.get();
-
                     if (w.getStatus() == WordCreationStatus.READY) {
                         wordReady = true;
                         readyCount++;
 
-                        // FIX LỖI CACHE: Nếu từ đã READY, tính luôn ngữ cảnh cho Entry này
                         Word.Definition matchedDef = selectDefinition(w, subtopic);
                         ctxDef = matchedDef.getDefinition();
                         ctxMean = matchedDef.getMeaningVi();
@@ -277,11 +285,10 @@ public class VocabService {
                         .subtopicId(subtopicId)
                         .topicId(subtopic.getTopicId())
                         .wordKey(wordKey)
-                        .wordText(wordText) // Lưu luôn wordText vào cache
+                        .wordText(wordText)
                         .pos(pos)
                         .order(order++)
                         .wordReady(wordReady)
-                        // Bơm data ngữ cảnh vào (sẽ có data nếu từ đã READY sẵn, null nếu từ PENDING)
                         .contextDefinition(ctxDef)
                         .contextMeaningVi(ctxMean)
                         .contextExample(ctxEx)
@@ -297,7 +304,7 @@ public class VocabService {
                     ? VocabSubTopicStatus.READY : VocabSubTopicStatus.PROCESSING_WORDS);
             subtopicRepo.save(subtopic);
 
-            // Send progress event so UI immediately shows 0/N or N/N counts
+            // Gửi sự kiện Kafka để UI cập nhật số nhảy múa
             kafkaProducer.sendVocabSubTopicProgress(VocabSubTopicProgressEvent.builder()
                     .topicId(subtopic.getTopicId())
                     .subtopicId(subtopicId)

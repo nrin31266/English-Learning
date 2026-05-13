@@ -28,7 +28,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: t("appMenu.vocabulary"),
       children: [
-        { title: "Vocab Topics", url: "/vocab/topics", icon: BookOpen },
+        { title: "Vocab Topics", url: "/vocab/topics", icon: BookMarked },
         // { title: t("appMenu.allWords"), url: "/all-words", icon: CaseSensitive },
         // { title: "Word Queue", url: "/word-queue", icon: Inbox }
       ]
