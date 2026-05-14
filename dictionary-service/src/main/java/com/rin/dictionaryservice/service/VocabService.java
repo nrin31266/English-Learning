@@ -4,7 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rin.dictionaryservice.constant.VocabSubTopicStatus;
 import com.rin.dictionaryservice.constant.VocabTopicStatus;
-import com.rin.dictionaryservice.constant.WordCreationStatus;
+import com.rin.englishlearning.common.dto.PageResponse;
+import org.springframework.data.domain.Sort;import com.rin.dictionaryservice.constant.WordCreationStatus;
 import com.rin.dictionaryservice.dto.*;
 import com.rin.dictionaryservice.kafka.KafkaProducer;
 import com.rin.dictionaryservice.model.*;
@@ -104,8 +105,65 @@ public class VocabService {
         log.info("[VocabTopic] Deleted: {}", topicId);
     }
 
-    public List<VocabTopicResponse> listTopics() {
-        return topicRepo.findAll().stream().map(this::toTopicResponse).toList();
+    public PageResponse<VocabTopicResponse> listTopics(String q, List<String> tags, String status,
+                                                         int page, int size, String sort) {
+        String keyword = q == null ? "" : q.trim().toLowerCase();
+
+        List<String> tagFilters = (tags == null || tags.isEmpty()) ? List.of()
+                : tags.stream().map(String::trim).filter(t -> !t.isBlank()).map(String::toLowerCase).toList();
+
+        final VocabTopicStatus statusFilter = parseStatusFilter(status);
+
+        List<VocabTopic> allFiltered = topicRepo.findAll().stream()
+                .filter(t -> {
+                    // multi-tag: topic must match ALL selected tags
+                    if (tagFilters.isEmpty()) return true;
+                    if (t.getTags() == null || t.getTags().isEmpty()) return false;
+                    return tagFilters.stream()
+                            .allMatch(tf -> t.getTags().stream()
+                                    .anyMatch(tt -> tt != null && tt.toLowerCase().equals(tf)));
+                })
+                .filter(t -> {
+                    if (keyword.isBlank()) return true;
+                    boolean inTitle = t.getTitle() != null && t.getTitle().toLowerCase().contains(keyword);
+                    boolean inDesc = t.getDescription() != null && t.getDescription().toLowerCase().contains(keyword);
+                    boolean inTags = t.getTags() != null && t.getTags().stream()
+                            .anyMatch(x -> x != null && x.toLowerCase().contains(keyword));
+                    return inTitle || inDesc || inTags;
+                })
+                .filter(t -> {
+                    if (statusFilter == null) return true;
+                    return t.getStatus() == statusFilter;
+                })
+                .collect(Collectors.toList());
+
+        // Sort: newest (default) / oldest
+        boolean asc = "oldest".equalsIgnoreCase(sort);
+        allFiltered.sort((a, b) -> {
+            if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
+            if (a.getCreatedAt() == null) return 1;
+            if (b.getCreatedAt() == null) return -1;
+            return asc ? a.getCreatedAt().compareTo(b.getCreatedAt()) : b.getCreatedAt().compareTo(a.getCreatedAt());
+        });
+
+        long total = allFiltered.size();
+        int totalPages = (size > 0) ? (int) Math.ceil((double) total / size) : 0;
+        int safePage = Math.max(0, page);
+        int fromIndex = safePage * size;
+        int toIndex = Math.min(fromIndex + size, allFiltered.size());
+
+        List<VocabTopic> pageData = allFiltered.subList(
+                Math.min(fromIndex, allFiltered.size()), toIndex);
+
+        return PageResponse.<VocabTopicResponse>builder()
+                .data(pageData.stream().map(this::toTopicResponse).toList())
+                .page(safePage)
+                .size(size)
+                .totalElements(total)
+                .totalPages(totalPages)
+                .hasNext(safePage + 1 < totalPages)
+                .hasPrevious(safePage > 0)
+                .build();
     }
 
     public VocabTopicResponse getTopic(String topicId) {
@@ -723,6 +781,15 @@ public class VocabService {
         } catch (Exception e) {
             log.error("[VocabService] Failed to parse word list: {}", e.getMessage());
             throw new RuntimeException("Failed to parse AI word list response", e);
+        }
+    }
+
+    private VocabTopicStatus parseStatusFilter(String status) {
+        if (status == null || status.isBlank()) return null;
+        try {
+            return VocabTopicStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            return null;
         }
     }
 

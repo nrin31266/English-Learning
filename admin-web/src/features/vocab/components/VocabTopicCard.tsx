@@ -81,17 +81,11 @@ export default function VocabTopicCard({
         </div>
 
         <div className="flex flex-wrap gap-1">
-          {topic.tags?.slice(0, 3).map((tag: string) => (
+          {topic.tags?.map((tag: string) => (
             <Badge key={tag} variant="outline" className="px-1.5 py-0 text-[11px]">
               {tag}
             </Badge>
           ))}
-
-          {(topic.tags?.length || 0) > 3 && (
-            <Badge variant="secondary" className="px-1.5 py-0 text-[11px]">
-              +{topic.tags.length - 3}
-            </Badge>
-          )}
 
           {(!topic.tags || topic.tags.length === 0) && (
             <span className="text-xs text-muted-foreground">No tags</span>

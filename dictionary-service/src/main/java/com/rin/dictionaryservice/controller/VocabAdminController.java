@@ -3,6 +3,7 @@ package com.rin.dictionaryservice.controller;
 import com.rin.dictionaryservice.dto.*;
 import com.rin.dictionaryservice.service.VocabService;
 import com.rin.englishlearning.common.dto.ApiResponse;
+import com.rin.englishlearning.common.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
@@ -31,9 +32,16 @@ public class VocabAdminController {
     }
 
     @GetMapping("/topics")
-    public ApiResponse<List<VocabTopicResponse>> listTopics() {
-        return ApiResponse.<List<VocabTopicResponse>>builder()
-                .result(vocabService.listTopics())
+    public ApiResponse<PageResponse<VocabTopicResponse>> listTopics(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) List<String> tags,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "newest") String sort
+    ) {
+        return ApiResponse.<PageResponse<VocabTopicResponse>>builder()
+                .result(vocabService.listTopics(q, tags, status, page, size, sort))
                 .build();
     }
 

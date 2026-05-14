@@ -1,10 +1,19 @@
 import handleAPI from "@/apis/handleAPI";
-import type { IAsyncState, IUpdateEntryContextRequest, IVocabSubTopic, IVocabSubTopicProgressEvent, IVocabSubTopicReadyEvent, IVocabSubtopicsGeneratedEvent, IVocabTopic, IVocabWordEntry } from "@/types";
+import type { IAsyncState, IPageResponse, IUpdateEntryContextRequest, IVocabSubTopic, IVocabSubTopicProgressEvent, IVocabSubTopicReadyEvent, IVocabSubtopicsGeneratedEvent, IVocabTopic, IVocabWordEntry } from "@/types";
 import { extractError } from "@/utils/reduxUtils";
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
+interface ITopicsState extends IAsyncState<IVocabTopic[]> {
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
 interface IVocabState {
-  topics: IAsyncState<IVocabTopic[]>;
+  topics: ITopicsState;
   subtopics: IAsyncState<IVocabSubTopic[]>;
   words: IAsyncState<IVocabWordEntry[]>;
   createTopic: IAsyncState<null>;
@@ -18,8 +27,18 @@ const asyncIdle = <T>(data: T): IAsyncState<T> => ({
   error: { code: null, message: null },
 });
 
+const initialTopicsState: ITopicsState = {
+  ...asyncIdle([]),
+  page: 0,
+  size: 12,
+  totalElements: 0,
+  totalPages: 0,
+  hasNext: false,
+  hasPrevious: false,
+};
+
 const initialState: IVocabState = {
-  topics: asyncIdle([]),
+  topics: initialTopicsState,
   subtopics: asyncIdle([]),
   words: asyncIdle([]),
   createTopic: asyncIdle(null),
@@ -82,7 +101,16 @@ const vocabSlice = createSlice({
     builder
       // fetchVocabTopics
       .addCase(fetchVocabTopics.pending, (s) => { s.topics.status = "loading"; })
-      .addCase(fetchVocabTopics.fulfilled, (s, a) => { s.topics.status = "succeeded"; s.topics.data = a.payload; })
+      .addCase(fetchVocabTopics.fulfilled, (s, a) => {
+        s.topics.status = "succeeded";
+        s.topics.data = a.payload.data;
+        s.topics.page = a.payload.page;
+        s.topics.size = a.payload.size;
+        s.topics.totalElements = a.payload.totalElements;
+        s.topics.totalPages = a.payload.totalPages;
+        s.topics.hasNext = a.payload.hasNext;
+        s.topics.hasPrevious = a.payload.hasPrevious;
+      })
       .addCase(fetchVocabTopics.rejected, (s, a) => { s.topics.status = "failed"; s.topics.error = a.payload as any; })
       // createVocabTopic
       .addCase(createVocabTopic.pending, (s) => { s.createTopic.status = "loading"; })
@@ -198,10 +226,36 @@ export default vocabSlice.reducer;
 
 const BASE = "/dictionaries/vocab";
 
-export const fetchVocabTopics = createAsyncThunk("vocab/fetchTopics", async (_, { rejectWithValue }) => {
-  try { return await handleAPI<IVocabTopic[]>({ endpoint: `${BASE}/topics` }); }
-  catch (e) { return rejectWithValue(extractError(e)); }
-});
+export interface IFetchVocabTopicsParams {
+  q?: string;
+  tags?: string[];
+  status?: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+export const fetchVocabTopics = createAsyncThunk(
+  "vocab/fetchTopics",
+  async (params: IFetchVocabTopicsParams | undefined, { rejectWithValue }) => {
+    try {
+      const queryParams: Record<string, any> = {};
+      if (params?.q) queryParams.q = params.q;
+      if (params?.tags && params.tags.length > 0) queryParams.tags = params.tags;
+      if (params?.status) queryParams.status = params.status;
+      queryParams.page = params?.page ?? 0;
+      queryParams.size = params?.size ?? 12;
+      queryParams.sort = params?.sort ?? "newest";
+
+      return await handleAPI<IPageResponse<IVocabTopic>>({
+        endpoint: `${BASE}/topics`,
+        params: queryParams,
+      });
+    } catch (e) {
+      return rejectWithValue(extractError(e));
+    }
+  }
+);
 
 export const createVocabTopic = createAsyncThunk("vocab/createTopic", async (body: object, { rejectWithValue }) => {
   try { return await handleAPI<IVocabTopic>({ endpoint: `${BASE}/topics`, method: "POST", body }); }

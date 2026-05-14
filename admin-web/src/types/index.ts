@@ -68,6 +68,15 @@ export interface IVocabSubTopic {
   createdAt: string;
 }
 
+export interface IVocabTag {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  isActive: boolean;
+  active?: boolean;
+}
+
 export interface IUpdateEntryContextRequest {
   definition: string;
   meaningVi: string;
@@ -207,17 +216,13 @@ export interface IPageableInfo {
 }
 
 export interface IPageResponse<T> {
-  content: T[];
-  pageable: IPageableInfo;
-  last: boolean;
-  totalPages: number;
-  totalElements: number;
+  data: T[];
+  page: number;
   size: number;
-  number: number;
-  first: boolean;
-  numberOfElements: number;
-  sort: ISortInfo;
-  empty: boolean;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 export interface ILessonDto {
