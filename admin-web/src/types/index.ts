@@ -46,6 +46,7 @@ export interface IVocabTopic {
   readySubtopicCount: number;
   status: "DRAFT" | "GENERATING_SUBTOPICS" | "READY_FOR_WORD_GEN" | "PROCESSING" | "READY";
   isActive: boolean;
+  active?: boolean;
   thumbnailUrl?: string;
   publishedAt?: string;
   createdAt: string;
@@ -63,6 +64,7 @@ export interface IVocabSubTopic {
   readyWordCount: number;
   status: "PENDING_WORDS" | "GENERATING_WORDS" | "PROCESSING_WORDS" | "READY";
   isActive: boolean;
+  active?: boolean;
   createdAt: string;
 }
 

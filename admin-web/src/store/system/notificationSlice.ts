@@ -17,6 +17,8 @@ interface INotificationState {
   items: INotification[]
 }
 
+const MAX_NOTIFICATIONS = 3
+
 const initialState: INotificationState = {
   items: [],
 }
@@ -28,6 +30,10 @@ const notificationSlice = createSlice({
     showNotification: {
       reducer(state, action: PayloadAction<INotification>) {
         state.items.push(action.payload)
+        if (state.items.length > MAX_NOTIFICATIONS) {
+          // keep newest 3, drop oldest first
+          state.items = state.items.slice(state.items.length - MAX_NOTIFICATIONS)
+        }
       },
       // cho phép gọi showNotification({ message, variant, ... }) mà không cần tự tạo id
       prepare(

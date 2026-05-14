@@ -28,6 +28,7 @@ const router = createBrowserRouter([
         path: "/",
         element: <HomePage />,
       },
+
       {
         path: "/topics",
         element: withSuspense(<TopicsPage />),

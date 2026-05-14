@@ -1,5 +1,5 @@
 // src/components/notifications/NotificationHost.tsx
-import { use, useEffect } from "react"
+import { useEffect } from "react"
 
 import {
   Alert,
@@ -41,40 +41,6 @@ const getVariantStyles = (variant: NotificationVariant) => {
       }
   }
 }
-const mocks = [
-  {
-    id: '1',
-    title: 'Info Notification',
-    message: 'This is an info notification.',
-    variant: 'info' as NotificationVariant,
-    durationMs: 4000,
-    closable: true,
-  },
-  {
-    id: '2',
-    title: 'Success Notification',
-    message: 'This is a success notification.',
-    variant: 'success' as NotificationVariant,
-    durationMs: 4000,
-    closable: true,
-  },
-  {
-    id: '3',
-    title: 'Warning Notification',
-    message: 'This is a warning notification.',
-    variant: 'warning' as NotificationVariant,
-    durationMs: 4000,
-    closable: true,
-  },
-  {
-    id: '4',
-    title: 'Error Notification',
-    message: 'This is an error notification.',
-    variant: 'error' as NotificationVariant,
-    durationMs: null, // Không auto ẩn
-    closable: true,
-  },
-];
 export const NotificationHost = () => {
   const dispatch = useAppDispatch()
   const items = useAppSelector((state) => state.system.notifications.items)
@@ -91,14 +57,16 @@ export const NotificationHost = () => {
       )
 
     return () => {
-      timers.forEach((t) => { t && clearTimeout(t) })
+      timers.forEach((t) => {
+        if (t) clearTimeout(t)
+      })
     }
   }, [items, dispatch])
 
   if (items.length === 0) return null
 
   return (
-    <div className="pointer-events-none fixed left-1/2 -translate-x-1/2 z-500 flex w-80 flex-col gap-2 top-4 sm:top-6 sm:w-[420px]">
+    <div className="pointer-events-none fixed left-1/2 top-4 z-500 flex w-[92vw] max-w-[520px] -translate-x-1/2 flex-col gap-2 sm:top-6">
       {items.map((n) => {
         const styles = getVariantStyles(n.variant)
 
@@ -107,11 +75,11 @@ export const NotificationHost = () => {
             key={n.id}
             // error dùng destructive, còn lại default
             variant={n.variant === "error" ? "destructive" : "default"}
-            className="pointer-events-auto flex items-start gap-3 border shadow-lg backdrop-blur-sm"
+            className="pointer-events-auto flex items-start gap-3 rounded-lg border bg-background/95 p-3 shadow-lg backdrop-blur-sm"
           >
             {/* Thanh màu bên trái */}
             <div
-              className={`mt-0.5 h-9 w-1 rounded-full ${styles.barClass}`}
+              className={`mt-0.5 h-11 w-1 rounded-full ${styles.barClass}`}
             />
 
             {/* Nội dung */}
@@ -119,11 +87,11 @@ export const NotificationHost = () => {
               <div className="mt-0.5">{styles.icon}</div>
               <div className="flex-1 space-y-1">
                 {n.title && (
-                  <AlertTitle className="text-sm font-semibold">
+                  <AlertTitle className="text-sm font-semibold leading-tight">
                     {n.title}
                   </AlertTitle>
                 )}
-                <AlertDescription className="text-xs leading-snug">
+                <AlertDescription className="text-sm leading-snug text-foreground/85">
                   {n.message}
                 </AlertDescription>
               </div>
@@ -134,9 +102,9 @@ export const NotificationHost = () => {
               <button
                 type="button"
                 onClick={() => dispatch(hideNotification(n.id))}
-                className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] text-muted-foreground hover:bg-muted"
+                className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
               >
-                <X className="h-3 w-3" />
+                <X className="h-4 w-4" />
               </button>
             )}
           </Alert>

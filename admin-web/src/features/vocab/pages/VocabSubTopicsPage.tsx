@@ -35,6 +35,8 @@ import {
   fetchWords,
   generateWords,
   setActiveSubtopicId,
+  toggleTopicActive,
+  toggleSubtopicActive,
   updateSubtopicFromWs,
   updateSubtopicProgress
 } from "@/store/vocab/vocabSlice";
@@ -46,15 +48,15 @@ import type {
 } from "@/types";
 import {
   ArrowLeft,
-  ChevronRight,
+  CheckCircle2,
   Layers3,
   Loader2,
-  Trash2,
-  Wand2
+  Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import VocabWordsDialog from "../components/VocabWordsDialog";
+import VocabActionButton from "../components/VocabActionButton";
 
 const subtopicStatusColor: Record<IVocabSubTopic["status"], string> = {
   PENDING_WORDS: "bg-slate-500",
@@ -83,6 +85,8 @@ export default function VocabSubTopicsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingSubIds, setLoadingSubIds] = useState<Set<string>>(new Set());
+  const [loadingToggleSubIds, setLoadingToggleSubIds] = useState<Set<string>>(new Set());
+  const [togglingTopicActive, setTogglingTopicActive] = useState(false);
 
   // Delete subtopic confirm
   const [deleteConfirm, setDeleteConfirm] = useState<IVocabSubTopic | null>(null);
@@ -90,11 +94,15 @@ export default function VocabSubTopicsPage() {
 
   const { topics, subtopics } = useAppSelector((s) => s.vocab.vocab);
   const topic = topics.data.find((t: IVocabTopic) => t.id === topicId);
+  const isTopicActive = topic ? (topic.isActive ?? topic.active ?? false) : false;
 
   const readySubtopics = topic?.readySubtopicCount ?? 0;
   const totalSubtopics = topic?.subtopicCount ?? subtopics.data.length;
   const topicProgress =
     totalSubtopics > 0 ? Math.round((readySubtopics / totalSubtopics) * 100) : 0;
+  const topicCompleted =
+    (topic?.status === "READY") ||
+    (totalSubtopics > 0 && readySubtopics >= totalSubtopics);
 
   useEffect(() => {
     if (topics.status === "idle") dispatch(fetchVocabTopics());
@@ -175,6 +183,52 @@ export default function VocabSubTopicsPage() {
     setDeleteConfirm(null);
   };
 
+  const handleToggleSubTopic = async (sub: IVocabSubTopic) => {
+    setLoadingToggleSubIds((prev) => new Set([...prev, sub.id]));
+
+    const res = await dispatch(toggleSubtopicActive(sub.id));
+
+    if (toggleSubtopicActive.fulfilled.match(res)) {
+      const isActive = res.payload.isActive ?? res.payload.active ?? false;
+      const next = isActive ? "hiển thị" : "ẩn";
+      dispatch(
+        showNotification({
+          message: `Sub-topic "${res.payload.title}" đã ${next}`,
+          variant: "success",
+        })
+      );
+    } else {
+      dispatch(showNotification({ message: "Cập nhật active thất bại", variant: "error" }));
+    }
+
+    setLoadingToggleSubIds((prev) => {
+      const next = new Set(prev);
+      next.delete(sub.id);
+      return next;
+    });
+  };
+
+  const handleToggleTopicActive = async () => {
+    if (!topic) return;
+
+    setTogglingTopicActive(true);
+    const res = await dispatch(toggleTopicActive(topic.id));
+
+    if (toggleTopicActive.fulfilled.match(res)) {
+      const nextActive = res.payload.isActive ?? res.payload.active ?? false;
+      dispatch(
+        showNotification({
+          message: `Topic "${res.payload.title}" is now ${nextActive ? "active" : "inactive"}`,
+          variant: "success",
+        })
+      );
+    } else {
+      dispatch(showNotification({ message: "Update topic active failed", variant: "error" }));
+    }
+
+    setTogglingTopicActive(false);
+  };
+
 
   return (
     <div className="space-y-4 p-4">
@@ -203,54 +257,65 @@ export default function VocabSubTopicsPage() {
 
       {/* Header */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Layers3 size={18} />
-                <h1 className="truncate text-xl font-bold">
-                  {topic?.title ?? "Sub-topics"}
-                </h1>
-              </div>
+        <CardContent className="space-y-2 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+              <Layers3 size={18} />
+              <h1 className="truncate text-lg font-bold">
+                {topic?.title ?? "Sub-topics"}
+              </h1>
+              {topic?.cefrRange && (
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  {topic.cefrRange}
+                </Badge>
+              )}
+            </div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {topic?.cefrRange && (
-                  <Badge variant="outline" className="text-xs">
-                    {topic.cefrRange}
-                  </Badge>
-                )}
+            <div className="flex shrink-0 items-center gap-2">
+              {topicCompleted && (
+                <Badge className="bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">
+                  <CheckCircle2 size={12} className="mr-1" />
+                  Completed
+                </Badge>
+              )}
+              {topic && (
+                <VocabActionButton
+                  label={isTopicActive ? "Active" : "Inactive"}
+                  loading={togglingTopicActive}
+                  loadingLabel="Saving"
+                  tone={isTopicActive ? "active" : "inactive"}
+                  onClick={handleToggleTopicActive}
+                  disabled={togglingTopicActive}
+                  title={isTopicActive ? "Topic is active" : "Topic is inactive"}
+                />
+              )}
+            </div>
+          </div>
 
-                {topic?.tags?.slice(0, 4).map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-
-                {(topic?.tags?.length || 0) > 4 && (
-                  <Badge variant="secondary" className="text-xs">
-                    +{topic!.tags.length - 4}
-                  </Badge>
-                )}
-              </div>
-
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+              {topic?.tags?.slice(0, 3).map((tag) => (
+                <Badge key={tag} variant="secondary" className="shrink-0 text-xs">
+                  {tag}
+                </Badge>
+              ))}
+              {(topic?.tags?.length || 0) > 3 && (
+                <Badge variant="secondary" className="shrink-0 text-xs">
+                  +{topic!.tags.length - 3}
+                </Badge>
+              )}
               {topic?.description && (
-                <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                <p className="truncate text-sm text-muted-foreground">
                   {topic.description}
                 </p>
               )}
             </div>
 
-            <div className="w-full shrink-0 space-y-2 rounded-lg border bg-muted/30 p-3 lg:w-[320px]">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Topic progress</span>
-                <span className="font-medium">
-                  {readySubtopics}/{totalSubtopics} READY
-                </span>
-              </div>
-
-              <Progress value={topicProgress} className="h-2" />
-
-         
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-sm font-semibold">
+                {readySubtopics}/{totalSubtopics}
+              </span>
+              <Progress value={topicProgress} className="h-1 w-24" />
             </div>
           </div>
         </CardContent>
@@ -283,6 +348,9 @@ export default function VocabSubTopicsPage() {
               {subtopics.data.map((sub: IVocabSubTopic) => {
                 const isAnimating = animatedStatuses.has(sub.status);
                 const isGeneratingThis = loadingSubIds.has(sub.id);
+                const isTogglingThis = loadingToggleSubIds.has(sub.id);
+                const isSubtopicActive = sub.isActive ?? sub.active ?? false;
+                const canToggleSubtopicActive = sub.status === "READY";
                 const wordProgress =
                   sub.wordCount > 0 ? Math.round((sub.readyWordCount / sub.wordCount) * 100) : 0;
                 const hasWords = sub.wordCount > 0;
@@ -350,11 +418,11 @@ export default function VocabSubTopicsPage() {
 
                     <TableCell>
                       <Badge
-                        className={`inline-flex items-center gap-1 whitespace-nowrap text-[11px] text-white ${
+                        className={`inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1 text-sm font-semibold text-white ${
                           subtopicStatusColor[sub.status]
                         } ${isAnimating ? "animate-pulse" : ""}`}
                       >
-                        {isAnimating && <Loader2 size={10} className="animate-spin" />}
+                        {isAnimating && <Loader2 size={12} className="animate-spin" />}
                         {subtopicStatusLabel[sub.status] ?? sub.status}
                       </Badge>
                     </TableCell>
@@ -362,39 +430,51 @@ export default function VocabSubTopicsPage() {
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         {sub.status === "PENDING_WORDS" && (
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8"
+                          <VocabActionButton
+                            label="Generate"
+                            loading={isGeneratingThis}
+                            loadingLabel="Generating"
+                            tone="magic"
                             disabled={loadingSubIds.size > 0}
                             onClick={() => handleGenWords(sub.id)}
-                            title={isGeneratingThis ? "Đang gen từ" : "Gen từ"}
-                          >
-                            {isGeneratingThis ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <Wand2 size={14} />
-                            )}
-                          </Button>
+                            title={isGeneratingThis ? "Generating words" : "Generate words"}
+                          />
                         )}
 
-                        <Button
-                          size="icon"
+                        <VocabActionButton
+                          label="View"
                           variant={hasWords ? "default" : "outline"}
-                          className="h-8 w-8"
-                          // disabled={!hasWords && sub.status === "PENDING_WORDS"}
                           onClick={() => handleViewWords(sub.id)}
-                          title={hasWords ? "Xem từ" : "Chưa có từ"}
-                        >
-                          <ChevronRight size={14} />
-                        </Button>
+                          title={hasWords ? "View words" : "No words yet"}
+                        />
+
+                        <VocabActionButton
+                          label={isSubtopicActive ? "Active" : "Inactive"}
+                          loading={isTogglingThis}
+                          loadingLabel="Saving"
+                          tone={
+                            !canToggleSubtopicActive
+                              ? "inactive"
+                              : isSubtopicActive
+                                ? "active"
+                                : "inactive"
+                          }
+                          className={canToggleSubtopicActive ? "" : "!border-slate-200 !bg-slate-100 !text-slate-400"}
+                          disabled={isTogglingThis || !canToggleSubtopicActive}
+                          onClick={() => handleToggleSubTopic(sub)}
+                          title={
+                            canToggleSubtopicActive
+                              ? (isSubtopicActive ? "Sub-topic is active" : "Sub-topic is inactive")
+                              : "Only READY sub-topics can change state"
+                          }
+                        />
 
                         <Button
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8 text-destructive hover:text-destructive"
                           onClick={() => setDeleteConfirm(sub)}
-                          title="Xóa sub-topic"
+                          title="Delete sub-topic"
                         >
                           <Trash2 size={14} />
                         </Button>

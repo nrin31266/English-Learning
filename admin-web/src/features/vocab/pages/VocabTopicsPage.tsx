@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider";
@@ -12,6 +11,7 @@ import {
   generateSubTopics,
   onSubtopicsGenerated,
   setActiveTopicId,
+  toggleTopicActive,
   updateSubtopicFromWs,
   updateVocabTopic,
 } from "@/store/vocab/vocabSlice";
@@ -20,15 +20,7 @@ import type {
   IVocabSubtopicsGeneratedEvent,
   IVocabTopic,
 } from "@/types";
-import {
-  BookMarked,
-  Layers3,
-  Loader2,
-  Pencil,
-  Plus,
-  RefreshCcw,
-  Trash2,
-} from "lucide-react";
+import { BookMarked, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateVocabTopicDialog, {
@@ -38,6 +30,7 @@ import DeleteVocabTopicDialog from "../components/DeleteVocabTopicDialog";
 import EditVocabTopicDialog, {
   type EditTopicForm,
 } from "../components/EditVocabTopicDialog";
+import VocabTopicCard from "../components/VocabTopicCard";
 
 const statusColor: Record<IVocabTopic["status"], string> = {
   DRAFT: "bg-slate-500",
@@ -78,6 +71,7 @@ export default function VocabTopicsPage() {
   const [creating, setCreating] = useState(false);
 
   const [loadingGenIds, setLoadingGenIds] = useState<Set<string>>(new Set());
+  const [loadingToggleIds, setLoadingToggleIds] = useState<Set<string>>(new Set());
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<IVocabTopic | null>(null);
@@ -93,12 +87,6 @@ export default function VocabTopicsPage() {
 
   const [deleteConfirm, setDeleteConfirm] = useState<IVocabTopic | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  const topicCount = topics.data.length;
-  const readyCount = topics.data.filter((t: IVocabTopic) => t.status === "READY").length;
-  const runningCount = topics.data.filter((t: IVocabTopic) =>
-    runningStatuses.has(t.status)
-  ).length;
 
   useEffect(() => {
     if (topics.status === "idle") dispatch(fetchVocabTopics());
@@ -328,6 +316,31 @@ export default function VocabTopicsPage() {
     setDeleteConfirm(null);
   };
 
+  const handleToggleTopic = async (topic: IVocabTopic) => {
+    setLoadingToggleIds((prev) => new Set([...prev, topic.id]));
+
+    const res = await dispatch(toggleTopicActive(topic.id));
+
+    if (toggleTopicActive.fulfilled.match(res)) {
+      const isActive = res.payload.isActive ?? res.payload.active ?? false;
+      const next = isActive ? "hiển thị" : "ẩn";
+      dispatch(
+        showNotification({
+          message: `Topic "${res.payload.title}" đã ${next}`,
+          variant: "success",
+        })
+      );
+    } else {
+      dispatch(showNotification({ message: "Cập nhật active thất bại", variant: "error" }));
+    }
+
+    setLoadingToggleIds((prev) => {
+      const next = new Set(prev);
+      next.delete(topic.id);
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-5 p-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -343,24 +356,8 @@ export default function VocabTopicsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="rounded-lg border bg-card px-3 py-2 text-sm">
-            <span className="text-muted-foreground">Total </span>
-            <span className="font-semibold">{topicCount}</span>
-          </div>
-
-          <div className="rounded-lg border bg-card px-3 py-2 text-sm">
-            <span className="text-muted-foreground">Ready </span>
-            <span className="font-semibold">{readyCount}</span>
-          </div>
-
-          <div className="rounded-lg border bg-card px-3 py-2 text-sm">
-            <span className="text-muted-foreground">Running </span>
-            <span className="font-semibold">{runningCount}</span>
-          </div>
-
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus size={15} className="mr-1" />
-            New topic
+          <Button className="h-8 px-3 text-xs" onClick={() => setCreateOpen(true)}>
+            Create
           </Button>
         </div>
       </div>
@@ -379,9 +376,8 @@ export default function VocabTopicsPage() {
             <div className="mt-1 text-xs text-muted-foreground">
               Tạo topic đầu tiên để bắt đầu generate sub-topics.
             </div>
-            <Button className="mt-4" onClick={() => setCreateOpen(true)}>
-              <Plus size={15} className="mr-1" />
-              New topic
+            <Button className="mt-4 h-8 px-3 text-xs" onClick={() => setCreateOpen(true)}>
+              Create
             </Button>
           </CardContent>
         </Card>
@@ -390,140 +386,26 @@ export default function VocabTopicsPage() {
       {topics.data.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {topics.data.map((topic: IVocabTopic) => {
-            const hasSubtopics = topic.subtopicCount > 0;
             const isRunning = runningStatuses.has(topic.status);
             const isGeneratingThis = loadingGenIds.has(topic.id);
+            const isTogglingThis = loadingToggleIds.has(topic.id);
 
             return (
-              <Card key={topic.id} className="overflow-hidden transition-shadow hover:shadow-md">
-                <div className="relative h-28 bg-muted">
-                  {topic.thumbnailUrl ? (
-                    <img
-                      src={topic.thumbnailUrl}
-                      alt={topic.title}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <BookMarked size={32} className="text-muted-foreground" />
-                    </div>
-                  )}
-
-                  <div className="absolute left-3 top-3">
-                    <Badge className={`text-white text-[11px] ${statusColor[topic.status]}`}>
-                      {isRunning && <Loader2 size={10} className="mr-1 animate-spin" />}
-                      {statusLabel[topic.status] ?? topic.status}
-                    </Badge>
-                  </div>
-                </div>
-
-                <CardContent className="space-y-3 p-4">
-                  <div className="min-w-0">
-                    <div className="truncate text-base font-semibold" title={topic.title}>
-                      {topic.title}
-                    </div>
-
-                    {topic.description ? (
-                      <div
-                        className="mt-1 line-clamp-2 min-h-[36px] text-xs leading-relaxed text-muted-foreground"
-                        title={topic.description}
-                      >
-                        {topic.description}
-                      </div>
-                    ) : (
-                      <div className="mt-1 min-h-[36px] text-xs text-muted-foreground">
-                        No description
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-1">
-                    {topic.tags?.slice(0, 3).map((tag: string) => (
-                      <Badge key={tag} variant="outline" className="px-1.5 py-0 text-[11px]">
-                        {tag}
-                      </Badge>
-                    ))}
-
-                    {(topic.tags?.length || 0) > 3 && (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-[11px]">
-                        +{topic.tags.length - 3}
-                      </Badge>
-                    )}
-
-                    {(!topic.tags || topic.tags.length === 0) && (
-                      <span className="text-xs text-muted-foreground">No tags</span>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-md bg-muted/60 px-2 py-2">
-                      <div className="text-muted-foreground">CEFR</div>
-                      <div className="mt-0.5 font-medium">{topic.cefrRange || "—"}</div>
-                    </div>
-
-                    <div className="rounded-md bg-muted/60 px-2 py-2">
-                      <div className="text-muted-foreground">Sub</div>
-                      <div className="mt-0.5 font-medium">
-                        {hasSubtopics ? `${topic.readySubtopicCount}/${topic.subtopicCount}` : "—"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <div className="flex items-center gap-1">
-                      {topic.status === "DRAFT" && topic.subtopicCount === 0 && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={loadingGenIds.size > 0}
-                          onClick={() => handleGenSubtopics(topic.id)}
-                          title={isGeneratingThis ? "Đang gen sub-topics" : "Gen sub-topics"}
-                        >
-                          {isGeneratingThis ? (
-                            <Loader2 size={14} className="mr-1 animate-spin" />
-                          ) : (
-                            <RefreshCcw size={14} className="mr-1" />
-                          )}
-                          Gen
-                        </Button>
-                      )}
-
-                      <Button
-                        size="sm"
-                        variant={hasSubtopics ? "default" : "outline"}
-                        disabled={!hasSubtopics}
-                        onClick={() => handleViewSubtopics(topic.id)}
-                        title={hasSubtopics ? "Xem sub-topics" : "Chưa có sub-topics"}
-                      >
-                        <Layers3 size={14} className="mr-1" />
-                        Open
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => handleOpenEdit(topic)}
-                        title="Sửa topic"
-                      >
-                        <Pencil size={14} />
-                      </Button>
-
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteConfirm(topic)}
-                        title="Xóa topic"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <VocabTopicCard
+                key={topic.id}
+                topic={topic}
+                statusColor={statusColor}
+                statusLabel={statusLabel}
+                isRunning={isRunning}
+                isGenerating={isGeneratingThis}
+                isToggling={isTogglingThis}
+                isBusyGeneratingAny={loadingGenIds.size > 0}
+                onGenerate={handleGenSubtopics}
+                onOpen={handleViewSubtopics}
+                onToggle={handleToggleTopic}
+                onEdit={handleOpenEdit}
+                onDelete={setDeleteConfirm}
+              />
             );
           })}
         </div>

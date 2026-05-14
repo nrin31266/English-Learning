@@ -1,5 +1,4 @@
 // src/features/vocab/components/VocabWordsDialog.tsx
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,17 +17,10 @@ import {
   generateSingleMeaningSync,
 } from "@/store/vocab/vocabSlice";
 import type { IWordDefinition, IVocabSubTopic, IVocabWordEntry } from "@/types";
-import {
-  CheckCircle2,
-  Clock,
-  Loader2,
-  Pencil,
-  RefreshCw,
-  Sparkles,
-  Trash2,
-  Volume2,
-} from "lucide-react";
+import { Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
+import VocabWordCard from "./VocabWordCard";
+import VocabWordContextDialog from "./VocabWordContextDialog";
 
 interface Props {
   open: boolean;
@@ -57,6 +49,9 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
 
   const readyCount = subtopic?.readyWordCount ?? words.data.filter((w) => w.wordReady).length;
   const totalCount = subtopic?.wordCount ?? words.data.length;
+  const subtopicTitleEn = subtopic?.title?.trim() || "Words";
+  const subtopicTitleVi = subtopic?.titleVi?.trim() || "Chưa có tiêu đề tiếng Việt";
+  const editingEntry = words.data.find((w) => w.id === editEntryId) ?? null;
 
   const handleReload = async () => {
     if (!activeSubtopicId) return;
@@ -184,24 +179,31 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
           showCloseButton
         >
           <DialogHeader className="shrink-0">
+            <DialogTitle className="sr-only">Sub-topic words</DialogTitle>
             <div className="flex flex-col gap-3 pr-8 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <DialogTitle className="truncate text-lg">
-                  {subtopic?.title ?? "Words"}
-                </DialogTitle>
-
-                <DialogDescription className="line-clamp-2">
-                  {subtopic?.titleVi && <span>{subtopic.titleVi} — </span>}
-                  <span>
-                    {readyCount}/{totalCount} từ đã sẵn sàng
-                  </span>
+              <div className="min-w-0 space-y-1">
+                <div className="text-lg font-semibold">Words</div>
+                <DialogDescription className="space-y-1 text-sm">
+                  <div className="truncate">
+                    <span className="font-semibold text-foreground">EN:</span>{" "}
+                    <span className="text-foreground">{subtopicTitleEn}</span>
+                  </div>
+                  <div className="line-clamp-2">
+                    <span className="font-semibold text-foreground">VI:</span>{" "}
+                    <span>{subtopicTitleVi}</span>
+                  </div>
+                  <div className="text-xs">
+                    Ready <span className="font-semibold">{readyCount}</span> /{" "}
+                    <span className="font-semibold">{totalCount}</span>
+                  </div>
                 </DialogDescription>
               </div>
 
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="outline"
+                  
                   disabled={reloading || !activeSubtopicId}
                   onClick={handleReload}
                   title="Reload danh sách từ"
@@ -211,7 +213,7 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
                   ) : (
                     <RefreshCw size={14} className="mr-1" />
                   )}
-                  Reload
+
                 </Button>
 
                 {subtopic && words.data.length > 0 && (
@@ -244,170 +246,20 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
 
             <div className="grid grid-cols-[repeat(auto-fit,minmax(380px,1fr))] gap-3">
               {words.data.map((entry: IVocabWordEntry) => {
-                const hasContext =
-                  entry.contextDefinition ||
-                  entry.contextMeaningVi ||
-                  entry.contextExample ||
-                  entry.contextViExample;
-
                 const displayWord = getWordDisplay(entry);
                 const audioUrl = getUsAudioUrl(entry);
                 const isPlaying = playingId === entry.id;
 
                 return (
-                  <div
+                  <VocabWordCard
                     key={entry.id}
-                    className="h-fit min-w-0 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/30"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span
-                            className="truncate text-base font-semibold"
-                            title={displayWord}
-                          >
-                            {displayWord}
-                          </span>
-
-                          <Badge variant="outline" className="shrink-0 text-xs">
-                            {entry.pos}
-                          </Badge>
-
-                          {entry.wordReady ? (
-                            <CheckCircle2 size={16} className="shrink-0 text-green-500" />
-                          ) : (
-                            <Clock size={16} className="shrink-0 text-orange-400" />
-                          )}
-                        </div>
-
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            #{entry.order + 1}
-                          </span>
-
-                          {entry.wordDetail?.phonetics?.us && (
-                            <span className="text-xs text-muted-foreground">
-                              {entry.wordDetail.phonetics.us}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-8 w-8 shrink-0"
-                        disabled={!audioUrl || isPlaying}
-                        onClick={() => handlePlayUsAudio(entry)}
-                        title={audioUrl ? "Phát audio US" : "Chưa có audio US"}
-                      >
-                        {isPlaying ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Volume2 size={14} />
-                        )}
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 shrink-0 px-2 text-muted-foreground hover:text-foreground"
-                        onClick={() => setEditEntryId(entry.id)}
-                        title="Sửa ngữ cảnh"
-                      >
-                        <Pencil size={14} className="mr-1" />
-                        Sửa ngữ cảnh
-                      </Button>
-                    </div>
-
-                    <div className="mt-3 space-y-2">
-                      {hasContext && (
-                        <div className="space-y-1.5 border-l-2 border-blue-400 pl-3">
-                          {entry.contextMeaningVi && (
-                            <div className="text-sm font-medium text-blue-700 dark:text-blue-400">
-                              {entry.contextMeaningVi}
-                            </div>
-                          )}
-
-                          {entry.contextDefinition && (
-                            <div className="text-xs leading-relaxed text-muted-foreground">
-                              {entry.contextDefinition}
-                            </div>
-                          )}
-
-                          {entry.contextExample && (
-                            <div className="text-sm italic leading-relaxed text-muted-foreground">
-                              “{entry.contextExample}”
-                            </div>
-                          )}
-
-                          {entry.contextViExample && (
-                            <div className="text-sm italic leading-relaxed text-muted-foreground">
-                              “{entry.contextViExample}”
-                            </div>
-                          )}
-
-                          {entry.contextLevel && (
-                            <Badge variant="secondary" className="text-[11px]">
-                              {entry.contextLevel}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-
-                      {entry.wordDetail && (
-                        <div
-                          className={`space-y-1 border-l-2 pl-3 ${
-                            hasContext ? "border-muted opacity-70" : "border-green-400"
-                          }`}
-                        >
-                          <div className="flex flex-wrap items-center gap-2">
-                            {entry.wordDetail.cefrLevel && (
-                              <Badge variant="secondary" className="text-[11px]">
-                                {entry.wordDetail.cefrLevel}
-                              </Badge>
-                            )}
-
-                            {entry.wordDetail.summaryVi && (
-                              <span className="text-sm font-medium">
-                                {entry.wordDetail.summaryVi}
-                              </span>
-                            )}
-                          </div>
-
-                          {!hasContext && entry.wordDetail.definitions?.[0] && (
-                            <>
-                              <div className="text-xs leading-relaxed text-muted-foreground">
-                                {entry.wordDetail.definitions[0].definition}
-                              </div>
-
-                              <div className="text-xs leading-relaxed text-muted-foreground">
-                                {entry.wordDetail.definitions[0].meaningVi}
-                              </div>
-
-                              {entry.wordDetail.definitions[0].example && (
-                                <div className="text-sm italic leading-relaxed text-muted-foreground">
-                                  “{entry.wordDetail.definitions[0].example}”
-                                </div>
-                              )}
-
-                              {entry.wordDetail.definitions[0].viExample && (
-                                <div className="text-sm italic leading-relaxed text-muted-foreground">
-                                  “{entry.wordDetail.definitions[0].viExample}”
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                      {!entry.wordDetail && !hasContext && (
-                        <div className="pl-1 text-xs italic text-muted-foreground">
-                          {entry.wordReady ? "Đã tra cứu" : "Đang chờ tra cứu…"}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    entry={entry}
+                    displayWord={displayWord}
+                    isPlaying={isPlaying}
+                    audioAvailable={!!audioUrl}
+                    onPlayAudio={() => handlePlayUsAudio(entry)}
+                    onOpenContext={() => setEditEntryId(entry.id)}
+                  />
                 );
               })}
             </div>
@@ -421,110 +273,16 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
         </DialogContent>
       </Dialog>
 
-      {/* ─── EDIT CONTEXT DIALOG ─────────────────────────────────────────── */}
-      <Dialog open={!!editEntryId} onOpenChange={(v) => !v && setEditEntryId(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          {(() => {
-            const entry = words.data.find((w) => w.id === editEntryId);
-            if (!entry) return null;
-            const defs = entry.wordDetail?.definitions ?? [];
-            const isGenerating = generatingId === entry.id;
-            return (
-              <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <span className="truncate">Sửa ngữ cảnh — {getWordDisplay(entry)}</span>
-                    <Badge variant="outline">{entry.pos}</Badge>
-                  </DialogTitle>
-                  <DialogDescription>
-                    Chọn một nghĩa có sẵn hoặc yêu cầu AI tạo nghĩa mới phù hợp ngữ cảnh.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="mt-4 space-y-4">
-                  {/* Existing definitions */}
-                  {defs.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-muted-foreground">
-                        Các nghĩa có sẵn ({defs.length})
-                      </h4>
-                      {defs.map((def, idx) => (
-                        <div
-                          key={idx}
-                          className="rounded-md border bg-card p-3 space-y-1.5"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
-                              {def.meaningVi && (
-                                <div className="text-sm font-medium">{def.meaningVi}</div>
-                              )}
-                              <div className="text-xs leading-relaxed text-muted-foreground">
-                                {def.definition}
-                              </div>
-                              {def.example && (
-                                <div className="text-xs italic text-muted-foreground">
-                                  “{def.example}”
-                                </div>
-                              )}
-                              {def.viExample && (
-                                <div className="text-xs italic text-muted-foreground">
-                                  “{def.viExample}”
-                                </div>
-                              )}
-                              {def.level && (
-                                <Badge variant="secondary" className="text-[11px]">
-                                  {def.level}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => handlePickDefinition(entry.id, def)}
-                          >
-                            <CheckCircle2 size={14} className="mr-1" />
-                            Chọn nghĩa này
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {defs.length === 0 && (
-                    <div className="text-center text-sm text-muted-foreground">
-                      Không có nghĩa nào được tra cứu. Bạn có thể yêu cầu AI tạo nghĩa mới.
-                    </div>
-                  )}
-
-                  {/* AI generate button */}
-                  <div className="border-t pt-4">
-                    <Button
-                      size="sm"
-                      className="w-full"
-                      disabled={isGenerating}
-                      onClick={() => handleGenerateMeaning(entry.id)}
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 size={14} className="mr-1 animate-spin" />
-                          Đang sinh nghĩa qua AI…
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles size={14} className="mr-1" />
-                          ✨ Generate Contextual Meaning via AI
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      <VocabWordContextDialog
+        open={!!editEntryId}
+        entry={editingEntry}
+        isGenerating={!!(editingEntry && generatingId === editingEntry.id)}
+        onOpenChange={(v) => {
+          if (!v) setEditEntryId(null);
+        }}
+        onPickDefinition={handlePickDefinition}
+        onGenerateMeaning={handleGenerateMeaning}
+      />
 
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent>
