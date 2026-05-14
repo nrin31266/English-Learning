@@ -1,5 +1,5 @@
 import {
-  BookA,
+  BookMarked,
   Menu,
   Notebook,
   Library,
@@ -9,7 +9,7 @@ import {
   Trophy,
   MessageCircle,
   Newspaper,
-  type LucideIcon // 👉 Thêm dòng này để lấy type của Icon
+  type LucideIcon
 } from "lucide-react"
 import * as React from "react"
 import { Link, useLocation } from "react-router-dom"
@@ -40,7 +40,7 @@ const HeadNav = () => {
 
   const NAV_LINKS: NavItem[] = [
     { name: t("header.playlists"), path: "/topics", icon: Notebook },
-    { name: t("header.dictionary"), path: "/dictionary", icon: BookA },
+    { name: t("header.dictionary"), path: "/vocab/topics", icon: BookMarked },
     {
       name: t("header.practice"),
       icon: Library,

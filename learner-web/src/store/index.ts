@@ -8,12 +8,15 @@ import topicsReducer from './topicsSlide';
 import topicReducer from './topicSlide';
 import lessonForShadowingReducer from './lessonForShadowingSlide';
 import lessonForDictationReducer from './lessonForDictationSlide'; 
+import vocabReducer from './vocabSlide';
+
 const rootReducer = combineReducers({
   system: systemReducer,
   topics: topicsReducer,
   topic: topicReducer,
   lessonForShadowing: lessonForShadowingReducer,
   lessonForDictation: lessonForDictationReducer,
+  vocab: vocabReducer,
 });
 
 

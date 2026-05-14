@@ -327,3 +327,71 @@ export interface IPageResponse<T> {
   sort: ISortInfo;
   empty: boolean;
 }
+
+// ── Vocab types (dictionary-service) ─────────────────────────────────────
+
+export interface IVocabTopic {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  cefrRange: string;
+  estimatedWordCount: number;
+  subtopicCount: number;
+  readySubtopicCount: number;
+  status: "DRAFT" | "GENERATING_SUBTOPICS" | "READY_FOR_WORD_GEN" | "PROCESSING" | "READY";
+  isActive: boolean;
+  active?: boolean;
+  thumbnailUrl?: string;
+  publishedAt?: string;
+  createdAt: string;
+}
+
+export interface IVocabSubTopic {
+  id: string;
+  topicId: string;
+  title: string;
+  titleVi: string;
+  description: string;
+  cefrLevel: string;
+  order: number;
+  wordCount: number;
+  readyWordCount: number;
+  status: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface IVocabWordEntry {
+  id: string;
+  subtopicId: string;
+  topicId: string;
+  wordKey: string;
+  wordText: string;
+  pos: string;
+  order: number;
+  wordReady: boolean;
+  note?: string;
+  contextDefinition?: string;
+  contextMeaningVi?: string;
+  contextExample?: string;
+  contextViExample?: string;
+  contextLevel?: string;
+  wordDetail?: unknown;
+}
+
+export interface IVocabTag {
+  name: string;
+  count: number;
+}
+
+/** Matches the custom PageResponse returned by dictionary-service */
+export interface IVocabPageResponse<T> {
+  data: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}

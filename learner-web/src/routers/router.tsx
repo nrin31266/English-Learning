@@ -7,6 +7,7 @@ import { createBrowserRouter } from "react-router-dom"
 const HomePage = lazy(() => import('@/features/home/HomePage'))
 const TopicsPage = lazy(() => import('@/features/topic/pages/Topics'))
 const TopicsDetailsPage = lazy(() => import('@/features/topic/pages/TopicDetails'))
+const VocabTopicsPage = lazy(() => import('@/features/vocab/pages/VocabTopicsPage'))
 const ShadowingModePage = lazy(() => import('@/features/learnshadowing/pages/ShadowingMode'))
 const DictationModePage = lazy(() => import('@/features/learndictation/pages/DictationMode'))
 const DictionaryPage = () => <div>Dictionary Page</div>
@@ -36,6 +37,10 @@ const router = createBrowserRouter([
       {
         path: "/topics/:slug",
         element: withSuspense(<TopicsDetailsPage />),
+      },
+      {
+        path: "/vocab/topics",
+        element: withSuspense(<VocabTopicsPage />),
       },
       {
         path: "/learn/lessons/:id/:slug/shadowing",
