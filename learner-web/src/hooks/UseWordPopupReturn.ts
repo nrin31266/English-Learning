@@ -38,13 +38,13 @@ export const useWordPopup = (): UseWordPopupReturn => {
           text: word.wordText || word.wordNormalized || "",
           context: context,
           isFallback: true,
-          posTag: word.posTag,
+          posTag: word.posTag || "NOUN",
           entityType: word.entityType,
           lemma: word.lemma,
         }
       });
       setWordData(res);
-    } catch (e) {
+    } catch {
       setWordData(null);
     } finally {
       setLoadingWordData(false);

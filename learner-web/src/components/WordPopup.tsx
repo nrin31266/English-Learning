@@ -52,6 +52,16 @@ const WordPopup = ({
     if (anchorEl) refs.setReference(anchorEl)
   }, [anchorEl, refs])
 
+  const handleClose = useCallback(() => {
+    setIsExiting(true)
+    setIsVisible(false)
+
+    closeTimeoutRef.current = setTimeout(() => {
+      onClose()
+      setIsExiting(false)
+    }, 120)
+  }, [onClose])
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -75,17 +85,7 @@ const WordPopup = ({
       document.removeEventListener("mousedown", handleClickOutside)
       document.removeEventListener("keydown", handleEsc)
     }
-  }, [anchorEl])
-
-  const handleClose = () => {
-    setIsExiting(true)
-    setIsVisible(false)
-
-    closeTimeoutRef.current = setTimeout(() => {
-      onClose()
-      setIsExiting(false)
-    }, 120)
-  }
+  }, [anchorEl, handleClose])
 
   const handlePlayUk = useCallback(() => {
     const now = Date.now()
@@ -190,8 +190,9 @@ const WordPopup = ({
   const isReadyOrFallback = wordData?.status === "READY" || wordData?.status === "FALLBACK"
   const showContent = isReadyOrFallback && !isLoading
 
-  const cambridgeLink = wordData?.word || word?.wordText
-    ? `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent((wordData?.word || word?.wordText || "").toLowerCase())}`
+  const normalizedWord = (wordData?.word || word?.wordText || word?.wordNormalized || "").trim()
+  const cambridgeLink = normalizedWord
+    ? `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(normalizedWord.toLowerCase())}`
     : null
 
   useEffect(() => {
@@ -237,11 +238,11 @@ const WordPopup = ({
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-lg font-semibold text-primary">
-                {wordData?.word || word.wordText}
+                {wordData?.word || word.wordText || word.wordNormalized}
               </p>
-              {wordData?.pos && (
+              {(wordData?.pos || word.posTag) && (
                 <span className="uppercase text-xs text-muted-foreground">
-                  {wordData.pos}
+                  {wordData?.pos || word.posTag}
                 </span>
               )}
               {wordData?.cefrLevel && (
@@ -336,10 +337,12 @@ const WordPopup = ({
           <div className="max-h-64 overflow-y-auto space-y-3 pr-1">
             {wordData.definitions.map((def, i) => (
               <div key={i} className="border-l-2 border-primary/30 pl-3">
-                <p className="text-sm font-medium">{def.definition}</p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {def.meaningVi}
-                </p>
+                {def.definition && <p className="text-sm font-medium">{def.definition}</p>}
+                {def.meaningVi && (
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {def.meaningVi}
+                  </p>
+                )}
                 {def.example && (
                   <p className="text-xs italic text-muted-foreground mt-1">
                     "{def.example}"
