@@ -224,7 +224,7 @@ const vocabSlice = createSlice({
 export const { setActiveTopicId, setActiveSubtopicId, updateSubtopicFromWs, onSubtopicsGenerated, updateSubtopicProgress } = vocabSlice.actions;
 export default vocabSlice.reducer;
 
-const BASE = "/dictionaries/vocab";
+const BASE = "/dictionaries/admin/vocab";
 
 export interface IFetchVocabTopicsParams {
   q?: string;

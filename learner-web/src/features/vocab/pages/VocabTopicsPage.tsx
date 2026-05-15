@@ -194,14 +194,14 @@ export default function VocabTopicsPage() {
   const isLoading = status === "loading";
 
   return (
-    <div className="mx-auto w-full space-y-6 px-4 py-8 lg:px-8 h-[calc(100vh-8vh)]">
+    <div className="mx-auto min-h-[calc(100vh-8vh)] w-full space-y-6 px-4 py-8 lg:px-8">
       {/* Header */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <BookMarked className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Vocabulary</h1>
+          <BookMarked className="h-7 w-7 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight">Vocabulary</h1>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Browse vocabulary topics and start learning new words.
         </p>
       </div>
@@ -209,7 +209,7 @@ export default function VocabTopicsPage() {
       {/* Filters bar */}
       <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
         {/* Search with icon */}
-        <div className="relative w-full lg:w-64">
+        <div className="relative w-full lg:w-72">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
           <Input
             value={searchInput}
@@ -218,13 +218,13 @@ export default function VocabTopicsPage() {
               setPage(0);
             }}
             placeholder="Search topics..."
-            className="h-10 pl-10 text-sm"
+            className="h-11 pl-10 text-base"
           />
         </div>
 
         {/* Sort */}
         <Select value={sort} onValueChange={handleSortChange}>
-          <SelectTrigger className="h-10 w-[130px] text-xs">
+          <SelectTrigger className="h-11 w-[150px] text-sm">
             <SelectValue placeholder="Sort" />
           </SelectTrigger>
           <SelectContent>
@@ -238,18 +238,18 @@ export default function VocabTopicsPage() {
           <Button
             size="icon"
             variant={viewMode === "card" ? "default" : "ghost"}
-            className="h-8 w-8"
+            className="h-9 w-9"
             onClick={() => setViewMode("card")}
           >
-            <LayoutGrid size={15} />
+            <LayoutGrid size={16} />
           </Button>
           <Button
             size="icon"
             variant={viewMode === "list" ? "default" : "ghost"}
-            className="h-8 w-8"
+            className="h-9 w-9"
             onClick={() => setViewMode("list")}
           >
-            <List size={15} />
+            <List size={16} />
           </Button>
         </div>
 
@@ -356,7 +356,7 @@ export default function VocabTopicsPage() {
 
       {/* Results count */}
       {!isLoading && data.length > 0 && (
-        <div className="text-xs text-muted-foreground">
+        <div className="text-sm font-medium text-muted-foreground">
           {totalElements} topic{totalElements !== 1 ? "s" : ""}
           {totalPages > 1 && ` — Page ${currentPage + 1}/${totalPages}`}
         </div>

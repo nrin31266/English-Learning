@@ -404,7 +404,7 @@ export default function VocabTopicsPage() {
 
       const baseUrl = import.meta.env.VITE_GATEWAY_URL || "";
       const resp = await fetch(
-        `${baseUrl}/dictionaries/vocab/topics/${editingTopic.id}/upload-image`,
+        `${baseUrl}/dictionaries/admin/vocab/topics/${editingTopic.id}/upload-image`,
         {
           method: "POST",
           body: formData,

@@ -1,8 +1,10 @@
 import handleAPI from "@/apis/handleAPI";
-import type { IVocabSubTopic, IVocabWordEntry } from "@/types";
+import type { IVocabSubTopic, IVocabTopic, IVocabWordEntry } from "@/types";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 interface IVocabDetailState {
+  topic: IVocabTopic | null;
+  topicStatus: "idle" | "loading" | "succeeded" | "failed";
   subtopics: IVocabSubTopic[];
   subtopicsStatus: "idle" | "loading" | "succeeded" | "failed";
   words: IVocabWordEntry[];
@@ -11,12 +13,28 @@ interface IVocabDetailState {
 }
 
 const initialState: IVocabDetailState = {
+  topic: null,
+  topicStatus: "idle",
   subtopics: [],
   subtopicsStatus: "idle",
   words: [],
   wordsStatus: "idle",
   activeSubtopicId: null,
 };
+
+export const fetchTopicDetail = createAsyncThunk(
+  "vocabDetail/fetchTopicDetail",
+  async (topicId: string, { rejectWithValue }) => {
+    try {
+      return await handleAPI<IVocabTopic>({
+        endpoint: `/dictionaries/vocab/topics/${topicId}`,
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      return rejectWithValue(msg);
+    }
+  }
+);
 
 export const fetchSubTopics = createAsyncThunk(
   "vocabDetail/fetchSubTopics",
@@ -61,6 +79,8 @@ const vocabDetailSlide = createSlice({
       state.activeSubtopicId = action.payload;
     },
     clearDetail(state) {
+      state.topic = null;
+      state.topicStatus = "idle";
       state.subtopics = [];
       state.subtopicsStatus = "idle";
       state.words = [];
@@ -70,6 +90,12 @@ const vocabDetailSlide = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchTopicDetail.pending, (s) => { s.topicStatus = "loading"; })
+      .addCase(fetchTopicDetail.fulfilled, (s, a) => {
+        s.topicStatus = "succeeded";
+        s.topic = a.payload;
+      })
+      .addCase(fetchTopicDetail.rejected, (s) => { s.topicStatus = "failed"; })
       .addCase(fetchSubTopics.pending, (s) => { s.subtopicsStatus = "loading"; })
       .addCase(fetchSubTopics.fulfilled, (s, a) => {
         s.subtopicsStatus = "succeeded";

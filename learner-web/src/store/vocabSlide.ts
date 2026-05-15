@@ -41,6 +41,7 @@ export const fetchVocabTopics = createAsyncThunk(
       if (params?.q) queryParams.q = params.q;
       if (params?.tags && params.tags.length > 0) queryParams.tags = params.tags;
       if (params?.status) queryParams.status = params.status;
+      queryParams.activeOnly = true;
       queryParams.page = params?.page ?? 0;
       queryParams.size = params?.size ?? 12;
       queryParams.sort = params?.sort ?? "newest";

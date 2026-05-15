@@ -16,7 +16,7 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/vocab")
+@RequestMapping("/admin/vocab")
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class VocabAdminController {
 
