@@ -1,4 +1,3 @@
-// src/features/vocab/components/VocabWordsDialog.tsx
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { showNotification } from "@/store/system/notificationSlice";
 import {
@@ -50,52 +50,36 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
   const readyCount = subtopic?.readyWordCount ?? words.data.filter((w) => w.wordReady).length;
   const totalCount = subtopic?.wordCount ?? words.data.length;
   const subtopicTitleEn = subtopic?.title?.trim() || "Words";
-  const subtopicTitleVi = subtopic?.titleVi?.trim() || "Chưa có tiêu đề tiếng Việt";
+  const subtopicTitleVi = subtopic?.titleVi?.trim() || "";
   const editingEntry = words.data.find((w) => w.id === editEntryId) ?? null;
 
   const handleReload = async () => {
     if (!activeSubtopicId) return;
-
     setReloading(true);
     const res = await dispatch(fetchWords(activeSubtopicId));
-
     if (fetchWords.fulfilled.match(res)) {
       dispatch(showNotification({ message: "Đã reload danh sách từ", variant: "success" }));
     } else {
       dispatch(showNotification({ message: "Reload danh sách từ thất bại", variant: "error" }));
     }
-
     setReloading(false);
   };
 
   const handleDeleteAllWords = async () => {
     if (!activeSubtopicId) return;
-
     setDeletingAll(true);
-
     const res = await dispatch(deleteAllWordsInSubTopic(activeSubtopicId));
-
     if (deleteAllWordsInSubTopic.fulfilled.match(res)) {
-      dispatch(
-        showNotification({
-          message: `Đã xóa tất cả từ trong "${subtopic?.title ?? activeSubtopicId}"`,
-          variant: "success",
-        })
-      );
-
+      dispatch(showNotification({ message: `Đã xóa tất cả từ`, variant: "success" }));
       dispatch(fetchWords(activeSubtopicId));
       setDeleteConfirmOpen(false);
     } else {
       dispatch(showNotification({ message: "Xóa từ thất bại", variant: "error" }));
     }
-
     setDeletingAll(false);
   };
 
-  const handlePickDefinition = async (
-    entryId: string,
-    def: IWordDefinition
-  ) => {
+  const handlePickDefinition = async (entryId: string, def: IWordDefinition) => {
     const res = await dispatch(
       updateEntryContextManual({
         entryId,
@@ -131,120 +115,92 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
   const handlePlayUsAudio = async (entry: IVocabWordEntry) => {
     const audioUrl = getUsAudioUrl(entry);
     const word = getWordDisplay(entry);
-
     if (!audioUrl) {
-      dispatch(
-        showNotification({
-          message: `Chưa có audio US cho "${word}"`,
-          variant: "warning",
-        })
-      );
+      dispatch(showNotification({ message: `Chưa có audio US cho "${word}"`, variant: "warning" }));
       return;
     }
-
     try {
       setPlayingId(entry.id);
-
       const audio = new Audio(audioUrl);
-
       audio.onended = () => setPlayingId(null);
-
       audio.onerror = () => {
         setPlayingId(null);
-        dispatch(
-          showNotification({
-            message: `Không phát được audio US cho "${word}"`,
-            variant: "error",
-          })
-        );
+        dispatch(showNotification({ message: `Không phát được audio`, variant: "error" }));
       };
-
       await audio.play();
     } catch {
       setPlayingId(null);
-      dispatch(
-        showNotification({
-          message: `Không phát được audio US cho "${word}"`,
-          variant: "error",
-        })
-      );
+      dispatch(showNotification({ message: `Không phát được audio`, variant: "error" }));
     }
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-        <DialogContent
-          className="!w-[98vw] !max-w-[1600px] h-[92vh] max-h-[92vh] overflow-hidden flex flex-col p-5"
-          showCloseButton
-        >
+        <DialogContent className="!h-[92vh] !w-[98vw] !max-w-[1600px] overflow-hidden border-border/60 p-3">
           <DialogHeader className="shrink-0">
             <DialogTitle className="sr-only">Sub-topic words</DialogTitle>
-            <div className="flex flex-col gap-3 pr-8 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0 space-y-1">
-                <div className="text-lg font-semibold">Words</div>
-                <DialogDescription className="space-y-1 text-sm">
-                  <div className="truncate">
-                    <span className="font-semibold text-foreground">EN:</span>{" "}
-                    <span className="text-foreground">{subtopicTitleEn}</span>
-                  </div>
-                  <div className="line-clamp-2">
-                    <span className="font-semibold text-foreground">VI:</span>{" "}
-                    <span>{subtopicTitleVi}</span>
-                  </div>
-                  <div className="text-xs">
-                    Ready <span className="font-semibold">{readyCount}</span> /{" "}
-                    <span className="font-semibold">{totalCount}</span>
-                  </div>
-                </DialogDescription>
+            
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="truncate text-lg font-semibold">{subtopicTitleEn}</h2>
+                  {subtopic?.cefrLevel && (
+                    <Badge variant="outline" className="shrink-0 px-2 py-0.5 text-xs">{subtopic.cefrLevel}</Badge>
+                  )}
+                  <Badge variant="outline" className="shrink-0 px-2 py-0.5 text-xs font-medium">
+                    {readyCount}/{totalCount} Ready
+                  </Badge>
+                </div>
+                {subtopicTitleVi && (
+                  <p className="truncate text-sm text-muted-foreground">{subtopicTitleVi}</p>
+                )}
+                {subtopic?.description && (
+                  <p className="line-clamp-1 text-xs text-muted-foreground">{subtopic.description}</p>
+                )}
               </div>
 
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <Button
                   size="icon"
-                  variant="outline"
-                  
+                  variant="ghost"
+                  className="h-8 w-8"
                   disabled={reloading || !activeSubtopicId}
                   onClick={handleReload}
-                  title="Reload danh sách từ"
                 >
-                  {reloading ? (
-                    <Loader2 size={14} className="mr-1 animate-spin" />
-                  ) : (
-                    <RefreshCw size={14} className="mr-1" />
-                  )}
-
+                  <RefreshCw size={14} className={reloading ? "animate-spin" : ""} />
                 </Button>
 
                 {subtopic && words.data.length > 0 && (
                   <Button
                     size="sm"
-                    variant="destructive"
+                    variant="ghost"
+                    className="h-8 text-destructive hover:text-destructive"
                     disabled={deletingAll}
                     onClick={() => setDeleteConfirmOpen(true)}
                   >
                     <Trash2 size={14} className="mr-1" />
-                    Xóa tất cả
+                    Delete all
                   </Button>
                 )}
               </div>
             </div>
           </DialogHeader>
 
-          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-2">
-            {words.status === "loading" && (
-              <div className="flex justify-center py-10">
-                <Loader2 className="animate-spin" />
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+            {words.status === "loading" && words.data.length === 0 && (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             )}
 
             {words.status !== "loading" && words.data.length === 0 && (
-              <div className="py-12 text-center text-sm text-muted-foreground">
+              <div className="py-16 text-center text-sm text-muted-foreground">
                 Chưa có từ nào trong sub-topic này.
               </div>
             )}
 
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(380px,1fr))] gap-3">
+            <div className="grid auto-rows-fr gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {words.data.map((entry: IVocabWordEntry) => {
                 const displayWord = getWordDisplay(entry);
                 const audioUrl = getUsAudioUrl(entry);
@@ -266,7 +222,7 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
           </div>
 
           <DialogFooter className="mt-3 shrink-0">
-            <Button variant="outline" onClick={onClose}>
+            <Button size="sm" variant="outline" className="h-8" onClick={onClose}>
               Đóng
             </Button>
           </DialogFooter>
@@ -288,7 +244,6 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Xác nhận xóa tất cả từ</DialogTitle>
-
             <DialogDescription>
               Bạn có chắc muốn xóa tất cả{" "}
               <strong>{subtopic?.wordCount ?? words.data.length}</strong> từ trong sub-topic{" "}
@@ -298,31 +253,15 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
               </span>
             </DialogDescription>
           </DialogHeader>
-
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmOpen(false)}
-              disabled={deletingAll}
-            >
+            <Button variant="outline" size="sm" onClick={() => setDeleteConfirmOpen(false)} disabled={deletingAll}>
               Hủy
             </Button>
-
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAllWords}
-              disabled={deletingAll}
-            >
+            <Button variant="destructive" size="sm" onClick={handleDeleteAllWords} disabled={deletingAll}>
               {deletingAll ? (
-                <>
-                  <Loader2 size={14} className="mr-1 animate-spin" />
-                  Đang xóa...
-                </>
+                <><Loader2 size={12} className="mr-1 animate-spin" /> Đang xóa...</>
               ) : (
-                <>
-                  <Trash2 size={14} className="mr-1" />
-                  Xóa tất cả
-                </>
+                <><Trash2 size={12} className="mr-1" /> Xóa tất cả</>
               )}
             </Button>
           </DialogFooter>

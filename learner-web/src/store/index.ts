@@ -9,6 +9,7 @@ import topicReducer from './topicSlide';
 import lessonForShadowingReducer from './lessonForShadowingSlide';
 import lessonForDictationReducer from './lessonForDictationSlide'; 
 import vocabReducer from './vocabSlide';
+import vocabDetailReducer from './vocabDetailSlide';
 
 const rootReducer = combineReducers({
   system: systemReducer,
@@ -17,6 +18,7 @@ const rootReducer = combineReducers({
   lessonForShadowing: lessonForShadowingReducer,
   lessonForDictation: lessonForDictationReducer,
   vocab: vocabReducer,
+  vocabDetail: vocabDetailReducer,
 });
 
 

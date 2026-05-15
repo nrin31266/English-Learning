@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { IVocabTopic } from "@/types";
 import { BookMarked, Loader2, Trash2 } from "lucide-react";
-import VocabActionButton from "./VocabActionButton";
+
 
 interface VocabTopicCardProps {
   topic: IVocabTopic;
@@ -108,41 +108,53 @@ export default function VocabTopicCard({
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
           {topic.status === "DRAFT" && topic.subtopicCount === 0 && (
-            <VocabActionButton
-              label="Generate"
-              loading={isGenerating}
-              loadingLabel="Generating"
-              tone="magic"
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 bg-violet-600 text-white hover:bg-violet-700"
               disabled={isBusyGeneratingAny}
               onClick={() => onGenerate(topic.id)}
               title={isGenerating ? "Generating sub-topics" : "Generate sub-topics"}
-            />
+            >
+              {isGenerating && <Loader2 size={14} className="animate-spin" />}
+              {isGenerating ? "Generating" : "Generate"}
+            </Button>
           )}
 
-          <VocabActionButton
-            label="Open"
+          <Button
+            size="sm"
             variant={hasSubtopics ? "default" : "outline"}
             disabled={!hasSubtopics}
             onClick={() => onOpen(topic.id)}
             title={hasSubtopics ? "Open sub-topics" : "No sub-topics yet"}
-          />
+            className="h-8"
+          >
+            Open
+          </Button>
 
-          <VocabActionButton
-            label={isTopicActive ? "Active" : "Inactive"}
-            loading={isToggling}
-            loadingLabel="Saving"
-            tone={isTopicActive ? "active" : "inactive"}
+          <Button
+            size="sm"
             onClick={() => onToggle(topic)}
             disabled={isToggling}
             title={isTopicActive ? "Topic is active" : "Topic is inactive"}
-          />
+            className={`h-8 gap-1.5 ${
+              isTopicActive
+                ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                : "bg-muted text-foreground hover:bg-muted/80"
+            }`}
+          >
+            {isToggling && <Loader2 size={14} className="animate-spin" />}
+            {isToggling ? "Saving" : isTopicActive ? "Active" : "Inactive"}
+          </Button>
 
-          <VocabActionButton
-            label="Edit"
+          <Button
+            size="sm"
             variant="ghost"
             onClick={() => onEdit(topic)}
             title="Edit topic"
-          />
+            className="h-8"
+          >
+            Edit
+          </Button>
 
           <Button
             size="icon"

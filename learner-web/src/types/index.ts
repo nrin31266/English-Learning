@@ -359,6 +359,7 @@ export interface IVocabSubTopic {
   readyWordCount: number;
   status: string;
   isActive: boolean;
+  active?: boolean;
   createdAt: string;
 }
 

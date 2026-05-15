@@ -77,10 +77,13 @@ public class VocabAdminController {
 
     // ─── SUBTOPICS ───────────────────────────────────────────────────────────
 
-    @GetMapping("/topics/{topicId}/subtopics")
-    public ApiResponse<List<VocabSubTopicResponse>> listSubTopics(@PathVariable String topicId) {
+        @GetMapping("/topics/{topicId}/subtopics")
+        public ApiResponse<List<VocabSubTopicResponse>> listSubTopics(
+            @PathVariable String topicId,
+            @RequestParam(name = "activeOnly", defaultValue = "false") boolean activeOnly
+        ) {
         return ApiResponse.<List<VocabSubTopicResponse>>builder()
-                .result(vocabService.listSubTopics(topicId))
+            .result(vocabService.listSubTopics(topicId, activeOnly))
                 .build();
     }
 

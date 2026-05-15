@@ -14,6 +14,7 @@ public class SingleMeaningRequest {
     @JsonProperty("word") String word;
     @JsonProperty("pos") String pos;
     @JsonProperty("topic_title") String topicTitle;
+    @JsonProperty("topic_description") String topicDescription;
     @JsonProperty("subtopic_title") String subtopicTitle;
     @JsonProperty("subtopic_description") String subtopicDescription;
 }

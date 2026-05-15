@@ -1,19 +1,26 @@
 package com.rin.dictionaryservice.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rin.dictionaryservice.constant.VocabSubTopicStatus;
 import com.rin.dictionaryservice.constant.VocabTopicStatus;
-import com.rin.englishlearning.common.dto.PageResponse;
-import org.springframework.data.domain.Sort;import com.rin.dictionaryservice.constant.WordCreationStatus;
+import com.rin.dictionaryservice.constant.WordCreationStatus;
 import com.rin.dictionaryservice.dto.*;
+import com.rin.dictionaryservice.dto.ai.AiSingleMeaningPayload;
+import com.rin.dictionaryservice.dto.ai.AiSubtopicItem;
+import com.rin.dictionaryservice.dto.ai.AiSubtopicsPayload;
+import com.rin.dictionaryservice.dto.ai.AiWordItem;
+import com.rin.dictionaryservice.dto.ai.AiWordsPayload;
+import com.rin.dictionaryservice.exception.DictionaryErrorCode;
 import com.rin.dictionaryservice.kafka.KafkaProducer;
 import com.rin.dictionaryservice.model.*;
-import com.rin.dictionaryservice.repository.httpclient.LanguageProcessingClient;
 import com.rin.dictionaryservice.repository.*;
+import com.rin.dictionaryservice.repository.httpclient.LanguageProcessingClient;
+import com.rin.dictionaryservice.service.support.VocabAiResponseParser;
+import com.rin.dictionaryservice.service.support.VocabContextScoringHelper;
+import com.rin.englishlearning.common.dto.PageResponse;
 import com.rin.englishlearning.common.event.VocabSubTopicProgressEvent;
 import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
 import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
+import com.rin.englishlearning.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +38,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -50,6 +58,8 @@ public class VocabService {
     KafkaProducer kafkaProducer;
     MongoTemplate mongoTemplate;
     RestTemplate restTemplate;
+    VocabAiResponseParser aiResponseParser;
+    VocabContextScoringHelper scoringHelper;
 
     @lombok.experimental.NonFinal
     @org.springframework.beans.factory.annotation.Value("${language-processing.worker-key}")
@@ -58,9 +68,6 @@ public class VocabService {
     @lombok.experimental.NonFinal
     @org.springframework.beans.factory.annotation.Value("${language-processing.url}")
     String lpsBaseUrl;
-
-    ObjectMapper objectMapper = new ObjectMapper();
-
 
     // ─── TOPIC CRUD ──────────────────────────────────────────────────────────
 
@@ -79,8 +86,7 @@ public class VocabService {
     }
 
     public VocabTopicResponse updateTopic(String topicId, UpdateVocabTopicRequest req) {
-        VocabTopic topic = topicRepo.findById(topicId)
-                .orElseThrow(() -> new RuntimeException("Topic not found: " + topicId));
+        VocabTopic topic = getTopicOrThrow(topicId);
         if (req.getTitle() != null) topic.setTitle(req.getTitle());
         if (req.getDescription() != null) topic.setDescription(req.getDescription());
         if (req.getTags() != null) topic.setTags(req.getTags());
@@ -93,7 +99,7 @@ public class VocabService {
 
     public void deleteTopic(String topicId) {
         if (!topicRepo.existsById(topicId)) {
-            throw new RuntimeException("Topic not found: " + topicId);
+            throw topicNotFound(topicId);
         }
         // Cascade delete: sub-topics and word entries for this topic
         subtopicRepo.deleteByTopicId(topicId);
@@ -167,15 +173,13 @@ public class VocabService {
     }
 
     public VocabTopicResponse getTopic(String topicId) {
-        return toTopicResponse(topicRepo.findById(topicId)
-                .orElseThrow(() -> new RuntimeException("Topic not found: " + topicId)));
+        return toTopicResponse(getTopicOrThrow(topicId));
     }
 
     // ─── GENERATE SUBTOPICS ──────────────────────────────────────────────────
 
     public VocabTopicResponse acceptGenerateSubTopics(String topicId) {
-        VocabTopic topic = topicRepo.findById(topicId)
-                .orElseThrow(() -> new RuntimeException("Topic not found: " + topicId));
+        VocabTopic topic = getTopicOrThrow(topicId);
         if (topic.getSubtopicCount() > 0) {
             subtopicRepo.deleteByTopicId(topicId);
             topic.setSubtopicCount(0);
@@ -190,8 +194,7 @@ public class VocabService {
     @Async
     public CompletableFuture<Void> generateSubTopicsAsync(String topicId) {
         try {
-            VocabTopic topic = topicRepo.findById(topicId)
-                    .orElseThrow(() -> new RuntimeException("Topic not found: " + topicId));
+            VocabTopic topic = getTopicOrThrow(topicId);
             int n = Math.max(1, topic.getEstimatedWordCount() / 20);
             log.info("[VocabTopic] Async generating {} subtopics for: {}", n, topicId);
             AiGenerateResponse aiResp = lpsClient.genSubtopics(workerKey,
@@ -199,16 +202,17 @@ public class VocabService {
                             topic.getDescription() != null ? topic.getDescription() : "",
                             topic.getCefrRange(), n,
                             topic.getTags() != null ? topic.getTags() : List.of()));
-            String aiJson = serializeAiResult(aiResp);
+            String aiJson = aiResponseParser.serializeResult(aiResp);
+            AiSubtopicsPayload payload = aiResponseParser.parseSubtopicsPayload(aiJson);
 
             // Parse AI-generated topic description and map it back to the topic
-            String aiDescription = parseTopicDescription(aiJson);
+            String aiDescription = parseTopicDescription(payload);
             if (aiDescription != null && !aiDescription.isBlank()) {
                 topic.setDescription(aiDescription);
                 log.info("[VocabTopic] AI-generated description for {}: {}", topicId, aiDescription);
             }
 
-            List<VocabSubTopic> subtopics = parseSubTopics(topicId, aiJson);
+            List<VocabSubTopic> subtopics = parseSubTopics(topicId, payload);
             subtopicRepo.saveAll(subtopics);
             topic.setSubtopicCount(subtopics.size());
             topic.setStatus(VocabTopicStatus.READY_FOR_WORD_GEN);
@@ -230,16 +234,17 @@ public class VocabService {
         return CompletableFuture.completedFuture(null);
     }
 
-    public List<VocabSubTopicResponse> listSubTopics(String topicId) {
-        return subtopicRepo.findAllByTopicIdOrderByOrder(topicId)
-                .stream().map(this::toSubTopicResponse).toList();
+    public List<VocabSubTopicResponse> listSubTopics(String topicId, boolean activeOnly) {
+        List<VocabSubTopic> subtopics = activeOnly
+                ? subtopicRepo.findAllByTopicIdAndIsActiveTrueOrderByOrder(topicId)
+                : subtopicRepo.findAllByTopicIdOrderByOrder(topicId);
+        return subtopics.stream().map(this::toSubTopicResponse).toList();
     }
 
     // ─── GENERATE WORDS ──────────────────────────────────────────────────────
 
     public VocabSubTopicResponse acceptGenerateWords(String subtopicId) {
-        VocabSubTopic subtopic = subtopicRepo.findById(subtopicId)
-                .orElseThrow(() -> new RuntimeException("SubTopic not found: " + subtopicId));
+        VocabSubTopic subtopic = getSubtopicOrThrow(subtopicId);
         if (subtopic.getWordCount() > 0) {
             log.warn("[VocabSubTopic] Already has words, skipping: {}", subtopicId);
             return toSubTopicResponse(subtopic);
@@ -253,20 +258,19 @@ public class VocabService {
     @Async
     public CompletableFuture<Void> generateWordsAsync(String subtopicId) {
         try {
-            VocabSubTopic subtopic = subtopicRepo.findById(subtopicId)
-                    .orElseThrow(() -> new RuntimeException("SubTopic not found: " + subtopicId));
-            VocabTopic topic = topicRepo.findById(subtopic.getTopicId())
-                    .orElseThrow(() -> new RuntimeException("Topic not found"));
+            VocabSubTopic subtopic = getSubtopicOrThrow(subtopicId);
+            VocabTopic topic = getTopicOrThrow(subtopic.getTopicId());
 
             log.info("[VocabSubTopic] Async generating words for: {}", subtopicId);
             
             AiGenerateResponse aiResp = lpsClient.genWords(workerKey,
                     new VocabGenWordsRequest(topic.getTitle(), subtopic.getTitle(),
                             subtopic.getDescription() != null ? subtopic.getDescription() : "",
-                            subtopic.getCefrLevel() != null ? subtopic.getCefrLevel().name() : "B1",
+                            subtopic.getCefrLevel() != null ? subtopic.getCefrLevel().name() : DEFAULT_CEFR_LEVEL.name(),
                             List.of())); 
 
-            List<Map<String, String>> aiWords = parseWordList(serializeAiResult(aiResp));
+            String aiJson = aiResponseParser.serializeResult(aiResp);
+            List<Map<String, String>> aiWords = parseWordList(aiResponseParser.parseWordsPayload(aiJson));
             List<VocabWordEntry> entries = new ArrayList<>();
             int readyCount = 0;
             int order = 0;
@@ -289,7 +293,7 @@ public class VocabService {
                         .replaceAll("_+", "_")
                         .replaceAll("^_|_$", "");
 
-                String pos = aiWord.getOrDefault("pos", "NOUN").trim().toUpperCase();
+                String pos = aiWord.getOrDefault("pos", DEFAULT_POS).trim().toUpperCase();
 
                 if (wordKey.isBlank()) continue;
 
@@ -320,7 +324,7 @@ public class VocabService {
                         wordReady = true;
                         readyCount++;
 
-                        Word.Definition matchedDef = selectDefinition(w, subtopic);
+                        Word.Definition matchedDef = scoringHelper.selectDefinition(w, topic, subtopic);
                         ctxDef = matchedDef.getDefinition();
                         ctxMean = matchedDef.getMeaningVi();
                         ctxEx = matchedDef.getExample();
@@ -424,8 +428,7 @@ public class VocabService {
     // ─── DELETE / RECALCULATE ────────────────────────────────────────────────
 
     public void deleteAllWordsInSubTopic(String subtopicId) {
-        VocabSubTopic subtopic = subtopicRepo.findById(subtopicId)
-                .orElseThrow(() -> new RuntimeException("SubTopic not found: " + subtopicId));
+        VocabSubTopic subtopic = getSubtopicOrThrow(subtopicId);
         String topicId = subtopic.getTopicId();
 
         // Delete all word entries belonging to this subtopic
@@ -455,8 +458,7 @@ public class VocabService {
     }
 
     public void deleteSubTopic(String subtopicId) {
-        VocabSubTopic subtopic = subtopicRepo.findById(subtopicId)
-                .orElseThrow(() -> new RuntimeException("SubTopic not found: " + subtopicId));
+        VocabSubTopic subtopic = getSubtopicOrThrow(subtopicId);
         String topicId = subtopic.getTopicId();
 
         // Delete all word entries belonging to this subtopic
@@ -484,18 +486,32 @@ public class VocabService {
     // ─── TOGGLE ACTIVE ───────────────────────────────────────────────────────
 
     public VocabTopicResponse toggleTopicActive(String topicId) {
-        VocabTopic topic = topicRepo.findById(topicId)
-                .orElseThrow(() -> new RuntimeException("Topic not found: " + topicId));
-        topic.setActive(!topic.isActive());
+        VocabTopic topic = getTopicOrThrow(topicId);
+
+        boolean nextActive = !topic.isActive();
+        if (nextActive && (
+                topic.getStatus() == VocabTopicStatus.DRAFT ||
+                topic.getStatus() == VocabTopicStatus.GENERATING_SUBTOPICS ||
+                topic.getSubtopicCount() == 0
+        )) {
+            throw new BaseException(DictionaryErrorCode.TOPIC_NOT_READY);
+        }
+
+        topic.setActive(nextActive);
         topicRepo.save(topic);
         log.info("[VocabTopic] Toggled isActive to {} for: {}", topic.isActive(), topicId);
         return toTopicResponse(topic);
     }
 
     public VocabSubTopicResponse toggleSubtopicActive(String subtopicId) {
-        VocabSubTopic subtopic = subtopicRepo.findById(subtopicId)
-                .orElseThrow(() -> new RuntimeException("SubTopic not found: " + subtopicId));
-        subtopic.setActive(!subtopic.isActive());
+        VocabSubTopic subtopic = getSubtopicOrThrow(subtopicId);
+
+        boolean nextActive = !subtopic.isActive();
+        if (nextActive && subtopic.getStatus() != VocabSubTopicStatus.READY) {
+            throw new BaseException(DictionaryErrorCode.SUBTOPIC_NOT_READY);
+        }
+
+        subtopic.setActive(nextActive);
         subtopicRepo.save(subtopic);
         log.info("[VocabSubTopic] Toggled isActive to {} for: {}", subtopic.isActive(), subtopicId);
         return toSubTopicResponse(subtopic);
@@ -504,8 +520,7 @@ public class VocabService {
     // ─── HUMAN-IN-THE-LOOP: MANUAL OVERRIDE & SYNC GENERATION ──────────────
 
     public VocabWordEntryResponse updateEntryContextManual(String entryId, UpdateEntryContextRequest req) {
-        VocabWordEntry entry = wordEntryRepo.findById(entryId)
-                .orElseThrow(() -> new RuntimeException("Word entry not found: " + entryId));
+        VocabWordEntry entry = getWordEntryOrThrow(entryId);
         entry.setContextDefinition(req.getDefinition());
         entry.setContextMeaningVi(req.getMeaningVi());
         entry.setContextExample(req.getExample());
@@ -518,17 +533,18 @@ public class VocabService {
     }
 
     public VocabWordEntryResponse generateSingleMeaningSync(String entryId) {
-        VocabWordEntry entry = wordEntryRepo.findById(entryId)
-                .orElseThrow(() -> new RuntimeException("Word entry not found: " + entryId));
-        VocabTopic topic = topicRepo.findById(entry.getTopicId())
-                .orElseThrow(() -> new RuntimeException("Topic not found: " + entry.getTopicId()));
-        VocabSubTopic subtopic = subtopicRepo.findById(entry.getSubtopicId())
-                .orElseThrow(() -> new RuntimeException("SubTopic not found: " + entry.getSubtopicId()));
+        VocabWordEntry entry = getWordEntryOrThrow(entryId);
+        VocabTopic topic = getTopicOrThrow(entry.getTopicId());
+        VocabSubTopic subtopic = getSubtopicOrThrow(entry.getSubtopicId());
+
+        String promptWord = entry.getWordText() != null && !entry.getWordText().isBlank()
+                ? entry.getWordText()
+                : entry.getWordKey().replace('_', ' ');
 
         log.info("[VocabWordEntry] Sync generating single meaning for entry: {}", entryId);
         AiGenerateResponse aiResp = lpsClient.generateSingleMeaning(workerKey,
-                new SingleMeaningRequest(entry.getWordKey(), entry.getPos(),
-                        topic.getTitle(), subtopic.getTitle(),
+                new SingleMeaningRequest(promptWord, entry.getPos(),
+                        topic.getTitle(), topic.getDescription(), subtopic.getTitle(),
                         subtopic.getDescription() != null ? subtopic.getDescription() : ""));
 
         Word.Definition newDef = parseSingleMeaningResult(aiResp);
@@ -537,9 +553,10 @@ public class VocabService {
         if (word == null) {
             word = Word.builder()
                     .id(wordId)
-                    .text(entry.getWordText() != null ? entry.getWordText() : entry.getWordKey().replace('_', ' '))
+                    .text(promptWord)
                     .key(entry.getWordKey())
                     .pos(entry.getPos())
+                    .status(WordCreationStatus.READY)
                     .context(subtopic.getDescription())
                     .definitions(new ArrayList<>())
                     .build();
@@ -547,10 +564,14 @@ public class VocabService {
         if (word.getDefinitions() == null) {
             word.setDefinitions(new ArrayList<>());
         }
-        word.getDefinitions().add(newDef);
+        if (!scoringHelper.containsSameDefinition(word.getDefinitions(), newDef)) {
+            word.getDefinitions().add(newDef);
+        }
+        word.setText(promptWord);
         word.setContext(subtopic.getDescription());
+        word.setStatus(WordCreationStatus.READY);
         wordRepository.save(word);
-        log.info("[VocabWordEntry] Appended new definition to word: {}", wordId);
+        log.info("[VocabWordEntry] Upserted contextual definition for word: {}", wordId);
 
         entry.setWordReady(true);
         entry.setWordText(word.getText());
@@ -566,19 +587,14 @@ public class VocabService {
     }
 
     private Word.Definition parseSingleMeaningResult(AiGenerateResponse aiResp) {
-        try {
-            String json = objectMapper.writeValueAsString(aiResp.getResult());
-            JsonNode node = objectMapper.readTree(json);
-            return Word.Definition.builder()
-                    .definition(node.path("definition").asText(""))
-                    .meaningVi(node.path("meaning_vi").asText(""))
-                    .example(node.path("example").asText(""))
-                    .viExample(node.path("vi_example").asText(""))
-                    .level(parseCefrLevel(node.path("level").asText("B1")))
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse single meaning AI result", e);
-        }
+        AiSingleMeaningPayload payload = aiResponseParser.parseSingleMeaningPayload(aiResp);
+        return Word.Definition.builder()
+                .definition(safe(payload.definition()))
+                .meaningVi(safe(payload.meaningVi()))
+                .example(safe(payload.example()))
+                .viExample(safe(payload.viExample()))
+                .level(parseCefrLevel(payload.level()))
+                .build();
     }
 
     private VocabWordEntryResponse buildSingleWordEntryResponse(VocabWordEntry entry) {
@@ -629,13 +645,17 @@ public class VocabService {
             Map<String, Object> respBody = response.getBody();
             String url = respBody != null ? (String) respBody.get("url") : null;
             if (url == null || url.isEmpty()) {
-                throw new RuntimeException("Upload response missing 'url' field: " + respBody);
+                throw new BaseException(DictionaryErrorCode.IMAGE_UPLOAD_RESPONSE_INVALID,
+                        String.format(DictionaryErrorCode.IMAGE_UPLOAD_RESPONSE_INVALID.getMessage() + ": %s", respBody));
             }
             log.info("[VocabTopic] Image uploaded: {}", url);
             return url;
+        } catch (BaseException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[VocabTopic] Image upload failed: {}", e.getMessage(), e);
-            throw new RuntimeException("Image upload failed: " + e.getMessage(), e);
+            throw new BaseException(DictionaryErrorCode.IMAGE_UPLOAD_FAILED,
+                    String.format("%s: %s", DictionaryErrorCode.IMAGE_UPLOAD_FAILED.getMessage(), e.getMessage()));
         }
     }
 
@@ -678,7 +698,8 @@ public class VocabService {
 
             // Lấy Subtopic tương ứng của Entry để biết target CEFR Level
             VocabSubTopic subtopic = subtopicRepo.findById(entry.getSubtopicId()).orElse(null);
-            Word.Definition matchedDef = selectDefinition(word, subtopic);
+            VocabTopic topic = topicRepo.findById(entry.getTopicId()).orElse(null);
+            Word.Definition matchedDef = scoringHelper.selectDefinition(word, topic, subtopic);
 
             // 4. Lưu Cache thẳng vào Entry
             entry.setWordReady(true);
@@ -729,59 +750,40 @@ public class VocabService {
                 .build());
     }
 
-    // ─── AI CALL HELPER ──────────────────────────────────────────────────────
-
-    private String serializeAiResult(AiGenerateResponse resp) {
-        try {
-            return objectMapper.writeValueAsString(resp.getResult());
-        } catch (Exception e) {
-            log.error("[VocabService] Failed to serialize AI result: {}", e.getMessage());
-            throw new RuntimeException("AI result serialization failed", e);
-        }
-    }
-
     // ─── PARSERS ─────────────────────────────────────────────────────────────
 
-    private List<VocabSubTopic> parseSubTopics(String topicId, String json) {
-        try {
-            JsonNode root = objectMapper.readTree(json);
-            JsonNode arr = root.path("subtopics");
-            List<VocabSubTopic> result = new ArrayList<>();
-            int order = 0;
-            for (JsonNode node : arr) {
-                CefrLevel level = parseCefrLevel(node.path("cefrLevel").asText("B1"));
-                result.add(VocabSubTopic.builder()
-                        .topicId(topicId)
-                        .title(node.path("title").asText())
-                        .titleVi(node.path("titleVi").asText())
-                        .description(node.path("description").asText())
-                        .cefrLevel(level)
-                        .order(order++)
-                        .build());
-            }
-            return result;
-        } catch (Exception e) {
-            log.error("[VocabService] Failed to parse subtopics: {}", e.getMessage());
-            throw new RuntimeException("Failed to parse AI subtopic response", e);
+    private List<VocabSubTopic> parseSubTopics(String topicId, AiSubtopicsPayload payload) {
+        List<VocabSubTopic> result = new ArrayList<>();
+        List<AiSubtopicItem> aiItems = payload.subtopics() != null ? payload.subtopics() : List.of();
+
+        int order = 0;
+        for (AiSubtopicItem item : aiItems) {
+            result.add(VocabSubTopic.builder()
+                    .topicId(topicId)
+                    .title(safe(item.title()))
+                    .titleVi(safe(item.titleVi()))
+                    .description(safe(item.description()))
+                    .cefrLevel(parseCefrLevel(item.cefrLevel()))
+                    .order(order++)
+                    .build());
         }
+        return result;
     }
 
-    private List<Map<String, String>> parseWordList(String json) {
-        try {
-            JsonNode root = objectMapper.readTree(json);
-            JsonNode arr = root.path("words");
-            List<Map<String, String>> result = new ArrayList<>();
-            for (JsonNode node : arr) {
-                result.add(Map.of(
-                        "word", node.path("word").asText(""),
-                        "pos", node.path("pos").asText("NOUN")
-                ));
-            }
-            return result;
-        } catch (Exception e) {
-            log.error("[VocabService] Failed to parse word list: {}", e.getMessage());
-            throw new RuntimeException("Failed to parse AI word list response", e);
+    private List<Map<String, String>> parseWordList(AiWordsPayload payload) {
+        List<Map<String, String>> result = new ArrayList<>();
+        List<AiWordItem> words = payload.words() != null ? payload.words() : List.of();
+
+        for (AiWordItem item : words) {
+            String word = safe(item.word());
+            if (word.isBlank()) continue;
+
+            result.add(Map.of(
+                    "word", word,
+                    "pos", normalizePos(item.pos())
+            ));
         }
+        return result;
     }
 
     private VocabTopicStatus parseStatusFilter(String status) {
@@ -797,22 +799,13 @@ public class VocabService {
         try {
             return CefrLevel.valueOf(raw.toUpperCase().trim());
         } catch (Exception e) {
-            return CefrLevel.B1;
+            return DEFAULT_CEFR_LEVEL;
         }
     }
 
-    private String parseTopicDescription(String json) {
-        try {
-            JsonNode root = objectMapper.readTree(json);
-            JsonNode desc = root.path("topic_description");
-            if (!desc.isMissingNode() && !desc.asText("").isBlank()) {
-                return desc.asText().trim();
-            }
-            return null;
-        } catch (Exception e) {
-            log.warn("[VocabService] Could not parse topic_description from AI response: {}", e.getMessage());
-            return null;
-        }
+    private String parseTopicDescription(AiSubtopicsPayload payload) {
+        String description = safe(payload.topicDescription());
+        return description.isBlank() ? null : description;
     }
 
     // ─── RESPONSE BUILDERS ───────────────────────────────────────────────────
@@ -859,39 +852,50 @@ public class VocabService {
         }).toList();
     }
 
-    private Word.Definition selectDefinition(Word word, VocabSubTopic subtopic) {
-        if (word.getDefinitions() == null || word.getDefinitions().isEmpty()) {
-            return Word.Definition.builder().definition("").meaningVi("").example("").viExample("").build();
-        }
-
-        // 1. NẾU LÀ TỪ ĐƯỢC AI TẠO RIÊNG CHO BÀI NÀY -> Lấy chính xác nghĩa số 0 (Đã được AI đo ni đóng giày)
-        if (subtopic != null && subtopic.getDescription() != null
-                && subtopic.getDescription().equals(word.getContext())) {
-            return word.getDefinitions().get(0);
-        }
-
-        // 2. NẾU LÀ TỪ DÙNG LẠI (TỪ BÀI KHÁC) -> Lọc theo Level và Random để tạo sự đa dạng
-        CefrLevel targetLevel = subtopic != null ? subtopic.getCefrLevel() : null;
-
-        if (targetLevel != null) {
-            List<Word.Definition> matchingDefs = word.getDefinitions().stream()
-                    .filter(def -> def.getLevel() == targetLevel)
-                    .toList();
-
-            if (!matchingDefs.isEmpty()) {
-                // Có nhiều nghĩa cùng Level -> Bốc Random
-                if (matchingDefs.size() > 1) {
-                    int randomIndex = new java.util.Random().nextInt(matchingDefs.size());
-                    return matchingDefs.get(randomIndex);
-                }
-                return matchingDefs.get(0); // Chỉ có 1 nghĩa thì lấy luôn
-            }
-        }
-
-        // 3. Fallback: Nếu không có level nào khớp, bốc random toàn bộ các nghĩa để học đa dạng
-        int randomFallback = new java.util.Random().nextInt(word.getDefinitions().size());
-        return word.getDefinitions().get(randomFallback);
+    private String normalizePos(String raw) {
+        if (raw == null || raw.isBlank()) return DEFAULT_POS;
+        return raw.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
     }
+
+    private String safe(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private VocabTopic getTopicOrThrow(String topicId) {
+        return topicRepo.findById(topicId).orElseThrow(() -> topicNotFound(topicId));
+    }
+
+    private VocabSubTopic getSubtopicOrThrow(String subtopicId) {
+        return subtopicRepo.findById(subtopicId).orElseThrow(() -> subtopicNotFound(subtopicId));
+    }
+
+    private VocabWordEntry getWordEntryOrThrow(String entryId) {
+        return wordEntryRepo.findById(entryId).orElseThrow(() -> wordEntryNotFound(entryId));
+    }
+
+    private BaseException topicNotFound(String topicId) {
+        return new BaseException(
+                DictionaryErrorCode.TOPIC_NOT_FOUND,
+                String.format(DictionaryErrorCode.TOPIC_NOT_FOUND.getMessage(), topicId)
+        );
+    }
+
+    private BaseException subtopicNotFound(String subtopicId) {
+        return new BaseException(
+                DictionaryErrorCode.SUBTOPIC_NOT_FOUND,
+                String.format(DictionaryErrorCode.SUBTOPIC_NOT_FOUND.getMessage(), subtopicId)
+        );
+    }
+
+    private BaseException wordEntryNotFound(String entryId) {
+        return new BaseException(
+                DictionaryErrorCode.WORD_ENTRY_NOT_FOUND,
+                String.format(DictionaryErrorCode.WORD_ENTRY_NOT_FOUND.getMessage(), entryId)
+        );
+    }
+
+    private static final CefrLevel DEFAULT_CEFR_LEVEL = CefrLevel.B1;
+    private static final String DEFAULT_POS = "NOUN";
 
     private VocabTopicResponse toTopicResponse(VocabTopic t) {
         return VocabTopicResponse.builder()

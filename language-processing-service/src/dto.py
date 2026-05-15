@@ -205,6 +205,7 @@ class SingleMeaningRequest(BaseModel):
     word: str
     pos: str
     topic_title: str
+    topic_description: str = ""
     subtopic_title: str
     subtopic_description: str
 

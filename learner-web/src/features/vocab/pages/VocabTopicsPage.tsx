@@ -25,10 +25,12 @@ import {
   type IFetchVocabTopicsParams,
 } from "@/store/vocabSlide";
 import type { IVocabTopic } from "@/types";
-import { BookMarked, LayoutGrid, List, Loader2, X, ChevronRight, Search } from "lucide-react";
+import { BookMarked, LayoutGrid, List, X, Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VocabTopicCard from "../components/VocabTopicCard";
+import VocabTopicListCard from "../components/VocabTopicListCard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function VocabTopicsPage() {
   const dispatch = useAppDispatch();
@@ -49,8 +51,10 @@ export default function VocabTopicsPage() {
   const [showAllTags, setShowAllTags] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFirstMount = useRef(true);
-  const prevSearchInput = useRef(searchInput);
+  const mountedRef = useRef(false);
+  
+  // Giữ params hiện tại để biết cái gì thay đổi
+  const currentParamsRef = useRef({ searchInput, selectedTags, sort, page });
 
   // Load tags once
   useEffect(() => {
@@ -67,7 +71,7 @@ export default function VocabTopicsPage() {
     [dispatch]
   );
 
-  // Sync filter state → URL
+  // Sync URL mỗi khi state thay đổi
   useEffect(() => {
     const params = new URLSearchParams();
     if (searchInput.trim()) params.set("q", searchInput.trim());
@@ -77,11 +81,14 @@ export default function VocabTopicsPage() {
     setSearchParams(params, { replace: true });
   }, [searchInput, selectedTags, sort, page, setSearchParams]);
 
-  // Fetch: search debounced 500ms, others immediate
+  // Fetch data
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    const fire = () => {
+    const prev = currentParamsRef.current;
+    
+    // Lần đầu mount -> fetch ngay
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      currentParamsRef.current = { searchInput, selectedTags, sort, page };
       const tagsArr = selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
       doFetch({
         q: searchInput.trim() || undefined,
@@ -90,50 +97,78 @@ export default function VocabTopicsPage() {
         size: 12,
         sort,
       });
-    };
+      return;
+    }
 
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      prevSearchInput.current = searchInput;
-      fire();
-    } else if (searchInput !== prevSearchInput.current) {
-      prevSearchInput.current = searchInput;
-      debounceRef.current = setTimeout(fire, 500);
-    } else {
-      fire();
+    // Nếu search thay đổi -> debounce 500ms
+    if (searchInput !== prev.searchInput) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        currentParamsRef.current = { searchInput, selectedTags, sort, page };
+        const tagsArr = selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
+        doFetch({
+          q: searchInput.trim() || undefined,
+          tags: tagsArr,
+          page,
+          size: 12,
+          sort,
+        });
+      }, 500);
+      return;
+    }
+
+    // Còn lại tags, sort, page thay đổi -> fetch ngay lập tức
+    if (
+      selectedTags !== prev.selectedTags ||
+      sort !== prev.sort ||
+      page !== prev.page
+    ) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      currentParamsRef.current = { searchInput, selectedTags, sort, page };
+      const tagsArr = selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
+      doFetch({
+        q: searchInput.trim() || undefined,
+        tags: tagsArr,
+        page,
+        size: 12,
+        sort,
+      });
     }
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput, selectedTags, sort, page, doFetch]);
 
-  const handleFilterChange = useCallback(() => setPage(0), []);
-
-  const toggleTag = (tag: string) => {
+  const toggleTag = useCallback((tag: string) => {
     setSelectedTags((prev) => {
       const next = new Set(prev);
       if (next.has(tag)) next.delete(tag);
       else next.add(tag);
       return next;
     });
-    handleFilterChange();
-  };
+    setPage(0);
+  }, []);
 
-  const handleSortChange = (value: string) => {
+  const handleSortChange = useCallback((value: string) => {
     setSort(value);
-    handleFilterChange();
-  };
+    setPage(0);
+  }, []);
 
-  const handlePageChange = (newPage: number) => {
+  const handleClearAll = useCallback(() => {
+    setSelectedTags(new Set());
+    setSearchInput("");
+    setPage(0);
+  }, []);
+
+  const handlePageChange = useCallback((newPage: number) => {
     setPage(newPage);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  }, []);
 
-  const handleOpenTopic = (topic: IVocabTopic) => {
-    navigate(`/vocab/topics/${topic.id}/subtopics`);
-  };
+  const handleOpenTopic = useCallback((topic: IVocabTopic) => {
+    navigate(`/vocab/topics/${topic.id}`);
+  }, [navigate]);
 
   // Pagination helpers
   const totalPages = tp ?? 0;
@@ -156,10 +191,10 @@ export default function VocabTopicsPage() {
     return pages;
   };
 
-  const isLoading = status === "loading" || status === "idle";
+  const isLoading = status === "loading";
 
   return (
-    <div className="mx-auto w-full space-y-6 px-4 py-8 lg:px-8">
+    <div className="mx-auto w-full space-y-6 px-4 py-8 lg:px-8 h-[calc(100vh-8vh)]">
       {/* Header */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
@@ -180,7 +215,7 @@ export default function VocabTopicsPage() {
             value={searchInput}
             onChange={(e) => {
               setSearchInput(e.target.value);
-              handleFilterChange();
+              setPage(0);
             }}
             placeholder="Search topics..."
             className="h-10 pl-10 text-sm"
@@ -227,7 +262,7 @@ export default function VocabTopicsPage() {
                 <Badge
                   key={tag}
                   variant={isSelected ? "default" : "outline"}
-                  className={`cursor-pointer text-sm px-3 py-1.5 transition-colors ${
+                  className={`cursor-pointer text-sm px-3 py-1.5 ${
                     isSelected
                       ? "bg-primary text-primary-foreground hover:bg-primary/80"
                       : "hover:bg-accent"
@@ -266,24 +301,46 @@ export default function VocabTopicsPage() {
             variant="ghost"
             size="sm"
             className="h-6 px-1.5 text-[11px]"
-            onClick={() => {
-              setSelectedTags(new Set());
-              setSearchInput("");
-              setPage(0);
-            }}
+            onClick={handleClearAll}
           >
             Clear all
           </Button>
         </div>
       )}
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      {/* Content */}
+            {/* Loading skeleton */}
+      {isLoading && viewMode === "card" && (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <Skeleton className="h-40 w-full rounded-none" />
+              <CardContent className="p-4 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
+      {isLoading && viewMode === "list" && (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i} className="p-4">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-12 w-12 rounded-lg shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-1/3" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+                <Skeleton className="h-8 w-20 rounded-md" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
       {/* Empty */}
       {!isLoading && data.length === 0 && (
         <Card>
@@ -298,7 +355,7 @@ export default function VocabTopicsPage() {
       )}
 
       {/* Results count */}
-      {data.length > 0 && (
+      {!isLoading && data.length > 0 && (
         <div className="text-xs text-muted-foreground">
           {totalElements} topic{totalElements !== 1 ? "s" : ""}
           {totalPages > 1 && ` — Page ${currentPage + 1}/${totalPages}`}
@@ -306,7 +363,7 @@ export default function VocabTopicsPage() {
       )}
 
       {/* Card view - YouTube style grid */}
-      {data.length > 0 && viewMode === "card" && (
+      {!isLoading && data.length > 0 && viewMode === "card" && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {data.map((topic) => (
             <VocabTopicCard
@@ -319,80 +376,16 @@ export default function VocabTopicsPage() {
       )}
 
       {/* List view - compact row items */}
-      {data.length > 0 && viewMode === "list" && (
+      {!isLoading && data.length > 0 && viewMode === "list" && (
         <div className="space-y-2">
-          {data.map((topic) => {
-            const subtopicCount = topic.readySubtopicCount ?? 0;
-            return (
-              <button
-                key={topic.id}
-                type="button"
-                onClick={() => handleOpenTopic(topic)}
-                className="group flex w-full items-center gap-4 rounded-xl border bg-card p-3 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {/* Small thumbnail */}
-                <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-muted/50 sm:h-20 sm:w-32">
-                  {topic.thumbnailUrl ? (
-                    <img
-                      src={topic.thumbnailUrl}
-                      alt={topic.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <BookMarked className="h-6 w-6 text-muted-foreground/30" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="truncate text-sm font-semibold text-foreground transition-colors group-hover:text-primary">
-                      {topic.title}
-                    </h3>
-                    {topic.cefrRange && (
-                      <span className="shrink-0 rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                        {topic.cefrRange}
-                      </span>
-                    )}
-                  </div>
-
-                  {topic.description && (
-                    <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
-                      {topic.description}
-                    </p>
-                  )}
-
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {subtopicCount} topic{subtopicCount !== 1 ? "s" : ""}
-                    </span>
-
-                    {topic.tags && topic.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {topic.tags.slice(0, 4).map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-primary" />
-              </button>
-            );
-          })}
+          {data.map((topic) => (
+            <VocabTopicListCard key={topic.id} topic={topic} onOpen={handleOpenTopic} />
+          ))}
         </div>
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {totalPages > 1 && !isLoading && (
         <Pagination>
           <PaginationContent>
             <PaginationItem>

@@ -19,6 +19,15 @@ const levelStyles: Record<LanguageLevel, string> = {
   C2: "border-fuchsia-500/30 bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-400 dark:bg-fuchsia-500/10",
 }
 
+const levelLabels: Record<LanguageLevel, string> = {
+  A1: "A1",
+  A2: "A2",
+  B1: "B1",
+  B2: "B2",
+  C1: "C1",
+  C2: "C2",
+}
+
 const LanguageLevelBadge: React.FC<LanguageLevelBadgeProps> = ({
   level,
   className = "",
@@ -29,7 +38,7 @@ const LanguageLevelBadge: React.FC<LanguageLevelBadgeProps> = ({
   return (
     <span
       className={[
-        "inline-flex h-7 min-w-[2.5rem] items-center justify-center", // h-7 to hơn nhẹ
+        "inline-flex h-7 min-w-10 items-center justify-center", // h-7 to hơn nhẹ
         "rounded-md border px-2.5 text-[13px] font-bold uppercase tracking-wider shadow-sm transition-all", // Đậm và rõ ràng
         colorClass,
         className,
@@ -38,7 +47,7 @@ const LanguageLevelBadge: React.FC<LanguageLevelBadgeProps> = ({
         .filter(Boolean)
         .join(" ")}
     >
-      {level}
+      {levelLabels[level]}
     </span>
   )
 }

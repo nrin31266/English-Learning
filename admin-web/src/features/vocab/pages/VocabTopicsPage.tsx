@@ -52,6 +52,7 @@ import EditVocabTopicDialog, {
   type EditTopicForm,
 } from "../components/EditVocabTopicDialog";
 import VocabTopicCard from "../components/VocabTopicCard";
+import VocabTopicListCard from "../components/VocabTopicListCard";
 
 const statusColor: Record<IVocabTopic["status"], string> = {
   DRAFT: "bg-slate-500",
@@ -732,103 +733,22 @@ export default function VocabTopicsPage() {
             const isRunning = runningStatuses.has(topic.status);
             const isGeneratingThis = loadingGenIds.has(topic.id);
             const isTogglingThis = loadingToggleIds.has(topic.id);
-            const isTopicActive = topic.isActive ?? topic.active ?? false;
-            const hasSubtopics = topic.subtopicCount > 0;
-
             return (
-              <Card key={topic.id}>
-                <CardContent className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="truncate text-base font-semibold">{topic.title}</div>
-                      <Badge className={`text-white text-[11px] ${statusColor[topic.status]}`}>
-                        {isRunning && <Loader2 size={10} className="mr-1 animate-spin" />}
-                        {statusLabel[topic.status] ?? topic.status}
-                      </Badge>
-                      {topic.cefrRange && (
-                        <Badge variant="outline" className="text-[11px]">
-                          {topic.cefrRange}
-                        </Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {topic.readySubtopicCount}/{topic.subtopicCount || 0}
-                      </span>
-                    </div>
-
-                    {topic.description && (
-                      <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
-                        {topic.description}
-                      </p>
-                    )}
-
-                    {topic.tags && topic.tags.length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {topic.tags.map((tag: string) => (
-                          <Badge key={tag} variant="outline" className="px-1.5 py-0 text-[10px]">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1">
-                    {topic.status === "DRAFT" && topic.subtopicCount === 0 && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 px-2 text-xs"
-                        disabled={loadingGenIds.size > 0}
-                        onClick={() => handleGenSubtopics(topic.id)}
-                      >
-                        {isGeneratingThis ? "Generating" : "Generate"}
-                      </Button>
-                    )}
-
-                    <Button
-                      size="sm"
-                      variant={hasSubtopics ? "default" : "outline"}
-                      className="h-8 px-2 text-xs"
-                      disabled={!hasSubtopics}
-                      onClick={() => handleViewSubtopics(topic.id)}
-                    >
-                      Open
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className={`h-8 px-2 text-xs ${
-                        isTopicActive
-                          ? "!border-blue-900 !bg-blue-900 !text-white hover:!border-blue-800 hover:!bg-blue-800"
-                          : "!border-slate-300 !bg-slate-200 !text-slate-700 hover:!border-slate-400 hover:!bg-slate-300"
-                      }`}
-                      onClick={() => handleToggleTopic(topic)}
-                      disabled={isTogglingThis}
-                    >
-                      {isTogglingThis ? "Saving" : isTopicActive ? "Active" : "Inactive"}
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 px-2 text-xs"
-                      onClick={() => handleOpenEdit(topic)}
-                    >
-                      Edit
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 px-2 text-xs text-destructive hover:text-destructive"
-                      onClick={() => setDeleteConfirm(topic)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <VocabTopicListCard
+                key={topic.id}
+                topic={topic}
+                statusColor={statusColor}
+                statusLabel={statusLabel}
+                isRunning={isRunning}
+                isGenerating={isGeneratingThis}
+                isToggling={isTogglingThis}
+                isBusyGeneratingAny={loadingGenIds.size > 0}
+                onGenerate={handleGenSubtopics}
+                onOpen={handleViewSubtopics}
+                onToggle={handleToggleTopic}
+                onEdit={handleOpenEdit}
+                onDelete={setDeleteConfirm}
+              />
             );
           })}
         </div>

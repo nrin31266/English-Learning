@@ -27,7 +27,6 @@ class WordWorker:
             {
                 "word": normalize_word_soft(job["text"]) or job["text"],
                 "pos": job["pos"],
-                "context": job.get("context", ""),
             }
             for job in jobs
         ]

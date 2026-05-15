@@ -113,7 +113,7 @@ async def on_word_ready(key: str, pos: str) -> None:
     }
 
     try:
-        # Nhớ thêm headers=headers vào hàm requests.post
+     
         response = await asyncio.to_thread(
             requests.post, 
             endpoint, 

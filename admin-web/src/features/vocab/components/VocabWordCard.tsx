@@ -25,34 +25,41 @@ export default function VocabWordCard({
     entry.contextMeaningVi ||
     entry.contextExample ||
     entry.contextViExample;
+  const contextPrimary = entry.contextMeaningVi || entry.contextDefinition || "Chưa có ngữ cảnh";
+  const dictPrimary =
+    entry.wordDetail?.summaryVi ||
+    entry.wordDetail?.definitions?.[0]?.meaningVi ||
+    entry.wordDetail?.definitions?.[0]?.definition ||
+    "Chưa có dữ liệu từ điển";
 
   return (
-    <div className="h-fit min-w-0 rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-base font-semibold" title={displayWord}>
+    <div className="h-full min-w-0 rounded-lg border border-border/60 bg-card p-3 shadow-xs transition-shadow hover:shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-start gap-1.5">
+            <h3
+              className="min-w-0 flex-1 text-[17px] font-semibold leading-snug break-all"
+              title={displayWord}
+            >
               {displayWord}
-            </span>
-
-            <Badge variant="outline" className="shrink-0 text-xs">
+            </h3>
+            <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[11px]">
               {entry.pos}
             </Badge>
-
             {entry.wordReady ? (
-              <Badge variant="secondary" className="shrink-0 text-[11px] text-emerald-700">
-                <CheckCircle2 size={12} className="mr-1" />
+              <Badge variant="secondary" className="shrink-0 bg-emerald-50 px-1.5 py-0 text-[11px] text-emerald-700">
+                <CheckCircle2 size={11} className="mr-1" />
                 Ready
               </Badge>
             ) : (
-              <Badge variant="secondary" className="shrink-0 text-[11px] text-amber-700">
-                <Clock size={12} className="mr-1" />
+              <Badge variant="secondary" className="shrink-0 bg-amber-50 px-1.5 py-0 text-[11px] text-amber-700">
+                <Clock size={11} className="mr-1" />
                 Pending
               </Badge>
             )}
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted-foreground">#{entry.order + 1}</span>
             {entry.wordDetail?.phonetics?.us && (
               <span className="text-xs text-muted-foreground">{entry.wordDetail.phonetics.us}</span>
@@ -60,7 +67,7 @@ export default function VocabWordCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <Button
             size="icon"
             variant="outline"
@@ -78,74 +85,46 @@ export default function VocabWordCard({
             onClick={onOpenContext}
             disabled={!entry.wordReady}
             title="Context"
+            className="h-8 gap-1.5 px-2.5"
           >
-            <Pencil size={14} className="mr-1" />
+            <Pencil size={13} className="mr-1" />
             Context
           </Button>
         </div>
       </div>
 
-      <div className="mt-3 space-y-2">
-        {hasContext && (
-          <div className="space-y-1.5 rounded-lg border bg-sky-50/40 p-3">
-            <div className="text-xs font-semibold text-foreground">Context</div>
-            {entry.contextMeaningVi && <div className="text-sm font-medium">{entry.contextMeaningVi}</div>}
-            {entry.contextDefinition && (
-              <div className="text-xs leading-relaxed text-muted-foreground">{entry.contextDefinition}</div>
-            )}
-            {entry.contextExample && (
-              <div className="text-sm italic leading-relaxed text-muted-foreground">“{entry.contextExample}”</div>
-            )}
-            {entry.contextViExample && (
-              <div className="text-sm italic leading-relaxed text-muted-foreground">“{entry.contextViExample}”</div>
-            )}
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <div
+          className={`rounded-md border p-2 ${
+            hasContext ? "border-sky-100 bg-sky-50/25" : "border-border/60 bg-muted/15"
+          }`}
+        >
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <span>Context</span>
             {entry.contextLevel && (
-              <Badge variant="secondary" className="text-[11px]">
+              <Badge variant="outline" className="px-1.5 py-0 text-[11px]">
                 {entry.contextLevel}
               </Badge>
             )}
           </div>
-        )}
+          <div className="mt-1 min-h-[42px] text-sm font-medium leading-relaxed text-foreground/90 line-clamp-2">
+            {contextPrimary}
+          </div>
+        </div>
 
-        {entry.wordDetail && (
-          <div className="space-y-1 rounded-lg border bg-muted/20 p-3">
-            <div className="text-xs font-semibold text-foreground">Dictionary</div>
-            <div className="flex flex-wrap items-center gap-2">
-              {entry.wordDetail.cefrLevel && (
-                <Badge variant="secondary" className="text-[11px]">
-                  {entry.wordDetail.cefrLevel}
-                </Badge>
-              )}
-
-              {entry.wordDetail.summaryVi && (
-                <span className="text-sm font-medium">{entry.wordDetail.summaryVi}</span>
-              )}
-            </div>
-
-            {!hasContext && entry.wordDetail.definitions?.[0] && (
-              <>
-                <div className="text-xs leading-relaxed text-muted-foreground">
-                  {entry.wordDetail.definitions[0].definition}
-                </div>
-                <div className="text-xs leading-relaxed text-muted-foreground">
-                  {entry.wordDetail.definitions[0].meaningVi}
-                </div>
-                {entry.wordDetail.definitions[0].example && (
-                  <div className="text-sm italic leading-relaxed text-muted-foreground">
-                    “{entry.wordDetail.definitions[0].example}”
-                  </div>
-                )}
-                {entry.wordDetail.definitions[0].viExample && (
-                  <div className="text-sm italic leading-relaxed text-muted-foreground">
-                    “{entry.wordDetail.definitions[0].viExample}”
-                  </div>
-                )}
-              </>
+        <div className="rounded-md border border-border/60 bg-muted/15 p-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <span>Dictionary</span>
+            {entry.wordDetail?.cefrLevel && (
+              <Badge variant="outline" className="px-1.5 py-0 text-[11px]">
+                {entry.wordDetail.cefrLevel}
+              </Badge>
             )}
           </div>
-        )}
-
-        
+          <div className="mt-1 min-h-[42px] text-[13px] leading-relaxed text-muted-foreground line-clamp-2">
+            {dictPrimary}
+          </div>
+        </div>
       </div>
     </div>
   );
