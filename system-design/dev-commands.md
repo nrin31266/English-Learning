@@ -114,3 +114,14 @@ Có thể mở rộng thêm:
 CI/CD
 Kubernetes
 Monitoring (Prometheus, Grafana)
+Lệnh chạy theo hướng mới:
+
+python src/scripts/quicktest.py --status READY --strict-only --used-only --out bad_core_used.json
+
+Audit chất lượng, bỏ INFO:
+
+python src/scripts/quicktest.py --status READY --used-only --ignore-info --out quality_used.json
+
+Muốn xem lại kiểu fill blank cũ thì mới bật:
+
+python src/scripts/quicktest.py --status READY --used-only --fill-blank-check --out fillblank_legacy_report.json

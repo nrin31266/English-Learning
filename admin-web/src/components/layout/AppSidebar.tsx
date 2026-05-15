@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Blocks, BookMarked, Calendar, CircleUserRound, Home, Inbox, PlaneTakeoff, Settings } from "lucide-react"
+import { Blocks, BookMarked, Calendar, CircleUserRound, Home, Inbox, PlaneTakeoff, Settings, SpellCheck } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, 
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar"
@@ -28,6 +28,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: t("appMenu.vocabulary"),
       children: [
         { title: "Vocab Topics", url: "/vocab/topics", icon: BookMarked },
+        { title: "Dictionary Words", url: "/dictionary/words", icon: SpellCheck },
         // { title: t("appMenu.allWords"), url: "/all-words", icon: CaseSensitive },
         // { title: "Word Queue", url: "/word-queue", icon: Inbox }
       ]

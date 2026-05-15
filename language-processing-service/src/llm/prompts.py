@@ -27,26 +27,29 @@ CUSTOM_POS_GUIDE = """Quy tắc POS:
 - Chỉ dùng một trong các giá trị sau:
   NOUN, VERB, ADJ, ADV, PHRASE, PHRASAL_VERB, COLLOCATION, IDIOM, FIXED_EXPRESSION
 - NOUN: danh từ đơn hoặc cụm danh từ thông dụng.
-  Ví dụ: "fare", "boarding pass", "aisle seat"
+  Ví dụ: "fare", "boarding pass", "aisle seat", "customer feedback"
 - VERB: động từ đơn.
-  Ví dụ: "confirm", "reserve", "cancel"
+  Ví dụ: "confirm", "reserve", "cancel", "approve"
 - ADJ: tính từ hoặc cụm tính từ ngắn.
   Ví dụ: "available", "non-refundable", "well known"
 - ADV: trạng từ hoặc cụm trạng từ.
   Ví dụ: "in advance", "temporarily"
 - PHRASE: cụm từ hữu ích nhưng không thuộc rõ các nhóm dưới.
-  Ví dụ: "on time", "at risk"
+  Ví dụ: "on time", "at risk", "under pressure"
 - PHRASAL_VERB: cụm động từ có particle/preposition và có nghĩa riêng.
-  Ví dụ: "check in", "take off", "set up", "log in"
+  Ví dụ: "check in", "take off", "set up", "log in", "wake someone up"
 - COLLOCATION: cụm kết hợp tự nhiên, hay dùng cùng nhau.
-  Ví dụ: "make a reservation", "boarding pass", "customer service"
+  Ví dụ: "make a reservation", "boarding pass", "customer service", "meet a deadline"
 - IDIOM: thành ngữ, nghĩa không suy ra trực tiếp từ từng từ.
   Ví dụ: "break the ice", "hit the road"
-- FIXED_EXPRESSION: cụm diễn đạt cố định.
-  Ví dụ: "as soon as possible", "in charge of", "according to"
+- FIXED_EXPRESSION: cụm diễn đạt cố định hoặc bán cố định.
+  Ví dụ: "as soon as possible", "in charge of", "according to", "be responsible for something"
 - Nếu là cụm nhiều từ phổ biến, ưu tiên gán loại cụm cụ thể:
   PHRASAL_VERB, COLLOCATION, IDIOM, FIXED_EXPRESSION.
 - Nếu không chắc cụm thuộc loại nào, dùng PHRASE.
+- Có thể dùng placeholder tự nhiên trong cụm nếu cụm đó thường cần tân ngữ/chủ thể:
+  someone, somebody, something, one's, your.
+  Ví dụ: "wake someone up", "take something into account", "lose touch with someone", "do one's best", "brush your teeth".
 """
 
 
@@ -97,7 +100,7 @@ _WORD_SCHEMA = """{
     {
       "definition": "Định nghĩa tiếng Anh rõ ràng, sát nghĩa từ điển",
       "meaningVi": "Nghĩa tiếng Việt tự nhiên, ngắn gọn",
-      "example": "Câu ví dụ tiếng Anh có chứa đúng từ/cụm từ được yêu cầu",
+      "example": "Câu ví dụ tiếng Anh tự nhiên dùng đúng từ/cụm từ hoặc biến thể ngữ pháp tự nhiên của nó",
       "viExample": "Bản dịch tiếng Việt tự nhiên của câu ví dụ",
       "level": "B1"
     }
@@ -135,7 +138,7 @@ _WORD_RULES = f"""LUẬT BẮT BUỘC:
    - Nếu pos="PHRASAL_VERB", chỉ sinh nghĩa của cụm động từ đó.
    - Nếu pos="COLLOCATION", chỉ sinh nghĩa/cách dùng của cụm kết hợp đó.
    - Nếu pos="IDIOM", chỉ sinh nghĩa thành ngữ đó.
-   - Nếu pos="FIXED_EXPRESSION", chỉ sinh nghĩa cụm diễn đạt cố định đó.
+   - Nếu pos="FIXED_EXPRESSION", chỉ sinh nghĩa cụm diễn đạt cố định hoặc bán cố định đó.
    - Nếu pos="PHRASE", xử lý như cụm từ/cụm diễn đạt hữu ích.
    - Tuyệt đối không mượn nghĩa từ POS khác.
 
@@ -170,6 +173,7 @@ _WORD_RULES = f"""LUẬT BẮT BUỘC:
    - Với ADJ, mô tả trạng thái/tính chất.
    - Với ADV, mô tả cách thức/mức độ/thời điểm.
    - Với COLLOCATION, IDIOM, PHRASE, FIXED_EXPRESSION, định nghĩa phải giải thích ý nghĩa/cách dùng của cả cụm.
+   - Nếu input có placeholder như someone/something/one's/your, định nghĩa phải giải thích vai trò của placeholder đó.
    - Không viết định nghĩa quá ngắn kiểu một từ.
    - Không viết định nghĩa quá dài hoặc lan man.
 
@@ -192,16 +196,22 @@ _WORD_RULES = f"""LUẬT BẮT BUỘC:
    - Không nhồi quá nhiều nghĩa phụ.
 
 9. Ví dụ tiếng Anh:
-   - Field "example" bắt buộc phải chứa chính xác chuỗi word input.
-   - Không được thay bằng từ đồng nghĩa.
-   - Không được đổi sang từ khác.
-   - Không được đổi dạng từ.
-   - Không được chia thì khác nếu làm thay đổi chuỗi gốc.
-   - Không được thêm hậu tố hoặc biến thể khiến không còn tìm thấy đúng chuỗi input.
-   - Ví dụ phải cho phép hệ thống tìm chính xác input trong câu bằng string matching.
-   - Với input là "record", câu ví dụ phải chứa đúng "record", không dùng "records", "recorded", "recording".
-   - Với input là "take off", câu ví dụ phải chứa đúng "take off", không dùng "takes off", "took off", "taking off".
-   - Câu ví dụ phải tự nhiên, ngắn vừa phải, phù hợp để làm bài fill-in-the-blank.
+   - Field "example" phải là câu tiếng Anh tự nhiên, ngắn vừa phải.
+   - Ví dụ phải dùng đúng nghĩa đang giải thích.
+   - Ví dụ được phép dùng biến thể ngữ pháp tự nhiên của word input nếu câu cần như vậy.
+   - Với danh từ, có thể dùng số ít hoặc số nhiều nếu tự nhiên.
+     Ví dụ: "requirement" có thể xuất hiện là "a requirement" hoặc "requirements" nếu câu cần số nhiều.
+   - Với động từ, có thể chia thì, thêm s/es, dùng V-ing, V-ed nếu tự nhiên.
+     Ví dụ: "clean" có thể xuất hiện là "cleaned", "cleans", "cleaning".
+   - Với phrasal verb/collocation/fixed expression có placeholder như someone/something/one's/your, ví dụ được phép thay placeholder bằng người/vật cụ thể.
+     Ví dụ: "wake someone up" có thể dùng "Please wake me up at 7."
+     Ví dụ: "take something into account" có thể dùng "We took the cost into account."
+     Ví dụ: "do one's best" có thể dùng "She did her best."
+   - Với cụm không có placeholder, nên giữ cụm gần với dạng input nhưng vẫn ưu tiên câu tự nhiên.
+   - Không thay bằng từ đồng nghĩa không liên quan.
+   - Không dùng ví dụ mà người học không nhận ra được từ/cụm đang học.
+   - Câu ví dụ nên hữu ích cho các mode học: nghe rồi ghi lại, quiz chọn nghĩa, quiz chọn từ, flashcard, nối từ với nghĩa.
+   - Không tối ưu cho fill-in-the-blank exact-string nữa.
    - Không dùng câu quá phức tạp.
    - Không dùng ví dụ nhạy cảm, bạo lực, chính trị, tình dục, hoặc gây tranh cãi.
 
@@ -247,8 +257,6 @@ _WORD_RULES = f"""LUẬT BẮT BUỘC:
    - Không suy diễn theo chủ đề.
    - Không đưa nghĩa của POS khác.
    - Không đưa nghĩa của cụm từ khác.
-   - Không viết ví dụ thiếu đúng chuỗi input.
-   - Không đổi dạng từ trong example.
    - Không dịch Việt quá cụt.
    - Không sinh JSON lỗi.
 """
@@ -395,6 +403,8 @@ def build_word_gen_prompt(
 
 Nhiệm vụ:
 Sinh danh sách từ/cụm từ tiếng Anh chất lượng cao cho đúng subtopic được cung cấp.
+Danh sách này dùng cho nghe rồi ghi lại, quiz chọn nghĩa, quiz chọn từ, flashcard và nối từ với nghĩa.
+Không cần tối ưu cho fill-in-the-blank exact-string.
 
 Input:
 - parentTopic: {_json_escape(topic_title)}
@@ -405,7 +415,7 @@ Input:
 Số lượng:
 - Sinh linh hoạt từ 16 đến 26 items.
 - Không cần ép đủ 26 nếu subtopic không đủ từ chất lượng.
-- Chất lượng, độ đúng ngữ cảnh, và độ đa dạng nghĩa quan trọng hơn số lượng.
+- Chất lượng, độ đúng ngữ cảnh, độ tự nhiên, tính ứng dụng và độ đa dạng nghĩa quan trọng hơn số lượng.
 - Nếu subtopic rất giàu từ vựng, có thể sinh gần 26.
 - Nếu subtopic hẹp, sinh ít hơn nhưng phải sạch và đúng.
 - Nếu không đủ 16 items chất lượng, vẫn ưu tiên đúng và sạch hơn là bịa thêm.
@@ -440,10 +450,47 @@ Luật chọn từ/cụm từ:
 12. Với CEFR cao, có thể sinh từ formal/specialized hơn nhưng vẫn phải thực tế.
 13. Không sinh tên riêng, thương hiệu, địa danh cụ thể, URL, số, hoặc ký hiệu rác.
 14. Không sinh item nhạy cảm, bạo lực, chính trị, tình dục, hoặc gây tranh cãi.
-15. word phải viết lowercase.
-16. Giữ spelling tự nhiên, khoảng trắng, dấu nháy, dấu gạch nối, và accent nếu có.
-17. Không dùng underscore cho phrase.
-18. Không thêm nghĩa, không thêm explanation trong output.
+
+Luật làm giàu cụm từ kiểu TOEIC/giao tiếp:
+15. Được phép và nên sinh các cụm có placeholder tự nhiên nếu chúng phổ biến và hữu ích.
+16. Placeholder hợp lệ:
+   - someone
+   - somebody
+   - something
+   - one's
+   - your
+17. Dùng placeholder khi cụm thường cần tân ngữ/chủ thể linh hoạt.
+   Ví dụ tốt:
+   - "wake someone up"
+   - "take something into account"
+   - "lose touch with someone"
+   - "get in touch with someone"
+   - "ask someone out"
+   - "remind someone of something"
+   - "be responsible for something"
+   - "do one's best"
+   - "brush your teeth"
+   - "wash your face"
+18. Không dùng cụm cụt, thiếu thành phần khiến example sau này phải tự chen từ vào giữa.
+   Ví dụ xấu:
+   - "wash face"
+   - "wake up" nếu nghĩa muốn nói là đánh thức ai đó
+   - "take account" thay vì "take something into account"
+19. Nếu cụm có hai biến thể nghĩa khác nhau, chọn dạng rõ nghĩa hơn:
+   - "wake up" = tự thức dậy
+   - "wake someone up" = đánh thức ai đó
+   - "get up" = thức dậy / đứng dậy
+   - "get someone up" = gọi ai dậy
+20. Ưu tiên cụm người học thật sự gặp trong TOEIC, công việc, du lịch, đời sống, học tập và giao tiếp.
+
+Luật format word:
+21. word phải viết lowercase.
+22. Giữ spelling tự nhiên, khoảng trắng, dấu nháy, dấu gạch nối, dấu chấm nếu thật sự thuộc từ/cụm.
+23. Cho phép dấu/diacritics/accent trong các từ tiếng Anh vay mượn hoặc thuật ngữ hợp lệ.
+    Ví dụ: "café", "résumé", "naïve", "façade", "chargé d'affaires".
+24. Không tự ý bỏ dấu nếu spelling chuẩn của từ có dấu.
+25. Không dùng underscore cho phrase.
+26. Không thêm nghĩa, không thêm explanation trong output.
 
 {CUSTOM_POS_GUIDE}
 
@@ -452,14 +499,25 @@ Ví dụ word hợp lệ:
 - {{"word": "check in", "pos": "PHRASAL_VERB"}}
 - {{"word": "fare", "pos": "NOUN"}}
 - {{"word": "aisle seat", "pos": "COLLOCATION"}}
-- {{"word": "take into account", "pos": "FIXED_EXPRESSION"}}
+- {{"word": "take something into account", "pos": "FIXED_EXPRESSION"}}
 - {{"word": "in charge of", "pos": "FIXED_EXPRESSION"}}
+- {{"word": "be responsible for something", "pos": "FIXED_EXPRESSION"}}
+- {{"word": "wake someone up", "pos": "PHRASAL_VERB"}}
+- {{"word": "lose touch with someone", "pos": "FIXED_EXPRESSION"}}
+- {{"word": "do one's best", "pos": "FIXED_EXPRESSION"}}
+- {{"word": "brush your teeth", "pos": "COLLOCATION"}}
+- {{"word": "wash your face", "pos": "COLLOCATION"}}
 - {{"word": "well known", "pos": "ADJ"}}
 - {{"word": "on time", "pos": "PHRASE"}}
+- {{"word": "résumé", "pos": "NOUN"}}
+- {{"word": "café", "pos": "NOUN"}}
 
 Ví dụ word không hợp lệ:
 - {{"word": "boarding_pass", "pos": "COLLOCATION"}}
 - {{"word": "Airport Security", "pos": "NOUN"}}
+- {{"word": "wash face", "pos": "COLLOCATION"}}
+- {{"word": "wake up", "pos": "PHRASAL_VERB"}} nếu nghĩa muốn nói là đánh thức ai đó
+- {{"word": "take account", "pos": "FIXED_EXPRESSION"}}
 - {{"word": "airport", "pos": "NOUN"}} nếu subtopic chỉ nói về booking flight tickets
 - {{"word": "buy", "pos": "VERB"}} và {{"word": "purchase", "pos": "VERB"}} cùng list nếu chúng chỉ đóng vai trò gần nghĩa nhau
 - {{"word": "check in", "pos": "VERB"}} nếu muốn nhấn mạnh đây là phrasal verb phổ biến thì nên dùng PHRASAL_VERB
@@ -517,7 +575,7 @@ Schema output:
 {{
   "definition": "Clear dictionary-style English definition that matches the selected real sense",
   "meaningVi": "Nghĩa tiếng Việt tự nhiên, ngắn gọn",
-  "example": "English example sentence containing the exact input word or phrase",
+  "example": "English example sentence using the word, phrase, or a natural grammatical realization of it",
   "viExample": "Bản dịch tiếng Việt tự nhiên của example",
   "level": "B1"
 }}
@@ -543,7 +601,7 @@ Luật bắt buộc:
    - Nếu pos="PHRASAL_VERB", definition phải là nghĩa của cụm động từ.
    - Nếu pos="COLLOCATION", definition phải giải thích nghĩa/cách dùng của collocation.
    - Nếu pos="IDIOM", definition phải là nghĩa thành ngữ.
-   - Nếu pos="FIXED_EXPRESSION", definition phải là nghĩa/cách dùng của cụm cố định.
+   - Nếu pos="FIXED_EXPRESSION", definition phải là nghĩa/cách dùng của cụm cố định hoặc bán cố định.
    - Tuyệt đối không đổi POS.
    - Không dùng nghĩa của POS khác để làm cho hợp context.
 
@@ -554,8 +612,10 @@ Luật bắt buộc:
    - Không viết definition quá dài hoặc lan man.
    - Không đưa chi tiết quá chuyên ngành nếu từ đó có nghĩa phổ thông phù hợp.
    - Không lấy nghĩa của cụm dài hơn nếu input không phải chính xác cụm đó.
+   - Nếu input có placeholder như someone/something/one's/your, definition phải giải thích nghĩa của cả pattern đó.
    - Ví dụ: input "bank" không được lấy nghĩa của "bank account".
    - Ví dụ: input "take off" thì được lấy nghĩa phrasal verb vì input chính xác là cụm đó.
+   - Ví dụ: input "wake someone up" phải lấy nghĩa đánh thức ai đó, không lấy nghĩa tự thức dậy.
 
 4. Ràng buộc ngữ cảnh:
    - Nghĩa được chọn phải hợp với subtopicDescription trước tiên.
@@ -564,8 +624,10 @@ Luật bắt buộc:
    - Nhưng nghĩa vẫn phải là nghĩa thật của word.
    - Không được tạo nghĩa riêng chỉ vì subtopic cần.
    - Không được suy diễn quá xa.
-   - Không được đưa nghĩa thuộc phần bị EXCLUDED trong subtopicDescription.
-   - Không được lấy nghĩa chỉ vì topicDescription nếu subtopicDescription không bao gồm nghĩa đó.
+   - subtopicDescription có thể chứa phần EXCLUDES để phân ranh giới khi sinh word list.
+   - Khi chọn nghĩa cho word đã có sẵn, EXCLUDES chỉ là thông tin ranh giới mềm, không phải danh sách cấm tuyệt đối.
+   - Ưu tiên nghĩa khớp với phần INCLUDED, subtopicTitle, topicDescription và mục tiêu học tập.
+   - Không tự động loại một nghĩa chỉ vì definition/example có vài keyword xuất hiện trong phần EXCLUDES.
 
 5. meaningVi:
    - meaningVi phải là tiếng Việt tự nhiên.
@@ -578,14 +640,22 @@ Luật bắt buộc:
 
 6. example:
    - example phải là câu tiếng Anh tự nhiên, ngắn vừa phải.
-   - example bắt buộc chứa chính xác chuỗi word input.
-   - Không thay bằng từ đồng nghĩa.
-   - Không đổi sang từ khác.
-   - Không đổi dạng từ nếu làm mất khả năng tìm chuỗi input bằng string matching.
-   - Với input "record", example phải chứa đúng "record", không dùng "records", "recorded", "recording".
-   - Với input "take off", example phải chứa đúng "take off", không dùng "takes off", "took off", "taking off".
-   - Câu ví dụ phải phù hợp với nghĩa đã chọn và subtopic.
-   - Câu ví dụ phải dùng được cho bài fill-in-the-blank.
+   - example phải dùng đúng nghĩa đang học.
+   - Không cần tối ưu cho fill-in-the-blank exact-string.
+   - Được phép dùng biến thể ngữ pháp tự nhiên của word input nếu câu cần như vậy.
+   - Với danh từ, có thể dùng số ít hoặc số nhiều nếu tự nhiên.
+     Ví dụ: "curtain" có thể dùng "curtains" nếu câu nói về nhiều rèm cửa.
+   - Với động từ, có thể chia thì, thêm s/es, dùng V-ing, V-ed nếu tự nhiên.
+     Ví dụ: "clean" có thể dùng "cleaned", "cleans", "cleaning".
+   - Với phrasal verb/collocation/fixed expression có placeholder như someone/something/one's/your, ví dụ được phép thay placeholder bằng người/vật cụ thể.
+     Ví dụ: "wake someone up" có thể dùng "Please wake me up at 7."
+     Ví dụ: "take something into account" có thể dùng "We took the cost into account."
+     Ví dụ: "lose touch with someone" có thể dùng "I lost touch with my old friend."
+     Ví dụ: "do one's best" có thể dùng "She did her best."
+   - Với cụm không có placeholder, ví dụ nên thể hiện rõ cụm đó hoặc một biến thể tự nhiên của cụm đó.
+   - Không thay bằng từ đồng nghĩa không liên quan.
+   - Không dùng ví dụ mà người học không nhận ra được từ/cụm đang học.
+   - Câu ví dụ nên hữu ích cho các mode học: nghe rồi ghi lại, quiz chọn nghĩa, quiz chọn từ, flashcard, nối từ với nghĩa.
    - Không dùng câu quá phức tạp.
    - Không dùng nội dung nhạy cảm, bạo lực, chính trị, tình dục, hoặc gây tranh cãi.
 

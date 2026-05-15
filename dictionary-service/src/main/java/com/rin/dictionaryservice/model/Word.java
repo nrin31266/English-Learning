@@ -54,6 +54,9 @@ public class Word {
     boolean isPhrase = false;  // true nếu là cụm từ (collocation, idiom...)
     String phraseType;         // COLLOCATION, IDIOM, PHRASAL_VERB, FIXED_EXPRESSION
 
+    @Builder.Default
+    boolean isValid = true;
+
     @CreatedDate
     LocalDateTime createdAt;
 

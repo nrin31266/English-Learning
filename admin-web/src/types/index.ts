@@ -147,6 +147,69 @@ export interface IVocabSubtopicsGeneratedEvent {
   topicDescription: string;
 }
 
+export interface IAdminWordDefinition {
+  definition: string;
+  meaningVi: string;
+  example: string;
+  viExample: string;
+  level: string;
+  exampleContainsExactWord?: boolean;
+}
+
+export interface IWordDefinitionSyncSummary {
+  updatedEntryCount: number;
+  rescoredEntryCount: number;
+  skippedEntryCount: number;
+}
+
+export interface IWordEntryUsage {
+  entryId: string;
+  topicId: string;
+  topicTitle: string;
+  subtopicId: string;
+  subtopicTitle: string;
+  wordKey: string;
+  wordText: string;
+  pos: string;
+  wordReady: boolean;
+  contextDefinition?: string;
+  contextMeaningVi?: string;
+  contextExample?: string;
+  contextViExample?: string;
+  contextLevel?: string;
+}
+
+export interface IAdminWord {
+  id: string;
+  text: string;
+  key: string;
+  pos: string;
+  status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
+  summaryVi?: string;
+  cefrLevel?: string;
+  phonetics?: {
+    uk?: string;
+    ukAudioUrl?: string;
+    us?: string;
+    usAudioUrl?: string;
+  };
+  definitionCount: number;
+  usedEntryCount: number;
+  readyEntryCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface IAdminWordDetail extends IAdminWord {
+  definitions: IAdminWordDefinition[];
+  isPhrase: boolean;
+  phraseType?: string;
+  isValid: boolean;
+  context?: string;
+  entriesPreview?: IWordEntryUsage[];
+  syncSummary?: IWordDefinitionSyncSummary;
+}
+
 export interface IAsyncState<T> {
   data: T;
   status: "idle" | "loading" | "succeeded" | "failed";

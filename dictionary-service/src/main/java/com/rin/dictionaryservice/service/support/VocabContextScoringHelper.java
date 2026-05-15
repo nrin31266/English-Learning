@@ -42,13 +42,14 @@ public class VocabContextScoringHelper {
     private static final int MISSING_DEFINITION_PENALTY = 12;
     private static final int MISSING_EXAMPLE_PENALTY = 8;
     private static final int MISSING_MEANING_PENALTY = 4;
-    private static final int WORD_NOT_IN_EXAMPLE_PENALTY = 5;
     private static final int EXACT_CONTEXT_INDEX0_BONUS = 10;
 
     private static final double INDEX_TIEBREAKER_FACTOR = 0.05;
 
-    private static final Pattern NON_WORD_PATTERN =
-            Pattern.compile("[^\\p{L}\\p{N}+#./'-]+", Pattern.UNICODE_CHARACTER_CLASS);
+    private static final Pattern NON_WORD_PATTERN = Pattern.compile(
+            "[^\\p{L}\\p{N}+#./'-]+",
+            Pattern.UNICODE_CHARACTER_CLASS
+    );
 
     private static final Set<String> CONTEXT_STOP_WORDS = new HashSet<>(Set.of(
             "the", "and", "for", "with", "that", "this", "from", "into", "onto", "about",
@@ -81,7 +82,7 @@ public class VocabContextScoringHelper {
 
         for (int i = 0; i < definitions.size(); i++) {
             Word.Definition def = definitions.get(i);
-            double score = scoreDefinition(def, word, subtopic, profile, i, exactContext);
+            double score = scoreDefinition(def, subtopic, profile, i, exactContext);
 
             if (score > bestScore) {
                 bestScore = score;
@@ -120,7 +121,6 @@ public class VocabContextScoringHelper {
 
     private double scoreDefinition(
             Word.Definition def,
-            Word word,
             VocabSubTopic subtopic,
             ContextProfile profile,
             int index,
@@ -162,14 +162,6 @@ public class VocabContextScoringHelper {
 
         if (isBlank(def.getMeaningVi())) {
             score -= MISSING_MEANING_PENALTY;
-        }
-
-        String wordText = word.getText() != null && !word.getText().isBlank()
-                ? normalizeText(word.getText())
-                : normalizeText(word.getKey() != null ? word.getKey().replace('_', ' ') : "");
-
-        if (!wordText.isBlank() && !example.contains(wordText)) {
-            score -= WORD_NOT_IN_EXAMPLE_PENALTY;
         }
 
         if (exactContext && index == 0) {

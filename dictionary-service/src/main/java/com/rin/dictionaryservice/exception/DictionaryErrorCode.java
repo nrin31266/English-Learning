@@ -21,7 +21,14 @@ public enum DictionaryErrorCode implements ErrorCode {
     AI_RESULT_SERIALIZATION_FAILED(2009, "AI result serialization failed", HttpStatus.BAD_GATEWAY),
 
     IMAGE_UPLOAD_FAILED(2010, "Image upload failed", HttpStatus.BAD_GATEWAY),
-    IMAGE_UPLOAD_RESPONSE_INVALID(2011, "Upload response missing 'url' field", HttpStatus.BAD_GATEWAY)
+    IMAGE_UPLOAD_RESPONSE_INVALID(2011, "Upload response missing 'url' field", HttpStatus.BAD_GATEWAY),
+
+    WORD_NOT_FOUND(2012, "Word not found: %s", HttpStatus.NOT_FOUND),
+    WORD_ALREADY_EXISTS(2013, "Word already exists: %s", HttpStatus.CONFLICT),
+    WORD_IN_USE(2014, "Cannot delete word because it is used by %s vocab entries.", HttpStatus.BAD_REQUEST),
+    WORD_DEFINITION_INDEX_INVALID(2015, "Definition index invalid: %s", HttpStatus.BAD_REQUEST),
+    WORD_CREATE_INVALID(2016, "Word create invalid: %s", HttpStatus.BAD_REQUEST),
+    WORD_UPDATE_INVALID(2017, "Word update invalid: %s", HttpStatus.BAD_REQUEST)
 
     ;
 
