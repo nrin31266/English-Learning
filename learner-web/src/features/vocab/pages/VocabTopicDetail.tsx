@@ -1,56 +1,51 @@
 import LanguageLevelBadge, { type LanguageLevel } from "@/components/LanguageLevel";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { clearDetail, fetchSubTopics, fetchTopicDetail, fetchWords, setActiveSubtopic } from "@/store/vocabDetailSlide";
-import type { IVocabSubTopic } from "@/types";
+import type { IVocabSubTopic, IVocabWordEntry } from "@/types";
 import {
   ArrowLeft,
   BookMarked,
-  Headphones,
-  Layers3,
-  Link2,
   Loader2,
-  Shuffle,
-  SpellCheck,
-  Languages,
+  Play,
+  Volume2,
 } from "lucide-react";
-import type { ComponentType } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-type LearnMode = "combined" | "listening" | "quiz-vi" | "quiz-en" | "flashcard" | "match";
-
-interface ModeItem {
-  key: LearnMode;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-  tone: string;
-  description: string;
+function getWordDefinition(word: IVocabWordEntry) {
+  return word.contextDefinition || word.wordDetail?.definitions?.[0]?.definition || "";
 }
 
-const MODES: ModeItem[] = [
-  { key: "combined", label: "Kết hợp", icon: Shuffle, tone: "text-indigo-600", description: "Luân phiên nhiều dạng bài để học toàn diện và bớt nhàm chán." },
-  { key: "listening", label: "Nghe điền", icon: Headphones, tone: "text-cyan-600", description: "Nghe phát âm và điền từ còn thiếu để luyện nghe chính xác." },
-  { key: "quiz-en", label: "Quiz Anh", icon: SpellCheck, tone: "text-blue-600", description: "Nhìn từ tiếng Anh và chọn nghĩa tiếng Việt đúng." },
-  { key: "quiz-vi", label: "Quiz Việt", icon: Languages, tone: "text-violet-600", description: "Nhìn nghĩa tiếng Việt và chọn từ tiếng Anh phù hợp." },
-  { key: "flashcard", label: "Flashcard", icon: Layers3, tone: "text-emerald-600", description: "Lật thẻ nhanh để ghi nhớ nghĩa, ví dụ và cách dùng của từ." },
-  { key: "match", label: "Nối nghĩa", icon: Link2, tone: "text-amber-600", description: "Ghép từ và nghĩa theo cặp để tăng phản xạ nhận diện." },
-];
+function getWordMeaning(word: IVocabWordEntry) {
+  return word.contextMeaningVi || word.wordDetail?.summaryVi || word.wordDetail?.definitions?.[0]?.meaningVi || "";
+}
 
-const MODE_SET = new Set(MODES.map((m) => m.key));
-const DEFAULT_MODE: LearnMode = "combined";
+function getWordExample(word: IVocabWordEntry) {
+  return word.contextExample || word.wordDetail?.definitions?.[0]?.example || "";
+}
 
-function normalizeMode(raw?: string): LearnMode {
-  if (raw && MODE_SET.has(raw as LearnMode)) {
-    return raw as LearnMode;
-  }
-  return DEFAULT_MODE;
+function getWordViExample(word: IVocabWordEntry) {
+  return word.contextViExample || word.wordDetail?.definitions?.[0]?.viExample || "";
+}
+
+function getWordLevel(word: IVocabWordEntry) {
+  return word.contextLevel || word.wordDetail?.cefrLevel || "";
+}
+
+function getAudioUrl(word: IVocabWordEntry) {
+  return word.wordDetail?.phonetics?.usAudioUrl || word.wordDetail?.phonetics?.ukAudioUrl || "";
+}
+
+function playWordAudio(word: IVocabWordEntry) {
+  const audioUrl = getAudioUrl(word);
+  if (!audioUrl) return;
+  void new Audio(audioUrl).play();
 }
 
 export default function VocabTopicDetail() {
-  const { id, subtopicId, mode: modeParam } = useParams<{ id: string; subtopicId?: string; mode?: string }>();
+  const { id, subtopicId } = useParams<{ id: string; subtopicId?: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const [previewMode, setPreviewMode] = useState<LearnMode>(normalizeMode(modeParam));
 
   const { topic, topicStatus, subtopics, subtopicsStatus, words, wordsStatus, activeSubtopicId } = useAppSelector((s) => s.vocabDetail);
 
@@ -89,24 +84,15 @@ export default function VocabTopicDetail() {
     dispatch(fetchWords(activeSubtopicId));
   }, [dispatch, activeSubtopicId]);
 
-  useEffect(() => {
-    setPreviewMode(normalizeMode(modeParam));
-  }, [modeParam]);
-
   const handleSelectSubtopic = (sub: IVocabSubTopic) => {
     if (!id) return;
     dispatch(setActiveSubtopic(sub.id));
-    setPreviewMode(DEFAULT_MODE);
     navigate(`/vocab/topics/${id}/subtopics/${sub.id}`);
   };
 
-  const handleSelectMode = (nextMode: LearnMode) => {
-    setPreviewMode(nextMode);
-  };
-
-  const handleStartMode = () => {
+  const handleStartLearning = () => {
     if (!id || !activeSubtopicId) return;
-    navigate(`/vocab/topics/${id}/subtopics/${activeSubtopicId}/${previewMode}`);
+    
   };
 
   const handleHeaderBack = () => {
@@ -126,15 +112,14 @@ export default function VocabTopicDetail() {
         <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
           <BookMarked className="h-8 w-8 text-primary" />
         </div>
-        <h2 className="text-2xl font-bold tracking-tight">Chọn 1 sub-topic để bắt đầu học</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Chọn 1 sub-topic để xem từ vựng</h2>
         <p className="mt-2 text-base text-muted-foreground">
-          Khi bạn chọn bài ở danh sách bên trái, hệ thống sẽ hiện 6 chế độ học để luyện theo phong cách bạn muốn.
+          Khi bạn chọn bài ở danh sách bên trái, hệ thống sẽ hiển thị toàn bộ từ vựng trong sub-topic đó.
         </p>
       </div>
     </div>
   );
 
-  const activeMode = MODES.find((m) => m.key === previewMode) ?? MODES[0];
   const rightLearningState = (
     <div className="flex flex-col p-4 xl:h-full xl:min-h-0 xl:overflow-y-auto">
       <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
@@ -154,81 +139,94 @@ export default function VocabTopicDetail() {
               <p className="mt-1 text-sm text-muted-foreground">{activeSubtopic.titleVi}</p>
             )}
           </div>
-          <div className="rounded-xl border bg-background px-3 py-2 text-right">
-            <div className="text-xs text-muted-foreground">Số từ</div>
-            <div className="text-lg font-bold">{activeSubtopic?.wordCount ?? 0}</div>
-            <div className="text-xs text-muted-foreground">trong bài này</div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-36">
+            <div className="inline-flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
+              <span className="text-xs font-medium text-muted-foreground">Tổng số từ</span>
+              <span className="text-base font-bold">{words.length || activeSubtopic?.wordCount || 0}</span>
+            </div>
+            <button
+              onClick={handleStartLearning}
+              disabled={wordsStatus === "loading" || words.length === 0}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Học bài này
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="mt-4">
-        <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Chọn chế độ học</h3>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {MODES.map((item) => {
-            const Icon = item.icon;
-            const selected = item.key === previewMode;
-            return (
-              <button
-                key={item.key}
-                onClick={() => handleSelectMode(item.key)}
-                className={`rounded-xl border px-3 py-3 text-left transition-all ${
-                  selected
-                    ? "border-primary bg-primary/10 shadow-sm"
-                    : "border-border/70 bg-background hover:bg-muted/30"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Icon className={`h-4 w-4 ${item.tone}`} />
-                  <span className="text-sm font-semibold">{item.label}</span>
-                </div>
-              </button>
-            );
-          })}
+      {wordsStatus === "loading" && (
+        <div className="flex flex-1 items-center justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-border/70 bg-card p-5">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1 text-xs font-semibold">
-          {activeMode.label}
-        </div>
-        <p className="text-sm text-muted-foreground">{activeMode.description}</p>
-        <div className="mt-5">
-          <button
-            onClick={handleStartMode}
-            disabled={wordsStatus === "loading" || words.length === 0}
-            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary px-6 text-base font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {wordsStatus === "loading" ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Đang tải dữ liệu...
-              </>
-            ) : (
-              `Bắt đầu ${activeMode.label}`
-            )}
-          </button>
-        </div>
-      </div>
+      )}
 
       {wordsStatus === "succeeded" && words.length === 0 && (
         <div className="mt-4 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-          Bài này chưa có từ vựng sẵn sàng để học. Vui lòng quay lại sau.
+          Sub-topic này chưa có từ vựng sẵn sàng. Vui lòng quay lại sau.
         </div>
       )}
 
-      {modeParam && MODE_SET.has(modeParam as LearnMode) && (
-        <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
-          <div className="text-sm font-semibold">Đã vào chế độ: {activeMode.label}</div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Khung học thực tế của chế độ này sẽ được cắm vào vùng này ở bước tiếp theo.
-          </p>
+      {wordsStatus === "failed" && (
+        <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          Không tải được danh sách từ vựng. Vui lòng thử lại.
         </div>
       )}
 
-      {wordsStatus !== "loading" && wordsStatus !== "succeeded" && (
-        <div className="mt-4 text-sm text-muted-foreground">
-          Chọn bài và chế độ học để bắt đầu.
+      {wordsStatus === "succeeded" && words.length > 0 && (
+        <div className="mt-4 grid gap-3">
+          {words
+            .slice()
+            .sort((a, b) => a.order - b.order)
+            .map((word) => {
+              const definition = getWordDefinition(word);
+              const meaning = getWordMeaning(word);
+              const example = getWordExample(word);
+              const viExample = getWordViExample(word);
+              const level = getWordLevel(word);
+              const audioUrl = getAudioUrl(word);
+
+              return (
+                <article key={word.id} className="rounded-xl border border-border/70 bg-card p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-bold leading-tight">{word.wordText}</h3>
+                        <span className="rounded-md border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                          {word.pos}
+                        </span>
+                        {level && (
+                          <LanguageLevelBadge
+                            level={level as LanguageLevel}
+                            className="h-6 min-w-[2.1rem] px-2 text-[10px]"
+                            hasBg
+                          />
+                        )}
+                      </div>
+                      {meaning && <p className="mt-1 text-sm font-medium text-primary">{meaning}</p>}
+                    </div>
+                    {audioUrl && (
+                      <button
+                        onClick={() => playWordAudio(word)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground transition-colors hover:text-foreground"
+                        title="Nghe phát âm"
+                      >
+                        <Volume2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {definition && <p className="mt-3 text-sm text-foreground">{definition}</p>}
+
+                  {(example || viExample) && (
+                    <div className="mt-3 rounded-lg bg-muted/30 p-3 text-sm">
+                      {example && <p className="font-medium text-foreground">{example}</p>}
+                      {viExample && <p className="mt-1 text-muted-foreground">{viExample}</p>}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
         </div>
       )}
     </div>
@@ -269,7 +267,7 @@ export default function VocabTopicDetail() {
         >
           <div className="border-b px-3 py-2.5 sm:px-4 sm:py-3">
             <h2 className="text-lg font-bold sm:text-xl">Sub-topics</h2>
-            <p className="text-sm text-muted-foreground">Chọn bài để mở chế độ học.</p>
+            <p className="text-sm text-muted-foreground">Chọn bài để xem danh sách từ vựng.</p>
           </div>
 
           <div className="flex-1 space-y-2 overflow-y-auto p-2.5 sm:p-3">
@@ -290,10 +288,10 @@ export default function VocabTopicDetail() {
                   <button
                     key={sub.id}
                     onClick={() => handleSelectSubtopic(sub)}
-                    className={`w-full rounded-xl border text-left transition-colors ${
+                    className={`group w-full rounded-xl border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
                       isActive
-                        ? "border-primary/40 bg-primary/10"
-                        : "border-border/70 bg-muted/20 hover:bg-muted/35"
+                        ? "border-primary/40 bg-primary/10 hover:border-primary/60"
+                        : "border-border/70 bg-muted/20 hover:border-primary/30 hover:bg-background"
                     } p-2.5 sm:p-3`}
                   >
                     <div className="mb-1.5 flex items-start justify-between gap-2 sm:mb-2">
@@ -308,7 +306,7 @@ export default function VocabTopicDetail() {
                             />
                           )}
                         </div>
-                        <p className="mt-0.5 truncate text-sm font-semibold sm:mt-1 sm:text-base">{sub.title}</p>
+                        <p className="mt-0.5 truncate text-sm font-semibold transition-colors group-hover:text-primary sm:mt-1 sm:text-base">{sub.title}</p>
                         {sub.titleVi && (
                           <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">{sub.titleVi}</p>
                         )}

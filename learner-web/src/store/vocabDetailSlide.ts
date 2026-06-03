@@ -76,6 +76,10 @@ const vocabDetailSlide = createSlice({
   initialState,
   reducers: {
     setActiveSubtopic(state, action) {
+      if (state.activeSubtopicId !== action.payload) {
+        state.words = [];
+        state.wordsStatus = "idle";
+      }
       state.activeSubtopicId = action.payload;
     },
     clearDetail(state) {
@@ -102,12 +106,18 @@ const vocabDetailSlide = createSlice({
         s.subtopics = a.payload;
       })
       .addCase(fetchSubTopics.rejected, (s) => { s.subtopicsStatus = "failed"; })
-      .addCase(fetchWords.pending, (s) => { s.wordsStatus = "loading"; })
+      .addCase(fetchWords.pending, (s) => {
+        s.wordsStatus = "loading";
+        s.words = [];
+      })
       .addCase(fetchWords.fulfilled, (s, a) => {
         s.wordsStatus = "succeeded";
         s.words = a.payload;
       })
-      .addCase(fetchWords.rejected, (s) => { s.wordsStatus = "failed"; });
+      .addCase(fetchWords.rejected, (s) => {
+        s.wordsStatus = "failed";
+        s.words = [];
+      });
   },
 });
 

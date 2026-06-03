@@ -59,8 +59,7 @@ public class VocabContextScoringHelper {
             "cover", "covers", "covered", "vocabulary", "words", "word", "terms", "term",
             "related", "specific", "general", "common", "basic", "advanced", "process",
             "context", "subtopic", "topic", "english", "learners", "learning", "used", "using",
-            "use", "does", "not", "must", "only", "what", "when", "where", "which", "while",
-            "các", "và", "hoặc", "cho", "của", "trong", "ngoài", "liên", "quan"
+            "use", "does", "not", "must", "only", "what", "when", "where", "which", "while"
     ));
 
     public Word.Definition selectDefinition(Word word, VocabTopic topic, VocabSubTopic subtopic) {

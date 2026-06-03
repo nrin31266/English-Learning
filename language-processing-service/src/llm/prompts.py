@@ -22,7 +22,6 @@ def _json_array(values: list[str] | None) -> str:
 
 
 CUSTOM_POS_GUIDE = """Quy tắc POS:
-- POS không cần theo spaCy.
 - POS là nhãn học từ vựng do hệ thống định nghĩa để dễ lưu và hiển thị.
 - Chỉ dùng một trong các giá trị sau:
   NOUN, VERB, ADJ, ADV, PHRASE, PHRASAL_VERB, COLLOCATION, IDIOM, FIXED_EXPRESSION

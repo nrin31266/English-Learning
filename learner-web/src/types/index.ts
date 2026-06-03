@@ -363,6 +363,29 @@ export interface IVocabSubTopic {
   createdAt: string;
 }
 
+export interface IVocabWordDetail {
+  id: string;
+  text: string;
+  pos: string;
+  key: string;
+  summaryVi?: string;
+  phonetics?: {
+    uk?: string;
+    ukAudioUrl?: string;
+    us?: string;
+    usAudioUrl?: string;
+  };
+  cefrLevel?: string;
+  definitions?: Array<{
+    definition?: string;
+    meaningVi?: string;
+    example?: string;
+    viExample?: string;
+    level?: string;
+  }>;
+  status?: string;
+}
+
 export interface IVocabWordEntry {
   id: string;
   subtopicId: string;
@@ -378,7 +401,7 @@ export interface IVocabWordEntry {
   contextExample?: string;
   contextViExample?: string;
   contextLevel?: string;
-  wordDetail?: unknown;
+  wordDetail?: IVocabWordDetail | null;
 }
 
 export interface IVocabTag {

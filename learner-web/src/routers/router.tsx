@@ -51,10 +51,7 @@ const router = createBrowserRouter([
         path: "/vocab/topics/:id/subtopics/:subtopicId",
         element: withSuspense(<VocabTopicDetail />),
       },
-      {
-        path: "/vocab/topics/:id/subtopics/:subtopicId/:mode",
-        element: withSuspense(<VocabTopicDetail />),
-      },
+     
       {
         path: "/learn/lessons/:id/:slug/shadowing",
         element: withSuspense(<ShadowingModePage />),

@@ -88,8 +88,8 @@ const SentenceItem = ({ sentence, mode = "view", viewMode = "minimal", onSplitSe
       <div className="mt-0.5 w-12 shrink-0 text-[14px] text-muted-foreground font-semibold">
         #{s.orderIndex + 1}
       </div>
-      <div className="mt-0.5 w-12 shrink-0 text-[14px] text-muted-foreground">
-        {formatTimeMs(s.audioStartMs)}
+      <div className="mt-0.5 w-24 shrink-0 text-[14px] text-muted-foreground">
+        {formatTimeMs(s.audioStartMs)}-{formatTimeMs(s.audioEndMs)}
       </div>
 
       {/* Content */}
