@@ -1,3 +1,5 @@
+// src/pages/dictation/components/DictationPanel.tsx
+
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
@@ -7,8 +9,6 @@ import {
     CheckCircle2,
     ChevronRight,
     Eye,
-    Pause,
-    Play,
     RotateCcw
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -23,7 +23,7 @@ type RevealState = Record<number, boolean>
 
 type DictationPanelProps = {
     sentence: ILessonSentenceDetailsResponse
-    onSubmit?: (score: number) => void
+    onComplete?: (sentenceId: number, score: number) => void
     onNext?: () => void
     loading?: boolean
     completed?: boolean
@@ -37,20 +37,22 @@ type DictationPanelProps = {
 const getWordDisplay = (w: ILessonWordResponse): string =>
     w.wordText || w.wordNormalized || ""
 
+/**
+ * DictationPanel Component: Quản lý logic nhập liệu và chấm điểm cho chế độ chép chính tả.
+ * Sử dụng cơ chế kiểm tra thời gian thực dựa trên so sánh string normalized.
+ */
 const DictationPanel = ({
-    sentence, onSubmit, onNext,
+    sentence, onComplete, onNext,
     loading = false, 
     completed = false,
     currentTemporaryAnswer, onTemporaryAnswerChange,
     userInteracted,
-    onTogglePlayPause,
-    isPlaying
 }: DictationPanelProps) => {
     const [answer, setAnswer] = useState("")
     const [revealState, setRevealState] = useState<RevealState>({})
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const [isTransitioning, setIsTransitioning] = useState(false)
-   
+    
     const { activeWord, anchorEl, wordData, loadingWordData, handleWordClick, closePopup } = useWordPopup();
 
     const sortedWords = useMemo(
@@ -89,6 +91,10 @@ const DictationPanel = ({
     const revealedCount = Object.keys(revealState).length
     const hasRevealedAny = revealedCount > 0
 
+    /**
+     * Tính toán điểm dựa trên tỷ lệ từ hoàn thành không sử dụng gợi ý.
+     * Scale: 0 - 100.
+     */
     const calculatedScore = useMemo(() => {
         if (revealedCount === 0) return 100
         return Math.max(0, Math.round(((totalWords - revealedCount) / totalWords) * 100))
@@ -106,15 +112,20 @@ const DictationPanel = ({
 
     const isAllCorrect = typedTokens.length === totalWords && correctTypedCount === totalWords
 
+    /**
+     * Trigger hoàn thành câu khi logic so sánh khớp 100%.
+     */
     useEffect(() => {
         if (isAllCorrect && !completed && !loading && userInteracted) {
             successSound.play()
             const finalPath = sentence.textDisplay || sortedWords.map(w => getWordDisplay(w)).join(" ")
             setAnswer(finalPath)
             onTemporaryAnswerChange?.(finalPath)
-            onSubmit?.(calculatedScore)
+            
+            // Callback đồng bộ với kiến trúc Smart API Call
+            onComplete?.(sentence.id, calculatedScore)
         }
-    }, [isAllCorrect, completed, loading, calculatedScore, onSubmit, userInteracted, sentence.textDisplay])
+    }, [isAllCorrect, completed, loading, calculatedScore, onComplete, userInteracted, sentence.textDisplay, sortedWords])
 
     const prettifyAndFocus = useCallback(() => {
         let firstErrorIndex = -1
@@ -166,7 +177,7 @@ const DictationPanel = ({
             return prevAnswer
         })
         if (userInteracted) textareaRef.current?.focus()
-    }, [onTemporaryAnswerChange])
+    }, [onTemporaryAnswerChange, userInteracted])
 
     const handleWordChipClick = useCallback((w: ILessonWordResponse, el: HTMLElement) => {
         handleWordClick(w, el, sentence.textDisplay || "")
@@ -183,7 +194,7 @@ const DictationPanel = ({
     return (
         <div className="flex w-full flex-col gap-3 rounded-xl border bg-card p-3 sm:p-4 shadow-sm relative">
 
-            {/* HEADER - Gọn với text thường */}
+            {/* Header: Hiển thị thống kê hoàn thành và số lượng gợi ý */}
             <div className="flex items-center justify-between gap-4 z-10">
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                     <div className="flex items-center gap-1.5">
@@ -204,7 +215,7 @@ const DictationPanel = ({
                 {completed && <CompletedBadge size="sm" />}
             </div>
 
-            {/* TEXTAREA */}
+            {/* Input chính */}
             <div className="relative group z-10">
                 <Textarea
                     ref={textareaRef}
@@ -235,7 +246,7 @@ const DictationPanel = ({
                 />
             </div>
 
-            {/* WORD CHIPS */}
+            {/* Word Chips hiển thị từ vựng gợi ý */}
             <div className={cn(
                 "rounded-lg border border-border/50 bg-muted/10 p-3 flex flex-wrap gap-2 max-h-48 overflow-y-auto min-h-[80px] z-10 transition-all",
                 !userInteracted && "pointer-events-none opacity-80"
@@ -254,10 +265,8 @@ const DictationPanel = ({
                 ))}
             </div>  
 
-            {/* FOOTER */}
+            {/* Footer: Điều khiển chức năng */}
             <div className="flex justify-between items-center pt-1 z-10">
-                
-                {/* NHÓM BÊN TRÁI: Các công cụ */}
                 <div className="flex items-center gap-2">
                     <Button
                         variant="ghost"
@@ -269,36 +278,14 @@ const DictationPanel = ({
                         <RotateCcw className="h-3.5 w-3.5 sm:mr-1" />
                         <span className="hidden sm:inline">Reset</span>
                     </Button>
-
-                    {/* <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onTogglePlayPause}
-                        disabled={!userInteracted}
-                        className="h-8 px-3 border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/50 hidden sm:flex transition-all w-24 justify-center"
-                        title="Press ` (Backtick) to Play/Pause"
-                    >
-                        {isPlaying ? (
-                            <Pause className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-                        ) : (
-                            <Play className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                        )}
-                        <span className="text-xs font-medium w-10 text-left">
-                            {isPlaying ? "Pause" : "Play"}
-                        </span>
-                        <kbd className="ml-1 px-1.5 py-0.5 rounded bg-muted text-[11px] font-mono border border-border font-bold">
-                            `
-                        </kbd>
-                    </Button> */}
                 </div>
 
-                {/* NHÓM BÊN PHẢI: Chuyển câu */}
                 <Button
                     onClick={onNext}
                     disabled={loading || (!userInteracted && !completed)}
                     size="sm"
                     className={cn(
-                        "h-8 gap-1.5 px-4  text-base shadow-sm transition-all",
+                        "h-8 gap-1.5 px-4 text-base shadow-sm transition-all",
                         completed
                             ? "bg-primary hover:bg-primary/80 text-primary-foreground"
                             : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -309,7 +296,7 @@ const DictationPanel = ({
                 </Button>
             </div>
 
-            {/* MEANING - Nền vàng nhẹ */}
+            {/* Translation (Chỉ hiển thị khi đã hoàn thành) */}
             {isAllCorrect && completed && !loading && sentence.translationVi && (
                 <div className="mt-4 rounded-lg bg-primary/3 border border-primary/40  p-3 z-10">
                     <span className="block text-[10px] font-bold uppercase tracking-widest text-primary mb-1">

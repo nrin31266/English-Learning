@@ -225,6 +225,7 @@ public class LessonService {
                 .totalCompletedSentences(
                         progress.getCompletedSentenceIds() != null ? progress.getCompletedSentenceIds().size() : 0
                 )
+                .highestScores(progress.getHighestScores() != null ? progress.getHighestScores() : new java.util.HashMap<>())
                 .build();
     }
 

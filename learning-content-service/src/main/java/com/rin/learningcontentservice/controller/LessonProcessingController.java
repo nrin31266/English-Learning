@@ -6,11 +6,12 @@ import com.rin.learningcontentservice.dto.request.ProgressUpdateRequest;
 import com.rin.learningcontentservice.service.LessonProcessingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/process") // Đã bỏ dấu '/' ở cuối cho chuẩn RESTful
+@RequestMapping("/process")
 public class LessonProcessingController {
 
     private final LessonProcessingService lessonProcessingService;
@@ -20,22 +21,18 @@ public class LessonProcessingController {
      * @param request chứa lessonId, sentenceId, mode, score
      */
     @PutMapping("/progress")
-    public ApiResponse<Void> updateProgress(@Valid @RequestBody ProgressUpdateRequest request) {
-
+    public ResponseEntity<Void> updateProgress(@Valid @RequestBody ProgressUpdateRequest request) {
         // Gọi service xử lý logic lưu Database âm thầm
         lessonProcessingService.updateProgress(request);
 
-        // Trả về HTTP 200 OK thành công, không cần data rườm rà vì frontend đã Optimistic UI
-        return ApiResponse.success(null);
+        return ApiResponse.noContent();
     }
-    // LessonProcessingController.java
 
     @PutMapping("/progress/batch")
-    public ApiResponse<Void> updateBatchProgress(@Valid @RequestBody ProgressBatchRequest request) {
+    public ResponseEntity<Void> updateBatchProgress(@Valid @RequestBody ProgressBatchRequest request) {
         // Đẩy qua service xử lý một lượt
         lessonProcessingService.updateBatchProgress(request);
 
-        return ApiResponse.success(null);
+        return ApiResponse.noContent();
     }
-
 }

@@ -3,6 +3,8 @@ package com.rin.learningcontentservice.dto.response;
 import com.rin.learningcontentservice.model.ProgressStatus;
 import lombok.Builder;
 import lombok.Data;
+
+import java.util.Map;
 import java.util.Set;
 
 @Data
@@ -12,4 +14,5 @@ public class UserLessonProgressDto {
     private ProgressStatus status;
     private Set<Long> completedSentenceIds;
     private int totalCompletedSentences;
+    private Map<Long, Double> highestScores;
 }

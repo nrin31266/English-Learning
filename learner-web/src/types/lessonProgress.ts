@@ -9,6 +9,9 @@ export interface UserLessonProgress {
   status: ProgressStatus;
   completedSentenceIds: number[]; // Backend trả về Set<Long> sẽ parse thành array ở Frontend
   totalCompletedSentences: number;
+  
+  // --- THÊM TRƯỜNG NÀY ĐỂ HỨNG DATA TỪ BACKEND ---
+  highestScores: Record<number, number>; // Map lưu điểm kỷ lục: { sentenceId: score }
 }
 
 // Wrapper DTO chứa toàn bộ tiến độ của bài học (nằm trong LessonDetailsResponse)
@@ -17,13 +20,13 @@ export interface LessonProgressOverview {
   dictation: UserLessonProgress;
 }
 
-// Response từ API khi gọi PUT /process/progress
-export interface ProgressUpdateResponse {
-  isPassed: boolean;
-  sentenceCompleted: boolean;
-  lessonCompleted: boolean;
-  totalCompletedSentences: number;
-}
+// // Response từ API khi gọi PUT /process/progress
+// export interface ProgressUpdateResponse {
+//   isPassed: boolean;
+//   sentenceCompleted: boolean;
+//   lessonCompleted: boolean;
+//   totalCompletedSentences: number;
+// }
 
 // (Tùy chọn) Request payload để gửi lên API PUT /process/progress
 export interface ProgressUpdateRequest {

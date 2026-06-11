@@ -3,8 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Spinner2 } from "@/components/ui/spinner2"
 import { cn } from "@/lib/utils"
-import { ArrowRight, Mic, Square, Volume2, X, Snail } from "lucide-react"
-import { useState, useEffect } from "react"
+import { ArrowRight, Mic, Volume2, X, Snail } from "lucide-react"
 
 interface RecordingControlsProps {
   isRecording: boolean
@@ -41,124 +40,130 @@ const RecordingControls = ({
   onTogglePlayRecorded,
   onNext,
 }: RecordingControlsProps) => {
-  const [showRecordingEffect, setShowRecordingEffect] = useState(false)
-
-  useEffect(() => {
-    if (isRecording) {
-      const timer = setTimeout(() => setShowRecordingEffect(true), 50)
-      return () => clearTimeout(timer)
-    } else {
-      setShowRecordingEffect(false)
-    }
-  }, [isRecording])
 
   return (
-    <div className="flex flex-col items-center w-full gap-2 mt-2">
+    <div className="flex flex-col items-center w-full mt-2">
       
-      {/* TRỞ VỀ CHÂN ÁI: DÙNG ABSOLUTE CHIA ĐÔI (50%) ĐỂ KHOÁ TÂM TUYỆT ĐỐI */}
-      <div className="relative flex items-center justify-center w-full max-w-md mx-auto h-20 sm:h-24">
-        
-        {/* BÊN TRÁI: Dồn về từ mức 50% đổ sang trái */}
-        <div className="absolute inset-y-0 left-0 right-[50%] flex flex-col sm:flex-row items-end sm:items-center justify-center gap-2 pr-10 sm:pr-14 z-10">
-          {(!isRecording && !isUploading) && (
-            <Button
-              variant={isSlowMode ? "default" : "outline"}
-              size="sm"
-              // 👉 Sửa mỗi nút Slow về xanh blue-600 như cũ
-              className={cn("gap-1.5 px-3 h-9 rounded-full transition-all duration-300 font-medium", 
-                isSlowMode ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm border-transparent" : "text-muted-foreground hover:text-foreground"
-              )}
-              onClick={onToggleSlowMode}
-              disabled={!userInteracted}
-              title="Add extra time for speaking slowly"
-            >
-              <Snail className="h-4 w-4" />
-              <span className="hidden sm:inline">{isSlowMode ? "Slowed" : "Slow"}</span>
-            </Button>
-          )}
+      {/* Định nghĩa CSS cho sóng âm */}
+      <style>{`
+        @keyframes sound-wave {
+          0% { transform: scaleY(0.3); opacity: 0.7; }
+          50% { transform: scaleY(1); opacity: 1; }
+          100% { transform: scaleY(0.3); opacity: 0.7; }
+        }
+      `}</style>
 
-          {(hasRecordedAudio && !isRecording && !isUploading) && (
-            <Button
-              variant={isPlayingRecorded ? "default" : "outline"}
-              size="sm"
-              className={cn("gap-1.5 px-3 h-9 rounded-full transition-all font-medium",
-                isPlayingRecorded ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+      {/* KHU VỰC TOOLBAR: CHIA 3 KHỐI ĐỂ KHOÁ TÂM TUYỆT ĐỐI */}
+      <div className="flex w-full items-center justify-between">
+        
+        {/* KHỐI TRÁI: Các nút phụ */}
+        <div className="flex-1 flex justify-end items-center gap-1.5 sm:gap-2">
+          {(!isRecording && !isUploading) && (
+            <>
+              <Button
+                variant={isSlowMode ? "default" : "outline"}
+                size="sm"
+                className={cn("gap-1.5 px-2 sm:px-3 h-8 sm:h-9 transition-all font-medium", 
+                  isSlowMode ? "bg-blue-600 hover:bg-blue-700 text-white border-transparent" : "text-muted-foreground hover:text-foreground border-border/60"
+                )}
+                onClick={onToggleSlowMode}
+                disabled={!userInteracted}
+                title="Add extra time for speaking slowly"
+              >
+                <Snail className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline text-[13px]">{isSlowMode ? "Slowed" : "Slow"}</span>
+              </Button>
+
+              {(hasRecordedAudio) && (
+                <Button
+                  variant={isPlayingRecorded ? "default" : "outline"}
+                  size="sm"
+                  className={cn("gap-1.5 px-2 sm:px-3 h-8 sm:h-9 transition-all font-medium",
+                    isPlayingRecorded ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground border-border/60"
+                  )}
+                  onClick={onTogglePlayRecorded}
+                >
+                  <Volume2 className={cn("h-3.5 w-3.5", isPlayingRecorded && "animate-pulse")} /> 
+                  <span className="hidden sm:inline text-[13px]">{isPlayingRecorded ? "Stop" : "Play"}</span>
+                </Button>
               )}
-              onClick={onTogglePlayRecorded}
-            >
-              <Volume2 className={cn("h-4 w-4", isPlayingRecorded && "animate-pulse")} /> 
-              <span className="hidden sm:inline">{isPlayingRecorded ? "Stop" : "Play"}</span>
-            </Button>
+            </>
           )}
         </div>
 
-        {/* GIỮA: Nút Record (Lớp z-20, tách biệt hoàn toàn) */}
-        <div className="relative z-20 shrink-0">
-          <button
-            className={cn(
-              "transform-gpu relative w-16 h-16 sm:w-20 sm:h-20 rounded-full transition-all duration-300 ease-out",
-              "flex flex-col items-center justify-center will-change-transform border-[3px] overflow-hidden",
-              isRecording
-                ? "bg-red-500 border-red-400 hover:bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.5)]"
-                : "bg-primary border-primary/40 hover:bg-primary/90 shadow-[0_8px_20px_var(--tw-shadow-color)] shadow-primary/30 active:scale-95",
-              (!userInteracted || isUploading) && "opacity-50 cursor-not-allowed pointer-events-none grayscale-40"
-            )}
+        {/* KHỐI GIỮA: NÚT RECORD */}
+        <div className="shrink-0 mx-2 sm:mx-3">
+          <Button
             onClick={onRecordClick}
-            disabled={isUploading || !userInteracted}
-            style={{ transform: isRecording ? "scale(1.08)" : "scale(1)" }}
+            disabled={isUploading || (!userInteracted && !isRecording)}
+            title="Tap or press Space to record"
+            className={cn(
+              "relative flex items-center justify-center transition-all duration-300 ease-in-out shadow-sm",
+              "w-[140px] sm:w-[160px] h-10 sm:h-12",
+              isRecording
+                ? "bg-red-500 hover:bg-red-600 text-white" 
+                : "bg-primary hover:bg-primary/90 text-primary-foreground",
+              (!userInteracted || isUploading) && "opacity-50 grayscale cursor-not-allowed"
+            )}
           >
-            {isUploading ? (
-              <Spinner2 className="h-6 w-6 sm:h-8 sm:w-8 text-primary-foreground animate-spin drop-shadow-md" />
+            {!userInteracted ? (
+              // 👉 Đã bỏ animate-pulse ở đây
+              <span className="text-[13px] sm:text-[14px] font-bold tracking-wide">
+                ▶ Play to start
+              </span>
+            ) : isUploading ? (
+              <div className="flex items-center gap-2">
+                <Spinner2 className="h-4 w-4 animate-spin drop-shadow-sm" />
+                <span className="text-[13px] sm:text-[15px] font-semibold tracking-wide">Analyzing...</span>
+              </div>
             ) : isRecording ? (
-              <div className="flex flex-col items-center justify-center gap-1.5 drop-shadow-sm">
-                <style>{`
-                  @keyframes sound-wave {
-                    0% { transform: scaleY(0.3); opacity: 0.7; }
-                    50% { transform: scaleY(1); opacity: 1; }
-                    100% { transform: scaleY(0.3); opacity: 0.7; }
-                  }
-                `}</style>
-                <div className="flex items-end justify-center gap-[3px] h-5 sm:h-6 mt-1">
-                  <div className="w-1.5 sm:w-2 bg-white rounded-full h-full origin-bottom animate-[sound-wave_0.9s_ease-in-out_infinite]" />
-                  <div className="w-1.5 sm:w-2 bg-white rounded-full h-full origin-bottom animate-[sound-wave_1.2s_ease-in-out_infinite_0.2s]" />
-                  <div className="w-1.5 sm:w-2 bg-white rounded-full h-full origin-bottom animate-[sound-wave_0.8s_ease-in-out_infinite_0.4s]" />
-                  <div className="w-1.5 sm:w-2 bg-white rounded-full h-full origin-bottom animate-[sound-wave_1.1s_ease-in-out_infinite_0.1s]" />
-                  <div className="w-1.5 sm:w-2 bg-white rounded-full h-full origin-bottom animate-[sound-wave_1s_ease-in-out_infinite_0.5s]" />
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="flex items-end justify-center gap-[3px] h-4">
+                  <div className="w-[3px] bg-white rounded-full h-full origin-bottom animate-[sound-wave_0.9s_ease-in-out_infinite]" />
+                  <div className="w-[3px] bg-white rounded-full h-full origin-bottom animate-[sound-wave_1.2s_ease-in-out_infinite_0.2s]" />
+                  <div className="w-[3px] bg-white rounded-full h-full origin-bottom animate-[sound-wave_0.8s_ease-in-out_infinite_0.4s]" />
+                  <div className="w-[3px] bg-white rounded-full h-full origin-bottom animate-[sound-wave_1.1s_ease-in-out_infinite_0.1s]" />
                 </div>
-                <Square className="h-2.5 w-2.5 sm:h-3 sm:w-3 fill-white text-white opacity-90" />
+                {/* 👉 Đã tăng font-extrabold và size lên một chút để thời gian siêu nổi bật */}
+                <span className="font-mono font-extrabold tracking-widest text-[15px] sm:text-[17px]">
+                  00:{timeLeft.toString().padStart(2, '0')}
+                </span>
               </div>
             ) : (
-              <Mic className="h-7 w-7 sm:h-9 sm:w-9 text-primary-foreground drop-shadow-md" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Mic className="h-4 w-4 drop-shadow-sm shrink-0" />
+                <span className="text-[13px] sm:text-[15px] font-semibold tracking-wide whitespace-nowrap">
+                  {hasRecordedAudio ? "Try Again" : "Record"} 
+                  {/* 👉 In đậm số thời gian mặc định */}
+                  <span className="font-bold ml-1">({defaultTime}s)</span>
+                </span>
+              </div>
             )}
-
-            {showRecordingEffect && (
-              <span className="absolute inset-0 rounded-full border-4 border-primary-foreground/30 animate-ping pointer-events-none" style={{ animationDuration: "1.5s" }} />
-            )}
-          </button>
+          </Button>
         </div>
 
-        {/* BÊN PHẢI: Dồn về từ mức 50% đổ sang phải */}
-        <div className="absolute inset-y-0 left-[50%] right-0 flex flex-col sm:flex-row items-start sm:items-center justify-center gap-2 pl-10 sm:pl-14 z-10">
+        {/* KHỐI PHẢI: Các nút điều hướng */}
+        <div className="flex-1 flex justify-start items-center gap-1.5 sm:gap-2">
           {(!isRecording && !isUploading) && (
             <>
               {(shouldShowSkipButton && !shouldShowNextButton) && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="gap-1.5 px-3 h-9 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-full font-semibold tracking-wide"
+                  className="gap-1.5 px-2 sm:px-3 h-8 sm:h-9 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-semibold tracking-wide"
                   onClick={onNext}
                 >
-                  <span className="hidden sm:inline">Skip</span> <X className="h-4 w-4" />
+                  <span className="hidden sm:inline text-[13px]">Skip</span> <X className="h-3.5 w-3.5" />
                 </Button>
               )}
               
               {shouldShowNextButton && (
                 <Button 
                   size="sm"
-                  className="gap-1.5 px-5 h-9 bg-primary text-primary-foreground rounded-full font-bold shadow-sm hover:shadow-md animate-in fade-in zoom-in duration-300 tracking-wide" 
+                  className="gap-1.5 px-3 sm:px-4 h-8 sm:h-9 bg-primary text-primary-foreground font-bold shadow-sm hover:shadow-md animate-in fade-in zoom-in duration-300 tracking-wide" 
                   onClick={onNext}
                 >
-                  <span className="hidden sm:inline">Next</span> <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+                  <span className="hidden sm:inline text-[13px]">Next</span> <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
                 </Button>
               )}
             </>
@@ -167,35 +172,14 @@ const RecordingControls = ({
 
       </div>
 
-      {/* VỊ TRÍ TEXT TRẠNG THÁI & THỜI GIAN CỐ ĐỊNH */}
-      <div className="h-6 flex items-center justify-center w-full mt-1">
-        {!userInteracted ? (
-           <span className="text-[13px] sm:text-[14px] text-primary uppercase font-bold tracking-wider flex items-center gap-1.5 animate-pulse">
-             ▶ Play audio to start
-           </span>
-        ) : recordError ? (
-          <span className="text-[13px] text-red-600 dark:text-red-400 bg-red-50/80 dark:bg-red-950/40 px-3 py-1 rounded-full border border-red-200 dark:border-red-900 shadow-sm font-semibold tracking-wide">
+      {/* CHỈ HIỂN THỊ KHI CÓ LỖI */}
+      {recordError && (
+        <div className="flex items-center justify-center w-full mt-2 animate-in fade-in slide-in-from-bottom-1">
+          <span className="text-[12px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 px-3 py-1 rounded-md border border-red-200 dark:border-red-900 shadow-sm font-medium tracking-wide">
             ⚠️ {recordError}
           </span>
-        ) : isRecording ? (
-          <span className="text-[16px] sm:text-[18px] font-bold text-red-500 font-mono tracking-widest flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-            00:{timeLeft.toString().padStart(2, '0')}
-          </span>
-        ) : isUploading ? (
-          <span className="text-[13px] sm:text-[14px] text-muted-foreground animate-pulse font-bold tracking-widest uppercase">
-            ⏳ Analyzing voice...
-          </span>
-        ) : hasRecordedAudio ? (
-          <span className="text-[13px] sm:text-[15px] text-muted-foreground font-semibold tracking-wide flex items-center gap-1.5">
-            Tap /&nbsp;<kbd className="px-1 py-0.5 bg-muted/60 border border-border/60 rounded text-[10px] font-mono leading-none">Space</kbd>&nbsp;to try again <span className="text-primary/90 font-bold">({defaultTime}s)</span>
-          </span>
-        ) : (
-          <span className="text-[13px] sm:text-[15px] text-muted-foreground font-semibold tracking-wide flex items-center gap-1.5">
-            Tap /&nbsp;<kbd className="px-1 py-0.5 bg-muted/60 border border-border/60 rounded text-[10px] font-mono leading-none">Space</kbd>&nbsp;to record <span className="text-primary/90 font-bold">({defaultTime}s)</span>
-          </span>
-        )}
-      </div>
+        </div>
+      )}
 
     </div>
   )

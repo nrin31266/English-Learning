@@ -3,38 +3,44 @@
 import { useCallback, useRef } from "react"
 import { useParams } from "react-router-dom"
 import {
-  fetchLessonByIdForDictation,
+  fetchLessonById,
   resetLessonState,
-  submitBatchDictationScore,
-  submitDictationScore,
-  updateDictationCompletion,
-} from "@/store/lessonForDictationSlide"
+  submitBatchLessonScore,
+  submitLessonScore,
+  updateLocalProgress,
+} from "@/store/activeLessonSlice"
+
 import DictationPanel from "../components/DictationPanel"
 import DictationTranscript from "../components/DictationTranscript"
 import { useLessonMode } from "@/features/learnmode/hooks/useLessonMode"
 import LessonModeLayout from "@/features/learnmode/components/LessonModeLayout"
+import type { LearningMode } from "@/types/lessonProgress"
 
 const DictationMode = () => {
   const { id } = useParams<{ id: string }>()
+  
+  // Bộ nhớ đệm lưu trữ dữ liệu text đang gõ dở dang của từng câu
   const tempAnswersRef = useRef<Record<number, string>>({})
-
-  const updateCompletion = useCallback(
-    (sentenceId: number) => updateDictationCompletion({ sentenceId }),
+  const handleUpdateCompletion = useCallback(
+    (args: { sentenceId: number; score: number; mode: LearningMode }) => 
+        updateLocalProgress(args),
     []
   )
-
+  /**
+   * Khởi tạo Custom Hook quản lý trạng thái bài học Dictation.
+   * Cấu hình captureKeysInEditable = true để bật tính năng điều hướng khi gõ văn bản.
+   */
   const mode = useLessonMode({
     lessonId: id,
-    selector: (state) => state.lessonForDictation.lesson,
-    fetchAction: fetchLessonByIdForDictation,
+    selector: (state) => state.activeLesson.lesson,
+    fetchAction: fetchLessonById,
     resetAction: resetLessonState,
-    submitScore: submitDictationScore,
-    submitBatchScore: submitBatchDictationScore,
-    updateCompletion,
+    submitScore: submitLessonScore,
+    submitBatchScore: submitBatchLessonScore,
+    updateLocalProgress: handleUpdateCompletion,
     progressKey: "dictation",
     modeName: "DICTATION",
     captureKeysInEditable: true,
-    
   })
 
   const {
@@ -51,6 +57,8 @@ const DictationMode = () => {
     isPlaying
   } = mode
 
+  
+
   return (
     <LessonModeLayout
       mode={mode}
@@ -61,7 +69,7 @@ const DictationMode = () => {
             key="dictation-panel"
             sentence={currentSentence}
             onNext={handleNext}
-            onSubmit={(score) => handleCompleteSentence(currentSentence.id, score)}
+            onComplete={(score) => handleCompleteSentence(currentSentence.id, score)}
             completed={completedIdsSet.has(currentSentence.id)}
             currentTemporaryAnswer={tempAnswersRef.current[currentSentence.id]}
             onTemporaryAnswerChange={(val) => {

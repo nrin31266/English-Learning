@@ -8,7 +8,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Entity
@@ -47,10 +49,16 @@ public class UserLessonProgress {
     @Column(name = "lesson_version")
     @Builder.Default
     private Integer lessonVersion = 0;
-    @Builder.Default
-    @Column(name = "completed_sentence_ids", columnDefinition = "jsonb")
+
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    @Builder.Default
     private Set<Long> completedSentenceIds = new HashSet<>();
+
+    @Builder.Default
+    @Column(name = "highest_scores", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<Long, Double> highestScores = new HashMap<>();
 
     @UpdateTimestamp
     @Column(name = "updated_at")

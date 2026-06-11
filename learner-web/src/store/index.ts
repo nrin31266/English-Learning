@@ -6,17 +6,16 @@ import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux
 import systemReducer from './system/index';
 import topicsReducer from './topicsSlide';
 import topicReducer from './topicSlide';
-import lessonForShadowingReducer from './lessonForShadowingSlide';
-import lessonForDictationReducer from './lessonForDictationSlide'; 
+
 import vocabReducer from './vocabSlide';
 import vocabDetailReducer from './vocabDetailSlide';
+import activeLessonReducer from './activeLessonSlice';
 
 const rootReducer = combineReducers({
   system: systemReducer,
   topics: topicsReducer,
   topic: topicReducer,
-  lessonForShadowing: lessonForShadowingReducer,
-  lessonForDictation: lessonForDictationReducer,
+  activeLesson: activeLessonReducer,
   vocab: vocabReducer,
   vocabDetail: vocabDetailReducer,
 });

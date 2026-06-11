@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { useTranslation } from "react-i18next"
 
@@ -12,10 +11,9 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import {
-    Card,  
+    Card,
     CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
@@ -50,9 +48,6 @@ const mockTopics = [
     { value: "business-emails", label: "Business Emails" },
     { value: "daily-conversations", label: "Daily Conversations" },
 ]
-
-
-
 
 const createLessonSchema = (t: TFunction) =>
     z
@@ -94,6 +89,7 @@ const createLessonSchema = (t: TFunction) =>
         })
 
 type LessonFormValues = z.infer<ReturnType<typeof createLessonSchema>>
+
 const GenerateLessons = () => {
     const { t } = useTranslation()
     const schema = React.useMemo(() => createLessonSchema(t), [t])
@@ -101,10 +97,11 @@ const GenerateLessons = () => {
     const dispatch = useAppDispatch();
     const [loading, setLoading] = React.useState(false);
     const [storedThumbnailsOpen, setStoredThumbnailsOpen] = React.useState(false);
+
     const handleStoredClick = () => {
         setStoredThumbnailsOpen(!storedThumbnailsOpen);
     }
-    // stored_thumbnails: [url1, url2, ...]
+
     const [storedThumbnails, setStoredThumbnails] = React.useState<string[]>(() => {
         try {
             const raw = localStorage.getItem("stored_thumbnails");
@@ -116,9 +113,7 @@ const GenerateLessons = () => {
         }
     });
 
-
     const hanldeUpdateStoredThumbnails = (newThumbnail: string) => {
-        // max 10, if exists, move to front
         let updatedThumbnails = storedThumbnails.filter(url => url !== newThumbnail);
         updatedThumbnails.unshift(newThumbnail);
         if (updatedThumbnails.length > 10) {
@@ -127,10 +122,12 @@ const GenerateLessons = () => {
         setStoredThumbnails(updatedThumbnails);
         localStorage.setItem("stored_thumbnails", JSON.stringify(updatedThumbnails));
     }
+
     const navigate = useNavigate();
     const [hydrating, setHydrating] = React.useState(true);
+
     React.useEffect(() => {
-        const id = setTimeout(() => setHydrating(false), 50); // 10–120ms
+        const id = setTimeout(() => setHydrating(false), 50);
         return () => clearTimeout(id);
     }, []);
 
@@ -138,8 +135,7 @@ const GenerateLessons = () => {
         if (status === 'idle') {
             dispatch(fetchTopicOptions());
         }
-    }, [dispatch]);
-
+    }, [dispatch, status]);
 
     const defaultValues = React.useMemo<LessonFormValues>(() => ({
         topicSlug: "",
@@ -155,7 +151,6 @@ const GenerateLessons = () => {
         enableShadowing: true,
     }), []);
 
-
     const form = useForm<LessonFormValues>({
         resolver: zodResolver(schema),
         defaultValues,
@@ -167,7 +162,7 @@ const GenerateLessons = () => {
         if (watchedSourceType === "YOUTUBE" && form.getValues("thumbnailUrl")) {
             form.setValue("thumbnailUrl", "")
         }
-    }, [watchedSourceType])
+    }, [watchedSourceType, form])
 
     const topicOptions = React.useMemo(() => {
         if (data.length) {
@@ -184,11 +179,9 @@ const GenerateLessons = () => {
         [t]
     )
 
-    // ---------- Placeholder ----------
     const sourceUrlPlaceholder = watchedSourceType === "YOUTUBE"
         ? t("generateLessons.placeholders.youtubeSourceUrl")
         : t("generateLessons.placeholders.genericSourceUrl")
-
 
     async function onSubmit(values: LessonFormValues) {
         setLoading(true);
@@ -201,32 +194,29 @@ const GenerateLessons = () => {
             if (normalizedPayload.thumbnailUrl) {
                 hanldeUpdateStoredThumbnails(normalizedPayload.thumbnailUrl);
             }
-            console.log("Prepared lesson payload", normalizedPayload)
             const data = await handleAPI<ILessonDto>({
                 endpoint: "/learning-contents/admin/lessons",
                 method: "POST",
                 isAuth: true,
                 body: normalizedPayload,
             })
-
-            console.log(data);
-
             navigate(`/lessons/${data.id}/${data.slug}`);
-
             form.reset(defaultValues)
         } catch (error) {
-
             console.error("Failed to create lesson", error);
         } finally {
             setLoading(false);
         }
     }
+
     if (hydrating) {
         return <SkeletonComponent />
     }
+
     return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 h-6">
+        <div className="flex flex-col gap-4 relative h-full">
+            {/* Breadcrumb */}
+            <div className="flex items-center h-6 shrink-0">
                 <Breadcrumb>
                     <BreadcrumbList>
                         <BreadcrumbItem>
@@ -240,17 +230,18 @@ const GenerateLessons = () => {
                 </Breadcrumb>
             </div>
 
-            <Card>
-                <CardHeader>
+            <Card className="flex flex-col border shadow-sm relative overflow-hidden">
+                <CardHeader className="border-b bg-card pb-4">
                     <CardTitle>{t("generateLessons.form.title")}</CardTitle>
-                    <CardDescription>
-                        {t("generateLessons.form.description")}
-                    </CardDescription>
+                    <CardDescription>{t("generateLessons.form.description")}</CardDescription>
                 </CardHeader>
+
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
-                        <CardContent className="space-y-8">
-                            <section className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col">
+                        <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10 pt-6 pb-6">
+                            
+                            {/* --- CỘT TRÁI: TOPIC BASICS --- */}
+                            <section className="space-y-5">
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <div>
                                         <h3 className="text-base font-semibold">{t("generateLessons.sections.topicBasics.title")}</h3>
@@ -260,7 +251,8 @@ const GenerateLessons = () => {
                                     </div>
                                     <Badge variant="secondary">{t("generateLessons.form.requiredBadge")}</Badge>
                                 </div>
-                                <div className="grid gap-4 md:grid-cols-2">
+
+                                <div className="grid gap-5 sm:grid-cols-2">
                                     <FormField
                                         control={form.control}
                                         name="topicSlug"
@@ -270,8 +262,7 @@ const GenerateLessons = () => {
                                                 <FormControl>
                                                     <Select value={field.value || undefined} onValueChange={field.onChange}>
                                                         <SelectTrigger ref={field.ref}>
-                                                            <SelectValue placeholder={t("generateLessons.placeholders.topic")}
-                                                            />
+                                                            <SelectValue placeholder={t("generateLessons.placeholders.topic")} />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {topicOptions.map((topic) => (
@@ -293,8 +284,7 @@ const GenerateLessons = () => {
                                             <FormItem>
                                                 <FormLabel>{t("generateLessons.fields.title")}</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder={t("generateLessons.placeholders.title")}
-                                                        {...field} />
+                                                    <Input placeholder={t("generateLessons.placeholders.title")} {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -309,8 +299,7 @@ const GenerateLessons = () => {
                                                 <FormControl>
                                                     <Select value={field.value} onValueChange={field.onChange}>
                                                         <SelectTrigger ref={field.ref}>
-                                                            <SelectValue placeholder={t("generateLessons.placeholders.lessonType")}
-                                                            />
+                                                            <SelectValue placeholder={t("generateLessons.placeholders.lessonType")} />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {lessonTypeOptions.map((option) => (
@@ -334,8 +323,7 @@ const GenerateLessons = () => {
                                                 <FormControl>
                                                     <Select value={field.value} onValueChange={field.onChange}>
                                                         <SelectTrigger ref={field.ref}>
-                                                            <SelectValue placeholder={t("generateLessons.placeholders.languageLevel")}
-                                                            />
+                                                            <SelectValue placeholder={t("generateLessons.placeholders.languageLevel")} />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {cefrLevelOptions.map((option) => (
@@ -350,89 +338,92 @@ const GenerateLessons = () => {
                                             </FormItem>
                                         )}
                                     />
-                                    <FormField
-                                        control={form.control}
-                                        name="description"
-                                        render={({ field }) => (
-                                            <FormItem className="md:col-span-2">
-                                                <div className="flex items-center justify-between">
-                                                    <FormLabel>{t("generateLessons.fields.description")}</FormLabel>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {t("generateLessons.form.optionalHint")}
-                                                    </span>
-                                                </div>
-                                                <FormControl>
-                                                    <Textarea
-                                                        placeholder={t("generateLessons.placeholders.description")}
-                                                        rows={4}
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
                                 </div>
+
+                                <FormField
+                                    control={form.control}
+                                    name="description"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <div className="flex items-center justify-between">
+                                                <FormLabel>{t("generateLessons.fields.description")}</FormLabel>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {t("generateLessons.form.optionalHint")}
+                                                </span>
+                                            </div>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder={t("generateLessons.placeholders.description")}
+                                                    rows={4}
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </section>
 
-                            <Separator />
+                            {/* --- CỘT PHẢI: SOURCE & FEATURES --- */}
+                            <div className="space-y-8">
+                                <section className="space-y-5">
+                                    <div>
+                                        <h3 className="text-base font-semibold">{t("generateLessons.sections.source.title")}</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {t("generateLessons.sections.source.subtitle")}
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-5 sm:grid-cols-2">
+                                        <FormField
+                                            control={form.control}
+                                            name="sourceType"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t("generateLessons.fields.sourceType")}</FormLabel>
+                                                    <FormControl>
+                                                        <Select value={field.value} onValueChange={field.onChange}>
+                                                            <SelectTrigger ref={field.ref}>
+                                                                <SelectValue placeholder={t("generateLessons.placeholders.sourceType")} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {sourceTypeOptions.map((option) => (
+                                                                    <SelectItem key={option} value={option}>
+                                                                        {formatEnumLabel("sourceType", option)}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="sourceLanguage"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>{t("generateLessons.fields.sourceLanguage")}</FormLabel>
+                                                    <FormControl>
+                                                        <Select value={field.value} onValueChange={field.onChange}>
+                                                            <SelectTrigger ref={field.ref}>
+                                                                <SelectValue placeholder={t("generateLessons.placeholders.sourceLanguage")} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {sourceLanguageOptions.map((option) => (
+                                                                    <SelectItem key={option} value={option}>
+                                                                        {formatEnumLabel("sourceLanguage", option)}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
 
-                            <section className="space-y-4">
-                                <div>
-                                    <h3 className="text-base font-semibold">{t("generateLessons.sections.source.title")}</h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        {t("generateLessons.sections.source.subtitle")}
-                                    </p>
-                                </div>
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="sourceType"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>{t("generateLessons.fields.sourceType")}</FormLabel>
-                                                <FormControl>
-                                                    <Select value={field.value} onValueChange={field.onChange}>
-                                                        <SelectTrigger ref={field.ref}>
-                                                            <SelectValue placeholder={t("generateLessons.placeholders.sourceType")} />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {sourceTypeOptions.map((option) => (
-                                                                <SelectItem key={option} value={option}>
-                                                                    {formatEnumLabel("sourceType", option)}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="sourceLanguage"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>{t("generateLessons.fields.sourceLanguage")}</FormLabel>
-                                                <FormControl>
-                                                    <Select value={field.value} onValueChange={field.onChange}>
-                                                        <SelectTrigger ref={field.ref}>
-                                                            <SelectValue placeholder={t("generateLessons.placeholders.sourceLanguage")} />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {sourceLanguageOptions.map((option) => (
-                                                                <SelectItem key={option} value={option}>
-                                                                    {formatEnumLabel("sourceLanguage", option)}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
                                     <FormField
                                         control={form.control}
                                         name="sourceUrl"
@@ -446,6 +437,7 @@ const GenerateLessons = () => {
                                             </FormItem>
                                         )}
                                     />
+
                                     {watchedSourceType !== "YOUTUBE" && (
                                         <FormField
                                             control={form.control}
@@ -455,123 +447,128 @@ const GenerateLessons = () => {
                                                     <FormLabel>{t("generateLessons.fields.thumbnailUrl")}</FormLabel>
                                                     <div className="grid grid-cols-[1fr_auto] gap-4 items-center">
                                                         <FormControl>
-                                                            <Input placeholder={t("generateLessons.placeholders.thumbnail")}
-                                                                {...field} />
-
+                                                            <Input placeholder={t("generateLessons.placeholders.thumbnail")} {...field} />
                                                         </FormControl>
-
                                                         <div className="relative">
-                                                            <Button onClick={handleStoredClick} type="button" className="" variant={"ghost"}>Stored</Button>
-                                                            {
-                                                                storedThumbnailsOpen &&
-                                                                <div className="absolute z-50 top-8 right-0
-                                                                    sm:w-[600px] w-[300px]
-                                                                    max-h-[70vh] overflow-auto
-                                                                    bg-white rounded-md shadow-md border
-                                                                   ">
-                                                                    <div className="flex justify-between items-center px-4 h-8 py-2 border-b">
-                                                                        <h1 className="font-semibold">Select a Thumbnail</h1>
-
-                                                                        <Button onClick={handleStoredClick} className="h-6 w-6" type="button" variant={"ghost"}><CircleX /></Button>
-
+                                                            <Button onClick={handleStoredClick} type="button" variant="outline">
+                                                                Stored
+                                                            </Button>
+                                                            {storedThumbnailsOpen && (
+                                                                <div className="absolute z-[60] top-12 right-0 sm:w-[400px] w-[280px] max-h-[50vh] overflow-auto bg-white rounded-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] border">
+                                                                    <div className="flex justify-between items-center px-4 h-10 border-b sticky top-0 bg-white">
+                                                                        <h1 className="font-semibold text-sm">Select a Thumbnail</h1>
+                                                                        <Button onClick={handleStoredClick} className="h-6 w-6 p-0" type="button" variant="ghost">
+                                                                            <CircleX className="h-4 w-4" />
+                                                                        </Button>
                                                                     </div>
-                                                                    <div className=" px-4 py-2  ">
-                                                                        {storedThumbnails.map((thumbnailUrl, index) =>
-                                                                            <div key={index} className=" grid grid-cols-[1fr_auto] items-center">
-                                                                                <p className="truncate line-clamp-1 " >{thumbnailUrl}</p>
-                                                                                <Button onClick={() => {
-                                                                                    form.setValue("thumbnailUrl", thumbnailUrl);
-                                                                                    setStoredThumbnailsOpen(false);
-                                                                                }} type="button" className="h-6 w-6" variant={"ghost"}><MousePointer2 /></Button>
-                                                                            </div>)}
-
+                                                                    <div className="p-2 space-y-1">
+                                                                        {storedThumbnails.length === 0 ? (
+                                                                            <p className="text-sm text-muted-foreground text-center py-4">No stored thumbnails</p>
+                                                                        ) : (
+                                                                            storedThumbnails.map((thumbnailUrl, index) => (
+                                                                                <div key={index} className="flex items-center justify-between gap-2 p-2 hover:bg-slate-50 rounded-md">
+                                                                                    <p className="truncate text-sm">{thumbnailUrl}</p>
+                                                                                    <Button
+                                                                                        onClick={() => {
+                                                                                            form.setValue("thumbnailUrl", thumbnailUrl);
+                                                                                            setStoredThumbnailsOpen(false);
+                                                                                        }}
+                                                                                        type="button"
+                                                                                        className="h-8 w-8 shrink-0"
+                                                                                        variant="ghost"
+                                                                                    >
+                                                                                        <MousePointer2 className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                </div>
+                                                                            ))
+                                                                        )}
                                                                     </div>
                                                                 </div>
-                                                            }
+                                                            )}
                                                         </div>
-
                                                     </div>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
                                     )}
+                                </section>
 
-                                </div>
-                            </section>
+                                <Separator />
 
-
-
-                            <Separator />
-
-                            <section className="space-y-4">
-                                <div>
-                                    <h3 className="text-base font-semibold">{t("generateLessons.sections.features.title")}</h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        {t("generateLessons.sections.features.subtitle")}
-                                    </p>
-                                </div>
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="enableDictation"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <div className="flex items-start gap-3 rounded-md border p-3">
-                                                    <FormControl>
-                                                        <Checkbox
-                                                            id="enableDictation"
-                                                            checked={field.value}
-                                                            onCheckedChange={(checked) => field.onChange(!!checked)}
-                                                        />
-                                                    </FormControl>
-                                                    <div className="space-y-1">
-                                                        <Label htmlFor="enableDictation">{t("generateLessons.fields.enableDictation")}</Label>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {t("generateLessons.helperTexts.enableDictation")}
-                                                        </p>
+                                <section className="space-y-4">
+                                    <div>
+                                        <h3 className="text-base font-semibold">{t("generateLessons.sections.features.title")}</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {t("generateLessons.sections.features.subtitle")}
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <FormField
+                                            control={form.control}
+                                            name="enableDictation"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <div className="flex items-start gap-3 rounded-md border p-4 bg-slate-50/50">
+                                                        <FormControl>
+                                                            <Checkbox
+                                                                id="enableDictation"
+                                                                checked={field.value}
+                                                                onCheckedChange={(checked) => field.onChange(!!checked)}
+                                                                className="mt-1"
+                                                            />
+                                                        </FormControl>
+                                                        <div className="space-y-1 leading-none">
+                                                            <Label htmlFor="enableDictation">{t("generateLessons.fields.enableDictation")}</Label>
+                                                            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">
+                                                                {t("generateLessons.helperTexts.enableDictation")}
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="enableShadowing"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <div className="flex items-start gap-3 rounded-md border p-3">
-                                                    <FormControl>
-                                                        <Checkbox
-                                                            id="enableShadowing"
-                                                            checked={field.value}
-                                                            onCheckedChange={(checked) => field.onChange(!!checked)}
-                                                        />
-                                                    </FormControl>
-                                                    <div className="space-y-1">
-                                                        <Label htmlFor="enableShadowing">{t("generateLessons.fields.enableShadowing")}</Label>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {t("generateLessons.helperTexts.enableShadowing")}
-                                                        </p>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="enableShadowing"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <div className="flex items-start gap-3 rounded-md border p-4 bg-slate-50/50">
+                                                        <FormControl>
+                                                            <Checkbox
+                                                                id="enableShadowing"
+                                                                checked={field.value}
+                                                                onCheckedChange={(checked) => field.onChange(!!checked)}
+                                                                className="mt-1"
+                                                            />
+                                                        </FormControl>
+                                                        <div className="space-y-1 leading-none">
+                                                            <Label htmlFor="enableShadowing">{t("generateLessons.fields.enableShadowing")}</Label>
+                                                            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">
+                                                                {t("generateLessons.helperTexts.enableShadowing")}
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                            </section>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </section>
+                            </div>
                         </CardContent>
-                        <CardFooter className="flex flex-wrap justify-end gap-3">
+
+                        {/* STICKY FOOTER TẠI ĐÂY */}
+                        <div className="sticky bottom-0 z-50 flex items-center justify-end gap-3 bg-card border-t p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
                             <Button type="button" variant="outline" onClick={() => form.reset(defaultValues)}>
                                 {t("generateLessons.actions.reset")}
                             </Button>
                             <Button disabled={loading} type="submit">
-                                {loading && <Spinner2 />}
+                                {loading && <Spinner2 className="mr-2 h-4 w-4" />}
                                 {t("generateLessons.actions.submit")}
                             </Button>
-                        </CardFooter>
+                        </div>
                     </form>
                 </Form>
             </Card>

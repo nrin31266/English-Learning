@@ -1,22 +1,24 @@
-// ShadowingResultPanel.tsx
+// src/pages/shadowing/components/ShadowingResultPanel.tsx
+
 import React, { useState, useRef, useCallback, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import { Sparkles, Target, BookA } from "lucide-react"
+import { Target, BookA, Activity } from "lucide-react"
 import type { IShadowingResult, IDiffToken } from "@/types"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SHADOWING_THRESHOLD } from "./ActiveSentencePanel"
 import SkeletonBlock from "@/components/SkeletonBlock"
+import BestScoreBadge from "@/components/BestScoreBadge" 
 
 interface Props {
   result: IShadowingResult | null
   className?: string
   isLoading: boolean
   expectedPhonetic?: string | null
+  highestScore?: number 
 }
 
 const NOISE_PHONEMES = ["", " ", "ː", "ˑ", "None"]
 
-// Typography configs
 const IPA_TYPOGRAPHY = "font-sans text-[17px] sm:text-[19px] font-medium tracking-[0.03em]"
 const WORD_TYPOGRAPHY = "text-[17px] sm:text-[20px] md:text-[24px] font-medium leading-tight"
 const ERROR_TYPOGRAPHY = "text-[12px] sm:text-[13px] font-medium tracking-wide"
@@ -70,7 +72,6 @@ const IpaRenderer = React.memo(({
   const wordGroupClass = "underline decoration-muted-foreground/40 underline-offset-[5px] decoration-1"
   const spaceElement = <span className="select-none inline-block w-2 sm:w-2.5" />
 
-  // Render raw IPA from dictionary if requested or no result available
   if (!compares || compares.length === 0 || showOriginal) {
     if (!expectedPhonetic) {
       return <span className="text-sm text-muted-foreground/50 italic">No phonetic data</span>
@@ -94,7 +95,6 @@ const IpaRenderer = React.memo(({
     )
   }
 
-  // Filter out completely EXTRA words if not requested
   const filteredCompares = showExtra 
     ? compares 
     : compares.filter(c => c.status !== "EXTRA")
@@ -106,7 +106,6 @@ const IpaRenderer = React.memo(({
       {filteredCompares.map((c, idx) => {
         const attempted = c.position <= lastRecognizedPosition
 
-        // Handle completely extra word recognized by user
         if (c.status === "EXTRA" && showExtra) {
           const extraText = c.phonemeDiff?.actual_ipa || c.recognizedWord || ""
           if (!extraText || extraText === "None") return null
@@ -122,7 +121,6 @@ const IpaRenderer = React.memo(({
 
         if (c.status === "EXTRA" && !showExtra) return null
 
-        // Handle unattempted words (grayed out)
         if (!attempted) {
           const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
           return (
@@ -135,7 +133,6 @@ const IpaRenderer = React.memo(({
           )
         }
 
-        // Handle words without specific diff tokens (fallback)
         const diffTokens = c.phonemeDiff?.diff_tokens
         if (!diffTokens || diffTokens.length === 0) {
           const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
@@ -153,7 +150,6 @@ const IpaRenderer = React.memo(({
           )
         }
 
-        // Render phoneme diff tokens naturally
         const displayTokens = showExtra ? diffTokens : diffTokens.filter(t => t.type !== "EXTRA")
         
         return (
@@ -262,104 +258,119 @@ const WordItem = React.memo(({ c, attempted }: { c: any, attempted: boolean }) =
 })
 WordItem.displayName = "WordItem"
 
-const YourResultTab = React.memo(({ result }: { result: IShadowingResult }) => {
-  const { weightedAccuracy, fluencyScore, compares, lastRecognizedPosition } = result
-  const isExcellent = weightedAccuracy >= SHADOWING_THRESHOLD.NEXT
-  const isGood = weightedAccuracy >= SHADOWING_THRESHOLD.GOOD_SOUND
-
+const WordEvaluationList = React.memo(({ result }: { result: IShadowingResult }) => {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-1 px-2 py-0.5">
-        <div className="flex items-center gap-2">
-          {isExcellent ? 
-            <Sparkles className="h-4 w-4 text-emerald-500" /> : 
-            <Target className={cn("h-4 w-4", isGood ? "text-amber-500" : "text-red-500")} />
-          }
-          <span className="text-[24px] sm:text-[26px] leading-none font-bold tracking-tight">{weightedAccuracy.toFixed(0)}%</span>
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Accuracy</span>
-        </div>
-        <div className="h-6 w-px bg-border/60 mx-2" />
-        <div className="flex items-center gap-2">
-          <span className="text-[24px] sm:text-[26px] leading-none font-bold tracking-tight text-sky-600">{Math.round(fluencyScore * 100)}%</span>
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Fluency</span>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-end justify-center md:justify-start gap-x-1.5 sm:gap-x-2 gap-y-2 px-0.5">
-        {compares.map((c) => {
-          const attempted = c.position <= lastRecognizedPosition
-          return <WordItem key={c.position} c={c} attempted={attempted} />
-        })}
-      </div>
+    <div className="flex flex-wrap items-end justify-center md:justify-start gap-x-1.5 sm:gap-x-2 gap-y-2 px-0.5">
+      {result.compares.map((c) => {
+        const attempted = c.position <= result.lastRecognizedPosition
+        return <WordItem key={c.position} c={c} attempted={attempted} />
+      })}
     </div>
   )
 })
-YourResultTab.displayName = "YourResultTab"
+WordEvaluationList.displayName = "WordEvaluationList"
 
-const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading, expectedPhonetic }) => {
+const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading, expectedPhonetic, highestScore = 0 }) => {
   const [showOriginalIpa, setShowOriginalIpa] = useState(false)
   const [showExtraIpa, setShowExtraIpa] = useState(false)
 
   return (
-    <div className={cn("rounded-xl border bg-card p-4 w-full flex flex-col gap-0", className)}>
+    <div className={cn("rounded-xl border bg-card p-3 sm:p-4 w-full flex flex-col gap-3", className)}>
       
-      {/* SECTION 1: PHONETIC */}
-      <div className="flex flex-col gap-3 pb-4">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5">
-            <BookA className="w-4 h-4 text-muted-foreground/70" />
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Pronunciation</span>
-          </div>
+      {/* --- HEADER --- */}
+      <div className="flex flex-wrap items-center justify-between gap-y-3 px-1 min-h-[48px]">
+        
+        {/* NHÓM TRÁI: Điểm số hiện tại */}
+        <div className="flex items-center">
+          {result && !isLoading ? (
+            <div className="flex items-center divide-x divide-border/60">
+              
+              <div className="flex items-center gap-1.5 pr-3 sm:pr-4">
+                <Target className={cn("h-4 w-4 sm:h-5 sm:w-5", result.weightedAccuracy >= SHADOWING_THRESHOLD.NEXT ? "text-emerald-500" : "text-red-500")} />
+                <div className="flex flex-col">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase leading-none tracking-widest mb-0.5">Accuracy</span>
+                  <span className="text-sm sm:text-base font-bold leading-none">{Math.round(result.weightedAccuracy)}%</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-1.5 pl-3 sm:pl-4">
+                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-sky-500" />
+                <div className="flex flex-col">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase leading-none tracking-widest mb-0.5">Fluency</span>
+                  <span className="text-sm sm:text-base font-bold leading-none text-sky-600">{Math.round(result.fluencyScore * 100)}%</span>
+                </div>
+              </div>
+
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <BookA className="w-4 h-4 text-muted-foreground/70" />
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Pronunciation</span>
+            </div>
+          )}
+        </div>
+
+        {/* NHÓM PHẢI: Công tắc IPA (Xếp dọc màn nhỏ, ngang màn to) + Component BestScoreBadge */}
+        <div className="flex items-center gap-3 sm:gap-4 ml-auto">
+          
           {(result && !isLoading) && (
-            <div className="flex items-center gap-4">
+            // 👉 Đã đổi sang flex-col trên mobile, và sm:flex-row trên desktop
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-4 pr-3 sm:pr-4 border-r border-border/60 justify-center">
               <label className="flex items-center gap-1.5 cursor-pointer group">
                 <input 
                   type="checkbox" 
                   checked={showOriginalIpa}
                   onChange={(e) => setShowOriginalIpa(e.target.checked)}
-                  className="w-4 h-4 rounded border-muted-foreground/30 accent-primary cursor-pointer"
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-muted-foreground/30 accent-primary cursor-pointer"
                 />
-                <span className="text-[12px] font-semibold tracking-wide text-muted-foreground group-hover:text-foreground transition-colors">Dictionary</span>
+                <span className="text-[10px] sm:text-[12px] font-semibold tracking-wide text-muted-foreground group-hover:text-foreground transition-colors leading-none">Dictionary</span>
               </label>
+              
               <label className="flex items-center gap-1.5 cursor-pointer group">
                 <input 
                   type="checkbox" 
                   checked={showExtraIpa}
                   onChange={(e) => setShowExtraIpa(e.target.checked)}
-                  className="w-4 h-4 rounded border-muted-foreground/30 accent-amber-500 cursor-pointer"
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-muted-foreground/30 accent-amber-500 cursor-pointer"
                 />
-                <span className="text-[12px] font-semibold tracking-wide text-amber-600 group-hover:text-amber-500 transition-colors">+ Extra sounds</span>
+                <span className="text-[10px] sm:text-[12px] font-semibold tracking-wide text-amber-600 group-hover:text-amber-500 transition-colors leading-none">+ Extra</span>
               </label>
             </div>
           )}
+
+          {/* 👉 Gọi Component dùng chung vào đây */}
+          <BestScoreBadge score={highestScore} />
+
         </div>
 
-        <div className="min-h-[60px] flex items-center justify-center rounded-lg bg-muted/20 px-4 py-3 border border-border/40 shadow-sm">
-          <IpaRenderer 
-            compares={result?.compares} 
-            lastRecognizedPosition={result?.lastRecognizedPosition}
-            expectedPhonetic={expectedPhonetic}
-            showOriginal={showOriginalIpa}
-            showExtra={showExtraIpa}
-          />
-        </div>
       </div>
 
-      {/* SECTION 2: CONTENT */}
-      <div className="min-h-[100px] pt-4 border-t border-border/50">
+      {/* --- SECTION 2: IPA BOX --- */}
+      <div className="min-h-[50px] flex items-center justify-center rounded-lg bg-muted/20 px-3 py-2 border border-border/40 shadow-sm">
+        <IpaRenderer 
+          compares={result?.compares} 
+          lastRecognizedPosition={result?.lastRecognizedPosition}
+          expectedPhonetic={expectedPhonetic}
+          showOriginal={showOriginalIpa}
+          showExtra={showExtraIpa}
+        />
+      </div>
+
+      {/* --- SECTION 3: WORD CONTENT --- */}
+      <div className="min-h-[80px] pt-3 border-t border-border/50">
         {isLoading ? (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            <SkeletonBlock className="h-8 w-full rounded-md" />
             <SkeletonBlock className="h-10 w-full rounded-md" />
-            <SkeletonBlock className="h-14 w-full rounded-md" />
           </div>
         ) : !result ? (
-          <div className="flex items-center justify-center py-8">
-            <span className="text-[15px] font-medium text-muted-foreground/60 tracking-wide text-center">
+          <div className="flex items-center justify-center py-6">
+            <span className="text-[14px] font-medium text-muted-foreground/60 tracking-wide text-center">
               You can see your shadowing result here after you finish practicing!
             </span>
           </div>
         ) : (
-          <YourResultTab result={result} />
+          <WordEvaluationList result={result} />
         )}
       </div>
     </div>

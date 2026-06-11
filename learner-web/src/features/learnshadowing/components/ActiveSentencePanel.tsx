@@ -5,7 +5,6 @@ import CompletedBadge from "@/components/CompletedBadge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import WordPopup from "@/components/WordPopup"
 import { useWordPopup } from "@/hooks/UseWordPopupReturn"
-import { useAppDispatch } from "@/store"
 import type { ILessonDetailsResponse, ILessonWordResponse, ITranscriptionResponse } from "@/types"
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { successSound } from "../../../utils/sound"
@@ -20,11 +19,15 @@ interface ActiveSentencePanelProps {
   handlePause: () => void
   onNext: () => void
   userInteracted?: boolean
-  onComplete?: (sentenceId: number, fluencyScore: number, weightedAccuracy: number) => void
+  onComplete?: (sentenceId: number, weightedAccuracy: number) => void
 }
 
+/**
+ * Ngưỡng điểm đánh giá Shadowing.
+ * Đọc linh hoạt từ biến môi trường để phục vụ nhiều cấu hình môi trường khác nhau.
+ */
 export const SHADOWING_THRESHOLD = {
-  NEXT: 80,
+  NEXT: Number(import.meta.env.VITE_SHADOWING_PASS_THRESHOLD) || 80,
   GOOD_SOUND: 80,
 }
 
@@ -44,6 +47,8 @@ const ActiveSentencePanel = ({
   handlePause,
   onComplete
 }: ActiveSentencePanelProps) => {
+
+  // --- States quản lý UI & Audio ---
   const [isRecording, setIsRecording] = useState(false)
   const [hasRecordedAudio, setHasRecordedAudio] = useState(false)
   const [isPlayingRecorded, setIsPlayingRecorded] = useState(false)
@@ -57,26 +62,40 @@ const ActiveSentencePanel = ({
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [isSlowMode, setIsSlowMode] = useState<boolean>(false)
 
+  // --- Refs quản lý vòng đời Component và Media ---
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const dispatch = useAppDispatch()
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const streamRef = useRef<MediaStream | null>(null)
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
+  
   const cancelRecordingRef = useRef(false)
-
   const canStopRecordingRef = useRef(true)
   const minRecordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const sentenceIdRef = useRef<number>(0)
   const completedSentenceIdRef = useRef<number | null>(null)
+  
+  // Ref kiểm soát việc nộp bài, lưu ID của file audio gần nhất đã xử lý
+  const processedTranscriptionIdRef = useRef<number | string | null>(null)
+  const lastTranscriptionRef = useRef<string | null>(null)
+  const lastPlayRef = useRef(0)
 
+  // --- Derived Data (Memoized) ---
   const currentSentence = useMemo(
     () => lesson.sentences[activeIndex],
     [lesson.sentences, activeIndex]
   )
+
+  /**
+   * Truy xuất điểm số cao nhất của câu hỏi hiện tại từ Redux Store.
+   * Dùng làm mốc so sánh cho cơ chế Smart API Call.
+   */
+  const highestScore = useMemo(() => {
+    const scores = lesson.progressOverview?.shadowing?.highestScores
+    return scores?.[currentSentence.id] || 0
+  }, [lesson.progressOverview?.shadowing?.highestScores, currentSentence.id])
 
   const currentSentenceWords = useMemo(() => {
     return currentSentence?.lessonWords
@@ -86,8 +105,24 @@ const ActiveSentencePanel = ({
 
   const isCompleted = useMemo(() => {
     return lesson.progressOverview?.shadowing?.completedSentenceIds?.includes(currentSentence.id)
-  }, [lesson.progressOverview, currentSentence.id])
+  }, [lesson.progressOverview, currentSentence.id]) 
 
+  /**
+   * Đánh giá điều kiện hiển thị nút Next.
+   * Ưu tiên 1: Đã pass trong lịch sử (isCompleted).
+   * Ưu tiên 2: Vừa đạt điểm pass trong phiên hiện tại.
+   */
+  const shouldShowNextButton = useMemo(
+    () => isCompleted || (transcription?.shadowingResult?.weightedAccuracy ?? 0) >= SHADOWING_THRESHOLD.NEXT,
+    [isCompleted, transcription]
+  )
+
+  const shouldShowSkipButton = useMemo(
+    () => !isCompleted && hasRecordedAudio && !shouldShowNextButton,
+    [isCompleted, hasRecordedAudio, shouldShowNextButton]
+  )
+
+  // --- Hooks Popup Từ vựng ---
   const {
     activeWord,
     anchorEl,
@@ -101,27 +136,18 @@ const ActiveSentencePanel = ({
     handleWordClick(word, el, currentSentenceTextDisplay)
   }, [currentSentenceTextDisplay, handleWordClick])
 
-  // Nếu đã completed thì show NEXT luôn, khỏi cần xét điểm hiện tại
-  const shouldShowNextButton = useMemo(
-    () => isCompleted || (transcription?.shadowingResult?.weightedAccuracy ?? 0) >= SHADOWING_THRESHOLD.NEXT,
-    [isCompleted, transcription]
-  )
-
-  // Skip chỉ hiện khi KHÔNG completed và (chưa có điểm pass)
-  const shouldShowSkipButton = useMemo(
-    () => !isCompleted && hasRecordedAudio && !shouldShowNextButton,
-    [isCompleted, hasRecordedAudio, shouldShowNextButton]
-  )
-
-  const lastTranscriptionRef = useRef<string | null>(null)
-  const lastPlayRef = useRef(0)
-
+  // --- Utilities ---
   const revokeRecordedUrl = useCallback((url: string | null) => {
     if (url) {
       URL.revokeObjectURL(url)
     }
   }, [])
 
+  /**
+   * Dọn dẹp giao diện ghi âm. 
+   * Tuyệt đối không reset các Tracking Refs (như processedTranscriptionIdRef) tại đây 
+   * để tránh Race Condition (Submit oan) khi React chưa kịp clear state bất đồng bộ.
+   */
   const resetRecordingUi = useCallback(() => {
     setIsRecording(false)
     setHasRecordedAudio(false)
@@ -133,38 +159,34 @@ const ActiveSentencePanel = ({
       return null
     })
     setTranscription(null)
-    lastTranscriptionRef.current = null
     setTimeLeft(0)
   }, [revokeRecordedUrl])
 
   const playFeedbackSound = useCallback((isGoodScore: boolean) => {
     const now = Date.now()
-    if (now - lastPlayRef.current < 400) {
-      return
-    }
+    if (now - lastPlayRef.current < 400) return
     lastPlayRef.current = now
 
     if (!isGoodScore) return;
     successSound.play()
   }, [])
 
+  /**
+   * Effect: Xử lý âm thanh phản hồi khi có kết quả từ AI
+   */
   useEffect(() => {
     if (!transcription?.id) return
 
     const transcriptionKey = transcription.id.toString()
-    if (lastTranscriptionRef.current === transcriptionKey) {
-      return
-    }
+    if (lastTranscriptionRef.current === transcriptionKey) return
     lastTranscriptionRef.current = transcriptionKey
 
     const score = Math.round(transcription.shadowingResult?.weightedAccuracy ?? 0)
-    if (score == null) return
-    
-
     const shouldPlayGood = score >= SHADOWING_THRESHOLD.GOOD_SOUND
     playFeedbackSound(shouldPlayGood)
   }, [transcription?.id, playFeedbackSound])
 
+  // --- Hardware Device Management ---
   const loadAudioInputDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return
 
@@ -210,6 +232,9 @@ const ActiveSentencePanel = ({
     }
   }, [loadAudioInputDevices])
 
+  /**
+   * Effect: Reset trạng thái môi trường khi chuyển sang câu học mới
+   */
   useEffect(() => {
     resetRecordingUi()
     sentenceIdRef.current = currentSentence.id
@@ -225,24 +250,42 @@ const ActiveSentencePanel = ({
     }
   }, [currentSentence.id, resetRecordingUi])
 
+  /**
+   * Core Logic: Smart API Call Gating
+   * Quản lý tiến trình lưu trữ điểm số, ngăn chặn gọi API rác/trùng lặp.
+   */
   useEffect(() => {
-    const score = transcription?.shadowingResult?.weightedAccuracy
+    const shadowingResult = transcription?.shadowingResult
     const currentSentenceId = sentenceIdRef.current
 
-    if (completedSentenceIdRef.current === currentSentenceId) {
-      return
+    // Guard Clause: Chặn render dư thừa hoặc file đã được xử lý
+    if (!shadowingResult || !transcription?.id) return
+    if (processedTranscriptionIdRef.current === transcription.id) return
+
+    const weightedAccuracy = shadowingResult.weightedAccuracy ?? 0
+    const finalScore = Math.round(weightedAccuracy)
+
+    // Khóa ID của file âm thanh hiện tại để không thực thi lại logic này
+    processedTranscriptionIdRef.current = transcription.id
+
+    // Gatekeeper: Chỉ kích hoạt API report tiến độ khi điểm đợt này > kỷ lục cũ
+    if (finalScore > highestScore) {
+      if (onComplete) {
+        onComplete(currentSentenceId, finalScore)
+        console.log(`[Smart API Gating] Submitted score ${finalScore} for sentence ${currentSentenceId} (previous highest: ${highestScore})`)
+      }
+    } else {
+      console.log(`[Smart API Gating] Skipped update. Score (${finalScore}) <= Highest (${highestScore})`)
     }
 
-    const isPassed = score !== undefined && Math.round(score) >= SHADOWING_THRESHOLD.NEXT;
-
+    // Xác thực điều kiện qua bài (độc lập với tiến trình API)
+    const isPassed = finalScore >= SHADOWING_THRESHOLD.NEXT
     if (isPassed) {
       completedSentenceIdRef.current = currentSentenceId
-      if (onComplete) {
-        onComplete(currentSentenceId, transcription?.shadowingResult?.fluencyScore ?? 0, score!)
-      }
     }
-  }, [transcription, onComplete, dispatch])
+  }, [transcription, onComplete, highestScore])
 
+  // --- Recording Actions ---
   const calculateRecordingTime = useCallback(() => {
     if (!currentSentenceWords || currentSentenceWords.length === 0) return 5;
     const firstWord = currentSentenceWords[0];
@@ -314,6 +357,9 @@ const ActiveSentencePanel = ({
           formData.append("file", blob, "recording.webm")
           formData.append("expectedWords", JSON.stringify(expectedWords))
           formData.append("sentenceId", String(currentSentence.id))
+          
+          // Chốt cứng ID câu đang thu âm để phòng ngừa người dùng chuyển bài quá nhanh
+          const recordingSentenceId = currentSentence.id
 
           const data = await handleAPI<ITranscriptionResponse>({
             endpoint: "/lp/speech-to-text/transcribe",
@@ -322,6 +368,11 @@ const ActiveSentencePanel = ({
             isAuth: true,
             contentType: "multipart/form-data",
           })
+
+          // Hủy kết quả nếu user đã navigate sang câu tiếp theo trong lúc chờ API
+          if (sentenceIdRef.current !== recordingSentenceId) {
+            return
+          }
           setTranscription(data)
         } catch (error) {
           setRecordError("Something went wrong while uploading or processing the recording.")
@@ -337,7 +388,7 @@ const ActiveSentencePanel = ({
       canStopRecordingRef.current = false;
       if (minRecordTimerRef.current) clearTimeout(minRecordTimerRef.current);
       minRecordTimerRef.current = setTimeout(() => { canStopRecordingRef.current = true; }, 1000);
-      
+
       recordingTimerRef.current = setInterval(() => {
         setTimeLeft((prevTime) => {
           if (prevTime <= 1) {
@@ -388,6 +439,7 @@ const ActiveSentencePanel = ({
     }
   }
 
+  // Khóa event Spacebar để nhường quyền cho phím tắt trigger ghi âm
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code !== "Space") return
@@ -400,6 +452,7 @@ const ActiveSentencePanel = ({
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [handleRecordClick])
 
+  // Dọn dẹp tài nguyên phần cứng & timer khi Component bị unmount
   useEffect(() => {
     return () => {
       mediaRecorderRef.current?.stop()
@@ -414,7 +467,7 @@ const ActiveSentencePanel = ({
   return (
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
       <div className="flex flex-col items-center gap-4 px-4 py-4 relative">
-        
+
         {isCompleted && <CompletedBadge />}
 
         <MicrophoneSelector
@@ -447,14 +500,18 @@ const ActiveSentencePanel = ({
           <MemoSentenceDisplay
             words={currentSentenceWords}
             fallbackText={currentSentence?.textDisplay || "No sentence available."}
-            // phoneticUs={currentSentence?.phoneticUs}
             onWordClick={handleSentenceWordClick}
             className="items-center"
             activeWordId={activeWord?.id}
           />
         </div>
 
-        <MemoShadowingResultPanel result={shadowing} isLoading={isUploading} expectedPhonetic={currentSentence?.phoneticUs} />
+        <MemoShadowingResultPanel 
+          result={shadowing} 
+          isLoading={isUploading} 
+          expectedPhonetic={currentSentence?.phoneticUs} 
+          highestScore={highestScore} // Truyền điểm cao nhất vào Component kết quả
+        />
       </div>
       <audio ref={audioPlayerRef} src={recordedUrl ?? undefined} onEnded={() => setIsPlayingRecorded(false)} />
       <WordPopup word={activeWord} anchorEl={anchorEl} onClose={closePopup} wordData={wordData} isLoading={loadingWordData} />

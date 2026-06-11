@@ -3,12 +3,13 @@
 import { useCallback } from "react"
 import { useParams } from "react-router-dom"
 import {
-  fetchLessonByIdForShadowing,
+  fetchLessonById,
   resetLessonState,
-  submitBatchShadowingScore,
-  submitShadowingScore,
-  updateSentenceCompletion,
-} from "@/store/lessonForShadowingSlide"
+  submitBatchLessonScore,
+  submitLessonScore,
+  updateLocalProgress,
+} from "@/store/activeLessonSlice"
+
 import ActiveSentencePanel from "../components/ActiveSentencePanel"
 import ShadowingTranscript from "../components/ShadowingTranscript"
 import { useLessonMode } from "@/features/learnmode/hooks/useLessonMode"
@@ -17,19 +18,18 @@ import LessonModeLayout from "@/features/learnmode/components/LessonModeLayout"
 const ShadowingMode = () => {
   const { id } = useParams<{ id: string }>()
 
-  const updateCompletion = useCallback(
-    (sentenceId: number) => updateSentenceCompletion({ sentenceId, completed: true }),
-    []
-  )
-
+  /**
+   * Khởi tạo Custom Hook quản lý trạng thái bài học Shadowing.
+   * Liên kết trực tiếp các Action tương ứng từ activeLessonSlice.
+   */
   const mode = useLessonMode({
     lessonId: id,
-    selector: (state) => state.lessonForShadowing.lesson,
-    fetchAction: fetchLessonByIdForShadowing,
+    selector: (state) => state.activeLesson.lesson,
+    fetchAction: fetchLessonById,
     resetAction: resetLessonState,
-    submitScore: submitShadowingScore,
-    submitBatchScore: submitBatchShadowingScore,
-    updateCompletion,
+    submitScore: submitLessonScore,
+    submitBatchScore: submitBatchLessonScore,
+    updateLocalProgress: updateLocalProgress,
     progressKey: "shadowing",
     modeName: "SHADOWING",
   })
@@ -48,8 +48,11 @@ const ShadowingMode = () => {
     effectiveShowTranscript,
   } = mode
 
+  /**
+   * Adapter bọc hàm xử lý tiến độ để Component con gọi dễ dàng.
+   */
   const handleComplete = useCallback(
-    (sentenceId: number, _fluency: number, score: number) => handleCompleteSentence(sentenceId, score),
+    (sentenceId: number, score: number) => handleCompleteSentence(sentenceId, score),
     [handleCompleteSentence]
   )
 
