@@ -6,14 +6,15 @@ import { CheckCircle2 } from "lucide-react"
 interface CompletedBadgeProps {
   className?: string
   size?: "sm" | "md"
+  isAbsolute?: boolean // Tùy chọn để neo góc tuyệt đối hoặc không
 }
 
-const CompletedBadge = ({ className, size = "md" }: CompletedBadgeProps) => {
+const CompletedBadge = ({ className, size = "md", isAbsolute = true }: CompletedBadgeProps) => {
   return (
     <div 
       className={cn(
         // Neo góc phải
-        "absolute right-3 top-3 sm:right-4 sm:top-4 z-10",
+        isAbsolute ? "absolute right-3 top-3 sm:right-4 sm:top-4 z-10" : "",
         // Layout: Flex dứt khoát, bo tròn cực đại
         size === "sm" 
           ? "flex items-center gap-1 px-2 py-0.5 rounded-full"

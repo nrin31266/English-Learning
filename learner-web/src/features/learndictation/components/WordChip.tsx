@@ -101,20 +101,20 @@ const WordChip = ({
 
   const config = {
     correct_typed: {
-      base: "border-emerald-300/40 bg-emerald-50/40 dark:bg-emerald-950/20",
-      text: "text-emerald-600/80 dark:text-emerald-400/80",
+      base: "border-emerald-400/50 bg-emerald-50/50 dark:bg-emerald-950/30",
+      text: "text-emerald-700 dark:text-emerald-400",
     },
     near: {
-      base: "border-amber-300/40 bg-amber-50/40 dark:bg-amber-950/20",
-      text: "text-amber-600/80 dark:text-amber-400/80",
+      base: "border-amber-400/50 bg-amber-50/50 dark:bg-amber-950/30",
+      text: "text-amber-700 dark:text-amber-400",
     },
     wrong: {
-      base: "border-rose-300/40 bg-rose-50/40 dark:bg-rose-950/20",
-      text: "text-rose-600/80 dark:text-rose-400/80",
+      base: "border-rose-400/50 bg-rose-50/50 dark:bg-rose-950/30",
+      text: "text-rose-700 dark:text-rose-400",
     },
     untyped: {
-      base: "dark:border-slate-200/50 border-gray-500/30 bg-slate-50/30 dark:bg-slate-900/20 hover:border-primary/30",
-      text: "text-slate-400/70 dark:text-slate-500/70",
+      base: "border-gray-400/40 dark:border-slate-500/50 bg-slate-50/40 dark:bg-slate-900/30 hover:border-primary/40",
+      text: "text-slate-500 dark:text-slate-500",
     },
   }
 
@@ -141,7 +141,7 @@ const WordChip = ({
         current.base,
         (isClickable || isRevealable) && "cursor-pointer active:scale-95",
         isClickable && "hover:bg-primary/5",
-        isRevealed && "border-sky-400/60 bg-sky-50/40 dark:bg-sky-950/20"
+        isRevealed && "border-sky-500/60 bg-sky-50/50 dark:bg-sky-950/30"
       )}
     >
       <span

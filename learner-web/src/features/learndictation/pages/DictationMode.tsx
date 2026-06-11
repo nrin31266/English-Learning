@@ -1,6 +1,6 @@
 // src/pages/DictationMode.tsx
 
-import { useCallback, useRef } from "react"
+import { useCallback, useMemo, useRef } from "react"
 import { useParams } from "react-router-dom"
 import {
   fetchLessonById,
@@ -21,11 +21,13 @@ const DictationMode = () => {
   
   // Bộ nhớ đệm lưu trữ dữ liệu text đang gõ dở dang của từng câu
   const tempAnswersRef = useRef<Record<number, string>>({})
+  
   const handleUpdateCompletion = useCallback(
     (args: { sentenceId: number; score: number; mode: LearningMode }) => 
         updateLocalProgress(args),
     []
   )
+  
   /**
    * Khởi tạo Custom Hook quản lý trạng thái bài học Dictation.
    * Cấu hình captureKeysInEditable = true để bật tính năng điều hướng khi gõ văn bản.
@@ -44,6 +46,7 @@ const DictationMode = () => {
   })
 
   const {
+    lesson,
     currentSentence,
     activeIndex,
     sentences,
@@ -57,7 +60,17 @@ const DictationMode = () => {
     isPlaying
   } = mode
 
-  
+  // 👉 TÍNH TOÁN ĐIỂM KỶ LỤC CỦA CÂU HIỆN TẠI TỪ REDUX STORE
+  const highestScore = useMemo(() => {
+    const scores = lesson?.progressOverview?.dictation?.highestScores
+    return scores?.[currentSentence?.id] || 0
+  }, [lesson?.progressOverview?.dictation?.highestScores, currentSentence?.id])
+
+  // 👉 ĐỒNG BỘ: Tạo wrapper function chuẩn như bên Shadowing
+  const handleComplete = useCallback(
+    (sentenceId: number, score: number) => handleCompleteSentence(sentenceId, score),
+    [handleCompleteSentence]
+  )
 
   return (
     <LessonModeLayout
@@ -69,7 +82,7 @@ const DictationMode = () => {
             key="dictation-panel"
             sentence={currentSentence}
             onNext={handleNext}
-            onComplete={(score) => handleCompleteSentence(currentSentence.id, score)}
+            onComplete={handleComplete} 
             completed={completedIdsSet.has(currentSentence.id)}
             currentTemporaryAnswer={tempAnswersRef.current[currentSentence.id]}
             onTemporaryAnswerChange={(val) => {
@@ -78,6 +91,7 @@ const DictationMode = () => {
             userInteracted={userInteracted}
             onTogglePlayPause={handleTogglePlayPause}
             isPlaying={isPlaying}
+            highestScore={highestScore} 
           />
         )
       }

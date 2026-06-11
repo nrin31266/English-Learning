@@ -260,6 +260,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
   }, [dispatch, fetchAction, lessonId, modeName])
 
   const handleTogglePlayPause = useCallback(() => {
+     console.log("🔊 [useLessonMode] Toggle play/pause — current isPlaying:", isPlaying)
     if (isPlaying) {
       playerRef.current?.pause()
     } else {
@@ -315,6 +316,8 @@ export function useLessonMode(config: UseLessonModeConfig) {
     return () => window.removeEventListener("keydown", onKeyDown, { capture: true })
   }, [handleNext, handlePrev, handleTogglePlayPause, captureKeysInEditable])
 
+
+  
   return {
     lessonId,
     lesson,
