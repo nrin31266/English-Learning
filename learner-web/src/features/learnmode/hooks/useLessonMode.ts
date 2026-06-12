@@ -11,6 +11,7 @@ import { useAuth } from "@/features/keycloak/providers/AuthProvider"
 import { clearGuestProgress, getGuestProgress, saveGuestProgress } from "@/utils/guestStorage"
 import type { UnknownAction } from "@reduxjs/toolkit"
 import { gainRewards } from "@/store/gamificationSlice"
+import { calculateEarnedRewards, getMultiplierByLevel } from "@/utils/gamificationUtils"
 
 /**
  * Cấu hình tham số đầu vào cho Hook điều phối chế độ học.
@@ -149,51 +150,45 @@ export function useLessonMode(config: UseLessonModeConfig) {
    * Xử lý luồng hoàn thành một câu hỏi.
    * Áp dụng Optimistic UI: Cập nhật Store local trước, gọi API bất đồng bộ sau.
    */
-  const handleCompleteSentence = useCallback(
-    (sentenceId: number, score: number) => {
-      if (!lesson?.id) return
+const handleCompleteSentence = useCallback(
+  (sentenceId: number, score: number) => {
+    if (!lesson?.id) return
 
-      // 1. Cập nhật tiến độ bài học (UI xanh lên)
-      dispatch(updateLocalProgress({ sentenceId, score, mode: modeName }))
+    // 1. Cập nhật tiến độ bài học (UI xanh lên)
+    dispatch(updateLocalProgress({ sentenceId, score, mode: modeName }))
 
-      // 👉 2. TÍNH TOÁN GAMIFICATION DỰA TRÊN ĐỘ CHÊNH LỆCH
-      // Lấy kỷ lục cũ của câu này ra
-      const oldHighestScore = lesson.progressOverview?.[progressKey]?.highestScores?.[sentenceId] || 0
-      
-      // Nếu điểm mới CAO HƠN kỷ lục cũ thì mới cho nổ XP/Coin
-      if (score > oldHighestScore) {
-        // Độ chênh lệch điểm (Max là 100 nếu bài chưa làm bao giờ)
-        const scoreDifference = score - oldHighestScore
+    // 2. Lấy kỷ lục cũ của câu này ra
+    const oldHighestScore = lesson.progressOverview?.[progressKey]?.highestScores?.[sentenceId] || 0
+    
+    // 👉 3. TỰ ĐỘNG LẤY HỆ SỐ NHÂN TỪ TRÌNH ĐỘ BÀI HỌC
+    const multiplier = getMultiplierByLevel(lesson.languageLevel)
 
-        // Quy đổi XP: Chênh bao nhiêu điểm thì ăn bấy nhiêu XP (Max 100 XP/câu)
-        const earnedXp = Math.round(scoreDifference)
+    // 4. GỌI HÀM TIỆN ÍCH DÙNG CHUNG (Truyền thêm hệ số động vào)
+    const { earnedXp, earnedCoins, shouldReward } = calculateEarnedRewards(score, oldHighestScore, multiplier)
 
-        // Quy đổi Coin: Coin ít thôi. Cứ 10 điểm chênh lệch thì được 1 Coin (Max 10 Coin/câu)
-        // Nếu chênh lệch < 10 điểm nhưng vẫn có tiến bộ, vẫn cho 1 Coin khích lệ.
-        const earnedCoins = Math.max(1, Math.floor(scoreDifference / 10))
+    // Nếu hàm báo có tiến bộ -> Bắn action cho nổ số tại chỗ
+    if (shouldReward) {
+      dispatch(gainRewards({
+        xp: earnedXp,
+        coins: earnedCoins,
+        source: `${modeName.toLowerCase()}_${sentenceId}` 
+      }))
+    }
 
-        // Bắn action vào Redux -> Hạt XP sẽ bay lên!
-        dispatch(gainRewards({
-          xp: earnedXp,
-          coins: earnedCoins,
-          source: `${modeName.toLowerCase()}_${sentenceId}` 
-        }))
+    // 5. Xử lý đồng bộ dữ liệu lên Server (Giữ nguyên của bác)
+    if (profile) {
+      dispatch(submitScore({ lessonId: lesson.id, sentenceId, mode: modeName, score }) as any)
+    } else {
+      const currentLocal = getGuestProgress(lessonId!, modeName)
+      if (!currentLocal.includes(sentenceId)) {
+        saveGuestProgress(lessonId!, modeName, [...currentLocal, sentenceId])
+        setTimeout(() => setShowLoginModal(true), 600)
       }
-
-      // 3. Xử lý đồng bộ dữ liệu lên Server (Giữ nguyên của bác)
-      if (profile) {
-        dispatch(submitScore({ lessonId: lesson.id, sentenceId, mode: modeName, score }) as any)
-      } else {
-        const currentLocal = getGuestProgress(lessonId!, modeName)
-        if (!currentLocal.includes(sentenceId)) {
-          saveGuestProgress(lessonId!, modeName, [...currentLocal, sentenceId])
-          setTimeout(() => setShowLoginModal(true), 600)
-        }
-      }
-    },
-    [dispatch, lesson?.id, profile, lessonId, updateLocalProgress, submitScore, modeName, lesson?.progressOverview, progressKey]
-  )
-
+    }
+  },
+  // 👉 Nhớ bổ sung thêm thuộc tính lesson?.languageLevel vào mảng dependencies của useCallback
+  [dispatch, lesson?.id, lesson?.languageLevel, profile, lessonId, updateLocalProgress, submitScore, modeName, lesson?.progressOverview, progressKey]
+)
   /**
    * Kích hoạt Modal hoàn thành toàn bộ bài học
    */

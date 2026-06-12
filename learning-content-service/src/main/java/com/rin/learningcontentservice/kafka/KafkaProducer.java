@@ -1,6 +1,7 @@
 package com.rin.learningcontentservice.kafka;
 
 import com.rin.englishlearning.common.constants.KafkaTopics;
+import com.rin.englishlearning.common.event.GamificationRewardEvent;
 import com.rin.englishlearning.common.event.LessonGenerationRequestedEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
@@ -35,6 +36,18 @@ public class KafkaProducer {
                         log.info("✅ Gửi LessonProcessingStepNotifyEvent thành công tới topic {}", KafkaTopics.LESSON_PROCESSING_STEP_NOTIFY_TOPIC);
                     } else {
                         log.error("❌ Lỗi gửi LessonProcessingStepNotifyEvent: {}", ex.getMessage());
+                    }
+                });
+    }
+    public void publishGamificationRewardEvent(GamificationRewardEvent event) {
+        // Bác nhớ khai báo GAMIFICATION_REWARD_TOPIC = "gamification-reward-events" bên KafkaTopics nhé
+        kafkaTemplate.send(KafkaTopics.GAMIFICATION_REWARD_TOPIC, event)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("✅ Gửi GamificationRewardEvent thành công tới topic {} cho user {}",
+                                KafkaTopics.GAMIFICATION_REWARD_TOPIC, event.getUserId());
+                    } else {
+                        log.error("❌ Lỗi gửi GamificationRewardEvent: {}", ex.getMessage());
                     }
                 });
     }

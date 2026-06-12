@@ -1,10 +1,12 @@
 package com.rin.learningcontentservice.service;
 
+import com.rin.englishlearning.common.event.GamificationRewardEvent;
 import com.rin.englishlearning.common.exception.BaseErrorCode;
 import com.rin.englishlearning.common.exception.BaseException;
 import com.rin.learningcontentservice.dto.request.ProgressBatchRequest;
 import com.rin.learningcontentservice.dto.request.ProgressUpdateRequest;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
+import com.rin.learningcontentservice.kafka.KafkaProducer;
 import com.rin.learningcontentservice.model.*;
 import com.rin.learningcontentservice.repository.LessonRepository;
 import com.rin.learningcontentservice.repository.UserLessonProgressRepository;
@@ -27,10 +29,10 @@ public class LessonProcessingService {
 
     private final LessonRepository lessonRepository;
     private final UserLessonProgressRepository userLessonProgressRepository;
+    private final KafkaProducer kafkaProducer;
 
     /**
-     * Ngưỡng điểm để vượt qua chế độ Shadowing.
-     * Cấu hình thông qua properties/env, giá trị mặc định là 80.0.
+     * Ngưỡng điểm yêu cầu để vượt qua chế độ học Shadowing.
      */
     @Value("${app.learning.shadowing-threshold:80.0}")
     private double shadowingPassThreshold;
@@ -58,7 +60,6 @@ public class LessonProcessingService {
         Lesson lesson = lessonRepository.findById(request.getLessonId())
                 .orElseThrow(() -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND));
 
-        // Truy xuất tiến độ hiện tại hoặc khởi tạo bản ghi mới nếu chưa tồn tại
         UserLessonProgress progress = userLessonProgressRepository
                 .findByUserIdAndLessonIdAndMode(userId, request.getLessonId(), request.getMode())
                 .orElseGet(() -> UserLessonProgress.builder()
@@ -71,44 +72,49 @@ public class LessonProcessingService {
                         .highestScores(new HashMap<>())
                         .build());
 
-        // Đối chiếu và cập nhật lại tiến độ nếu version của bài học đã bị thay đổi bởi Administrator
         Integer currentLessonVersion = lesson.getVersion() == null ? 0 : lesson.getVersion();
         if (!currentLessonVersion.equals(progress.getLessonVersion())) {
             recomputeProgress(progress, lesson, currentLessonVersion);
         }
 
-        // Khởi tạo cấu trúc dữ liệu JSONB nếu rỗng để tránh NullPointerException
         if (progress.getHighestScores() == null) {
             progress.setHighestScores(new HashMap<>());
         }
 
         double currentScore = request.getScore() != null ? request.getScore() : 0.0;
         double previousHighScore = progress.getHighestScores().getOrDefault(request.getSentenceId(), 0.0);
-        double xpToAward = 0.0;
 
-        // Tính toán Delta XP: Chỉ cấp phát XP thưởng khi điểm hiện tại vượt qua kỷ lục đã lưu
+        // Đánh giá hiệu suất: Chỉ xử lý Gamification Event nếu có sự gia tăng điểm số thực tế
         if (currentScore > previousHighScore) {
-            xpToAward = currentScore - previousHighScore;
+            double deltaScore = currentScore - previousHighScore;
             progress.getHighestScores().put(request.getSentenceId(), currentScore);
+
+            // Trích xuất metadata phục vụ Gamification Service
+            double multiplier = extractMultiplier(lesson.getLanguageLevel().name());
+            String source = request.getMode().name();
+
+
+             GamificationRewardEvent event = GamificationRewardEvent.builder()
+                     .userId(userId)
+                     .deltaScore(deltaScore)
+                     .multiplier(multiplier)
+                     .source(source)
+                     .build();
+            kafkaProducer.publishGamificationRewardEvent(event);
+
+            log.info("Gamification Event Published: userId={}, deltaScore={}, multiplier={}, source={}",
+                    userId, deltaScore, multiplier, source);
         }
 
-        // Kích hoạt tiến trình Gamification qua Kafka nếu có sự gia tăng về điểm kinh nghiệm
-        if (xpToAward > 0) {
-            // TODO: Triển khai Kafka Publisher gửi message chứa (userId, xpToAward) sang user-service
-            log.info("Gamification Event Triggered: userId={}, xpAwarded={}", userId, xpToAward);
-        }
-
-        // Đánh giá tiêu chí hoàn thành dựa trên chế độ học (Learning Mode)
+        // Đánh giá tiêu chí hoàn thành học phần
         boolean isPassed = false;
         if (request.getMode() == LearningMode.SHADOWING) {
             isPassed = Math.round(currentScore) >= shadowingPassThreshold;
         } else if (request.getMode() == LearningMode.DICTATION) {
-            // Chế độ Dictation yêu cầu tính chính xác tuyệt đối, logic validate đã được xử lý tại client-side
             isPassed = true;
         }
 
         if (isPassed) {
-            // Ghi nhận hoàn thành câu. Set.add() trả về true nếu ID chưa tồn tại trong tập hợp
             boolean isNewCompletion = progress.getCompletedSentenceIds().add(request.getSentenceId());
 
             if (isNewCompletion) {
@@ -121,19 +127,17 @@ public class LessonProcessingService {
                                 .anyMatch(s -> s.getId().equals(id) && Boolean.TRUE.equals(s.getIsActive())))
                         .count();
 
-                // Cập nhật trạng thái tổng thể của bài học nếu hoàn thành toàn bộ nội dung active
                 if (activeTotal > 0 && completedActive >= activeTotal) {
                     progress.setStatus(ProgressStatus.COMPLETED);
                 }
             }
         }
 
-        // Lưu trữ trạng thái tiến độ, đảm bảo các cập nhật về highestScores và lessonVersion luôn được persist
         userLessonProgressRepository.save(progress);
     }
 
     /**
-     * Tính toán và đồng bộ lại trạng thái tiến độ dựa trên dữ liệu cấu trúc bài học mới nhất.
+     * Đồng bộ lại tiến độ học tập dựa trên cấu trúc mới nhất của Lesson (Xử lý khi Admin cập nhật bài học).
      */
     private void recomputeProgress(UserLessonProgress progress, Lesson lesson, Integer lessonVersion) {
         Set<Long> allLessonSentenceIds = lesson.getSentences().stream()
@@ -145,14 +149,12 @@ public class LessonProcessingService {
                 .map(LessonSentence::getId)
                 .collect(Collectors.toSet());
 
-        // Loại bỏ các ID câu học đã hoàn thành không còn tồn tại trong bài học
         if (progress.getCompletedSentenceIds() != null) {
             progress.getCompletedSentenceIds().retainAll(allLessonSentenceIds);
         } else {
             progress.setCompletedSentenceIds(new HashSet<>());
         }
 
-        // Đồng bộ dữ liệu JSONB: Xóa kỷ lục điểm của các câu học đã bị gỡ bỏ
         if (progress.getHighestScores() != null) {
             progress.getHighestScores().keySet().retainAll(allLessonSentenceIds);
         }
@@ -162,7 +164,23 @@ public class LessonProcessingService {
                 .count();
 
         progress.setLessonVersion(lessonVersion);
-        progress.setStatus((activeSentenceIds.size() > 0 && completedCount >= activeSentenceIds.size())
+        progress.setStatus((!activeSentenceIds.isEmpty() && completedCount >= activeSentenceIds.size())
                 ? ProgressStatus.COMPLETED : ProgressStatus.IN_PROGRESS);
+    }
+
+
+    private double extractMultiplier(String languageLevel) {
+        if (languageLevel == null || languageLevel.trim().isEmpty()) {
+            return 1.0;
+        }
+        return switch (languageLevel.toUpperCase()) {
+            case "A1", "EASY" -> 1.0;
+            case "A2" -> 1.5;
+            case "B1", "MEDIUM" -> 2.0;
+            case "B2" -> 2.5;
+            case "C1", "HARD" -> 3.0;
+            case "C2", "EXPERT" -> 3.5;
+            default -> 1.0;
+        };
     }
 }
