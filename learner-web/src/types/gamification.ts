@@ -4,6 +4,7 @@ export interface IGamificationState {
   userId: string;
   totalXp: number;
   rewardCoins: number;
+  rewardGems: number; // Thêm trường này để hứng dữ liệu Gem từ Backend (nếu có)
   currentStreak: number;
   longestStreak: number;
   
@@ -29,4 +30,5 @@ export interface IUserGamificationResponse {
   currentStreak: number;
   longestStreak: number;
   lastActiveDate: string | null;
+  rewardGems: number; // Thêm trường này để hứng dữ liệu Gem từ Backend (nếu có)
 }

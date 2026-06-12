@@ -1,5 +1,5 @@
-// src/components/gamification/CoinBadge.tsx
-import { Coins } from "lucide-react"
+// src/components/gamification/GemBadge.tsx
+import { Gem } from "lucide-react"
 import {
     Tooltip,
     TooltipContent,
@@ -9,8 +9,8 @@ import {
 import { cn } from "@/lib/utils"
 import { useAnimatedNumber } from "@/hooks/useAnimatedNumber"
 
-interface CoinBadgeProps {
-    coins: number
+interface GemBadgeProps {
+    gems: number
     className?: string
 }
 
@@ -18,7 +18,7 @@ const formatCompactNumber = (value: number, suffix: string) => {
     return `${Number(value.toFixed(2))}${suffix}`
 }
 
-const formatMobileCoins = (value: number) => {
+const formatMobileGems = (value: number) => {
     const absValue = Math.abs(value)
     if (absValue >= 1_000_000_000) return formatCompactNumber(value / 1_000_000_000, "B")
     if (absValue >= 1_000_000) return formatCompactNumber(value / 1_000_000, "M")
@@ -26,23 +26,21 @@ const formatMobileCoins = (value: number) => {
     return value.toLocaleString()
 }
 
-const formatDesktopCoins = (value: number) => {
+const formatDesktopGems = (value: number) => {
     const absValue = Math.abs(value)
     if (absValue >= 1_000_000_000) return formatCompactNumber(value / 1_000_000_000, "B")
     return value.toLocaleString()
 }
 
-const CoinBadge = ({ coins, className }: CoinBadgeProps) => {
-    // 👉 Đưa vào hook để lấy số đang nhảy (displayValue) và mảng các cục +Coin (diffQueue)
-    const { displayValue, diffQueue } = useAnimatedNumber(coins)
+const GemBadge = ({ gems, className }: GemBadgeProps) => {
+    const { displayValue, diffQueue } = useAnimatedNumber(gems)
 
-    // Format dựa trên con số đang chuyển động
-    const mobileCoins = formatMobileCoins(displayValue)
-    const desktopCoins = formatDesktopCoins(displayValue)
+    const mobileGems = formatMobileGems(displayValue)
+    const desktopGems = formatDesktopGems(displayValue)
 
     return (
         <TooltipProvider delayDuration={200}>
-            {/* 👉 CSS cục bộ cho hiệu ứng bay từ dưới lên ngay tại Component */}
+            {/* CSS Animation bay lơ lửng tại chỗ */}
             <style>{`
                 @keyframes localFloatUp {
                     0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
@@ -59,24 +57,23 @@ const CoinBadge = ({ coins, className }: CoinBadgeProps) => {
                 <TooltipTrigger asChild>
                     <div
                         className={cn(
-                            "relative flex items-center gap-1 sm:gap-1.5 px-1 py-0.5 sm:py-1 transition-transform duration-200 hover:scale-105",
+                            "flex items-center gap-1 sm:gap-1.5 px-1 py-0.5 sm:py-1 transition-transform duration-200 hover:scale-105",
                             className
                         )}
                     >
-                        <span className="text-xs sm:text-sm font-black leading-none text-amber-700 dark:text-yellow-200 tabular-nums tracking-tight">
-                            <span className="sm:hidden">{mobileCoins}</span>
-                            <span className="hidden sm:inline">{desktopCoins}</span>
+                        <span className="text-xs sm:text-sm font-black leading-none text-cyan-700 dark:text-cyan-300 tabular-nums tracking-tight">
+                            <span className="sm:hidden">{mobileGems}</span>
+                            <span className="hidden sm:inline">{desktopGems}</span>
                         </span>
-
-                        {/* Vùng chứa Icon và Hiệu ứng */}
+                        
                         <div className="relative flex items-center justify-center">
-                            <Coins className="size-4 sm:size-5 shrink-0 text-amber-500 dark:text-yellow-300" />
+                            <Gem className="size-4 sm:size-5 shrink-0 text-cyan-500 dark:text-cyan-400" />
                             
-                            {/* 👉 HẠT BAY LÊN NGAY TRÊN ĐẦU ICON */}
+                            {/*  HẠT KIM CƯƠNG BAY LÊN */}
                             {diffQueue.map((item) => (
                                 <span
                                     key={item.id}
-                                    className="pointer-events-none absolute left-1/2 top-4 z-50 text-xs sm:text-sm font-black text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-local-float"
+                                    className="pointer-events-none absolute left-1/2 top-4 z-50 text-xs sm:text-sm font-black text-cyan-500 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] animate-local-float"
                                     style={{ willChange: 'transform, opacity' }}
                                 >
                                     +{item.diff}
@@ -86,9 +83,9 @@ const CoinBadge = ({ coins, className }: CoinBadgeProps) => {
                     </div>
                 </TooltipTrigger>
 
-                <TooltipContent side="bottom" className="z-50">
+                <TooltipContent side="bottom" className="z-[100]">
                     <p>
-                        Balance: <span className="font-bold text-amber-500">{coins.toLocaleString()}</span> coins
+                        Gems: <span className="font-bold text-cyan-500">{gems.toLocaleString()}</span>
                     </p>
                 </TooltipContent>
             </Tooltip>
@@ -96,4 +93,4 @@ const CoinBadge = ({ coins, className }: CoinBadgeProps) => {
     )
 }
 
-export default CoinBadge
+export default GemBadge

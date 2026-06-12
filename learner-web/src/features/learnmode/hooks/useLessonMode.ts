@@ -10,6 +10,7 @@ import KeycloakClient from "@/features/keycloak/keycloak"
 import { useAuth } from "@/features/keycloak/providers/AuthProvider"
 import { clearGuestProgress, getGuestProgress, saveGuestProgress } from "@/utils/guestStorage"
 import type { UnknownAction } from "@reduxjs/toolkit"
+import { gainRewards } from "@/store/gamificationSlice"
 
 /**
  * Cấu hình tham số đầu vào cho Hook điều phối chế độ học.
@@ -152,10 +153,34 @@ export function useLessonMode(config: UseLessonModeConfig) {
     (sentenceId: number, score: number) => {
       if (!lesson?.id) return
 
-      // 1. Cập nhật tiến độ tức thời trên giao diện
+      // 1. Cập nhật tiến độ bài học (UI xanh lên)
       dispatch(updateLocalProgress({ sentenceId, score, mode: modeName }))
 
-      // 2. Xử lý đồng bộ dữ liệu
+      // 👉 2. TÍNH TOÁN GAMIFICATION DỰA TRÊN ĐỘ CHÊNH LỆCH
+      // Lấy kỷ lục cũ của câu này ra
+      const oldHighestScore = lesson.progressOverview?.[progressKey]?.highestScores?.[sentenceId] || 0
+      
+      // Nếu điểm mới CAO HƠN kỷ lục cũ thì mới cho nổ XP/Coin
+      if (score > oldHighestScore) {
+        // Độ chênh lệch điểm (Max là 100 nếu bài chưa làm bao giờ)
+        const scoreDifference = score - oldHighestScore
+
+        // Quy đổi XP: Chênh bao nhiêu điểm thì ăn bấy nhiêu XP (Max 100 XP/câu)
+        const earnedXp = Math.round(scoreDifference)
+
+        // Quy đổi Coin: Coin ít thôi. Cứ 10 điểm chênh lệch thì được 1 Coin (Max 10 Coin/câu)
+        // Nếu chênh lệch < 10 điểm nhưng vẫn có tiến bộ, vẫn cho 1 Coin khích lệ.
+        const earnedCoins = Math.max(1, Math.floor(scoreDifference / 10))
+
+        // Bắn action vào Redux -> Hạt XP sẽ bay lên!
+        dispatch(gainRewards({
+          xp: earnedXp,
+          coins: earnedCoins,
+          source: `${modeName.toLowerCase()}_${sentenceId}` 
+        }))
+      }
+
+      // 3. Xử lý đồng bộ dữ liệu lên Server (Giữ nguyên của bác)
       if (profile) {
         dispatch(submitScore({ lessonId: lesson.id, sentenceId, mode: modeName, score }) as any)
       } else {
@@ -166,7 +191,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
         }
       }
     },
-    [dispatch, lesson?.id, profile, lessonId, updateLocalProgress, submitScore, modeName]
+    [dispatch, lesson?.id, profile, lessonId, updateLocalProgress, submitScore, modeName, lesson?.progressOverview, progressKey]
   )
 
   /**

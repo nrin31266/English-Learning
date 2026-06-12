@@ -13,6 +13,7 @@ const initialState: IGamificationState = {
   level: 1,
   xpInCurrentLevel: 0,
   xpRequiredForNextLevel: 1000,
+  rewardGems: 0,
   progressPercent: 0,
   xpQueue: [], // Trạng thái mặc định ban đầu
 };

@@ -4,7 +4,10 @@
 import { Link } from "react-router-dom"
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar"
 
-export function BrandLogo() {
+interface BrandLogoProps {
+    onlyIcon?: boolean; // Nếu true, chỉ hiển thị icon mà không có text
+}
+export function BrandLogo({ onlyIcon = false }: BrandLogoProps) {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -20,9 +23,12 @@ export function BrandLogo() {
             </div>
             
             
-            <span className="truncate font-bold text-foreground text-base tracking-tight group-data-[collapsible=icon]:hidden">
-              Fluenrin
-            </span>
+            {!onlyIcon && (
+              <span className="truncate font-bold text-foreground text-base tracking-tight group-data-[collapsible=icon]:hidden">
+                Fluenrin
+              </span>
+            )}
+           
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
