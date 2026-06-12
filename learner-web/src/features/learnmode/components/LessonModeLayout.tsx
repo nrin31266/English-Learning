@@ -166,7 +166,7 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript }: LessonModeLay
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 mt-1 ">
           <div className={cn("flex flex-col gap-3", effectiveShowTranscript ? "xl:col-span-8" : "xl:col-span-8 xl:col-start-3")}>
-            <div className="sticky top-2 z-49">
+            <div className="sticky top-18 z-40">
               <Player
                 ref={playerRef}
                 lesson={lesson}

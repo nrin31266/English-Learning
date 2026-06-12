@@ -15,7 +15,7 @@ export default function Page() {
       <SidebarInset className="flex flex-col min-h-screen bg-background">
         {/* HEADER */}
         <header className="sticky top-0 h-16 border-b border-border/40 bg-background/70 backdrop-blur 
-        shadow-sm transition-all duration-200 z-48 hover:z-[60] has-[[aria-expanded=true]]:z-[60] has-[[data-state=open]]:z-[60]">
+        shadow-sm transition-all duration-200 z-48">
           <AppHeaderContent />
         </header>
 
