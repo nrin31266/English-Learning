@@ -1,23 +1,21 @@
-import SwitchingLanguage from "../SwitchingLanguage"
-import HeadNav from "./HeadNav"
+// src/components/layout/AppHeaderContent.tsx
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import Notification from "./Notification"
-import ProfileNav from "./ProfileNav"
-import ThemeToggle from "./ThemeToggle"
 
-const AppHeader = () => {
+const AppHeaderContent = () => {
   return (
-    <div className="container mx-auto flex h-full items-center justify-between px-4">
-      <HeadNav />
+    <div className="flex h-full w-full items-center justify-between px-4 sm:px-6 lg:px-8">
+      {/* TRÁI: Nút Hamburger mở đóng Sidebar */}
+      <div className="flex items-center gap-2">
+        <SidebarTrigger className="-ml-2 h-9 w-9 text-muted-foreground hover:text-foreground" />
+      </div>
 
+      {/* PHẢI: Chỉ giữ lại chuông thông báo cá nhân */}
       <div className="flex items-center gap-1 sm:gap-2">
-        <ThemeToggle />
-        <SwitchingLanguage />
         <Notification />
-        <div className="h-6 w-px bg-border/50 mx-1 sm:mx-2 hidden sm:block" /> {/* Dải phân cách tinh tế */}
-        <ProfileNav />
       </div>
     </div>
   )
 }
 
-export default AppHeader
+export default AppHeaderContent

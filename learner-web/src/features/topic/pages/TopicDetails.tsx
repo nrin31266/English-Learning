@@ -62,7 +62,7 @@ const TopicDetails = () => {
   const isLoading = status === "loading" || status === "idle"
 
   return (
-    <div className="mx-auto w-full  flex flex-col gap-6 px-4 py-6 lg:px-8 lg:py-8">
+    <div className="w-full  flex flex-col gap-6">
       
       {/* --- HEADER --- */}
       <header className="flex flex-col gap-4">

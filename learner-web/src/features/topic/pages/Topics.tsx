@@ -68,7 +68,7 @@ const Topics = () => {
   const isLoading = status === "loading" || status === "idle"
 
   return (
-    <div className="mx-auto w-full flex flex-col gap-12 px-4 py-10 lg:px-8">
+    <div className="w-full flex flex-col gap-12">
       
       {/* --- HEADER --- */}
       <header className="flex flex-col gap-4 border-b pb-8">

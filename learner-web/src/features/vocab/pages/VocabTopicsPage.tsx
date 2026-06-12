@@ -194,7 +194,7 @@ export default function VocabTopicsPage() {
   const isLoading = status === "loading";
 
   return (
-    <div className="mx-auto min-h-[calc(100vh-8vh)] w-full space-y-6 px-4 py-8 lg:px-8">
+    <div className="mx-auto min-h-[calc(100vh-8vh)] w-full space-y-6 ">
       {/* Header */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">

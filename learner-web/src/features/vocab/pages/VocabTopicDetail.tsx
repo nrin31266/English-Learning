@@ -233,7 +233,7 @@ export default function VocabTopicDetail() {
   );
 
   return (
-    <div className="px-3 py-3 lg:px-4 xl:h-[calc(100vh-6rem)]">
+    <div className="py-3 xl:h-[calc(100vh-6rem)]">
       <div className="mb-3 rounded-2xl border bg-background px-3 py-2">
         <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
           <button
