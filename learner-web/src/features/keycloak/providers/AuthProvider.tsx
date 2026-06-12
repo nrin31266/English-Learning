@@ -4,6 +4,14 @@ import FullScreenSpinner from "@/components/FullScreenSpinner";
 import KeycloakClient from "../keycloak";
 import handleAPI from "@/apis/handleAPI";
 
+// IMPORT REDUX & GAMIFICATION UTILS
+
+
+import { mapGamificationData } from "@/utils/gamificationMemo";
+import type { IUserGamificationResponse } from "@/types/gamification";
+import { useAppDispatch } from "@/store";
+import { setInitialGamification } from "@/store/gamificationSlice";
+
 type AuthContextType = {
   profile: IUserProfile | null;
   setProfile: (profile: IUserProfile | null) => void;
@@ -22,54 +30,66 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const kcClient = KeycloakClient.getInstance();
   const keycloak = kcClient.keycloak;
 
-  // ───────────────────────────────────────────
-  // 1️⃣ INIT KEYCLOAK
-  // ───────────────────────────────────────────
+  // KHỞI TẠO REDUX DISPATCH
+  const dispatch = useAppDispatch();
+
+  // -------------------------------------------
+  // 1. INIT KEYCLOAK
+  // -------------------------------------------
   useEffect(() => {
     const init = async () => {
       // KeycloakClient đã dùng 'check-sso', nên nó sẽ 
       // âm thầm kiểm tra xem có session không mà không redirect.
       await kcClient.init();
-
-      
-
       setLoadingKC(false);
     };
 
     init();
-
-    
   }, []);
 
-  // ─────────────────────────────────────────── 
-  // 2️⃣ LOAD PROFILE
-  // ───────────────────────────────────────────
+  // ------------------------------------------- 
+  // 2. LOAD PROFILE & GAMIFICATION ECOSYSTEM
+  // -------------------------------------------
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchUserData = async () => {
       if (!keycloak.authenticated) {
         setLoadingProfile(false);
         return;
       }
 
       try {
+        // 1. Tải Profile thông thường
         const backendProfile = await handleAPI<IUserProfile>({
           method: "POST",
           endpoint: "/user-profiles/me",
           isAuth: true,
         });
-
         setProfile(backendProfile);
+
+        // 2. Tải dữ liệu Gamification từ Backend
+        console.info("📡 Fetching global gamification metrics from userservice...");
+        const gamificationRaw = await handleAPI<IUserGamificationResponse>({
+          method: "GET",
+          endpoint: "/user-profiles/gamification/me",
+          isAuth: true,
+        });
+
+        // 3. Đưa qua hàm toán học O(1) để map ra state, sau đó đẩy vào Redux
+        const gamificationState = mapGamificationData(gamificationRaw);
+        dispatch(setInitialGamification(gamificationState));
+        console.info("🎯 Gamification state synchronized successfully.");
+
       } catch (err) {
-        console.error("Failed to load profile", err);
+        console.error("❌ Failed to load user ecosystem data", err);
       } finally {
         setLoadingProfile(false);
       }
     };
 
     if (!loadingKC) {
-      fetchProfile();
+      fetchUserData();
     }
-  }, [loadingKC]);
+  }, [loadingKC, dispatch]);
 
   // Hook phải nằm trước mọi return
   const contextValue = useMemo( 
@@ -80,16 +100,16 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [profile]
   );
 
-  // ───────────────────────────────────────────
-  // 3️⃣ UI RENDER
-  // ───────────────────────────────────────────
+  // -------------------------------------------
+  // 3. UI RENDER
+  // -------------------------------------------
 
   if (loadingKC)
     return <FullScreenSpinner label="Checking session..." />;
 
   // Nếu đã login nhưng chưa load xong Profile thì mới hiện Spinner
   if (keycloak.authenticated && loadingProfile)
-    return <FullScreenSpinner label="Loading profile..." />;
+    return <FullScreenSpinner label="Loading user data..." />;
 
   return (
     <AuthContext.Provider value={contextValue}>

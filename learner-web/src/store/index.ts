@@ -10,6 +10,7 @@ import topicReducer from './topicSlide';
 import vocabReducer from './vocabSlide';
 import vocabDetailReducer from './vocabDetailSlide';
 import activeLessonReducer from './activeLessonSlice';
+import gamificationReducer from './gamificationSlice';
 
 const rootReducer = combineReducers({
   system: systemReducer,
@@ -18,6 +19,7 @@ const rootReducer = combineReducers({
   activeLesson: activeLessonReducer,
   vocab: vocabReducer,
   vocabDetail: vocabDetailReducer,
+  gamification: gamificationReducer,
 });
 
 

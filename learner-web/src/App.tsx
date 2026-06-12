@@ -8,14 +8,14 @@ import { NotificationHost } from './components/NotificationHost'
 
 const App = () => {
   return (
-    <AuthProvider>
-      <WebSockerProvider>
-        <Provider store={store}>
+    <Provider store={store}> {/* ĐƯA REDUX PROVIDER LÊN ĐẦU TIÊN */}
+      <AuthProvider>
+        <WebSockerProvider>
           <RouterProvider router={router} />
           <NotificationHost />
-        </Provider>
-      </WebSockerProvider>
-    </AuthProvider>
+        </WebSockerProvider>
+      </AuthProvider>
+    </Provider>
   )
 }
 
