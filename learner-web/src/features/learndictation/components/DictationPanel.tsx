@@ -217,7 +217,9 @@ const DictationPanel = ({
      * Handler: Khi click "Con mắt" để mở Hint
      */
     const handleRevealOne = useCallback((wordId: number, wordText: string, wordIndex: number) => {
+        
         if (!userInteracted || showCompletedBadge) return;
+        console.log('autoFillHints value:', autoFillHints); // 👈 Debug
 
         setRevealState(prev => ({ ...prev, [wordId]: true }))
 
@@ -357,7 +359,10 @@ const DictationPanel = ({
                         <input
                             type="checkbox"
                             checked={autoFillHints}
-                            onChange={(e) => setAutoFillHints(e.target.checked)}
+                            onChange={(e) => {
+                                console.log('Auto-fill hints toggled:', e.target.checked); // 👈 Debug
+                                setAutoFillHints(e.target.checked)
+                            }}
                             disabled={showCompletedBadge}
                             className="w-3.5 h-3.5 rounded border-muted-foreground/30 accent-primary cursor-pointer disabled:opacity-50"
                         />

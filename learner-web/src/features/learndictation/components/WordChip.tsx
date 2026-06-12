@@ -164,6 +164,7 @@ export default React.memo(WordChip, (prevProps, nextProps) => {
     prevProps.typedToken === nextProps.typedToken &&
     prevProps.isRevealed === nextProps.isRevealed &&
     prevProps.word.id === nextProps.word.id &&
-    prevProps.userInteracted === nextProps.userInteracted
+    prevProps.userInteracted === nextProps.userInteracted &&
+    prevProps.onReveal === nextProps.onReveal
   )
 })

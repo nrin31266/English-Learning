@@ -68,7 +68,7 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript }: LessonModeLay
   } = mode
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] flex-col gap-2 py-2 px-2 pb-8">
+    <div className="flex flex-col w-full min-h-screen gap-2 p-2 sm:p-4">
 
       <div className="flex items-center justify-between gap-2 rounded-lg bg-card border px-2 sm:px-3 py-1.5 shadow-sm">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -164,7 +164,7 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript }: LessonModeLay
           {tk("lessonNotFound")}
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 mt-1">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 mt-1 ">
           <div className={cn("flex flex-col gap-3", effectiveShowTranscript ? "xl:col-span-8" : "xl:col-span-8 xl:col-start-3")}>
             <div className="sticky top-2 z-49">
               <Player
@@ -204,14 +204,7 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript }: LessonModeLay
         </div>
       )}
 
-      {showProgress && sentences.length > 0 && (
-        <LessonProgressBar
-          sentences={sentences as { id: number }[]}
-          completedIds={completedIdsArray}
-          activeIndex={activeIndex}
-          onSelect={handleSelectSentence}
-        />
-      )}
+
 
       <LoginIncentiveModal
         open={showLoginModal}
@@ -224,6 +217,16 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript }: LessonModeLay
         onBack={handleBackToTopic}
         onReview={() => setShowCompletionModal(false)}
       />
+
+      {showProgress && sentences.length > 0 && (
+        <LessonProgressBar
+
+          sentences={sentences as { id: number }[]}
+          completedIds={completedIdsArray}
+          activeIndex={activeIndex}
+          onSelect={handleSelectSentence}
+        />
+      )}
     </div>
   )
 }

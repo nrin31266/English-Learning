@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
+import { useSidebar } from "@/components/ui/sidebar"
 
 interface ProgressBarProps {
   sentences: { id: number }[]
@@ -12,16 +13,24 @@ const LessonProgressBar = ({ sentences, completedIds, activeIndex, onSelect }: P
   const completedSet = useMemo(() => new Set(completedIds), [completedIds])
   const scrollRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
-  
+
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const { state: sidebarState, isMobile } = useSidebar()
+  const isSidebarCollapsed = sidebarState === "collapsed"
+
+  // Khi mobile thì sidebar ẩn, left = 0
+  const sidebarWidth = isMobile
+    ? 0
+    : (isSidebarCollapsed ? 48 : 256)
 
   const checkScroll = () => {
     const el = scrollRef.current
     if (el) {
       const { scrollLeft, scrollWidth, clientWidth } = el
-      setCanScrollLeft(scrollLeft > 2)
-      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2)
+      setCanScrollLeft(scrollLeft > 5)
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5)
     }
   }
 
@@ -30,7 +39,7 @@ const LessonProgressBar = ({ sentences, completedIds, activeIndex, onSelect }: P
     if (!el) return
 
     checkScroll()
-    
+
     const onWheel = (e: WheelEvent) => {
       if (e.deltaY === 0) return
       e.preventDefault()
@@ -49,6 +58,13 @@ const LessonProgressBar = ({ sentences, completedIds, activeIndex, onSelect }: P
   }, [sentences.length])
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      checkScroll()
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [isSidebarCollapsed, isMobile])
+
+  useEffect(() => {
     const activeItem = itemRefs.current[activeIndex]
     if (activeItem && scrollRef.current) {
       const timer = setTimeout(() => {
@@ -57,25 +73,42 @@ const LessonProgressBar = ({ sentences, completedIds, activeIndex, onSelect }: P
           block: "nearest",
           inline: "center",
         })
-      }, 50) 
+      }, 50)
       return () => clearTimeout(timer)
     }
   }, [activeIndex])
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border/60 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] select-none pb-safe">
-      <div className="relative w-full max-w-5xl mx-auto">
-        
-        {/* Left scroll mask */}
-        <div className={cn(
-          "absolute left-0 top-0 bottom-0 z-20 w-12 pointer-events-none transition-opacity duration-150 bg-gradient-to-r from-background via-background/80 to-transparent",
-          canScrollLeft ? "opacity-100" : "opacity-0"
-        )} />
+    <div
+      className="fixed bottom-0 z-40 bg-background border-t border-border/60 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] select-none pb-safe transition-all duration-300"
+      style={{
+        left: `${sidebarWidth}px`,
+        right: 0
+      }}
+    >
+      <div className="relative w-full max-w-7xl mx-auto">
 
-        <div 
+        {/* Left scroll indicator - chỉ là hiệu ứng mờ, không phải nút */}
+        <div
+          className={cn(
+            "absolute left-0 top-0 bottom-0 z-20 w-20 pointer-events-none transition-opacity duration-200",
+            "bg-gradient-to-r from-background via-background/90 to-transparent",
+            canScrollLeft ? "opacity-100" : "opacity-0"
+          )}
+        />
+
+        {canScrollLeft && (
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 z-30 pointer-events-none text-muted-foreground/70">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </div>
+        )}
+
+        <div
           ref={scrollRef}
           className="flex items-center h-14 w-full overflow-x-auto no-scrollbar touch-pan-x px-8 gap-2"
-          style={{ 
+          style={{
             scrollSnapType: 'x mandatory',
             WebkitOverflowScrolling: 'touch'
           }}
@@ -92,14 +125,9 @@ const LessonProgressBar = ({ sentences, completedIds, activeIndex, onSelect }: P
                 className={cn(
                   "relative flex shrink-0 items-center justify-center h-9 min-w-[42px] rounded-md text-[14px] font-bold",
                   "scroll-snap-align-center transition-all duration-75 active:scale-95",
-                  
-                  // Incomplete
+
                   !isDone && !isActive && "bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700",
-                  
-                  // Completed
                   isDone && !isActive && "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600",
-                  
-                  // Active
                   isActive && "scale-105 z-10 shadow-md ring-2 ring-offset-2 ring-offset-background",
                   isActive && !isDone && "bg-blue-600 text-white ring-blue-600",
                   isActive && isDone && "bg-emerald-600 text-white ring-emerald-600"
@@ -109,7 +137,6 @@ const LessonProgressBar = ({ sentences, completedIds, activeIndex, onSelect }: P
                   {index + 1}
                 </span>
 
-                {/* Active indicator */}
                 {isActive && (
                   <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-[3px] bg-white/40 rounded-full" />
                 )}
@@ -118,11 +145,22 @@ const LessonProgressBar = ({ sentences, completedIds, activeIndex, onSelect }: P
           })}
         </div>
 
-        {/* Right scroll mask */}
-        <div className={cn(
-          "absolute right-0 top-0 bottom-0 z-20 w-12 pointer-events-none transition-opacity duration-150 bg-gradient-to-l from-background via-background/80 to-transparent",
-          canScrollRight ? "opacity-100" : "opacity-0"
-        )} />
+        {/* Right scroll indicator */}
+        <div
+          className={cn(
+            "absolute right-0 top-0 bottom-0 z-20 w-20 pointer-events-none transition-opacity duration-200",
+            "bg-gradient-to-l from-background via-background/90 to-transparent",
+            canScrollRight ? "opacity-100" : "opacity-0"
+          )}
+        />
+
+        {canScrollRight && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 z-30 pointer-events-none text-muted-foreground/70">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        )}
       </div>
     </div>
   )
