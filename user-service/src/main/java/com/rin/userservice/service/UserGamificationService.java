@@ -19,33 +19,55 @@ public class UserGamificationService {
 
     UserGamificationRepository gamificationRepository;
 
-    @Transactional
+    @Transactional(readOnly = true)
     public UserGamificationResponse getMyGamification() {
-        // Lấy Keycloak ID từ token của phiên đăng nhập hiện tại
         String currentUserId = SecurityContextHolder.getContext().getAuthentication().getName();
+        UserGamification gamification = getOrCreateUserGamification(currentUserId);
 
-        // Tìm bản ghi, nếu trống (User mới đăng nhập lần đầu) thì tự động tạo mới
-        UserGamification gamification = gamificationRepository.findById(currentUserId)
+
+        return UserGamificationResponse.builder()
+                .userId(gamification.getUserId())
+                .totalXp(gamification.getTotalXp())
+                .rewardCoins(gamification.getRewardCoins())
+                .rewardGems(gamification.getRewardGems())
+                .currentStreak(gamification.getCurrentStreak())
+                .longestStreak(gamification.getLongestStreak())
+                .lastActiveDate(gamification.getLastActiveDate())
+                .build();
+    }
+
+
+    @Transactional
+    public void addRewards(String userId, int earnedXp, int earnedCoins) {
+        UserGamification gamification = getOrCreateUserGamification(userId);
+
+        // Cộng dồn các chỉ số
+        gamification.setTotalXp(gamification.getTotalXp() + earnedXp);
+        gamification.setRewardCoins(gamification.getRewardCoins() + earnedCoins);
+        gamification.setLifetimeCoins(gamification.getLifetimeCoins() + earnedCoins);
+
+        gamificationRepository.save(gamification);
+
+        log.info("Cập nhật DB thành công cho User {}: +{} XP, +{} Coins", userId, earnedXp, earnedCoins);
+    }
+
+    /**
+     * HÀM TIỆN ÍCH: Tái sử dụng logic tìm/tạo mới User
+     */
+    private UserGamification getOrCreateUserGamification(String userId) {
+        return gamificationRepository.findById(userId)
                 .orElseGet(() -> {
-                    log.info("🆕 Generating default gamification record for Keycloak User: {}", currentUserId);
+                    log.info("🆕 Generating default gamification record for Keycloak User: {}", userId);
                     UserGamification newGami = UserGamification.builder()
-                            .userId(currentUserId)
+                            .userId(userId)
                             .totalXp(0L)
                             .rewardCoins(0L)
+                            .lifetimeCoins(0L)
+                            .rewardGems(0L)
                             .currentStreak(0)
                             .longestStreak(0)
                             .build();
                     return gamificationRepository.save(newGami);
                 });
-
-        // Map sang DTO sạch
-        return UserGamificationResponse.builder()
-                .userId(gamification.getUserId())
-                .totalXp(gamification.getTotalXp())
-                .rewardCoins(gamification.getRewardCoins())
-                .currentStreak(gamification.getCurrentStreak())
-                .longestStreak(gamification.getLongestStreak())
-                .lastActiveDate(gamification.getLastActiveDate())
-                .build();
     }
 }

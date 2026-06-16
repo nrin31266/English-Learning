@@ -1,8 +1,11 @@
 package com.rin.learningcontentservice.service;
 
+import com.rin.englishlearning.common.constants.DifficultyLevel;
+import com.rin.englishlearning.common.constants.GamificationTrigger;
 import com.rin.englishlearning.common.event.GamificationRewardEvent;
 import com.rin.englishlearning.common.exception.BaseErrorCode;
 import com.rin.englishlearning.common.exception.BaseException;
+import com.rin.englishlearning.common.utils.GamificationUtils;
 import com.rin.learningcontentservice.dto.request.ProgressBatchRequest;
 import com.rin.learningcontentservice.dto.request.ProgressUpdateRequest;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
@@ -16,10 +19,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,156 +34,215 @@ public class LessonProcessingService {
     private final UserLessonProgressRepository userLessonProgressRepository;
     private final KafkaProducer kafkaProducer;
 
-    /**
-     * Ngưỡng điểm yêu cầu để vượt qua chế độ học Shadowing.
-     */
     @Value("${app.learning.shadowing-threshold:80.0}")
     private double shadowingPassThreshold;
 
+    /**
+     * TỐI ƯU 1: Xử lý Batch chỉ với 1 lần gọi DB (Tránh lỗi N+1 Query)
+     */
     @Transactional
     public void updateBatchProgress(ProgressBatchRequest request) {
+        String userId = requireValidUserId();
+        Lesson lesson = getLessonOrThrow(request.getLessonId());
+        UserLessonProgress progress = getOrCreateProgress(userId, request.getLessonId(), request.getMode(), lesson);
+
+        List<GamificationRewardEvent> pendingEvents = new ArrayList<>();
+
+        // Gom nhóm các Active Sentences để tra cứu O(1)
+        Set<Long> activeSentenceIds = lesson.getSentences().stream()
+                .filter(s -> Boolean.TRUE.equals(s.getIsActive()))
+                .map(LessonSentence::getId)
+                .collect(Collectors.toSet());
+
+        // Lặp xử lý trên RAM, không gọi xuống DB
         for (Long sentenceId : request.getSentenceIds()) {
-            ProgressUpdateRequest singleRequest = ProgressUpdateRequest.builder()
-                    .lessonId(request.getLessonId())
-                    .sentenceId(sentenceId)
-                    .mode(request.getMode())
-                    .score(request.getScore())
-                    .build();
-            this.updateProgress(singleRequest);
-        }
-    }
-
-    @Transactional
-    public void updateProgress(ProgressUpdateRequest request) {
-        String userId = SecurityUtils.getCurrentUserId();
-        if (userId == null) {
-            throw new BaseException(BaseErrorCode.UNAUTHORIZED);
+            processSingleSentenceLogic(userId, lesson, progress, sentenceId, request.getScore(), request.getMode(), activeSentenceIds, pendingEvents);
         }
 
-        Lesson lesson = lessonRepository.findById(request.getLessonId())
-                .orElseThrow(() -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND));
-
-        UserLessonProgress progress = userLessonProgressRepository
-                .findByUserIdAndLessonIdAndMode(userId, request.getLessonId(), request.getMode())
-                .orElseGet(() -> UserLessonProgress.builder()
-                        .userId(userId)
-                        .lessonId(request.getLessonId())
-                        .mode(request.getMode())
-                        .lessonVersion(0)
-                        .status(ProgressStatus.IN_PROGRESS)
-                        .completedSentenceIds(new HashSet<>())
-                        .highestScores(new HashMap<>())
-                        .build());
-
-        Integer currentLessonVersion = lesson.getVersion() == null ? 0 : lesson.getVersion();
-        if (!currentLessonVersion.equals(progress.getLessonVersion())) {
-            recomputeProgress(progress, lesson, currentLessonVersion);
-        }
-
-        if (progress.getHighestScores() == null) {
-            progress.setHighestScores(new HashMap<>());
-        }
-
-        double currentScore = request.getScore() != null ? request.getScore() : 0.0;
-        double previousHighScore = progress.getHighestScores().getOrDefault(request.getSentenceId(), 0.0);
-
-        // Đánh giá hiệu suất: Chỉ xử lý Gamification Event nếu có sự gia tăng điểm số thực tế
-        if (currentScore > previousHighScore) {
-            double deltaScore = currentScore - previousHighScore;
-            progress.getHighestScores().put(request.getSentenceId(), currentScore);
-
-            // Trích xuất metadata phục vụ Gamification Service
-            double multiplier = extractMultiplier(lesson.getLanguageLevel().name());
-            String source = request.getMode().name();
-
-
-             GamificationRewardEvent event = GamificationRewardEvent.builder()
-                     .userId(userId)
-                     .deltaScore(deltaScore)
-                     .multiplier(multiplier)
-                     .source(source)
-                     .build();
-            kafkaProducer.publishGamificationRewardEvent(event);
-
-            log.info("Gamification Event Published: userId={}, deltaScore={}, multiplier={}, source={}",
-                    userId, deltaScore, multiplier, source);
-        }
-
-        // Đánh giá tiêu chí hoàn thành học phần
-        boolean isPassed = false;
-        if (request.getMode() == LearningMode.SHADOWING) {
-            isPassed = Math.round(currentScore) >= shadowingPassThreshold;
-        } else if (request.getMode() == LearningMode.DICTATION) {
-            isPassed = true;
-        }
-
-        if (isPassed) {
-            boolean isNewCompletion = progress.getCompletedSentenceIds().add(request.getSentenceId());
-
-            if (isNewCompletion) {
-                long activeTotal = lesson.getSentences().stream()
-                        .filter(s -> Boolean.TRUE.equals(s.getIsActive()))
-                        .count();
-
-                long completedActive = progress.getCompletedSentenceIds().stream()
-                        .filter(id -> lesson.getSentences().stream()
-                                .anyMatch(s -> s.getId().equals(id) && Boolean.TRUE.equals(s.getIsActive())))
-                        .count();
-
-                if (activeTotal > 0 && completedActive >= activeTotal) {
-                    progress.setStatus(ProgressStatus.COMPLETED);
-                }
-            }
-        }
-
+        // Lưu DB đúng 1 lần cho cả Batch
         userLessonProgressRepository.save(progress);
+
+        // Bắn toàn bộ sự kiện qua Kafka (An toàn sau khi Commit)
+        publishEventsAfterCommit(pendingEvents);
     }
 
     /**
-     * Đồng bộ lại tiến độ học tập dựa trên cấu trúc mới nhất của Lesson (Xử lý khi Admin cập nhật bài học).
+     * Xử lý câu đơn lẻ
      */
-    private void recomputeProgress(UserLessonProgress progress, Lesson lesson, Integer lessonVersion) {
-        Set<Long> allLessonSentenceIds = lesson.getSentences().stream()
-                .map(LessonSentence::getId)
-                .collect(Collectors.toSet());
+    @Transactional
+    public void updateProgress(ProgressUpdateRequest request) {
+        String userId = requireValidUserId();
+        Lesson lesson = getLessonOrThrow(request.getLessonId());
+        UserLessonProgress progress = getOrCreateProgress(userId, request.getLessonId(), request.getMode(), lesson);
+
+        List<GamificationRewardEvent> pendingEvents = new ArrayList<>();
 
         Set<Long> activeSentenceIds = lesson.getSentences().stream()
                 .filter(s -> Boolean.TRUE.equals(s.getIsActive()))
                 .map(LessonSentence::getId)
                 .collect(Collectors.toSet());
 
-        if (progress.getCompletedSentenceIds() != null) {
-            progress.getCompletedSentenceIds().retainAll(allLessonSentenceIds);
+        processSingleSentenceLogic(userId, lesson, progress, request.getSentenceId(), request.getScore(), request.getMode(), activeSentenceIds, pendingEvents);
+
+        userLessonProgressRepository.save(progress);
+        publishEventsAfterCommit(pendingEvents);
+    }
+
+    /**
+     * TỐI ƯU 2 & 5: Hàm Core chứa logic nghiệp vụ, check ID ngoại lệ và bỏ vòng lặp lồng nhau
+     */
+    private void processSingleSentenceLogic(String userId, Lesson lesson, UserLessonProgress progress,
+                                            Long sentenceId, Double rawScore, LearningMode mode,
+                                            Set<Long> activeSentenceIds, List<GamificationRewardEvent> pendingEvents) {
+
+        // Check 5: SentenceId phải thuộc Lesson này (Ngăn chặn hack từ Client)
+        if (!activeSentenceIds.contains(sentenceId)) {
+            log.warn("User {} cố gắng cập nhật sentenceId {} không hợp lệ cho lesson {}", userId, sentenceId, lesson.getId());
+            return; // Bỏ qua câu lỗi, xử lý tiếp câu khác
+        }
+
+        double currentScore = rawScore != null ? rawScore : 0.0;
+        double previousHighScore = progress.getHighestScores().getOrDefault(sentenceId, 0.0);
+
+        // Xử lý tạo Event phần thưởng
+        if (currentScore > previousHighScore) {
+            double deltaScore = currentScore - previousHighScore;
+            progress.getHighestScores().put(sentenceId, currentScore);
+
+            DifficultyLevel difficulty = extractDifficulty(lesson);
+            GamificationTrigger trigger = mode == LearningMode.DICTATION
+                    ? GamificationTrigger.SENTENCE_DICTATION
+                    : GamificationTrigger.SENTENCE_SHADOWING;
+            double multiplier = GamificationUtils.extractMultiplier(difficulty);
+
+            pendingEvents.add(GamificationRewardEvent.builder()
+                    .userId(userId)
+                    .deltaScore(deltaScore)
+
+                    .trigger(trigger)
+                    .targetId(String.valueOf(sentenceId))
+                    .timestamp(System.currentTimeMillis())
+                    .difficulty(difficulty)
+                    .build());
+        }
+
+        // TỐI ƯU 4: Chấm điểm
+        boolean isPassed = (mode == LearningMode.DICTATION) || (Math.round(currentScore) >= shadowingPassThreshold);
+
+        if (isPassed) {
+            boolean isNewCompletion = progress.getCompletedSentenceIds().add(sentenceId);
+
+            if (isNewCompletion && progress.getStatus() != ProgressStatus.COMPLETED) {
+                // TỐI ƯU 2: Dùng Set activeSentenceIds đếm trực tiếp, xóa bỏ stream lồng nhau
+                long completedActiveCount = progress.getCompletedSentenceIds().stream()
+                        .filter(activeSentenceIds::contains)
+                        .count();
+
+                if (activeSentenceIds.size() > 0 && completedActiveCount >= activeSentenceIds.size()) {
+                    progress.setStatus(ProgressStatus.COMPLETED);
+
+                    // Thêm Event hoàn thành bài học vào danh sách chờ bắn Kafka
+                    pendingEvents.add(buildLessonCompletedEvent(userId, lesson, activeSentenceIds.size()));
+                }
+            }
+        }
+    }
+
+    /**
+     * TỐI ƯU 3: Cơ chế chống Dual-Write. Chỉ bắn Kafka KHI VÀ CHỈ KHI Database đã commit thành công.
+     */
+    private void publishEventsAfterCommit(List<GamificationRewardEvent> events) {
+        if (events.isEmpty()) return;
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    events.forEach(event -> {
+                        kafkaProducer.publishGamificationRewardEvent(event);
+                        log.info("Kafka Event Published after DB Commit: trigger={}", event.getTrigger());
+                    });
+                }
+            });
         } else {
-            progress.setCompletedSentenceIds(new HashSet<>());
+            // Fallback nếu chạy ngoài Transaction
+            events.forEach(kafkaProducer::publishGamificationRewardEvent);
+        }
+    }
+
+    // --- CÁC HÀM TIỆN ÍCH HỖ TRỢ (Giúp code chính đọc như văn xuôi) ---
+
+    private String requireValidUserId() {
+        String userId = SecurityUtils.getCurrentUserId();
+        if (userId == null) throw new BaseException(BaseErrorCode.UNAUTHORIZED);
+        return userId;
+    }
+
+    private Lesson getLessonOrThrow(Long lessonId) {
+        return lessonRepository.findById(lessonId)
+                .orElseThrow(() -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND));
+    }
+
+    private UserLessonProgress getOrCreateProgress(String userId, Long lessonId, LearningMode mode, Lesson lesson) {
+        UserLessonProgress progress = userLessonProgressRepository
+                .findByUserIdAndLessonIdAndMode(userId, lessonId, mode)
+                .orElseGet(() -> UserLessonProgress.builder()
+                        .userId(userId).lessonId(lessonId).mode(mode).lessonVersion(0)
+                        .status(ProgressStatus.IN_PROGRESS)
+                        .completedSentenceIds(new HashSet<>())
+                        .highestScores(new HashMap<>())
+                        .build());
+
+        Integer currentVersion = lesson.getVersion() == null ? 0 : lesson.getVersion();
+        if (!currentVersion.equals(progress.getLessonVersion())) {
+            recomputeProgress(progress, lesson, currentVersion);
         }
 
-        if (progress.getHighestScores() != null) {
-            progress.getHighestScores().keySet().retainAll(allLessonSentenceIds);
+        if (progress.getHighestScores() == null) progress.setHighestScores(new HashMap<>());
+        if (progress.getCompletedSentenceIds() == null) progress.setCompletedSentenceIds(new HashSet<>());
+
+        return progress;
+    }
+
+    private DifficultyLevel extractDifficulty(Lesson lesson) {
+        try {
+            return lesson.getLanguageLevel() != null
+                    ? DifficultyLevel.valueOf(lesson.getLanguageLevel().name())
+                    : DifficultyLevel.UNKNOWN;
+        } catch (IllegalArgumentException e) {
+            return DifficultyLevel.UNKNOWN;
         }
+    }
 
-        long completedCount = activeSentenceIds.stream()
-                .filter(progress.getCompletedSentenceIds()::contains)
-                .count();
+    private GamificationRewardEvent buildLessonCompletedEvent(String userId, Lesson lesson, long totalSentences) {
+        DifficultyLevel difficulty = extractDifficulty(lesson);
+        return GamificationRewardEvent.builder()
+                .userId(userId)
+                .deltaScore(totalSentences * 10.0)
+                .trigger(GamificationTrigger.LESSON_COMPLETED)
+                .targetId(String.valueOf(lesson.getId()))
+                .timestamp(System.currentTimeMillis())
+                .difficulty(difficulty)
+                .build();
+    }
 
+    private void recomputeProgress(UserLessonProgress progress, Lesson lesson, Integer lessonVersion) {
+        Set<Long> allLessonSentenceIds = lesson.getSentences().stream()
+                .map(LessonSentence::getId).collect(Collectors.toSet());
+
+        Set<Long> activeSentenceIds = lesson.getSentences().stream()
+                .filter(s -> Boolean.TRUE.equals(s.getIsActive()))
+                .map(LessonSentence::getId).collect(Collectors.toSet());
+
+        if (progress.getCompletedSentenceIds() != null) progress.getCompletedSentenceIds().retainAll(allLessonSentenceIds);
+        else progress.setCompletedSentenceIds(new HashSet<>());
+
+        if (progress.getHighestScores() != null) progress.getHighestScores().keySet().retainAll(allLessonSentenceIds);
+        else progress.setHighestScores(new HashMap<>());
+
+        long completedCount = activeSentenceIds.stream().filter(progress.getCompletedSentenceIds()::contains).count();
         progress.setLessonVersion(lessonVersion);
         progress.setStatus((!activeSentenceIds.isEmpty() && completedCount >= activeSentenceIds.size())
                 ? ProgressStatus.COMPLETED : ProgressStatus.IN_PROGRESS);
-    }
-
-
-    private double extractMultiplier(String languageLevel) {
-        if (languageLevel == null || languageLevel.trim().isEmpty()) {
-            return 1.0;
-        }
-        return switch (languageLevel.toUpperCase()) {
-            case "A1", "EASY" -> 1.0;
-            case "A2" -> 1.5;
-            case "B1", "MEDIUM" -> 2.0;
-            case "B2" -> 2.5;
-            case "C1", "HARD" -> 3.0;
-            case "C2", "EXPERT" -> 3.5;
-            default -> 1.0;
-        };
     }
 }

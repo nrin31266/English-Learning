@@ -15,13 +15,14 @@ public class WebSocketConnectListener  implements ApplicationListener<SessionCon
     @Override
     public void onApplicationEvent(SessionConnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        String userId = (String) accessor.getSessionAttributes().get("keycloakId");
-        if(userId != null && !userId.isEmpty()){
-            log.info("User connected: {}", userId);
-            // TODO: Add additional logic here if needed
-        }else {
-            log.warn("⚠️ SessionConnectEvent triggered but keyCloakId is null");
-        }
+
+        String keycloakId = (String) accessor.getSessionAttributes().get("keycloakId");
+
+        String principalName = accessor.getUser() != null
+                ? accessor.getUser().getName()
+                : null;
+
+        log.info("User connected: sessionKeycloakId={}, principal={}", keycloakId, principalName);
     }
 }
 

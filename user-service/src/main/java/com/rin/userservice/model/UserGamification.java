@@ -29,6 +29,14 @@ public class UserGamification {
 
     @Column(nullable = false)
     @Builder.Default
+    Long lifetimeCoins = 0L;
+
+    @Column(nullable = false)
+    @Builder.Default
+    Long rewardGems = 0L;
+
+    @Column(nullable = false)
+    @Builder.Default
     Integer currentStreak = 0;
 
     @Column(nullable = false)

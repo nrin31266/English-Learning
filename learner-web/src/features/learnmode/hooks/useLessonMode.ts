@@ -11,7 +11,7 @@ import { useAuth } from "@/features/keycloak/providers/AuthProvider"
 import { clearGuestProgress, getGuestProgress, saveGuestProgress } from "@/utils/guestStorage"
 import type { UnknownAction } from "@reduxjs/toolkit"
 import { gainRewards } from "@/store/gamificationSlice"
-import { calculateEarnedRewards, getMultiplierByLevel } from "@/utils/gamificationUtils"
+
 
 /**
  * Cấu hình tham số đầu vào cho Hook điều phối chế độ học.
@@ -154,28 +154,13 @@ const handleCompleteSentence = useCallback(
   (sentenceId: number, score: number) => {
     if (!lesson?.id) return
 
-    // 1. Cập nhật tiến độ bài học (UI xanh lên)
+    // 1. Cập nhật tiến độ bài học tạm thời để UI xanh lên mượt mà
     dispatch(updateLocalProgress({ sentenceId, score, mode: modeName }))
 
-    // 2. Lấy kỷ lục cũ của câu này ra
-    const oldHighestScore = lesson.progressOverview?.[progressKey]?.highestScores?.[sentenceId] || 0
-    
-    // 👉 3. TỰ ĐỘNG LẤY HỆ SỐ NHÂN TỪ TRÌNH ĐỘ BÀI HỌC
-    const multiplier = getMultiplierByLevel(lesson.languageLevel)
+    // (ĐÃ XÓA TRẮNG HOÀN TOÀN LOGIC TỰ TÍNH XP/COIN VÀ TỰ DISPATCH REWARD Ở ĐÂY)
+    // Việc nổ hiệu ứng bây giờ sẽ do hook useGamificationSocket lắng nghe WebSocket đảm nhận.
 
-    // 4. GỌI HÀM TIỆN ÍCH DÙNG CHUNG (Truyền thêm hệ số động vào)
-    const { earnedXp, earnedCoins, shouldReward } = calculateEarnedRewards(score, oldHighestScore, multiplier)
-
-    // Nếu hàm báo có tiến bộ -> Bắn action cho nổ số tại chỗ
-    if (shouldReward) {
-      dispatch(gainRewards({
-        xp: earnedXp,
-        coins: earnedCoins,
-        source: `${modeName.toLowerCase()}_${sentenceId}` 
-      }))
-    }
-
-    // 5. Xử lý đồng bộ dữ liệu lên Server (Giữ nguyên của bác)
+    // 2. Xử lý đồng bộ dữ liệu lên Server
     if (profile) {
       dispatch(submitScore({ lessonId: lesson.id, sentenceId, mode: modeName, score }) as any)
     } else {
@@ -186,8 +171,8 @@ const handleCompleteSentence = useCallback(
       }
     }
   },
-  // 👉 Nhớ bổ sung thêm thuộc tính lesson?.languageLevel vào mảng dependencies của useCallback
-  [dispatch, lesson?.id, lesson?.languageLevel, profile, lessonId, updateLocalProgress, submitScore, modeName, lesson?.progressOverview, progressKey]
+  
+  [dispatch, lesson?.id, profile, lessonId, updateLocalProgress, submitScore, modeName]
 )
   /**
    * Kích hoạt Modal hoàn thành toàn bộ bài học

@@ -5,8 +5,10 @@ import { Outlet } from "react-router-dom"
 import AppFooterContent from "./AppFooterContent"
 import AppHeaderContent from "./AppHeaderContent"
 import { AppSidebar } from "./AppSidebar" // 👉 IMPORT SIDEBAR MỚI
+import { useGamificationSocket } from "@/hooks/useGamificationSocket"
 
 export default function Page() {
+  useGamificationSocket();
   return (
     <SidebarProvider>
 

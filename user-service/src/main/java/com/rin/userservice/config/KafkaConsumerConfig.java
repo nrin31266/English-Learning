@@ -1,9 +1,6 @@
-package com.rin.notificationservice.config;
+package com.rin.userservice.config;
 
-import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
-import com.rin.englishlearning.common.event.VocabSubTopicProgressEvent;
-import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
-import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
+import com.rin.englishlearning.common.event.GamificationRewardEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,13 +10,12 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
-import com.rin.englishlearning.common.event.NotificationPushEvent;
+
 import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
 public class KafkaConsumerConfig {
-
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
@@ -52,31 +48,8 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, LessonProcessingStepNotifyEvent>
-    lessonProcessingStepNotifyEventContainerFactory() {
-        return containerFactory(LessonProcessingStepNotifyEvent.class);
+    public ConcurrentKafkaListenerContainerFactory<String, GamificationRewardEvent> gamificationRewardEventContainerFactory() {
+        return containerFactory(GamificationRewardEvent.class);
     }
 
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, VocabSubTopicReadyEvent>
-    vocabSubTopicReadyEventContainerFactory() {
-        return containerFactory(VocabSubTopicReadyEvent.class);
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, VocabSubtopicsGeneratedEvent>
-    vocabSubtopicsGeneratedEventContainerFactory() {
-        return containerFactory(VocabSubtopicsGeneratedEvent.class);
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, VocabSubTopicProgressEvent>
-    vocabSubTopicProgressEventContainerFactory() {
-        return containerFactory(VocabSubTopicProgressEvent.class);
-    }
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, NotificationPushEvent>
-    notificationPushEventContainerFactory() {
-        return containerFactory(NotificationPushEvent.class);
-    }
 }

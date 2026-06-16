@@ -13,6 +13,7 @@ public class UserGamificationResponse {
     String userId;
     Long totalXp;
     Long rewardCoins;
+    Long rewardGems;
     Integer currentStreak;
     Integer longestStreak;
     LocalDate lastActiveDate;

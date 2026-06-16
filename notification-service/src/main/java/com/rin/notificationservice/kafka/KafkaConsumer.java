@@ -3,16 +3,13 @@ package com.rin.notificationservice.kafka;
 import com.rin.englishlearning.common.constants.KafkaTopics;
 import com.rin.englishlearning.common.constants.LessonProcessingStep;
 import com.rin.englishlearning.common.constants.LessonStatus;
-import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
-import com.rin.englishlearning.common.event.VocabSubTopicProgressEvent;
-import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
-import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
-import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
+import com.rin.englishlearning.common.event.*;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,10 +18,51 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class KafkaConsumer {
     SimpMessagingTemplate messagingTemplate;
+    private final SimpUserRegistry simpUserRegistry;
+    @KafkaListener(
+            topics = KafkaTopics.NOTIFICATION_PUSH_TOPIC,
+            containerFactory = "notificationPushEventContainerFactory"
+    )
+    public void handleNotificationPushEvent(NotificationPushEvent event) {
 
+
+        String destination;
+
+        // Switch-case theo module để định tuyến channel chuẩn xác
+        switch (event.getModule().toUpperCase()) {
+            case "GAMIFICATION":
+                destination = "/queue/gamification/alerts";
+                break;
+            case "LESSON_SYSTEM":
+                destination = "/queue/lessons/alerts";
+                break;
+            default:
+                log.warn("Module không hỗ trợ định tuyến WebSocket: {}", event.getModule());
+                return;
+        }
+
+        // Bắn vào kênh bảo mật của User (Spring tự map sang /user/{userId}/...)
+        messagingTemplate.convertAndSendToUser(
+                event.getUserId(),
+                destination,
+                event
+        );
+        boolean online = simpUserRegistry.getUser(event.getUserId()) != null;
+
+        log.info(
+                "WS user registry check: userId={}, online={}, allUsers={}",
+                event.getUserId(),
+                online,
+                simpUserRegistry.getUsers().stream()
+                        .map(user -> user.getName())
+                        .toList()
+        );
+
+        log.info("Đã bắn STOMP Message cho User {} tới destination {}", event.getUserId(), destination);
+    }
     @KafkaListener(
             topics = KafkaTopics.LESSON_PROCESSING_STEP_NOTIFY_TOPIC,
-            containerFactory = "lessonProcessingStepNotifyEventConcurrentKafkaListenerContainerFactory"
+            containerFactory = "lessonProcessingStepNotifyEventContainerFactory"
     )
     public void handleLessonProcessingStepUpdatedEvent(LessonProcessingStepNotifyEvent event) {
         log.info("Received LessonProcessingStepNotifyEvent: lessonId={}, step={}", event.getLessonId(), event.getProcessingStep());

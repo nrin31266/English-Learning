@@ -14,5 +14,7 @@ public final class KafkaTopics {
     public static final String VOCAB_SUBTOPICS_GENERATED_TOPIC = "vocab-subtopics-generated-v1";
     public static final String VOCAB_SUBTOPIC_PROGRESS_TOPIC = "vocab-subtopic-progress-v1";
     public static final String GAMIFICATION_REWARD_TOPIC = "gamification-reward-v1";
+    //
+    public static final String NOTIFICATION_PUSH_TOPIC = "notification-push-v1";
 
 }
