@@ -46,19 +46,27 @@ export const calculateLevelDetails = (totalXp: number) => {
 /**
  * Hàm dùng DUY NHẤT 1 LẦN khi vừa lấy dữ liệu từ Backend API
  */
-export const mapGamificationData = (raw: IUserGamificationResponse): IGamificationState => {
-  const totalXp = Math.max(0, raw.totalXp);
-  
-  const levelDetails = calculateLevelDetails(totalXp);
+export const mapGamificationData = (
+  raw: IUserGamificationResponse
+): IGamificationState => {
+  const totalXp = Math.max(0, raw.totalXp)
+
+  const levelDetails = calculateLevelDetails(totalXp)
 
   return {
     userId: raw.userId,
     totalXp,
-    rewardCoins: raw.rewardCoins,
-    currentStreak: raw.currentStreak,
-    longestStreak: raw.longestStreak,
-    rewardGems: raw.rewardGems || 0,
+    rewardCoins: raw.rewardCoins ?? 0,
+    currentStreak: raw.currentStreak ?? 0,
+    longestStreak: raw.longestStreak ?? 0,
+    rewardGems: raw.rewardGems ?? 0,
+
+    lastActiveDate: raw.lastActiveDate ?? null,
+    serverDate: raw.serverDate ?? null,
+    streakAlive: raw.streakAlive ?? false,
+    canIncreaseStreakToday: raw.canIncreaseStreakToday ?? false,
+
     ...levelDetails,
-    xpQueue: [] as IGamificationState["xpQueue"]
-  };
-};
+    xpQueue: [],
+  }
+}

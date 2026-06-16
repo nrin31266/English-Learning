@@ -17,4 +17,9 @@ public class UserGamificationResponse {
     Integer currentStreak;
     Integer longestStreak;
     LocalDate lastActiveDate;
+
+    // Thêm 3 field này
+    LocalDate serverDate;
+    Boolean streakAlive;
+    Boolean canIncreaseStreakToday;
 }

@@ -4,6 +4,7 @@ import com.rin.englishlearning.common.constants.KafkaTopics;
 import com.rin.englishlearning.common.event.GamificationRewardEvent;
 import com.rin.englishlearning.common.event.NotificationPushEvent;
 import com.rin.englishlearning.common.utils.GamificationUtils;
+import com.rin.userservice.dto.response.GamificationRewardResult;
 import com.rin.userservice.service.UserGamificationService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -36,41 +37,74 @@ public class GamificationEventConsumer {
                 event.getDeltaScore()
         );
 
-        // Nếu điểm <= 0 thì không thưởng (Chống hack/bug logic)
         if (event.getDeltaScore() <= 0) {
             log.warn("Nhận được deltaScore <= 0 cho user {}, bỏ qua xử lý thưởng.", event.getUserId());
             return;
         }
 
-        //  MỞ BUNG TRẦN: Dùng trực tiếp điểm thực tế từ hệ thống
         double scoreDifference = event.getDeltaScore();
-
         double multiplier = GamificationUtils.extractMultiplier(event.getDifficulty());
 
-        // 1. Quy đổi XP: Nhân hệ số
         double baseXp = scoreDifference * multiplier;
         int earnedXp = Math.max(1, (int) Math.round(baseXp));
 
-        // 2. Quy đổi Coin: Tỷ lệ 10 điểm = 1 Coin, nhân hệ số
         double baseCoins = (scoreDifference / 10.0) * multiplier;
         int earnedCoins = Math.max(1, (int) Math.floor(baseCoins));
-        // ---------------------------------------------------------
 
-        userGamificationService.addRewards(event.getUserId(), earnedXp, earnedCoins);
+        GamificationRewardResult result = userGamificationService.addRewards(
+                event.getUserId(),
+                earnedXp,
+                earnedCoins
+        );
 
-        // Đóng gói payload gửi sang Notification Service
+        sendRewardNotification(event.getUserId(), result);
+
+        if (result.isStreakUpdated()) {
+            sendStreakNotification(event.getUserId(), result);
+        }
+    }
+
+    private void sendRewardNotification(String userId, GamificationRewardResult result) {
         Map<String, Object> payload = new HashMap<>();
-        payload.put("earnedXp", earnedXp);
-        payload.put("earnedCoins", earnedCoins);
+        payload.put("earnedXp", result.getEarnedXp());
+        payload.put("earnedCoins", result.getEarnedCoins());
 
         NotificationPushEvent pushEvent = NotificationPushEvent.builder()
-                .userId(event.getUserId())
+                .userId(userId)
                 .module("GAMIFICATION")
                 .actionType("REWARD_EARNED")
                 .payload(payload)
                 .build();
 
-        // Gọi class Publisher để bắn đi
+        publisher.sendNotificationPushEvent(pushEvent);
+    }
+
+    private void sendStreakNotification(String userId, GamificationRewardResult result) {
+        Map<String, Object> payload = new HashMap<>();
+
+        payload.put("currentStreak", result.getCurrentStreak());
+        payload.put("longestStreak", result.getLongestStreak());
+
+        payload.put(
+                "lastActiveDate",
+                result.getLastActiveDate() != null ? result.getLastActiveDate().toString() : null
+        );
+
+        payload.put(
+                "serverDate",
+                result.getServerDate() != null ? result.getServerDate().toString() : null
+        );
+
+        payload.put("streakAlive", result.isStreakAlive());
+        payload.put("canIncreaseStreakToday", result.isCanIncreaseStreakToday());
+
+        NotificationPushEvent pushEvent = NotificationPushEvent.builder()
+                .userId(userId)
+                .module("GAMIFICATION")
+                .actionType("STREAK_UPDATED")
+                .payload(payload)
+                .build();
+
         publisher.sendNotificationPushEvent(pushEvent);
     }
 }

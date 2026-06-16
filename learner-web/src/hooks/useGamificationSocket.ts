@@ -1,59 +1,96 @@
 // src/hooks/useGamificationSocket.ts
-import { useEffect } from "react";
-import { useAppDispatch } from "@/store";
-import { gainRewards } from "@/store/gamificationSlice";
-import { useWebSocket } from "@/features/ws/providers/WebSockerProvider";
-// Giả định bác có hàm updateStreak, nếu chưa có thì cmt lại dùng sau
-// import { updateStreak } from "@/store/gamificationSlice"; 
 
+import { useEffect } from "react"
+import { useAppDispatch } from "@/store"
+import { gainRewards, updateStreak } from "@/store/gamificationSlice"
+import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
+
+type GamificationSocketEvent = {
+  userId: string
+  module: "GAMIFICATION"
+  actionType: "REWARD_EARNED" | "STREAK_UPDATED" | string
+  payload: Record<string, any>
+}
+
+const toNumber = (value: unknown, fallback = 0) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+const toBooleanOrUndefined = (value: unknown) => {
+  if (typeof value === "boolean") return value
+  if (value === "true") return true
+  if (value === "false") return false
+  return undefined
+}
 
 export const useGamificationSocket = () => {
-  const stompClient = useWebSocket();
-  const dispatch = useAppDispatch();
+  const stompClient = useWebSocket()
+  const dispatch = useAppDispatch()
 
   useEffect(() => {
-    // Chỉ chạy khi đã kết nối STOMP thành công
-    if (!stompClient?.connected) return;
+    if (!stompClient?.connected) return
 
-    // Đăng ký nhận kênh thông báo Gamification ma thuật của Spring (/user/...)
     const subscription = stompClient.subscribe(
       "/user/queue/gamification/alerts",
       (message: any) => {
         try {
-          const event = JSON.parse(message.body);
+          const event = JSON.parse(message.body) as GamificationSocketEvent
 
-          console.log("📥 Nhận được Socket Event Gamification:", event);
+          console.log("📥 Received Gamification Socket Event:", event)
 
-          // Xử lý rẽ nhánh theo hành động
           switch (event.actionType) {
-            case "REWARD_EARNED":
-              // Payload từ backend: { earnedXp: ..., earnedCoins: ... }
+            case "REWARD_EARNED": {
+              const earnedXp = toNumber(event.payload?.earnedXp)
+              const earnedCoins = toNumber(event.payload?.earnedCoins)
+
+              if (earnedXp <= 0 && earnedCoins <= 0) {
+                console.warn("⚠️ Invalid REWARD_EARNED payload:", event.payload)
+                return
+              }
+
               dispatch(
                 gainRewards({
-                  xp: event.payload.earnedXp,
-                  coins: event.payload.earnedCoins,
+                  xp: earnedXp,
+                  coins: earnedCoins,
                   source: "websocket",
                 })
-              );
-              break;
+              )
 
-            case "STREAK_UPDATED":
-              // Tương lai mở rộng: Nổ hiệu ứng chuỗi
-              // dispatch(updateStreak(event.payload));
-              break;
+              break
+            }
+
+            case "STREAK_UPDATED": {
+              const currentStreak = toNumber(event.payload?.currentStreak)
+              const longestStreak = toNumber(event.payload?.longestStreak)
+
+              dispatch(
+                updateStreak({
+                  currentStreak,
+                  longestStreak,
+                  lastActiveDate: event.payload?.lastActiveDate ?? null,
+                  serverDate: event.payload?.serverDate ?? null,
+                  streakAlive: toBooleanOrUndefined(event.payload?.streakAlive),
+                  canIncreaseStreakToday: toBooleanOrUndefined(
+                    event.payload?.canIncreaseStreakToday
+                  ),
+                })
+              )
+
+              break
+            }
 
             default:
-              console.warn("⚠️ Chưa xử lý Gamification Action:", event.actionType);
+              console.warn("⚠️ Unhandled Gamification action:", event.actionType)
           }
         } catch (error) {
-          console.error("❌ Lỗi parse thông báo Gamification WebSocket", error);
+          console.error("❌ Failed to parse Gamification WebSocket event:", error)
         }
       }
-    );
+    )
 
-    // Dọn dẹp listener khi Component unmount
     return () => {
-      subscription.unsubscribe();
-    };
-  }, [stompClient, dispatch]);
-};
+      subscription.unsubscribe()
+    }
+  }, [stompClient, dispatch])
+}
