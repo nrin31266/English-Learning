@@ -10,23 +10,7 @@ import { useWebSocket } from "@/features/ws/providers/WebSockerProvider";
 export const useGamificationSocket = () => {
   const stompClient = useWebSocket();
   const dispatch = useAppDispatch();
-  useEffect(() => {
-    if (!stompClient?.connected) {
-      return;
-    }
-//     stompClient.subscribe("/topic/debug/gamification", (message: any) => {
-//   console.log("📢 DEBUG broadcast received:", JSON.parse(message.body));
-// });
-    const debugSubscription = stompClient.subscribe("/topic/debug/gamification", (message: any) => {
-      console.log("📢 DEBUG broadcast received:", JSON.parse(message.body));
-    });
 
-    // Dọn dẹp subscription debug khi component unmount
-    return () => {
-      debugSubscription.unsubscribe();
-    };
-
-  }, [stompClient, dispatch]);
   useEffect(() => {
     // Chỉ chạy khi đã kết nối STOMP thành công
     if (!stompClient?.connected) return;

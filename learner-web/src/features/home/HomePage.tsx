@@ -28,7 +28,7 @@ const HomePage = () => {
       <Button 
   size="sm" 
   variant="outline" 
-  onClick={() => dispatch(gainRewards({ xp: 7777, coins: 500, source: "test" }))}
+  onClick={() => dispatch(gainRewards({ xp: 100, coins: 500, source: "test" }))}
 >
   Test +XP
 </Button>

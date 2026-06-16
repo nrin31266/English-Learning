@@ -24,7 +24,8 @@ public class KafkaConsumer {
             containerFactory = "notificationPushEventContainerFactory"
     )
     public void handleNotificationPushEvent(NotificationPushEvent event) {
-
+        log.info("Received NotificationPushEvent for User {}: module={}, actionType={}",
+                event.getUserId(), event.getModule(), event.getActionType());
 
         String destination;
 
@@ -47,18 +48,7 @@ public class KafkaConsumer {
                 destination,
                 event
         );
-        boolean online = simpUserRegistry.getUser(event.getUserId()) != null;
 
-        log.info(
-                "WS user registry check: userId={}, online={}, allUsers={}",
-                event.getUserId(),
-                online,
-                simpUserRegistry.getUsers().stream()
-                        .map(user -> user.getName())
-                        .toList()
-        );
-
-        log.info("Đã bắn STOMP Message cho User {} tới destination {}", event.getUserId(), destination);
     }
     @KafkaListener(
             topics = KafkaTopics.LESSON_PROCESSING_STEP_NOTIFY_TOPIC,

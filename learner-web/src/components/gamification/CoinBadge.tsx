@@ -1,99 +1,27 @@
 // src/components/gamification/CoinBadge.tsx
+
 import { Coins } from "lucide-react"
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
-import { useAnimatedNumber } from "@/hooks/useAnimatedNumber"
+import ResourceBadge from "./ResourceBadge"
 
 interface CoinBadgeProps {
-    coins: number
-    className?: string
-}
-
-const formatCompactNumber = (value: number, suffix: string) => {
-    return `${Number(value.toFixed(2))}${suffix}`
-}
-
-const formatMobileCoins = (value: number) => {
-    const absValue = Math.abs(value)
-    if (absValue >= 1_000_000_000) return formatCompactNumber(value / 1_000_000_000, "B")
-    if (absValue >= 1_000_000) return formatCompactNumber(value / 1_000_000, "M")
-    if (absValue >= 1_000) return formatCompactNumber(value / 1_000, "K")
-    return value.toLocaleString()
-}
-
-const formatDesktopCoins = (value: number) => {
-    const absValue = Math.abs(value)
-    if (absValue >= 1_000_000_000) return formatCompactNumber(value / 1_000_000_000, "B")
-    return value.toLocaleString()
+  coins: number
+  className?: string
 }
 
 const CoinBadge = ({ coins, className }: CoinBadgeProps) => {
-    // 👉 Đưa vào hook để lấy số đang nhảy (displayValue) và mảng các cục +Coin (diffQueue)
-    const { displayValue, diffQueue } = useAnimatedNumber(coins)
-
-    // Format dựa trên con số đang chuyển động
-    const mobileCoins = formatMobileCoins(displayValue)
-    const desktopCoins = formatDesktopCoins(displayValue)
-
-    return (
-        <TooltipProvider delayDuration={200}>
-            {/* 👉 CSS cục bộ cho hiệu ứng bay từ dưới lên ngay tại Component */}
-            <style>{`
-                @keyframes localFloatUp {
-                    0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
-                    20% { opacity: 1; transform: translate(-50%, -15px) scale(1.2); }
-                    80% { opacity: 1; transform: translate(-50%, -35px) scale(1); }
-                    100% { opacity: 0; transform: translate(-50%, -45px) scale(0.8); }
-                }
-                .animate-local-float {
-                    animation: localFloatUp 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-                }
-            `}</style>
-
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <div
-                        className={cn(
-                            "relative flex items-center gap-1 sm:gap-1.5 px-1 py-0.5 sm:py-1 transition-transform duration-200 hover:scale-105",
-                            className
-                        )}
-                    >
-                        <span className="text-xs sm:text-sm font-black leading-none text-amber-700 dark:text-yellow-200 tabular-nums tracking-tight">
-                            <span className="sm:hidden">{mobileCoins}</span>
-                            <span className="hidden sm:inline">{desktopCoins}</span>
-                        </span>
-
-                        {/* Vùng chứa Icon và Hiệu ứng */}
-                        <div className="relative flex items-center justify-center">
-                            <Coins className="size-4 sm:size-5 shrink-0 text-amber-500 dark:text-yellow-300" />
-                            
-                            {/* 👉 HẠT BAY LÊN NGAY TRÊN ĐẦU ICON */}
-                            {diffQueue.map((item) => (
-                                <span
-                                    key={item.id}
-                                    className="pointer-events-none absolute left-1/2 top-4 z-50 text-xs sm:text-sm font-black text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-local-float"
-                                    style={{ willChange: 'transform, opacity' }}
-                                >
-                                    +{item.diff}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                </TooltipTrigger>
-
-                <TooltipContent side="bottom" className="z-50">
-                    <p>
-                        Balance: <span className="font-bold text-amber-500">{coins.toLocaleString()}</span> coins
-                    </p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
-    )
+  return (
+    <ResourceBadge
+      value={coins}
+      label="Balance"
+      unitLabel="coins"
+      Icon={Coins}
+      textClassName="text-amber-700 dark:text-yellow-200"
+      iconClassName="text-amber-500 dark:text-yellow-300"
+      diffClassName="text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
+      tooltipValueClassName="text-amber-500"
+      className={className}
+    />
+  )
 }
 
 export default CoinBadge

@@ -12,7 +12,7 @@ import { useAuth } from "@/features/keycloak/providers/AuthProvider"
 
 const TEST_DATA = {
   level: 12,
-  currentStreak: 1,
+  currentStreak: 100,
   longestStreak: 23,
   rewardCoins: 10000050,
   rewardGems: 450324320,
