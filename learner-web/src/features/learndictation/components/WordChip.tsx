@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 import type { ILessonWordResponse } from "@/types"
 import { hasPunctuation, normalizeWordLower } from "@/utils/textUtils"
-import React, { useMemo } from "react"
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react"
 
 const levenshteinDistance = (a: string, b: string): number => {
   if (a === b) return 0
@@ -45,6 +45,16 @@ type WordChipProps = {
   onClickWord?: (word: ILessonWordResponse, el: HTMLElement) => void
 }
 
+const buildMaskedText = (text: string) => {
+  let masked = ""
+
+  for (let i = 0; i < text.length; i++) {
+    masked += hasPunctuation(text[i]) ? text[i] : MASK_CHAR
+  }
+
+  return masked
+}
+
 const WordChip = ({
   word,
   index,
@@ -52,27 +62,36 @@ const WordChip = ({
   isRevealed = false,
   userInteracted,
   onReveal,
-  onClickWord
+  onClickWord,
 }: WordChipProps) => {
+  const maskedMeasureRef = useRef<HTMLSpanElement>(null)
+  const wordMeasureRef = useRef<HTMLSpanElement>(null)
+
+  const [lockedWidth, setLockedWidth] = useState<number | null>(null)
+
+  const targetDisplay = useMemo(() => getWordDisplay(word), [word])
+  const fullMaskedText = useMemo(() => buildMaskedText(targetDisplay), [targetDisplay])
 
   const { status, displayText } = useMemo(() => {
-    const targetDisplay = getWordDisplay(word)
     const targetNorm = normalizeWordLower(targetDisplay) || ""
     const typedNorm = normalizeWordLower(typedToken) || ""
 
     if (!typedToken) {
-      let masked = ""
-      for (let i = 0; i < targetDisplay.length; i++) {
-        masked += hasPunctuation(targetDisplay[i]) ? targetDisplay[i] : MASK_CHAR
+      return {
+        status: "untyped" as WordChipStatus,
+        displayText: fullMaskedText,
       }
-      return { status: "untyped" as WordChipStatus, displayText: masked }
     }
 
     if (typedNorm === targetNorm) {
-      return { status: "correct_typed" as WordChipStatus, displayText: targetDisplay }
+      return {
+        status: "correct_typed" as WordChipStatus,
+        displayText: targetDisplay,
+      }
     }
 
     let maskedText = ""
+
     for (let i = 0; i < targetDisplay.length; i++) {
       const char = targetDisplay[i]
       const typedChar = typedToken[i]
@@ -87,15 +106,32 @@ const WordChip = ({
     }
 
     const distance = levenshteinDistance(typedNorm, targetNorm)
-    const isNear = distance <= 1 && Math.max(targetNorm.length, typedNorm.length) >= 2
+    const isNear =
+      distance <= 1 && Math.max(targetNorm.length, typedNorm.length) >= 2
 
     return {
       status: (isNear ? "near" : "wrong") as WordChipStatus,
-      displayText: maskedText
+      displayText: maskedText,
     }
-  }, [word, typedToken])
+  }, [targetDisplay, fullMaskedText, typedToken])
 
-  const finalDisplayText = isRevealed ? getWordDisplay(word) : displayText
+  useLayoutEffect(() => {
+    const maskedEl = maskedMeasureRef.current
+    const wordEl = wordMeasureRef.current
+
+    if (!maskedEl || !wordEl) return
+
+    const maskedWidth = maskedEl.getBoundingClientRect().width
+    const wordWidth = wordEl.getBoundingClientRect().width
+
+    const nextWidth = Math.ceil(Math.max(maskedWidth, wordWidth))
+
+    if (nextWidth > 0) {
+      setLockedWidth(nextWidth)
+    }
+  }, [word.id, targetDisplay, fullMaskedText])
+
+  const finalDisplayText = isRevealed ? targetDisplay : displayText
   const isRevealable = status !== "correct_typed" && !isRevealed
   const isClickable = status === "correct_typed"
 
@@ -113,7 +149,8 @@ const WordChip = ({
       text: "text-rose-700 dark:text-rose-400",
     },
     untyped: {
-      base: "border-gray-400/40 dark:border-slate-500/50 bg-slate-50/40 dark:bg-slate-900/30 hover:border-primary/40",
+      base:
+        "border-gray-400/40 dark:border-slate-500/50 bg-slate-50/40 dark:bg-slate-900/30 hover:border-primary/40",
       text: "text-slate-500 dark:text-slate-500",
     },
   }
@@ -124,38 +161,67 @@ const WordChip = ({
     if (!userInteracted) return
 
     if (isRevealable) {
-      onReveal?.(word.id, getWordDisplay(word), index)
-    } else if (isClickable && onClickWord) {
+      onReveal?.(word.id, targetDisplay, index)
+      return
+    }
+
+    if (isClickable && onClickWord) {
       onClickWord(word, e.currentTarget)
     }
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className={cn(
-        "group relative inline-flex items-center justify-center shrink-0",
-        "h-max rounded-md border text-sm sm:text-base px-2 py-1",
-        "transition-all duration-200 ease-out",
-        current.base,
-        (isClickable || isRevealable) && "cursor-pointer active:scale-95",
-        isClickable && "hover:bg-primary/5",
-        isRevealed && "border-sky-500/60 bg-sky-50/50 dark:bg-sky-950/30"
-      )}
-    >
-      <span
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        style={lockedWidth ? { width: `${lockedWidth}px` } : undefined}
         className={cn(
-          "font-normal tracking-wide whitespace-nowrap",
-          current.text,
-          status === "untyped" && "tracking-widest opacity-80"
+          "group relative inline-flex items-center justify-center shrink-0",
+          "h-max rounded-md border text-sm sm:text-base px-2 py-1",
+          "transition-colors duration-200 ease-out",
+          current.base,
+          (isClickable || isRevealable) && "cursor-pointer active:scale-95",
+          isClickable && "hover:bg-primary/5",
+          isRevealed && "border-sky-500/60 bg-sky-50/50 dark:bg-sky-950/30"
         )}
       >
-        {finalDisplayText}
-      </span>
+        <span
+          className={cn(
+            "font-normal tracking-wide whitespace-nowrap",
+            current.text,
+            status === "untyped" && "tracking-widest opacity-80"
+          )}
+        >
+          {finalDisplayText}
+        </span>
 
-      <span className="absolute inset-0 rounded-md ring-primary/20 transition-all group-focus-visible:ring-2 pointer-events-none" />
-    </button>
+        <span className="absolute inset-0 rounded-md ring-primary/20 transition-all group-focus-visible:ring-2 pointer-events-none" />
+      </button>
+
+      {/* Hidden measure: đo đúng 2 trạng thái, không render ra UI */}
+      <span className="pointer-events-none fixed -left-[9999px] top-0 invisible">
+        <span
+          ref={maskedMeasureRef}
+          className={cn(
+            "inline-flex items-center justify-center rounded-md border px-2 py-1",
+            "text-sm sm:text-base font-normal whitespace-nowrap tracking-widest"
+          )}
+        >
+          {fullMaskedText || MASK_CHAR}
+        </span>
+
+        <span
+          ref={wordMeasureRef}
+          className={cn(
+            "inline-flex items-center justify-center rounded-md border px-2 py-1",
+            "text-sm sm:text-base font-normal whitespace-nowrap tracking-wide"
+          )}
+        >
+          {targetDisplay || MASK_CHAR}
+        </span>
+      </span>
+    </>
   )
 }
 
@@ -164,7 +230,10 @@ export default React.memo(WordChip, (prevProps, nextProps) => {
     prevProps.typedToken === nextProps.typedToken &&
     prevProps.isRevealed === nextProps.isRevealed &&
     prevProps.word.id === nextProps.word.id &&
+    prevProps.word.wordText === nextProps.word.wordText &&
+    prevProps.word.wordNormalized === nextProps.word.wordNormalized &&
     prevProps.userInteracted === nextProps.userInteracted &&
-    prevProps.onReveal === nextProps.onReveal
+    prevProps.onReveal === nextProps.onReveal &&
+    prevProps.onClickWord === nextProps.onClickWord
   )
 })
