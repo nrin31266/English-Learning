@@ -2,14 +2,19 @@
 "use client"
 
 import * as React from "react"
-import { BookMarked, Notebook, Library, Users, Newspaper, Trophy, MessageCircle } from "lucide-react"
+import {
+  BookMarked,
+  Notebook,
+  Library,
+  Newspaper,
+  Trophy,
+  MessageCircle,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { NavMain } from "./NavMain"
 import { NavUser } from "./NavUser"
 import { BrandLogo } from "./BrandLogo"
-
-// 👉 IMPORT 2 TIỆN ÍCH ĐỂ ĐƯA VÀO SIDEBAR
 import ThemeToggle from "./ThemeToggle"
 import SwitchingLanguage from "../SwitchingLanguage"
 
@@ -20,12 +25,10 @@ import {
   SidebarHeader,
   SidebarRail,
   SidebarGroup,
-  SidebarMenu,
-  SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-import { useAuth } from '@/features/keycloak/providers/AuthProvider'
-import { getIndexFromChar } from '@/utils/textUtils'
+import { useAuth } from "@/features/keycloak/providers/AuthProvider"
+import { getIndexFromChar } from "@/utils/textUtils"
 
 const defaultavatars = [
   "/defaultavatars/Cat_owl.webp",
@@ -40,17 +43,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { profile } = useAuth()
 
   const appData = {
-    user: profile ? {
-      name: `${profile.firstName} ${profile.lastName}`,
-      email: profile.email || "",
-      avatar: defaultavatars[getIndexFromChar(profile.firstName?.[0] || 'A', defaultavatars.length)],
-      isGuest: false
-    } : {
-      name: "Guest",
-      email: "",
-      avatar: "",
-      isGuest: true
-    },
+    user: profile
+      ? {
+        name: `${profile.firstName} ${profile.lastName}`,
+        email: profile.email || "",
+        avatar:
+          defaultavatars[
+          getIndexFromChar(profile.firstName?.[0] || "A", defaultavatars.length)
+          ],
+        isGuest: false,
+      }
+      : {
+        name: "Guest",
+        email: "",
+        avatar: "",
+        isGuest: true,
+      },
+
     learningMenu: [
       { title: t("header.playlists"), url: "/topics", icon: Notebook },
       { title: t("header.dictionary"), url: "/vocab/topics", icon: BookMarked },
@@ -65,6 +74,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ],
       },
     ],
+
     socialMenu: [
       { title: t("header.leaderboard"), url: "/leaderboard", icon: Trophy },
       { title: t("header.discussions"), url: "/discussions", icon: MessageCircle },
@@ -78,30 +88,50 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="h-16 justify-center border-b border-border/40 px-2">
         <BrandLogo />
       </SidebarHeader>
-      
+
       {/* THÂN SIDEBAR */}
       <SidebarContent className="gap-0 py-2">
         <NavMain label={t("header.learning") || "Học tập"} items={appData.learningMenu} />
         <NavMain label={t("header.community") || "Cộng đồng"} items={appData.socialMenu} />
 
-        {/* 👉 KHỐI TIỆN ÍCH MỚI: Đưa Theme và Ngôn ngữ xuống đáy của Content */}
-        <SidebarGroup className="mt-auto pt-2 border-t border-border/40">
-          <SidebarMenu>
-            <SidebarMenuItem>
+        {/* TIỆN ÍCH CUỐI SIDEBAR */}
+        <SidebarGroup className="mt-auto border-t border-border/40 px-2 pt-3">
+          <div
+            className="
+      grid grid-cols-2 gap-2
+      group-data-[collapsible=icon]:grid-cols-1
+      group-data-[collapsible=icon]:place-items-center
+      group-data-[collapsible=icon]:px-0
+    "
+          >
+            <div
+              className="
+        min-w-0 [&>*]:h-9 [&>*]:w-full
+        group-data-[collapsible=icon]:[&>*]:h-9
+        group-data-[collapsible=icon]:[&>*]:w-9
+      "
+            >
               <ThemeToggle />
-            </SidebarMenuItem>
-            <SidebarMenuItem>
+            </div>
+
+            <div
+              className="
+        min-w-0 [&>*]:h-9 [&>*]:w-full
+        group-data-[collapsible=icon]:[&>*]:h-9
+        group-data-[collapsible=icon]:[&>*]:w-9
+      "
+            >
               <SwitchingLanguage />
-            </SidebarMenuItem>
-          </SidebarMenu>
+            </div>
+          </div>
         </SidebarGroup>
       </SidebarContent>
-      
+
       {/* ĐÁY SIDEBAR */}
       <SidebarFooter className="border-t border-border/40 p-2">
         <NavUser user={appData.user} />
       </SidebarFooter>
-      
+
       <SidebarRail />
     </Sidebar>
   )

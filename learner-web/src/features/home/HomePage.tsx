@@ -13,25 +13,16 @@ import {
 } from "lucide-react"
 import KeycloakClient from "../keycloak/keycloak";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "@/store"
-import { gainRewards } from "@/store/gamificationSlice"
 
 const HomePage = () => {
   const { t } = useTranslation()
   
   const kcClient = KeycloakClient.getInstance();
   const keycloak = kcClient.keycloak;
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      <Button 
-  size="sm" 
-  variant="outline" 
-  onClick={() => dispatch(gainRewards({ xp: 100, coins: 500, source: "test" }))}
->
-  Test +XP
-</Button>
+     
       {/* 🌟 SOFT GLOW BACKGROUND */}
       <div className="fixed inset-0 pointer-events-none -z-10 flex justify-center">
         <div className="absolute top-[-10%] w-[800px] h-[500px] bg-primary/5 blur-[120px] rounded-full" />

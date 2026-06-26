@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState } from "react"
 import i18next from "i18next"
 import {
   DropdownMenu,
@@ -12,51 +12,65 @@ import { SidebarMenuButton } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
 const LANGUAGES = [
-  { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
-  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: "vi", label: "Tiếng Việt", flag: "🇻🇳" },
+  { code: "en", label: "English", flag: "🇬🇧" },
 ]
 
 const SwitchingLanguage = () => {
-  const [lang, setLang] = useState(localStorage.getItem('lang') || 'vi')
-  
-  const activeLang = LANGUAGES.find(l => l.code === lang) || LANGUAGES[0];
+  const [lang, setLang] = useState(() => localStorage.getItem("lang") || "vi")
+
+  const activeLang = LANGUAGES.find((item) => item.code === lang) || LANGUAGES[0]
 
   const handleChangeLanguage = (value: string) => {
     i18next.changeLanguage(value)
-    localStorage.setItem('lang', value)
+    localStorage.setItem("lang", value)
     setLang(value)
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton 
+        <SidebarMenuButton
           tooltip="Language"
-          className="font-medium text-sm transition-none h-10 hover:bg-transparent hover:text-foreground active:bg-transparent"
+          className="
+            h-9 text-sm font-medium transition-none
+            hover:bg-transparent hover:text-foreground
+            active:bg-transparent
+            group-data-[collapsible=icon]:h-9
+            group-data-[collapsible=icon]:w-9
+            group-data-[collapsible=icon]:justify-center
+            group-data-[collapsible=icon]:px-0
+          "
         >
-          {/* Container chứa cờ có hiệu ứng scale khi thay đổi */}
-          <div className="flex items-center justify-center size-5 shrink-0 transition-all duration-300 ease-out transform group-hover:scale-110">
-            <span className="text-xl leading-none">{activeLang.flag}</span>
+          <div className="flex size-4 shrink-0 items-center justify-center transition-all duration-200 ease-out group-hover:scale-105">
+            <span className="text-sm leading-none">{activeLang.flag}</span>
           </div>
-          
-          <div className="flex items-center gap-2 truncate group-data-[collapsible=icon]:hidden">
-            <span>{activeLang.label}</span>
+
+          <div className="flex min-w-0 items-center gap-2 truncate group-data-[collapsible=icon]:hidden">
+            <span className="truncate">{activeLang.label}</span>
           </div>
         </SidebarMenuButton>
       </DropdownMenuTrigger>
-      
-      <DropdownMenuContent align="end" side="right" sideOffset={8} className="w-40 z-[100] rounded-lg">
-        {LANGUAGES.map((l) => (
+
+      <DropdownMenuContent
+        align="end"
+        side="right"
+        sideOffset={8}
+        className="z-[100] w-40 rounded-lg"
+      >
+        {LANGUAGES.map((item) => (
           <DropdownMenuItem
-            key={l.code}
-            onClick={() => handleChangeLanguage(l.code)}
+            key={item.code}
+            onClick={() => handleChangeLanguage(item.code)}
             className={cn(
-              "cursor-pointer flex items-center gap-2 p-2",
-              lang === l.code ? "bg-primary/10 text-primary font-bold" : "text-foreground"
+              "flex cursor-pointer items-center gap-2 p-2",
+              lang === item.code
+                ? "bg-primary/10 font-bold text-primary"
+                : "text-foreground"
             )}
           >
-            <span className="text-base">{l.flag}</span>
-            <span>{l.label}</span>
+            <span className="text-sm leading-none">{item.flag}</span>
+            <span>{item.label}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -64,4 +78,4 @@ const SwitchingLanguage = () => {
   )
 }
 
-export default SwitchingLanguage;
+export default SwitchingLanguage
