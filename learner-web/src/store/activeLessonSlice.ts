@@ -2,12 +2,9 @@
 
 import handleAPI from "@/apis/handleAPI";
 import type { IAsyncState, IErrorState, ILessonDetailsResponse } from "@/types";
-import type { LearningMode } from "@/types/lessonProgress";
+import type { LearningMode, ProgressUpdateResponse } from "@/types/lessonProgress";
 import { extractError } from "@/utils/reduxUtils";
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
-
-// Có thể lấy mốc từ env hoặc cho mặc định 80
-const SHADOWING_PASS_THRESHOLD = Number(import.meta.env.VITE_SHADOWING_PASS_THRESHOLD) || 80;
 
 interface ILessonReducer {
   lesson: IAsyncState<ILessonDetailsResponse | null>;
@@ -46,7 +43,7 @@ export const submitLessonScore = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      await handleAPI({
+      return await handleAPI<ProgressUpdateResponse>({
         endpoint: `/learning-contents/process/progress`,
         method: "PUT",
         isAuth: true,
@@ -99,33 +96,20 @@ export const activeLessonSlice = createSlice({
       
       if (!targetProgress) return;
 
-      // 1. Cập nhật Điểm kỷ lục (Highest Score)
-      if (!targetProgress.highestScores) {
-        targetProgress.highestScores = {};
-      }
-      const currentHighest = targetProgress.highestScores[sentenceId] || 0;
-      if (score > currentHighest) {
-        targetProgress.highestScores[sentenceId] = score;
-      }
-
-      // 2. Tự tính toán isPassed dựa vào mode
-      let isPassed = false;
-      if (mode === "DICTATION") {
-        isPassed = true; // UI Dictation đã gõ đúng 100% mới gửi nên auto pass
-      } else if (mode === "SHADOWING") {
-        isPassed = score >= SHADOWING_PASS_THRESHOLD;
-      }
-
-      // 3. Cập nhật list câu đã pass
-      if (isPassed && !targetProgress.completedSentenceIds.includes(sentenceId)) {
-        targetProgress.completedSentenceIds.push(sentenceId);
-        targetProgress.totalCompletedSentences = targetProgress.completedSentenceIds.length;
-
-        // 4. Check Passed nguyên bài
-        const displayTotal = data.sentences?.length || 0;
-        if (displayTotal > 0 && targetProgress.totalCompletedSentences >= displayTotal) {
+      const previous = targetProgress.progressItems?.[sentenceId];
+      targetProgress.progressItems ??= {};
+      targetProgress.progressItems[sentenceId] = {
+        bestScore: Math.max(previous?.bestScore ?? 0, score),
+        latestScore: score,
+        attemptCount: (previous?.attemptCount ?? 0) + 1,
+        firstCompletedAt: previous?.firstCompletedAt ?? Date.now(),
+        lastPracticedAt: Date.now(),
+      };
+      targetProgress.completedSentenceCount = Object.keys(targetProgress.progressItems).length;
+      targetProgress.totalSentenceCount = data.sentences?.length || 0;
+      if (targetProgress.totalSentenceCount > 0
+          && targetProgress.completedSentenceCount >= targetProgress.totalSentenceCount) {
           targetProgress.status = 'COMPLETED';
-        }
       }
     }
   },
@@ -142,10 +126,17 @@ export const activeLessonSlice = createSlice({
         state.lesson.status = "failed";
         state.lesson.error = action.payload as IErrorState;
       })
-      .addCase(submitLessonScore.rejected, (state, action) => {
+      .addCase(submitLessonScore.rejected, (_state, action) => {
         console.error(`Submit score bị lỗi:`, action.payload);
       })
-      .addCase(submitBatchLessonScore.rejected, (state, action) => {
+      .addCase(submitLessonScore.fulfilled, (state, action) => {
+        const response = action.payload;
+        const mode = response?.progress?.mode?.toLowerCase() as 'shadowing' | 'dictation' | undefined;
+        if (mode && state.lesson.data?.progressOverview) {
+          state.lesson.data.progressOverview[mode] = response.progress;
+        }
+      })
+      .addCase(submitBatchLessonScore.rejected, (_state, action) => {
         console.error(`Batch sync bị lỗi:`, action.payload);
       });
   },

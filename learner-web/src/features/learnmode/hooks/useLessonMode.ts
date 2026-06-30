@@ -4,13 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector, type RootState } from "@/store"
 import type { IAsyncState, ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
-import type { LearningMode } from "@/types/lessonProgress"
+import type { LearningMode, ProgressUpdateResponse } from "@/types/lessonProgress"
 import type { PlayerRef } from "@/components/players/types/types"
 import KeycloakClient from "@/features/keycloak/keycloak"
 import { useAuth } from "@/features/keycloak/providers/AuthProvider"
 import { clearGuestProgress, getGuestProgress, saveGuestProgress } from "@/utils/guestStorage"
 import type { UnknownAction } from "@reduxjs/toolkit"
-import { gainRewards } from "@/store/gamificationSlice"
 
 
 /**
@@ -56,7 +55,10 @@ export function useLessonMode(config: UseLessonModeConfig) {
 
   // --- Progress State Derivation ---
   const progress = useMemo(() => lesson?.progressOverview?.[progressKey], [lesson, progressKey])
-  const completedIdsArray = useMemo(() => progress?.completedSentenceIds || [], [progress])
+  const completedIdsArray = useMemo(
+    () => Object.keys(progress?.progressItems ?? {}).map(Number),
+    [progress?.progressItems]
+  )
   const completedIdsSet = useMemo(() => new Set(completedIdsArray), [completedIdsArray])
   const isLessonCompleted = useMemo(() => progress?.status === "COMPLETED", [progress])
 
@@ -67,12 +69,13 @@ export function useLessonMode(config: UseLessonModeConfig) {
   const [autoPlayOnSentenceChange, setAutoPlayOnSentenceChange] = useState(true)
   const [userInteracted, setUserInteracted] = useState(false)
 
-  const [showTranscriptToggle, setShowTranscriptToggle] = useState(false)
+  const [showTranscriptToggle, setShowTranscriptToggle] = useState(true)
   const [showProgress, setShowProgress] = useState(true)
   const [isDesktop, setIsDesktop] = useState(true)
 
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const initialCompletionHandledRef = useRef(false)
   const syncRef = useRef(false)
 
   const playerRef = useRef<PlayerRef | null>(null)
@@ -95,6 +98,8 @@ export function useLessonMode(config: UseLessonModeConfig) {
    * Khởi tạo luồng Fetch dữ liệu khi mount Component
    */
   useEffect(() => {
+    initialCompletionHandledRef.current = false
+    setShowCompletionModal(false)
     if (lessonId) {
       dispatch(fetchAction({ id: Number(lessonId), mode: modeName }) as any)
     }
@@ -104,6 +109,14 @@ export function useLessonMode(config: UseLessonModeConfig) {
   }, [dispatch, lessonId, fetchAction, resetAction, modeName])
 
   const isLoading = status === "idle" || status === "loading"
+
+  // Khi mở một bài đã hoàn thành, nhắc đúng một lần trong vòng đời trang.
+  // Đóng bằng Review sẽ không bị effect mở lại do status vẫn là COMPLETED.
+  useEffect(() => {
+    if (status !== "succeeded" || !lesson || initialCompletionHandledRef.current) return
+    initialCompletionHandledRef.current = true
+    if (isLessonCompleted) setShowCompletionModal(true)
+  }, [status, lesson, isLessonCompleted])
 
   const sentences: ILessonSentenceDetailsResponse[] = useMemo(
     () => lesson?.sentences ?? [],
@@ -151,8 +164,12 @@ export function useLessonMode(config: UseLessonModeConfig) {
    * Áp dụng Optimistic UI: Cập nhật Store local trước, gọi API bất đồng bộ sau.
    */
 const handleCompleteSentence = useCallback(
-  (sentenceId: number, score: number) => {
+  async (sentenceId: number, score: number) => {
     if (!lesson?.id) return
+    const justCompletedGuestLesson = !profile
+      && !completedIdsSet.has(sentenceId)
+      && sentences.length > 0
+      && completedIdsSet.size + 1 === sentences.length
 
     // 1. Cập nhật tiến độ bài học tạm thời để UI xanh lên mượt mà
     dispatch(updateLocalProgress({ sentenceId, score, mode: modeName }))
@@ -162,28 +179,30 @@ const handleCompleteSentence = useCallback(
 
     // 2. Xử lý đồng bộ dữ liệu lên Server
     if (profile) {
-      dispatch(submitScore({ lessonId: lesson.id, sentenceId, mode: modeName, score }) as any)
+      try {
+        const response = await dispatch(
+          submitScore({ lessonId: lesson.id, sentenceId, mode: modeName, score }) as any
+        ).unwrap() as ProgressUpdateResponse
+        if (response.justCompletedLesson) {
+          window.setTimeout(() => setShowCompletionModal(true), 800)
+        }
+      } catch {
+        // Redux thunk already stores the request error; keep optimistic UI responsive.
+      }
     } else {
       const currentLocal = getGuestProgress(lessonId!, modeName)
       if (!currentLocal.includes(sentenceId)) {
         saveGuestProgress(lessonId!, modeName, [...currentLocal, sentenceId])
-        setTimeout(() => setShowLoginModal(true), 600)
+        if (!justCompletedGuestLesson) setTimeout(() => setShowLoginModal(true), 600)
+      }
+      if (justCompletedGuestLesson) {
+        window.setTimeout(() => setShowCompletionModal(true), 800)
       }
     }
   },
   
-  [dispatch, lesson?.id, profile, lessonId, updateLocalProgress, submitScore, modeName]
+  [dispatch, lesson?.id, profile, lessonId, updateLocalProgress, submitScore, modeName, completedIdsSet, sentences.length]
 )
-  /**
-   * Kích hoạt Modal hoàn thành toàn bộ bài học
-   */
-  useEffect(() => {
-    if (lesson && isLessonCompleted) {
-      const timer = setTimeout(() => setShowCompletionModal(true), 800)
-      return () => clearTimeout(timer)
-    }
-  }, [isLessonCompleted, lesson])
-
   /**
    * Phục hồi tiến độ học tập cho Guest User từ LocalStorage
    */
@@ -193,8 +212,8 @@ const handleCompleteSentence = useCallback(
       if (localData.length > 0) {
         console.log("Hydrating guest progress from localStorage...")
         localData.forEach((sId) => {
-          // Khôi phục bằng điểm sàn tạm thời (100) đối với Dictation, hoặc pass threshold đối với Shadowing
-          const mockScore = modeName === 'DICTATION' ? 100 : 80; 
+          // Guest storage chỉ giữ completion, nên dùng điểm mặc định khi hydrate local UI.
+          const mockScore = 100;
           dispatch(updateLocalProgress({ sentenceId: sId, score: mockScore, mode: modeName }))
         })
       }

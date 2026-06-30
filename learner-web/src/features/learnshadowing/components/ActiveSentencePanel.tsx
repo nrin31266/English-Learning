@@ -93,9 +93,8 @@ const ActiveSentencePanel = ({
    * Dùng làm mốc so sánh cho cơ chế Smart API Call.
    */
   const highestScore = useMemo(() => {
-    const scores = lesson.progressOverview?.shadowing?.highestScores
-    return scores?.[currentSentence.id] || 0
-  }, [lesson.progressOverview?.shadowing?.highestScores, currentSentence.id])
+    return lesson.progressOverview?.shadowing?.progressItems?.[currentSentence.id]?.bestScore ?? 0
+  }, [lesson.progressOverview?.shadowing?.progressItems, currentSentence.id])
 
   const currentSentenceWords = useMemo(() => {
     return currentSentence?.lessonWords
@@ -104,7 +103,7 @@ const ActiveSentencePanel = ({
   const currentSentenceTextDisplay = currentSentence?.textDisplay || ""
 
   const isCompleted = useMemo(() => {
-    return lesson.progressOverview?.shadowing?.completedSentenceIds?.includes(currentSentence.id)
+    return Boolean(lesson.progressOverview?.shadowing?.progressItems?.[currentSentence.id])
   }, [lesson.progressOverview, currentSentence.id]) 
 
   /**
@@ -251,8 +250,7 @@ const ActiveSentencePanel = ({
   }, [currentSentence.id, resetRecordingUi])
 
   /**
-   * Core Logic: Smart API Call Gating
-   * Quản lý tiến trình lưu trữ điểm số, ngăn chặn gọi API rác/trùng lặp.
+   * Mỗi kết quả hợp lệ đều được gửi để backend cập nhật latestScore/attemptCount.
    */
   useEffect(() => {
     const shadowingResult = transcription?.shadowingResult
@@ -268,21 +266,10 @@ const ActiveSentencePanel = ({
     // Khóa ID của file âm thanh hiện tại để không thực thi lại logic này
     processedTranscriptionIdRef.current = transcription.id
 
-    // Gatekeeper: Chỉ kích hoạt API report tiến độ khi điểm đợt này > kỷ lục cũ
-    if (finalScore > highestScore) {
-      if (onComplete) {
-        onComplete(currentSentenceId, finalScore)
-        console.log(`[Smart API Gating] Submitted score ${finalScore} for sentence ${currentSentenceId} (previous highest: ${highestScore})`)
-      }
-    } else {
-      console.log(`[Smart API Gating] Skipped update. Score (${finalScore}) <= Highest (${highestScore})`)
-    }
+    onComplete?.(currentSentenceId, finalScore)
 
     // Xác thực điều kiện qua bài (độc lập với tiến trình API)
-    const isPassed = finalScore >= SHADOWING_THRESHOLD.NEXT
-    if (isPassed) {
-      completedSentenceIdRef.current = currentSentenceId
-    }
+    completedSentenceIdRef.current = currentSentenceId
   }, [transcription, onComplete, highestScore])
 
   // --- Recording Actions ---

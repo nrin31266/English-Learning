@@ -15,9 +15,11 @@ import DictationTranscript from "../components/DictationTranscript"
 import { useLessonMode } from "@/features/learnmode/hooks/useLessonMode"
 import LessonModeLayout from "@/features/learnmode/components/LessonModeLayout"
 import type { LearningMode } from "@/types/lessonProgress"
+import { useTranslation } from "react-i18next"
 
 const DictationMode = () => {
   const { id } = useParams<{ id: string }>()
+  const { t } = useTranslation()
   
   // Bộ nhớ đệm lưu trữ dữ liệu text đang gõ dở dang của từng câu
   const tempAnswersRef = useRef<Record<number, string>>({})
@@ -62,9 +64,8 @@ const DictationMode = () => {
 
   // 👉 TÍNH TOÁN ĐIỂM KỶ LỤC CỦA CÂU HIỆN TẠI TỪ REDUX STORE
   const highestScore = useMemo(() => {
-    const scores = lesson?.progressOverview?.dictation?.highestScores
-    return scores?.[currentSentence?.id] || 0
-  }, [lesson?.progressOverview?.dictation?.highestScores, currentSentence?.id])
+    return lesson?.progressOverview?.dictation?.progressItems?.[currentSentence?.id]?.bestScore ?? 0
+  }, [lesson?.progressOverview?.dictation?.progressItems, currentSentence?.id])
 
   // 👉 ĐỒNG BỘ: Tạo wrapper function chuẩn như bên Shadowing
   const handleComplete = useCallback(
@@ -76,6 +77,17 @@ const DictationMode = () => {
     <LessonModeLayout
       mode={mode}
       i18nPrefix="dictation"
+      completionDetails={
+        <div className="border-y border-border/70 py-5 text-center">
+          <div className="flex items-baseline justify-center gap-1 text-foreground">
+            <span className="text-4xl font-semibold tracking-tight text-primary">{Math.round(lesson?.progressOverview?.dictation?.lessonScore ?? 0)}</span>
+            <span className="text-sm font-medium text-muted-foreground">/100</span>
+          </div>
+          <div className="mt-1.5 text-center text-xs font-medium tracking-wide text-muted-foreground">
+            {t("modals.bestAverage")}
+          </div>
+        </div>
+      }
       panel={
         currentSentence && (
           <DictationPanel

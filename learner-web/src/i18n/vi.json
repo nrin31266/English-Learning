@@ -56,8 +56,8 @@
     "completionTitle": "Hoàn thành bài học",
     "completionDescription": "Bạn đã hoàn thành buổi học này. Sẵn sàng cho bài tiếp theo?",
     "completionBackToTopic": "Quay lại danh sách phát",
-    "completionReLearn": "Học lại",
-    "completionReview": "Xem lại"
+    "bestAverage": "Điểm tốt nhất TB",
+    "completionContinue": "Tiếp tục luyện tập"
   },
   "home": {
     "badge": "Tiêu chuẩn mới trong việc học ngôn ngữ",

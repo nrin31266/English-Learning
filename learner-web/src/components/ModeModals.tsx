@@ -1,6 +1,7 @@
 
 // src/components/ModeModals.tsx
 import { useTranslation } from "react-i18next";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,7 +66,7 @@ interface CompletionModalProps {
   open: boolean;
   onBack: () => void;
   onReview?: () => void;
-  onRestart?: () => void;
+  children?: ReactNode;
 }
 
 
@@ -73,57 +74,43 @@ export const CompletionModal = ({
   open,
   onBack,
   onReview = () => {},
-  onRestart = () => {},
+  children,
 }: CompletionModalProps) => {
   const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onReview}>
-      <DialogContent className="sm:max-w-[460px] p-0 rounded-[2rem] border-none bg-background shadow-2xl overflow-hidden">
-        <div className="p-8 sm:p-10 flex flex-col items-center">
-          
-          {/* Trophy Icon: Có background tròn làm điểm tựa, nhìn gọn gàng và tinh tế */}
-          <div className="mb-6 p-5 rounded-full bg-amber-500/10 text-amber-500">
-             <Trophy className="h-12 w-12 stroke-[1.5]" />
+      <DialogContent className="sm:max-w-[420px] overflow-hidden rounded-2xl border border-border/70 bg-background p-0 shadow-xl">
+        <div className="flex flex-col items-center px-7 pb-8 pt-9 text-center sm:px-10 sm:pt-10">
+          <div className="mb-6 flex items-center justify-center text-amber-500 dark:text-amber-400">
+             <Trophy className="h-14 w-14 stroke-[1.7] drop-shadow-sm" />
           </div>
-          
-          <DialogHeader className="text-center space-y-2">
-            <DialogTitle className="text-2xl sm:text-3xl font-bold text-foreground">
+
+          <DialogHeader className="flex w-full flex-col items-center space-y-2 text-center">
+            <DialogTitle className="w-full text-center text-2xl font-semibold tracking-tight text-foreground">
               {t("modals.completionTitle")}
             </DialogTitle>
-            <DialogDescription className="text-base text-muted-foreground">
+            <DialogDescription className="max-w-xs text-center text-sm leading-6 text-muted-foreground">
               {t("modals.completionDescription")}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Action Buttons: Phân cấp 1 chính - 2 phụ rõ ràng */}
-          <div className="w-full mt-10 space-y-3">
-            {/* Nút Primary: Điều hướng chính */}
+          {children && <div className="mt-7 w-full">{children}</div>}
+
+          <div className="mt-8 w-full space-y-2.5">
             <Button
               onClick={onBack}
-              className="w-full h-12 text-base font-semibold rounded-xl gap-2 shadow-sm"
+              className="h-11 w-full justify-center rounded-lg text-center font-semibold shadow-none"
             >
               {t("modals.completionBackToTopic")}
             </Button>
-            
-            <div className="grid grid-cols-2 gap-3">
-              {/* Nút Secondary: Học lại */}
-              <Button
-                onClick={onRestart}
-                variant="secondary"
-                className="h-11 font-semibold rounded-xl gap-2 hover:opacity-80"
-              >
-                {t("modals.completionReLearn")}
-              </Button>
-              
-              {/* Nút Outline: Xem lại bài */}
-              <Button
-                onClick={onReview}
-                variant="outline"
-                className="h-11 font-semibold rounded-xl gap-2"
-              >
-                {t("modals.completionReview")}
-              </Button>
-            </div>
+
+            <Button
+              onClick={onReview}
+              variant="outline"
+              className="h-11 w-full justify-center rounded-lg border-border/80 text-center font-medium"
+            >
+              {t("modals.completionContinue")}
+            </Button>
           </div>
 
         </div>

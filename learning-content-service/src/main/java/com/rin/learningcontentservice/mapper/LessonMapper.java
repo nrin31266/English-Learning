@@ -44,7 +44,7 @@ public interface LessonMapper {
         int totalActive = projection.getActiveSentenceCount() != null ? projection.getActiveSentenceCount() : 0;
 
         progresses.forEach(p -> {
-            int percent = calculatePercent(p.getCompletedSentenceIds() != null ? p.getCompletedSentenceIds().size() : 0, totalActive);
+            int percent = calculatePercent(p.getCompletedSentenceCount() != null ? p.getCompletedSentenceCount() : 0, totalActive);
 
             if (p.getMode() == LearningMode.SHADOWING) {
                 response.setShadowingStatus(p.getStatus().name());

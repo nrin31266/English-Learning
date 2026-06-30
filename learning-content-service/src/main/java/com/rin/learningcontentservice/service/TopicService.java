@@ -280,8 +280,8 @@ public class TopicService {
                     UserLessonProgress progress = progressByKey.get(lessonId + ":" + mode);
 
                     int totalActive = lesson.getTotalSentences() != null ? lesson.getTotalSentences() : 0;
-                    int completedCount = (progress != null && progress.getCompletedSentenceIds() != null)
-                            ? progress.getCompletedSentenceIds().size()
+                    int completedCount = (progress != null && progress.getCompletedSentenceCount() != null)
+                            ? progress.getCompletedSentenceCount()
                             : 0;
                     int progressPercent = lessonMapper.calculatePercent(completedCount, totalActive);
 

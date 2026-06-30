@@ -9,9 +9,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.sql.Timestamp;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 @Entity
 @Table(
@@ -50,25 +48,27 @@ public class UserLessonProgress {
     @Builder.Default
     private Integer lessonVersion = 0;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
     @Builder.Default
-    private Set<Long> completedSentenceIds = new HashSet<>();
+    @Column(name = "progress_items", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<Long, ProgressItem> progressItems = new HashMap<>();
+
+    @Column(name = "lesson_score")
+    private Double lessonScore;
 
     @Builder.Default
-    @Column(name = "highest_scores", columnDefinition = "jsonb")
-    @JdbcTypeCode(SqlTypes.JSON)
-    private Map<Long, Double> highestScores = new HashMap<>();
+    @Column(name = "completed_sentence_count")
+    private Integer completedSentenceCount = 0;
+
+    @Builder.Default
+    @Column(name = "total_sentence_count")
+    private Integer totalSentenceCount = 0;
+
+    @Column(name = "completed_at")
+    private Long completedAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Timestamp updatedAt;
 
-    // --- Helper Methods ---
-    public void markSentenceCompleted(Long sentenceId) {
-        if (this.completedSentenceIds == null) {
-            this.completedSentenceIds = new HashSet<>();
-        }
-        this.completedSentenceIds.add(sentenceId);
-    }
 }

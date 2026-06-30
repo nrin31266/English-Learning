@@ -14,9 +14,11 @@ import ActiveSentencePanel from "../components/ActiveSentencePanel"
 import ShadowingTranscript from "../components/ShadowingTranscript"
 import { useLessonMode } from "@/features/learnmode/hooks/useLessonMode"
 import LessonModeLayout from "@/features/learnmode/components/LessonModeLayout"
+import { useTranslation } from "react-i18next"
 
 const ShadowingMode = () => {
   const { id } = useParams<{ id: string }>()
+  const { t } = useTranslation()
 
   /**
    * Khởi tạo Custom Hook quản lý trạng thái bài học Shadowing.
@@ -60,6 +62,17 @@ const ShadowingMode = () => {
     <LessonModeLayout
       mode={mode}
       i18nPrefix="shadowing"
+      completionDetails={
+        <div className="border-y border-border/70 py-5 text-center">
+          <div className="flex items-baseline justify-center gap-1 text-foreground">
+            <span className="text-4xl font-semibold tracking-tight text-primary">{Math.round(lesson?.progressOverview?.shadowing?.lessonScore ?? 0)}</span>
+            <span className="text-sm font-medium text-muted-foreground">/100</span>
+          </div>
+          <div className="mt-1.5 text-center text-xs font-medium tracking-wide text-muted-foreground">
+            {t("modals.bestAverage")}
+          </div>
+        </div>
+      }
       panel={
         lesson &&
         currentSentence && (

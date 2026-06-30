@@ -56,8 +56,8 @@
     "completionTitle": "Lesson Completed",
     "completionDescription": "You've mastered this session. Ready for what's next?",
     "completionBackToTopic": "Back to Topic",
-    "completionReLearn": "Re-Learn",
-    "completionReview": "Review"
+    "bestAverage": "Best average",
+    "completionContinue": "Continue practicing"
   },
   "home": {
     "badge": "The New Standard in Language Learning",

@@ -18,9 +18,10 @@ interface LessonModeLayoutProps {
   i18nPrefix: string
   panel: ReactNode
   transcript: ReactNode
+  completionDetails?: ReactNode
 }
 
-const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript }: LessonModeLayoutProps) => {
+const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetails }: LessonModeLayoutProps) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const tk = (key: string) => t(`${i18nPrefix}.${key}`)
@@ -216,7 +217,9 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript }: LessonModeLay
         open={showCompletionModal}
         onBack={handleBackToTopic}
         onReview={() => setShowCompletionModal(false)}
-      />
+      >
+        {completionDetails}
+      </CompletionModal>
 
       {showProgress && sentences.length > 0 && (
         <LessonProgressBar

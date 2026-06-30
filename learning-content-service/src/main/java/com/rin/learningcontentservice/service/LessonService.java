@@ -221,11 +221,11 @@ public class LessonService {
         return UserLessonProgressDto.builder()
                 .mode(progress.getMode().name())
                 .status(progress.getStatus())
-                .completedSentenceIds(progress.getCompletedSentenceIds())
-                .totalCompletedSentences(
-                        progress.getCompletedSentenceIds() != null ? progress.getCompletedSentenceIds().size() : 0
-                )
-                .highestScores(progress.getHighestScores() != null ? progress.getHighestScores() : new java.util.HashMap<>())
+                .progressItems(progress.getProgressItems() != null ? progress.getProgressItems() : new java.util.HashMap<>())
+                .lessonScore(progress.getLessonScore())
+                .completedSentenceCount(progress.getCompletedSentenceCount())
+                .totalSentenceCount(progress.getTotalSentenceCount())
+                .completedAt(progress.getCompletedAt())
                 .build();
     }
 
@@ -233,8 +233,9 @@ public class LessonService {
         return UserLessonProgressDto.builder()
                 .mode(mode)
                 .status(ProgressStatus.IN_PROGRESS)
-                .completedSentenceIds(new HashSet<>())
-                .totalCompletedSentences(0)
+                .progressItems(new java.util.HashMap<>())
+                .completedSentenceCount(0)
+                .totalSentenceCount(0)
                 .build();
     }
 

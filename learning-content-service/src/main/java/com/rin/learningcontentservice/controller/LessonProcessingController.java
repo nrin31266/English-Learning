@@ -3,6 +3,7 @@ package com.rin.learningcontentservice.controller;
 import com.rin.englishlearning.common.dto.ApiResponse;
 import com.rin.learningcontentservice.dto.request.ProgressBatchRequest;
 import com.rin.learningcontentservice.dto.request.ProgressUpdateRequest;
+import com.rin.learningcontentservice.dto.response.ProgressUpdateResponse;
 import com.rin.learningcontentservice.service.LessonProcessingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,18 +22,12 @@ public class LessonProcessingController {
      * @param request chứa lessonId, sentenceId, mode, score
      */
     @PutMapping("/progress")
-    public ResponseEntity<Void> updateProgress(@Valid @RequestBody ProgressUpdateRequest request) {
-        // Gọi service xử lý logic lưu Database âm thầm
-        lessonProcessingService.updateProgress(request);
-
-        return ApiResponse.noContent();
+    public ResponseEntity<ApiResponse<ProgressUpdateResponse>> updateProgress(@Valid @RequestBody ProgressUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(lessonProcessingService.updateProgress(request)));
     }
 
     @PutMapping("/progress/batch")
-    public ResponseEntity<Void> updateBatchProgress(@Valid @RequestBody ProgressBatchRequest request) {
-        // Đẩy qua service xử lý một lượt
-        lessonProcessingService.updateBatchProgress(request);
-
-        return ApiResponse.noContent();
+    public ResponseEntity<ApiResponse<ProgressUpdateResponse>> updateBatchProgress(@Valid @RequestBody ProgressBatchRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(lessonProcessingService.updateBatchProgress(request)));
     }
 }

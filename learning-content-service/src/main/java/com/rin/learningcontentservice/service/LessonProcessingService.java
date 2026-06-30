@@ -8,6 +8,8 @@ import com.rin.englishlearning.common.exception.BaseException;
 import com.rin.englishlearning.common.utils.GamificationUtils;
 import com.rin.learningcontentservice.dto.request.ProgressBatchRequest;
 import com.rin.learningcontentservice.dto.request.ProgressUpdateRequest;
+import com.rin.learningcontentservice.dto.response.ProgressUpdateResponse;
+import com.rin.learningcontentservice.dto.response.UserLessonProgressDto;
 import com.rin.learningcontentservice.exception.LearningContentErrorCode;
 import com.rin.learningcontentservice.kafka.KafkaProducer;
 import com.rin.learningcontentservice.model.*;
@@ -17,7 +19,6 @@ import com.rin.learningcontentservice.utils.SecurityUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -34,14 +35,11 @@ public class LessonProcessingService {
     private final UserLessonProgressRepository userLessonProgressRepository;
     private final KafkaProducer kafkaProducer;
 
-    @Value("${app.learning.shadowing-threshold:80.0}")
-    private double shadowingPassThreshold;
-
     /**
      * TỐI ƯU 1: Xử lý Batch chỉ với 1 lần gọi DB (Tránh lỗi N+1 Query)
      */
     @Transactional
-    public void updateBatchProgress(ProgressBatchRequest request) {
+    public ProgressUpdateResponse updateBatchProgress(ProgressBatchRequest request) {
         String userId = requireValidUserId();
         Lesson lesson = getLessonOrThrow(request.getLessonId());
         UserLessonProgress progress = getOrCreateProgress(userId, request.getLessonId(), request.getMode(), lesson);
@@ -55,8 +53,9 @@ public class LessonProcessingService {
                 .collect(Collectors.toSet());
 
         // Lặp xử lý trên RAM, không gọi xuống DB
+        boolean justCompletedLesson = false;
         for (Long sentenceId : request.getSentenceIds()) {
-            processSingleSentenceLogic(userId, lesson, progress, sentenceId, request.getScore(), request.getMode(), activeSentenceIds, pendingEvents);
+            justCompletedLesson |= processSingleSentenceLogic(userId, lesson, progress, sentenceId, request.getScore(), request.getMode(), activeSentenceIds, pendingEvents);
         }
 
         // Lưu DB đúng 1 lần cho cả Batch
@@ -64,13 +63,14 @@ public class LessonProcessingService {
 
         // Bắn toàn bộ sự kiện qua Kafka (An toàn sau khi Commit)
         publishEventsAfterCommit(pendingEvents);
+        return buildResponse(progress, justCompletedLesson);
     }
 
     /**
      * Xử lý câu đơn lẻ
      */
     @Transactional
-    public void updateProgress(ProgressUpdateRequest request) {
+    public ProgressUpdateResponse updateProgress(ProgressUpdateRequest request) {
         String userId = requireValidUserId();
         Lesson lesson = getLessonOrThrow(request.getLessonId());
         UserLessonProgress progress = getOrCreateProgress(userId, request.getLessonId(), request.getMode(), lesson);
@@ -82,33 +82,50 @@ public class LessonProcessingService {
                 .map(LessonSentence::getId)
                 .collect(Collectors.toSet());
 
-        processSingleSentenceLogic(userId, lesson, progress, request.getSentenceId(), request.getScore(), request.getMode(), activeSentenceIds, pendingEvents);
+        boolean justCompletedLesson = processSingleSentenceLogic(userId, lesson, progress, request.getSentenceId(), request.getScore(), request.getMode(), activeSentenceIds, pendingEvents);
 
         userLessonProgressRepository.save(progress);
         publishEventsAfterCommit(pendingEvents);
+        return buildResponse(progress, justCompletedLesson);
     }
 
     /**
      * TỐI ƯU 2 & 5: Hàm Core chứa logic nghiệp vụ, check ID ngoại lệ và bỏ vòng lặp lồng nhau
      */
-    private void processSingleSentenceLogic(String userId, Lesson lesson, UserLessonProgress progress,
+    private boolean processSingleSentenceLogic(String userId, Lesson lesson, UserLessonProgress progress,
                                             Long sentenceId, Double rawScore, LearningMode mode,
                                             Set<Long> activeSentenceIds, List<GamificationRewardEvent> pendingEvents) {
 
         // Check 5: SentenceId phải thuộc Lesson này (Ngăn chặn hack từ Client)
         if (!activeSentenceIds.contains(sentenceId)) {
             log.warn("User {} cố gắng cập nhật sentenceId {} không hợp lệ cho lesson {}", userId, sentenceId, lesson.getId());
-            return; // Bỏ qua câu lỗi, xử lý tiếp câu khác
+            return false; // Bỏ qua câu lỗi, xử lý tiếp câu khác
         }
 
         double currentScore = rawScore != null ? rawScore : 0.0;
-        double previousHighScore = progress.getHighestScores().getOrDefault(sentenceId, 0.0);
+        long now = System.currentTimeMillis();
+        ProgressItem item = progress.getProgressItems().get(sentenceId);
+        double previousHighScore = item != null && item.getBestScore() != null ? item.getBestScore() : 0.0;
+
+        if (item == null) {
+            item = ProgressItem.builder()
+                    .bestScore(currentScore)
+                    .latestScore(currentScore)
+                    .attemptCount(1)
+                    .firstCompletedAt(now)
+                    .lastPracticedAt(now)
+                    .build();
+            progress.getProgressItems().put(sentenceId, item);
+        } else {
+            item.setLatestScore(currentScore);
+            item.setAttemptCount((item.getAttemptCount() == null ? 0 : item.getAttemptCount()) + 1);
+            item.setLastPracticedAt(now);
+            if (currentScore > previousHighScore) item.setBestScore(currentScore);
+        }
 
         // Xử lý tạo Event phần thưởng
         if (currentScore > previousHighScore) {
             double deltaScore = currentScore - previousHighScore;
-            progress.getHighestScores().put(sentenceId, currentScore);
-
             DifficultyLevel difficulty = extractDifficulty(lesson);
             GamificationTrigger trigger = mode == LearningMode.DICTATION
                     ? GamificationTrigger.SENTENCE_DICTATION
@@ -126,26 +143,22 @@ public class LessonProcessingService {
                     .build());
         }
 
-        // TỐI ƯU 4: Chấm điểm
-        boolean isPassed = (mode == LearningMode.DICTATION) || (Math.round(currentScore) >= shadowingPassThreshold);
+        int completedCount = (int) activeSentenceIds.stream().filter(progress.getProgressItems()::containsKey).count();
+        progress.setCompletedSentenceCount(completedCount);
+        progress.setTotalSentenceCount(activeSentenceIds.size());
 
-        if (isPassed) {
-            boolean isNewCompletion = progress.getCompletedSentenceIds().add(sentenceId);
-
-            if (isNewCompletion && progress.getStatus() != ProgressStatus.COMPLETED) {
-                // TỐI ƯU 2: Dùng Set activeSentenceIds đếm trực tiếp, xóa bỏ stream lồng nhau
-                long completedActiveCount = progress.getCompletedSentenceIds().stream()
-                        .filter(activeSentenceIds::contains)
-                        .count();
-
-                if (activeSentenceIds.size() > 0 && completedActiveCount >= activeSentenceIds.size()) {
-                    progress.setStatus(ProgressStatus.COMPLETED);
-
-                    // Thêm Event hoàn thành bài học vào danh sách chờ bắn Kafka
-                    pendingEvents.add(buildLessonCompletedEvent(userId, lesson, activeSentenceIds.size()));
-                }
-            }
+        boolean justCompletedLesson = progress.getStatus() != ProgressStatus.COMPLETED
+                && !activeSentenceIds.isEmpty()
+                && completedCount == activeSentenceIds.size();
+        if (justCompletedLesson) {
+            progress.setStatus(ProgressStatus.COMPLETED);
+            progress.setCompletedAt(now);
+            progress.setLessonScore(calculateLessonScore(progress, activeSentenceIds));
+            pendingEvents.add(buildLessonCompletedEvent(userId, lesson, activeSentenceIds.size()));
+        } else if (progress.getStatus() == ProgressStatus.COMPLETED && currentScore > previousHighScore) {
+            progress.setLessonScore(calculateLessonScore(progress, activeSentenceIds));
         }
+        return justCompletedLesson;
     }
 
     /**
@@ -189,17 +202,15 @@ public class LessonProcessingService {
                 .orElseGet(() -> UserLessonProgress.builder()
                         .userId(userId).lessonId(lessonId).mode(mode).lessonVersion(0)
                         .status(ProgressStatus.IN_PROGRESS)
-                        .completedSentenceIds(new HashSet<>())
-                        .highestScores(new HashMap<>())
+                        .progressItems(new HashMap<>())
                         .build());
+
+        if (progress.getProgressItems() == null) progress.setProgressItems(new HashMap<>());
 
         Integer currentVersion = lesson.getVersion() == null ? 0 : lesson.getVersion();
         if (!currentVersion.equals(progress.getLessonVersion())) {
             recomputeProgress(progress, lesson, currentVersion);
         }
-
-        if (progress.getHighestScores() == null) progress.setHighestScores(new HashMap<>());
-        if (progress.getCompletedSentenceIds() == null) progress.setCompletedSentenceIds(new HashSet<>());
 
         return progress;
     }
@@ -227,22 +238,42 @@ public class LessonProcessingService {
     }
 
     private void recomputeProgress(UserLessonProgress progress, Lesson lesson, Integer lessonVersion) {
-        Set<Long> allLessonSentenceIds = lesson.getSentences().stream()
-                .map(LessonSentence::getId).collect(Collectors.toSet());
-
         Set<Long> activeSentenceIds = lesson.getSentences().stream()
                 .filter(s -> Boolean.TRUE.equals(s.getIsActive()))
                 .map(LessonSentence::getId).collect(Collectors.toSet());
 
-        if (progress.getCompletedSentenceIds() != null) progress.getCompletedSentenceIds().retainAll(allLessonSentenceIds);
-        else progress.setCompletedSentenceIds(new HashSet<>());
-
-        if (progress.getHighestScores() != null) progress.getHighestScores().keySet().retainAll(allLessonSentenceIds);
-        else progress.setHighestScores(new HashMap<>());
-
-        long completedCount = activeSentenceIds.stream().filter(progress.getCompletedSentenceIds()::contains).count();
+        if (progress.getProgressItems() == null) progress.setProgressItems(new HashMap<>());
+        progress.getProgressItems().keySet().retainAll(activeSentenceIds);
+        int completedCount = (int) activeSentenceIds.stream().filter(progress.getProgressItems()::containsKey).count();
         progress.setLessonVersion(lessonVersion);
-        progress.setStatus((!activeSentenceIds.isEmpty() && completedCount >= activeSentenceIds.size())
-                ? ProgressStatus.COMPLETED : ProgressStatus.IN_PROGRESS);
+        progress.setCompletedSentenceCount(completedCount);
+        progress.setTotalSentenceCount(activeSentenceIds.size());
+        if (!activeSentenceIds.isEmpty() && completedCount == activeSentenceIds.size()) {
+            progress.setStatus(ProgressStatus.COMPLETED);
+            if (progress.getCompletedAt() == null) progress.setCompletedAt(System.currentTimeMillis());
+            progress.setLessonScore(calculateLessonScore(progress, activeSentenceIds));
+        } else {
+            progress.setStatus(ProgressStatus.IN_PROGRESS);
+            progress.setCompletedAt(null);
+            progress.setLessonScore(null);
+        }
+    }
+
+    private double calculateLessonScore(UserLessonProgress progress, Set<Long> activeSentenceIds) {
+        return activeSentenceIds.stream()
+                .map(progress.getProgressItems()::get)
+                .filter(Objects::nonNull)
+                .mapToDouble(item -> item.getBestScore() == null ? 0.0 : item.getBestScore())
+                .average().orElse(0.0);
+    }
+
+    private ProgressUpdateResponse buildResponse(UserLessonProgress progress, boolean justCompletedLesson) {
+        UserLessonProgressDto dto = UserLessonProgressDto.builder()
+                .mode(progress.getMode().name()).status(progress.getStatus())
+                .progressItems(progress.getProgressItems()).lessonScore(progress.getLessonScore())
+                .completedSentenceCount(progress.getCompletedSentenceCount())
+                .totalSentenceCount(progress.getTotalSentenceCount()).completedAt(progress.getCompletedAt())
+                .build();
+        return ProgressUpdateResponse.builder().progress(dto).justCompletedLesson(justCompletedLesson).build();
     }
 }
