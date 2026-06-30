@@ -9,14 +9,13 @@ type LanguageLevelBadgeProps = {
   hasBg?: boolean
 }
 
-// Giữ nguyên màu sắc đã tối ưu cho Light/Dark mode
 const levelStyles: Record<LanguageLevel, string> = {
-  A1: "border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 dark:bg-emerald-500/10",
-  A2: "border-lime-500/30 bg-lime-500/15 text-lime-700 dark:text-lime-400 dark:bg-lime-500/10",
-  B1: "border-sky-500/30 bg-sky-500/15 text-sky-700 dark:text-sky-400 dark:bg-sky-500/10",
-  B2: "border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-400 dark:bg-blue-500/10",
-  C1: "border-violet-500/30 bg-violet-500/15 text-violet-700 dark:text-violet-400 dark:bg-violet-500/10",
-  C2: "border-fuchsia-500/30 bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-400 dark:bg-fuchsia-500/10",
+  A1: "border-emerald-600/35 bg-emerald-100 text-emerald-800 dark:border-emerald-400/40 dark:bg-emerald-950 dark:text-emerald-300",
+  A2: "border-amber-600/35 bg-amber-100 text-amber-800 dark:border-amber-400/40 dark:bg-amber-950 dark:text-amber-300",
+  B1: "border-cyan-600/35 bg-cyan-100 text-cyan-800 dark:border-cyan-400/40 dark:bg-cyan-950 dark:text-cyan-300",
+  B2: "border-blue-600/35 bg-blue-100 text-blue-800 dark:border-blue-400/40 dark:bg-blue-950 dark:text-blue-300",
+  C1: "border-violet-600/35 bg-violet-100 text-violet-800 dark:border-violet-400/40 dark:bg-violet-950 dark:text-violet-300",
+  C2: "border-rose-600/35 bg-rose-100 text-rose-800 dark:border-rose-400/40 dark:bg-rose-950 dark:text-rose-300",
 }
 
 const levelLabels: Record<LanguageLevel, string> = {
@@ -38,11 +37,11 @@ const LanguageLevelBadge: React.FC<LanguageLevelBadgeProps> = ({
   return (
     <span
       className={[
-        "inline-flex h-7 min-w-10 items-center justify-center", // h-7 to hơn nhẹ
-        "rounded-md border px-2.5 text-[13px] font-bold uppercase tracking-wider shadow-sm transition-all", // Đậm và rõ ràng
+        "inline-flex h-5 min-w-8 shrink-0 items-center justify-center",
+        "rounded border px-1.5 text-[11px] font-bold leading-none tracking-[0.04em]",
         colorClass,
         className,
-        hasBg ? "bg-white/90 dark:bg-slate-950/90 backdrop-blur-sm" : "",
+        hasBg ? "shadow-sm backdrop-blur-sm" : "",
       ]
         .filter(Boolean)
         .join(" ")}
