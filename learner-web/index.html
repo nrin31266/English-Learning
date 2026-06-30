@@ -1,24 +1,91 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>learner-web</title>
+    <meta name="theme-color" content="#6366f1" />
+
+    <title>FluenRin - Luyện nghe, nói, dictation và từ vựng tiếng Anh</title>
+
+    <meta
+      name="description"
+      content="FluenRin giúp người học luyện tiếng Anh qua lesson playlist, shadowing, dictation, vocabulary topic, dictionary popup, IPA, audio, ví dụ và tiến độ học tập."
+    />
+
+    <meta
+      name="keywords"
+      content="FluenRin, học tiếng Anh, luyện nghe tiếng Anh, luyện nói tiếng Anh, shadowing, dictation, từ vựng tiếng Anh, IPA, English vocabulary, English learning app"
+    />
+
+    <meta name="author" content="FluenRin" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Vietnamese" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="FluenRin" />
+    <meta
+      property="og:title"
+      content="FluenRin - Luyện nghe, nói, dictation và từ vựng tiếng Anh"
+    />
+    <meta
+      property="og:description"
+      content="Học tiếng Anh theo lesson playlist, shadowing, dictation và vocabulary topic. Lưu tiến độ theo từng câu, từng từ và từng lượt luyện."
+    />
+    <meta property="og:image" content="/og-image.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="FluenRin - English practice with shadowing, dictation and vocabulary"
+    />
+    <meta
+      name="twitter:description"
+      content="Practice English with lessons, shadowing, dictation, vocabulary topics and learning progress."
+    />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "EducationalApplication",
+        "name": "FluenRin",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web",
+        "description": "FluenRin is an English learning web application for practicing listening, speaking, dictation and vocabulary through structured lessons, dictionary support and learning progress.",
+        "featureList": [
+          "Lesson playlists",
+          "Shadowing practice",
+          "Dictation practice",
+          "Vocabulary topics and subtopics",
+          "Dictionary popup with IPA, audio and examples",
+          "Learning progress tracking"
+        ],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
     <link
       href="https://fonts.googleapis.com/css2?family=Fugaz+One&display=swap"
       rel="stylesheet"
     />
+
     <link
-      href="https://fonts.googleapis.com/css2?family=Fugaz+One&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fugaz+One&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
       rel="stylesheet"
     />
-    <link href="https://fonts.googleapis.com/css2?family=Fugaz+One&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-    <!-- <link rel="preload" href="/src/index.css" as="style"> -->
-
   </head>
+
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
