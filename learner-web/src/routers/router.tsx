@@ -16,16 +16,16 @@ const ReviewPage = () => <div>Review Page</div>
 const SettingsPage = () => <div>Settings Page</div>
 const ProfilePage = () => <div>Profile Page</div>
 export const withSuspense = (element: ReactElement) => (
-  <Suspense fallback={<FullScreenSpinner label="Waiting..."/>}>
+  <Suspense fallback={<FullScreenSpinner label="Waiting..." />}>
     {element}
   </Suspense>
 )
 
 const router = createBrowserRouter([
-    
-      {
-        element: <AppLayout />, // layout bọc các route con
-         children: [
+
+  {
+    element: <AppLayout />, // layout bọc các route con
+    children: [
       {
         path: "/",
         element: <HomePage />,
@@ -51,7 +51,7 @@ const router = createBrowserRouter([
         path: "/vocab/topics/:id/subtopics/:subtopicId",
         element: withSuspense(<VocabTopicDetail />),
       },
-     
+
       {
         path: "/learn/lessons/:id/:slug/shadowing",
         element: withSuspense(<ShadowingModePage />),
@@ -77,7 +77,7 @@ const router = createBrowserRouter([
         element: <ProfilePage />,
       },
     ],
-      },
+  },
 ]);
 
 export default router;
