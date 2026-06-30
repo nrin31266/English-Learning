@@ -102,6 +102,15 @@
     "blog": "Blog",
     "learning": "Learning"
   },
+  "partOfSpeech": {
+    "NOUN": "Noun", "PROPN": "Proper noun", "VERB": "Verb", "AUX": "Auxiliary verb",
+    "ADJ": "Adjective", "ADV": "Adverb", "PRON": "Pronoun", "DET": "Determiner",
+    "ADP": "Preposition", "CCONJ": "Coordinating conjunction", "SCONJ": "Subordinating conjunction",
+    "NUM": "Numeral", "PART": "Particle", "INTJ": "Interjection", "PUNCT": "Punctuation",
+    "SYM": "Symbol", "PHRASE": "Phrase", "PHRASAL_VERB": "Phrasal verb",
+    "COLLOCATION": "Collocation", "IDIOM": "Idiom", "FIXED_EXPRESSION": "Fixed expression",
+    "OTHER": "Other"
+  },
   "footer": {
     "aboutTitle": "About Fluenrin",
     "aboutDesc": "Fluenrin is your personal AI Language Coach — engineered to help you master English through active immersion, precise shadowing, and smart dictation practice.",

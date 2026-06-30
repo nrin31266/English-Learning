@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils"
 import type { ILessonWordResponse } from "@/types"
 import LanguageLevelBadge from "./LanguageLevel"
 import type { IWordData } from "@/types/dictionary"
+import { getPartOfSpeechI18nKey } from "@/utils/partOfSpeech"
+import { useTranslation } from "react-i18next"
 
 interface WordPopupProps {
   word: ILessonWordResponse | null
@@ -21,6 +23,7 @@ const WordPopup = ({
   onClose,
   isLoading = false
 }: WordPopupProps) => {
+  const { t } = useTranslation()
   const [isVisible, setIsVisible] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
   const [isPlayingUk, setIsPlayingUk] = useState(false)
@@ -241,8 +244,8 @@ const WordPopup = ({
                 {wordData?.word || word.wordText || word.wordNormalized}
               </p>
               {(wordData?.pos || word.posTag) && (
-                <span className="uppercase text-xs text-muted-foreground">
-                  {wordData?.pos || word.posTag}
+                <span className="text-xs text-muted-foreground">
+                  {t(getPartOfSpeechI18nKey(wordData?.pos || word.posTag))}
                 </span>
               )}
               {wordData?.cefrLevel && (

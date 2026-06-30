@@ -2,6 +2,7 @@ import LanguageLevelBadge, { type LanguageLevel } from "@/components/LanguageLev
 import { useAppDispatch, useAppSelector } from "@/store";
 import { clearDetail, fetchSubTopics, fetchTopicDetail, fetchWords, setActiveSubtopic } from "@/store/vocabDetailSlide";
 import type { IVocabSubTopic, IVocabWordEntry } from "@/types";
+import { getPartOfSpeechI18nKey } from "@/utils/partOfSpeech";
 import {
   ArrowLeft,
   BookMarked,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 function getWordDefinition(word: IVocabWordEntry) {
   return word.contextDefinition || word.wordDetail?.definitions?.[0]?.definition || "";
@@ -46,6 +48,7 @@ function playWordAudio(word: IVocabWordEntry) {
 }
 
 export default function VocabTopicDetail() {
+  const { t } = useTranslation();
   const { id, subtopicId } = useParams<{ id: string; subtopicId?: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -194,16 +197,20 @@ export default function VocabTopicDetail() {
                         {phonetic && <span className="text-xs text-muted-foreground">/{phonetic.replace(/^\/+|\/+$/g, "")}/</span>}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span className="rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-                          {word.pos}
-                        </span>
                         {level && (
                           <LanguageLevelBadge
                             level={level as LanguageLevel}
-                            className="h-5 min-w-[1.8rem] px-1.5 text-[9px]"
+                            className="h-5 w-9 min-w-9 px-0 text-[9px]"
                             hasBg
                           />
                         )}
+                        {!level && <span className="h-5 w-9" aria-hidden="true" />}
+                        <span
+                          className="inline-flex h-5 w-24 items-center justify-center truncate rounded border px-1.5 text-[10px] font-semibold text-muted-foreground"
+                          title={t(getPartOfSpeechI18nKey(word.pos))}
+                        >
+                          {t(getPartOfSpeechI18nKey(word.pos))}
+                        </span>
                       </div>
                     </div>
                     {audioUrl && (

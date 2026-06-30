@@ -102,6 +102,15 @@
     "blog": "Bài viết",
     "learning": "Học tập"
   },
+  "partOfSpeech": {
+    "NOUN": "Danh từ", "PROPN": "Danh từ riêng", "VERB": "Động từ", "AUX": "Trợ động từ",
+    "ADJ": "Tính từ", "ADV": "Trạng từ", "PRON": "Đại từ", "DET": "Từ hạn định",
+    "ADP": "Giới từ", "CCONJ": "Liên từ đẳng lập", "SCONJ": "Liên từ phụ thuộc",
+    "NUM": "Số từ", "PART": "Tiểu từ", "INTJ": "Thán từ", "PUNCT": "Dấu câu",
+    "SYM": "Ký hiệu", "PHRASE": "Cụm từ", "PHRASAL_VERB": "Cụm động từ",
+    "COLLOCATION": "Cụm từ kết hợp", "IDIOM": "Thành ngữ", "FIXED_EXPRESSION": "Cụm cố định",
+    "OTHER": "Loại khác"
+  },
   "footer": {
     "aboutTitle": "Về Fluenrin",
     "aboutDesc": "Fluenrin là Huấn luyện viên Ngôn ngữ AI cá nhân của bạn — được thiết kế để giúp bạn làm chủ tiếng Anh qua phương pháp thực hành chủ động, shadowing chính xác và luyện chính tả thông minh.",
