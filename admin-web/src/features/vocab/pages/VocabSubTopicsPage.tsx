@@ -26,6 +26,7 @@ import {
   fetchVocabTopics,
   fetchWords,
   generateWords,
+  recalculateSubtopic,
   setActiveSubtopicId,
   toggleTopicActive,
   toggleSubtopicActive,
@@ -44,6 +45,7 @@ import {
   Eye,
   Layers3,
   Loader2,
+  RotateCcw,
   Sparkles,
   Trash2
 } from "lucide-react";
@@ -78,6 +80,7 @@ export default function VocabSubTopicsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingSubIds, setLoadingSubIds] = useState<Set<string>>(new Set());
   const [loadingToggleSubIds, setLoadingToggleSubIds] = useState<Set<string>>(new Set());
+  const [repairingSubIds, setRepairingSubIds] = useState<Set<string>>(new Set());
   const [togglingTopicActive, setTogglingTopicActive] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<IVocabSubTopic | null>(null);
   const [deletingSub, setDeletingSub] = useState(false);
@@ -181,6 +184,22 @@ export default function VocabSubTopicsPage() {
     setTogglingTopicActive(false);
   };
 
+  const handleRepairSubtopic = async (subtopicId: string) => {
+    setRepairingSubIds((prev) => new Set([...prev, subtopicId]));
+    const res = await dispatch(recalculateSubtopic(subtopicId));
+    if (recalculateSubtopic.fulfilled.match(res)) {
+      dispatch(showNotification({ message: "Đã repair counters/status của sub-topic", variant: "success" }));
+      if (topicId) dispatch(fetchVocabTopics());
+    } else {
+      dispatch(showNotification({ message: "Repair sub-topic thất bại", variant: "error" }));
+    }
+    setRepairingSubIds((prev) => {
+      const next = new Set(prev);
+      next.delete(subtopicId);
+      return next;
+    });
+  };
+
   return (
     <div className="mx-auto w-full space-y-4 p-4">
       {/* Breadcrumb */}
@@ -219,20 +238,25 @@ export default function VocabSubTopicsPage() {
                 </Badge>
               )}
               {topic && (
-                <Button
-                  size="sm"
-                  variant={isTopicActive ? "default" : "outline"}
-                  disabled={togglingTopicActive}
-                  onClick={handleToggleTopicActive}
-                  className={`h-8 shrink-0 ${
-                    isTopicActive
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : "bg-muted text-foreground hover:bg-muted/80"
-                  }`}
+                <span
+                  className="inline-flex"
+                  title={!isTopicActive && topic.status !== "READY" ? "Topic must be READY before publishing" : isTopicActive ? "Unpublish topic" : "Publish topic"}
                 >
-                  {togglingTopicActive && <Loader2 size={12} className="mr-1 animate-spin" />}
-                  {isTopicActive ? "Active" : "Inactive"}
-                </Button>
+                  <Button
+                    size="sm"
+                    variant={isTopicActive ? "default" : "outline"}
+                    disabled={togglingTopicActive || (!isTopicActive && topic.status !== "READY")}
+                    onClick={handleToggleTopicActive}
+                    className={`h-8 shrink-0 ${
+                      isTopicActive
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                        : "bg-muted text-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {togglingTopicActive && <Loader2 size={12} className="mr-1 animate-spin" />}
+                    {isTopicActive ? "Active" : "Inactive"}
+                  </Button>
+                </span>
               )}
             </div>
           </div>
@@ -293,11 +317,13 @@ export default function VocabSubTopicsPage() {
             const isAnimating = animatedStatuses.has(sub.status);
             const isGeneratingThis = loadingSubIds.has(sub.id);
             const isTogglingThis = loadingToggleSubIds.has(sub.id);
+            const isRepairingThis = repairingSubIds.has(sub.id);
             const isSubtopicActive = sub.isActive ?? sub.active ?? false;
             const canToggleSubtopicActive = sub.status === "READY";
             const wordProgress = sub.wordCount > 0 ? Math.round((sub.readyWordCount / sub.wordCount) * 100) : 0;
             const hasWords = sub.wordCount > 0;
             const isCompleted = sub.status === "READY" && sub.readyWordCount >= sub.wordCount;
+            const missingWordCount = Math.max(0, sub.wordCount - sub.readyWordCount);
 
             return (
               <Card key={sub.id} className="overflow-hidden border-border/60 transition-shadow hover:shadow-md">
@@ -331,23 +357,13 @@ export default function VocabSubTopicsPage() {
                       </p>
                     )}
 
-                    {/* Row 4: CEFR + Word count + Progress */}
-                    <div className="flex items-center gap-2">
+                    {/* Row 4: CEFR + explicit word counters */}
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline" className="shrink-0 px-2 py-0.5 text-xs font-medium">{sub.cefrLevel}</Badge>
-                      
-                      {isCompleted ? (
-                        <Badge className="shrink-0 bg-emerald-600 px-2 py-0.5 text-xs text-white">
-                          <CheckCircle2 size={11} className="mr-1" />
-                          Completed
-                        </Badge>
-                      ) : (
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {sub.readyWordCount}/{sub.wordCount}
-                          </span>
-                          <Progress value={wordProgress} className="h-1.5 flex-1" />
-                        </div>
-                      )}
+                      <Badge variant="outline" className="text-xs">Words {sub.wordCount}</Badge>
+                      <Badge variant="outline" className="text-xs text-emerald-600">Ready {sub.readyWordCount}</Badge>
+                      <Badge variant="outline" className="text-xs text-amber-600">Missing {missingWordCount}</Badge>
+                      {!isCompleted && <Progress value={wordProgress} className="h-1.5 min-w-20 flex-1" />}
                     </div>
 
                     {/* Row 5: Actions */}
@@ -379,19 +395,36 @@ export default function VocabSubTopicsPage() {
                         View
                       </Button>
 
+                      <span
+                        className="inline-flex"
+                        title={!canToggleSubtopicActive ? "Sub-topic must be READY before publishing" : isSubtopicActive ? "Unpublish sub-topic" : "Publish sub-topic"}
+                      >
+                        <Button
+                          size="sm"
+                          variant="default"
+                          disabled={isTogglingThis || (!isSubtopicActive && !canToggleSubtopicActive)}
+                          onClick={() => handleToggleSubTopic(sub)}
+                          className={`h-8 gap-1.5 ${
+                            isSubtopicActive
+                              ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                              : "bg-muted text-foreground hover:bg-muted/80"
+                          } ${canToggleSubtopicActive ? "" : "text-slate-400"}`}
+                        >
+                          {isTogglingThis && <Loader2 size={13} className="animate-spin" />}
+                          {isSubtopicActive ? "Active" : "Inactive"}
+                        </Button>
+                      </span>
+
                       <Button
                         size="sm"
-                        variant="default"
-                        disabled={isTogglingThis || !canToggleSubtopicActive}
-                        onClick={() => handleToggleSubTopic(sub)}
-                        className={`h-8 gap-1.5 ${
-                          isSubtopicActive
-                            ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                            : "bg-muted text-foreground hover:bg-muted/80"
-                        } ${canToggleSubtopicActive ? "" : "text-slate-400"}`}
+                        variant="ghost"
+                        className="h-8 gap-1.5"
+                        disabled={isRepairingThis}
+                        onClick={() => handleRepairSubtopic(sub.id)}
+                        title="Repair counters and status"
                       >
-                        {isTogglingThis && <Loader2 size={13} className="animate-spin" />}
-                        {isSubtopicActive ? "Active" : "Inactive"}
+                        <RotateCcw size={13} className={isRepairingThis ? "animate-spin" : ""} />
+                        Repair
                       </Button>
 
                       <Button

@@ -120,6 +120,13 @@ public class VocabAdminController {
         return ApiResponse.<String>builder().result("recalculated").build();
     }
 
+    @PostMapping("/subtopics/{subtopicId}/recalculate")
+    public ApiResponse<VocabSubTopicResponse> recalculateSubtopic(@PathVariable String subtopicId) {
+        return ApiResponse.<VocabSubTopicResponse>builder()
+                .result(vocabService.recalculateSubtopic(subtopicId))
+                .build();
+    }
+
     // ─── IMAGE UPLOAD (proxied to language-processing-service) ─────────────────
     @PostMapping("/topics/{topicId}/upload-image")
     public ApiResponse<String> uploadTopicImage(

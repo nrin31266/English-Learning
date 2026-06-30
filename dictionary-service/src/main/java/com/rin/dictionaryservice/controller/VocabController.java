@@ -24,14 +24,12 @@ public class VocabController {
     public ApiResponse<PageResponse<VocabTopicResponse>> listTopics(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) List<String> tags,
-            @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "true") boolean activeOnly,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "newest") String sort
     ) {
         return ApiResponse.<PageResponse<VocabTopicResponse>>builder()
-                .result(vocabService.listTopics(q, tags, status, activeOnly, page, size, sort))
+                .result(vocabService.listPublicTopics(q, tags, page, size, sort))
                 .build();
     }
 
@@ -56,4 +54,3 @@ public class VocabController {
                 .build();
     }
 }
-

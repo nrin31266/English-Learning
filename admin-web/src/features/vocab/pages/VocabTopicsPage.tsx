@@ -29,6 +29,7 @@ import {
   fetchVocabTopics,
   generateSubTopics,
   onSubtopicsGenerated,
+  recalculateTopic,
   setActiveTopicId,
   toggleTopicActive,
   updateSubtopicFromWs,
@@ -114,6 +115,7 @@ export default function VocabTopicsPage() {
 
   const [loadingGenIds, setLoadingGenIds] = useState<Set<string>>(new Set());
   const [loadingToggleIds, setLoadingToggleIds] = useState<Set<string>>(new Set());
+  const [repairingIds, setRepairingIds] = useState<Set<string>>(new Set());
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<IVocabTopic | null>(null);
@@ -206,7 +208,6 @@ export default function VocabTopicsPage() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput, selectedTags, statusFilter, sort, page, doFetch]);
 
   // Reset page to 0 when filters change
@@ -263,7 +264,7 @@ export default function VocabTopicsPage() {
     });
 
     return () => sub.unsubscribe();
-  }, [stompClient?.connected, dispatch]);
+  }, [stompClient, dispatch]);
 
   useEffect(() => {
     if (!stompClient?.connected) return;
@@ -283,7 +284,7 @@ export default function VocabTopicsPage() {
     });
 
     return () => sub.unsubscribe();
-  }, [stompClient?.connected, dispatch]);
+  }, [stompClient, dispatch]);
 
   const handleCreateTopic = async () => {
     if (!createData.title.trim()) return;
@@ -489,6 +490,23 @@ export default function VocabTopicsPage() {
     setLoadingToggleIds((prev) => {
       const next = new Set(prev);
       next.delete(topic.id);
+      return next;
+    });
+  };
+
+  const handleRepairTopic = async (topicId: string) => {
+    setRepairingIds((prev) => new Set([...prev, topicId]));
+    const res = await dispatch(recalculateTopic(topicId));
+    if (recalculateTopic.fulfilled.match(res)) {
+      dispatch(showNotification({ message: "Đã repair counters/status của topic", variant: "success" }));
+      const tagsArr = selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
+      dispatch(fetchVocabTopics({ q: searchInput.trim() || undefined, tags: tagsArr, status: statusFilter || undefined, page, size: 12, sort }));
+    } else {
+      dispatch(showNotification({ message: "Repair topic thất bại", variant: "error" }));
+    }
+    setRepairingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(topicId);
       return next;
     });
   };
@@ -714,12 +732,14 @@ export default function VocabTopicsPage() {
                 isRunning={isRunning}
                 isGenerating={isGeneratingThis}
                 isToggling={isTogglingThis}
+                isRepairing={repairingIds.has(topic.id)}
                 isBusyGeneratingAny={loadingGenIds.size > 0}
                 onGenerate={handleGenSubtopics}
                 onOpen={handleViewSubtopics}
                 onToggle={handleToggleTopic}
                 onEdit={handleOpenEdit}
                 onDelete={setDeleteConfirm}
+                onRepair={handleRepairTopic}
               />
             );
           })}
@@ -742,12 +762,14 @@ export default function VocabTopicsPage() {
                 isRunning={isRunning}
                 isGenerating={isGeneratingThis}
                 isToggling={isTogglingThis}
+                isRepairing={repairingIds.has(topic.id)}
                 isBusyGeneratingAny={loadingGenIds.size > 0}
                 onGenerate={handleGenSubtopics}
                 onOpen={handleViewSubtopics}
                 onToggle={handleToggleTopic}
                 onEdit={handleOpenEdit}
                 onDelete={setDeleteConfirm}
+                onRepair={handleRepairTopic}
               />
             );
           })}

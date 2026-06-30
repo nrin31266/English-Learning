@@ -18,6 +18,8 @@ public class VocabTopicResponse {
     int estimatedWordCount;
     int subtopicCount;
     int readySubtopicCount;
+    int wordCount;
+    int readyWordCount;
     VocabTopicStatus status;
     boolean isActive;
     String thumbnailUrl;

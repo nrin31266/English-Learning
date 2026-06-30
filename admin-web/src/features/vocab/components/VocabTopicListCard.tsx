@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { IVocabTopic } from "@/types";
-import { BookMarked, Layers, Loader2 } from "lucide-react";
+import { BookMarked, Layers, Loader2, Wrench } from "lucide-react";
 
 interface VocabTopicListCardProps {
   topic: IVocabTopic;
@@ -11,12 +11,14 @@ interface VocabTopicListCardProps {
   isRunning: boolean;
   isGenerating: boolean;
   isToggling: boolean;
+  isRepairing: boolean;
   isBusyGeneratingAny: boolean;
   onGenerate: (topicId: string) => void;
   onOpen: (topicId: string) => void;
   onToggle: (topic: IVocabTopic) => void;
   onEdit: (topic: IVocabTopic) => void;
   onDelete: (topic: IVocabTopic) => void;
+  onRepair: (topicId: string) => void;
 }
 
 export default function VocabTopicListCard({
@@ -26,16 +28,20 @@ export default function VocabTopicListCard({
   isRunning,
   isGenerating,
   isToggling,
+  isRepairing,
   isBusyGeneratingAny,
   onGenerate,
   onOpen,
   onToggle,
   onEdit,
   onDelete,
+  onRepair,
 }: VocabTopicListCardProps) {
   const hasSubtopics = topic.subtopicCount > 0;
   const isTopicActive = topic.isActive ?? topic.active ?? false;
   const tags = topic.tags?.slice(0, 6) ?? [];
+  const canActivate = topic.status === "READY";
+  const missingWordCount = Math.max(0, (topic.wordCount ?? 0) - (topic.readyWordCount ?? 0));
 
   return (
     <Card className="overflow-hidden border-border/60 transition-shadow hover:shadow-md">
@@ -102,6 +108,12 @@ export default function VocabTopicListCard({
               )}
             </div>
 
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge variant="outline">Words {topic.wordCount ?? 0}</Badge>
+              <Badge variant="outline" className="text-emerald-600">Ready {topic.readyWordCount ?? 0}</Badge>
+              <Badge variant="outline" className="text-amber-600">Missing {missingWordCount}</Badge>
+            </div>
+
             <div className="mt-auto flex flex-wrap items-center gap-2">
               {topic.status === "DRAFT" && topic.subtopicCount === 0 && (
                 <Button
@@ -125,18 +137,35 @@ export default function VocabTopicListCard({
                 Open
               </Button>
 
+              <span
+                className="inline-flex"
+                title={!canActivate && !isTopicActive ? "Topic must be READY before publishing" : isTopicActive ? "Unpublish topic" : "Publish topic"}
+              >
+                <Button
+                  size="sm"
+                  onClick={() => onToggle(topic)}
+                  disabled={isToggling || (!isTopicActive && !canActivate)}
+                  className={`h-8 gap-1.5 ${
+                    isTopicActive
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "bg-muted text-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {isToggling && <Loader2 size={14} className="animate-spin" />}
+                  {isToggling ? "Saving" : isTopicActive ? "Active" : "Inactive"}
+                </Button>
+              </span>
+
               <Button
                 size="sm"
-                onClick={() => onToggle(topic)}
-                disabled={isToggling}
-                className={`h-8 gap-1.5 ${
-                  isTopicActive
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "bg-muted text-foreground hover:bg-muted/80"
-                }`}
+                variant="ghost"
+                className="h-8 gap-1.5"
+                disabled={isRepairing}
+                onClick={() => onRepair(topic.id)}
+                title="Repair counters and status"
               >
-                {isToggling && <Loader2 size={14} className="animate-spin" />}
-                {isToggling ? "Saving" : isTopicActive ? "Active" : "Inactive"}
+                <Wrench size={13} className={isRepairing ? "animate-spin" : ""} />
+                Repair
               </Button>
 
               <Button size="sm" variant="ghost" className="h-8" onClick={() => onEdit(topic)}>

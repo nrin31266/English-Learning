@@ -206,6 +206,11 @@ const vocabSlice = createSlice({
         const idx = s.subtopics.data.findIndex((st) => st.id === updated.id);
         if (idx !== -1) s.subtopics.data[idx] = updated;
       })
+      .addCase(recalculateSubtopic.fulfilled, (s, a) => {
+        const updated = a.payload as IVocabSubTopic;
+        const idx = s.subtopics.data.findIndex((st) => st.id === updated.id);
+        if (idx !== -1) s.subtopics.data[idx] = updated;
+      })
       // updateEntryContextManual
       .addCase(updateEntryContextManual.fulfilled, (s, a) => {
         const updated = a.payload as IVocabWordEntry;
@@ -306,6 +311,11 @@ export const deleteSubTopic = createAsyncThunk("vocab/deleteSubTopic", async (su
 
 export const recalculateTopic = createAsyncThunk("vocab/recalculateTopic", async (topicId: string, { rejectWithValue }) => {
   try { return await handleAPI<string>({ endpoint: `${BASE}/topics/${topicId}/recalculate`, method: "POST" }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const recalculateSubtopic = createAsyncThunk("vocab/recalculateSubtopic", async (subtopicId: string, { rejectWithValue }) => {
+  try { return await handleAPI<IVocabSubTopic>({ endpoint: `${BASE}/subtopics/${subtopicId}/recalculate`, method: "POST" }); }
   catch (e) { return rejectWithValue(extractError(e)); }
 });
 

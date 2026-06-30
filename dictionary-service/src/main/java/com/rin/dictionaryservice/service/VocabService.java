@@ -18,6 +18,7 @@ import com.rin.dictionaryservice.service.support.VocabAiResponseParser;
 import com.rin.dictionaryservice.service.support.VocabContextScoringHelper;
 import com.rin.englishlearning.common.dto.PageResponse;
 import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
+import com.rin.englishlearning.common.event.VocabSubTopicProgressEvent;
 import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
 import com.rin.englishlearning.common.exception.BaseException;
 import lombok.RequiredArgsConstructor;
@@ -115,6 +116,11 @@ public class VocabService {
         return listTopics(q, tags, status, null, page, size, sort);
     }
 
+    public PageResponse<VocabTopicResponse> listPublicTopics(String q, List<String> tags,
+                                                              int page, int size, String sort) {
+        return listTopics(q, tags, VocabTopicStatus.READY.name(), true, page, size, sort);
+    }
+
     public PageResponse<VocabTopicResponse> listTopics(String q, List<String> tags, String status,
                                                        Boolean activeOnly, int page, int size, String sort) {
         String keyword = q == null ? "" : q.trim().toLowerCase();
@@ -186,7 +192,7 @@ public class VocabService {
 
     public VocabTopicResponse getTopic(String topicId, boolean requireActive) {
         VocabTopic topic = getTopicOrThrow(topicId);
-        if (requireActive && !topic.isActive()) {
+        if (requireActive && (!topic.isActive() || topic.getStatus() != VocabTopicStatus.READY)) {
             throw topicNotFound(topicId);
         }
         return toTopicResponse(topic);
@@ -196,11 +202,13 @@ public class VocabService {
 
     public VocabTopicResponse acceptGenerateSubTopics(String topicId) {
         VocabTopic topic = getTopicOrThrow(topicId);
-        if (topic.getSubtopicCount() > 0) {
-            subtopicRepo.deleteByTopicId(topicId);
-            topic.setSubtopicCount(0);
-            topic.setReadySubtopicCount(0);
-        }
+        // Regeneration replaces the whole curriculum branch. Remove entries first
+        // so deleted subtopics cannot leave orphan vocab_word_entries behind.
+        mongoTemplate.remove(new Query(Criteria.where("topicId").is(topicId)), VocabWordEntry.class);
+        subtopicRepo.deleteByTopicId(topicId);
+        topic.setSubtopicCount(0);
+        topic.setReadySubtopicCount(0);
+        topic.setActive(false);
         topic.setStatus(VocabTopicStatus.GENERATING_SUBTOPICS);
         topicRepo.save(topic);
         log.info("[VocabTopic] Accepted generate-subtopics for: {}", topicId);
@@ -262,7 +270,10 @@ public class VocabService {
         if (!topic.isActive()) {
             throw topicNotFound(topicId);
         }
-        return listSubTopics(topicId, true);
+        return subtopicRepo.findAllByTopicIdAndIsActiveTrueOrderByOrder(topicId).stream()
+                .filter(subtopic -> subtopic.getStatus() == VocabSubTopicStatus.READY)
+                .map(this::toSubTopicResponse)
+                .toList();
     }
 
     // ─── GENERATE WORDS ──────────────────────────────────────────────────────
@@ -383,11 +394,9 @@ public class VocabService {
             wordEntryRepo.saveAll(entries);
             subtopic.setWordCount(entries.size());
             subtopic.setReadyWordCount(readyCount);
-            subtopic.setStatus(entries.size() > 0 && entries.size() == readyCount
-                    ? VocabSubTopicStatus.READY : VocabSubTopicStatus.PROCESSING_WORDS);
+            subtopic.setStatus(VocabSubTopicStatus.PROCESSING_WORDS);
             subtopicRepo.save(subtopic);
-
-            if (subtopic.getStatus() == VocabSubTopicStatus.READY) checkTopicCompletion(subtopic);
+            checkSubTopicCompletion(subtopicId);
             log.info("[VocabSubTopic] {} entries ({} ready) for: {}", entries.size(), readyCount, subtopicId);
         } catch (Exception e) {
             log.error("[VocabSubTopic] Async word gen failed for {}: {}", subtopicId, e.getMessage());
@@ -405,40 +414,38 @@ public class VocabService {
 
     public void checkSubTopicCompletion(String subtopicId) {
         VocabSubTopic subtopic = subtopicRepo.findById(subtopicId).orElse(null);
-        if (subtopic == null || subtopic.getStatus() == VocabSubTopicStatus.READY) return;
+        if (subtopic == null) return;
 
-        long readyCount = wordEntryRepo.countBySubtopicIdAndWordReadyTrue(subtopicId);
         boolean alreadyReady = subtopic.getStatus() == VocabSubTopicStatus.READY;
-        subtopic.setReadyWordCount((int) readyCount);
+        subtopic = recalculateSubtopicCounts(subtopic);
+        recalculateTopicCountsOnly(subtopic.getTopicId());
 
-        if (subtopic.getWordCount() > 0 && readyCount >= subtopic.getWordCount()) {
-            subtopic.setStatus(VocabSubTopicStatus.READY);
-            log.info("[VocabSubTopic] READY: {}", subtopicId);
-        }
-        subtopicRepo.save(subtopic);
+        kafkaProducer.sendVocabSubTopicProgress(VocabSubTopicProgressEvent.builder()
+                .topicId(subtopic.getTopicId()).subtopicId(subtopic.getId())
+                .subtopicTitle(subtopic.getTitle()).readyWordCount(subtopic.getReadyWordCount())
+                .wordCount(subtopic.getWordCount()).subtopicStatus(subtopic.getStatus().name()).build());
 
-        // Only notify completion (ReadyEvent) on actual transition to READY
         if (subtopic.getStatus() == VocabSubTopicStatus.READY && !alreadyReady) {
-            checkTopicCompletion(subtopic);
+            publishSubtopicReady(subtopic);
         }
     }
 
 
     public List<VocabWordEntryResponse> listWords(String subtopicId) {
         // Tối ưu: Chỉ truyền vào subtopicId, logic chọn nghĩa đã được tính sẵn và lưu ở VocabWordEntry
-        return buildWordEntryResponses(subtopicId);
+        return buildWordEntryResponses(subtopicId, false);
     }
 
     public List<VocabWordEntryResponse> listWordsForPublic(String subtopicId) {
         VocabSubTopic subtopic = getSubtopicOrThrow(subtopicId);
-        if (!subtopic.isActive()) {
+        if (!subtopic.isActive() || subtopic.getStatus() != VocabSubTopicStatus.READY) {
             throw subtopicNotFound(subtopicId);
         }
         VocabTopic topic = getTopicOrThrow(subtopic.getTopicId());
-        if (!topic.isActive()) {
+        if (!topic.isActive() || topic.getStatus() != VocabTopicStatus.READY) {
             throw subtopicNotFound(subtopicId);
         }
-        return buildWordEntryResponses(subtopicId);
+        return buildWordEntryResponses(subtopicId, true);
     }
 
     // ─── DELETE / RECALCULATE ────────────────────────────────────────────────
@@ -496,7 +503,15 @@ public class VocabService {
     }
 
     public void recalculateTopic(String topicId) {
-        recalculateTopicCounts(topicId);
+        getTopicOrThrow(topicId);
+        subtopicRepo.findAllByTopicIdOrderByOrder(topicId).forEach(this::recalculateSubtopicCounts);
+        recalculateTopicCountsOnly(topicId);
+    }
+
+    public VocabSubTopicResponse recalculateSubtopic(String subtopicId) {
+        VocabSubTopic subtopic = recalculateSubtopicCounts(getSubtopicOrThrow(subtopicId));
+        recalculateTopicCountsOnly(subtopic.getTopicId());
+        return toSubTopicResponse(subtopic);
     }
 
     // ─── TOGGLE ACTIVE ───────────────────────────────────────────────────────
@@ -505,11 +520,7 @@ public class VocabService {
         VocabTopic topic = getTopicOrThrow(topicId);
 
         boolean nextActive = !topic.isActive();
-        if (nextActive && (
-                topic.getStatus() == VocabTopicStatus.DRAFT ||
-                topic.getStatus() == VocabTopicStatus.GENERATING_SUBTOPICS ||
-                topic.getSubtopicCount() == 0
-        )) {
+        if (nextActive && topic.getStatus() != VocabTopicStatus.READY) {
             throw new BaseException(DictionaryErrorCode.TOPIC_NOT_READY);
         }
 
@@ -544,6 +555,7 @@ public class VocabService {
         entry.setContextLevel(parseCefrLevel(req.getLevel()));
         entry.setWordReady(true);
         wordEntryRepo.save(entry);
+        checkSubTopicCompletion(entry.getSubtopicId());
         log.info("[VocabWordEntry] Manual context update for entry: {}", entryId);
         return buildSingleWordEntryResponse(entry);
     }
@@ -597,6 +609,7 @@ public class VocabService {
         entry.setContextViExample(newDef.getViExample());
         entry.setContextLevel(newDef.getLevel());
         wordEntryRepo.save(entry);
+        checkSubTopicCompletion(entry.getSubtopicId());
         log.info("[VocabWordEntry] Updated context cache for entry: {}", entryId);
 
         return buildSingleWordEntryResponse(entry);
@@ -675,7 +688,46 @@ public class VocabService {
         }
     }
 
+    private VocabSubTopic recalculateSubtopicCounts(VocabSubTopic subtopic) {
+        List<VocabWordEntry> entries = wordEntryRepo.findAllBySubtopicIdOrderByOrder(subtopic.getId());
+        Map<String, Word> wordsById = wordRepository.findAllById(entries.stream()
+                        .map(entry -> entry.getWordKey() + "|" + entry.getPos()).toList()).stream()
+                .collect(Collectors.toMap(Word::getId, word -> word));
+
+        boolean repairedEntry = false;
+        for (VocabWordEntry entry : entries) {
+            Word sharedWord = wordsById.get(entry.getWordKey() + "|" + entry.getPos());
+            boolean actuallyReady = entry.isWordReady()
+                    && sharedWord != null
+                    && sharedWord.getStatus() == WordCreationStatus.READY;
+            if (entry.isWordReady() != actuallyReady) {
+                entry.setWordReady(actuallyReady);
+                repairedEntry = true;
+            }
+        }
+        if (repairedEntry) wordEntryRepo.saveAll(entries);
+
+        long totalWords = entries.size();
+        long readyWords = entries.stream().filter(VocabWordEntry::isWordReady).count();
+        subtopic.setWordCount((int) totalWords);
+        subtopic.setReadyWordCount((int) readyWords);
+        if (totalWords == 0) {
+            subtopic.setStatus(VocabSubTopicStatus.PENDING_WORDS);
+        } else if (readyWords >= totalWords) {
+            subtopic.setStatus(VocabSubTopicStatus.READY);
+        } else {
+            subtopic.setStatus(VocabSubTopicStatus.PROCESSING_WORDS);
+        }
+        if (subtopic.getStatus() != VocabSubTopicStatus.READY) subtopic.setActive(false);
+        return subtopicRepo.save(subtopic);
+    }
+
     private void recalculateTopicCounts(String topicId) {
+        subtopicRepo.findAllByTopicIdOrderByOrder(topicId).forEach(this::recalculateSubtopicCounts);
+        recalculateTopicCountsOnly(topicId);
+    }
+
+    private void recalculateTopicCountsOnly(String topicId) {
         VocabTopic topic = topicRepo.findById(topicId).orElse(null);
         if (topic == null) return;
 
@@ -689,11 +741,13 @@ public class VocabService {
 
         if (totalSubtopics == 0) {
             topic.setStatus(VocabTopicStatus.DRAFT);
+            topic.setActive(false);
         } else if (readySubtopics >= totalSubtopics) {
             topic.setStatus(VocabTopicStatus.READY);
         } else {
             topic.setStatus(VocabTopicStatus.PROCESSING);
         }
+        if (topic.getStatus() != VocabTopicStatus.READY) topic.setActive(false);
         topicRepo.save(topic);
         log.info("[VocabTopic] Recalculated {}: {}/{} ready, status={}", topicId, readySubtopics, totalSubtopics, topic.getStatus());
     }
@@ -737,22 +791,11 @@ public class VocabService {
                 .forEach(this::checkSubTopicCompletion);
     }
 
-    private void checkTopicCompletion(VocabSubTopic readySubtopic) {
+    private void publishSubtopicReady(VocabSubTopic readySubtopic) {
         String topicId = readySubtopic.getTopicId();
         VocabTopic topic = topicRepo.findById(topicId).orElse(null);
         if (topic == null) return;
-
-        long readySubtopics = subtopicRepo.countByTopicIdAndStatus(topicId, VocabSubTopicStatus.READY);
-        topic.setReadySubtopicCount((int) readySubtopics);
-
-        boolean topicReady = topic.getSubtopicCount() > 0 && readySubtopics >= topic.getSubtopicCount();
-        if (topicReady) {
-            topic.setStatus(VocabTopicStatus.READY);
-            log.info("[VocabTopic] READY: {}", topicId);
-        } else {
-            topic.setStatus(VocabTopicStatus.PROCESSING);
-        }
-        topicRepo.save(topic);
+        boolean topicReady = topic.getStatus() == VocabTopicStatus.READY;
 
         kafkaProducer.sendVocabSubTopicReady(VocabSubTopicReadyEvent.builder()
                 .topicId(topicId)
@@ -762,7 +805,7 @@ public class VocabService {
                 .topicReady(topicReady)
                 .readyWordCount(readySubtopic.getReadyWordCount())
                 .wordCount(readySubtopic.getWordCount())
-                .readySubtopicCount((int) readySubtopics)
+                .readySubtopicCount(topic.getReadySubtopicCount())
                 .build());
     }
 
@@ -826,7 +869,7 @@ public class VocabService {
 
     // ─── RESPONSE BUILDERS ───────────────────────────────────────────────────
 
-    private List<VocabWordEntryResponse> buildWordEntryResponses(String subtopicId) {
+    private List<VocabWordEntryResponse> buildWordEntryResponses(String subtopicId, boolean readyOnly) {
         // Lấy danh sách Entry theo thứ tự (Chỉ tốn 1 query)
         List<VocabWordEntry> entries = wordEntryRepo.findAllBySubtopicIdOrderByOrder(subtopicId);
 
@@ -840,7 +883,11 @@ public class VocabService {
         Map<String, Word> wordMap = wordRepository.findAllById(wordIds).stream()
                 .collect(Collectors.toMap(Word::getId, w -> w));
 
-        return entries.stream().map(entry -> {
+        return entries.stream()
+                .filter(entry -> !readyOnly || (entry.isWordReady()
+                        && wordMap.containsKey(entry.getWordKey() + "|" + entry.getPos())
+                        && wordMap.get(entry.getWordKey() + "|" + entry.getPos()).getStatus() == WordCreationStatus.READY))
+                .map(entry -> {
             // Chỉ móc ra từ bộ nhớ, không chọc xuống DB nữa
             Word word = entry.isWordReady() ? wordMap.get(entry.getWordKey() + "|" + entry.getPos()) : null;
 
@@ -914,6 +961,9 @@ public class VocabService {
     private static final String DEFAULT_POS = "NOUN";
 
     private VocabTopicResponse toTopicResponse(VocabTopic t) {
+        List<VocabSubTopic> subtopics = subtopicRepo.findAllByTopicIdOrderByOrder(t.getId());
+        int wordCount = subtopics.stream().mapToInt(VocabSubTopic::getWordCount).sum();
+        int readyWordCount = subtopics.stream().mapToInt(VocabSubTopic::getReadyWordCount).sum();
         return VocabTopicResponse.builder()
                 .id(t.getId())
                 .title(t.getTitle())
@@ -923,6 +973,8 @@ public class VocabService {
                 .estimatedWordCount(t.getEstimatedWordCount())
                 .subtopicCount(t.getSubtopicCount())
                 .readySubtopicCount(t.getReadySubtopicCount())
+                .wordCount(wordCount)
+                .readyWordCount(readyWordCount)
                 .status(t.getStatus())
                 .isActive(t.isActive())
                 .thumbnailUrl(t.getThumbnailUrl())

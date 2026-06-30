@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { IVocabTopic } from "@/types";
-import { BookMarked, Loader2, Trash2 } from "lucide-react";
+import { BookMarked, Loader2, Trash2, Wrench } from "lucide-react";
 
 
 interface VocabTopicCardProps {
@@ -12,12 +12,14 @@ interface VocabTopicCardProps {
   isRunning: boolean;
   isGenerating: boolean;
   isToggling: boolean;
+  isRepairing: boolean;
   isBusyGeneratingAny: boolean;
   onGenerate: (topicId: string) => void;
   onOpen: (topicId: string) => void;
   onToggle: (topic: IVocabTopic) => void;
   onEdit: (topic: IVocabTopic) => void;
   onDelete: (topic: IVocabTopic) => void;
+  onRepair: (topicId: string) => void;
 }
 
 export default function VocabTopicCard({
@@ -27,15 +29,19 @@ export default function VocabTopicCard({
   isRunning,
   isGenerating,
   isToggling,
+  isRepairing,
   isBusyGeneratingAny,
   onGenerate,
   onOpen,
   onToggle,
   onEdit,
   onDelete,
+  onRepair,
 }: VocabTopicCardProps) {
   const hasSubtopics = topic.subtopicCount > 0;
   const isTopicActive = topic.isActive ?? topic.active ?? false;
+  const canActivate = topic.status === "READY";
+  const missingWordCount = Math.max(0, (topic.wordCount ?? 0) - (topic.readyWordCount ?? 0));
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-md">
@@ -92,17 +98,20 @@ export default function VocabTopicCard({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="rounded-md bg-muted/60 px-2 py-2">
-            <div className="text-muted-foreground">CEFR</div>
-            <div className="mt-0.5 font-medium">{topic.cefrRange || "—"}</div>
+            <div className="text-muted-foreground">Words</div>
+            <div className="mt-0.5 font-medium">{topic.wordCount ?? 0}</div>
           </div>
 
           <div className="rounded-md bg-muted/60 px-2 py-2">
-            <div className="text-muted-foreground">Sub</div>
-            <div className="mt-0.5 font-medium">
-              {hasSubtopics ? `${topic.readySubtopicCount}/${topic.subtopicCount}` : "—"}
-            </div>
+            <div className="text-muted-foreground">Ready</div>
+            <div className="mt-0.5 font-medium text-emerald-600">{topic.readyWordCount ?? 0}</div>
+          </div>
+
+          <div className="rounded-md bg-muted/60 px-2 py-2">
+            <div className="text-muted-foreground">Missing</div>
+            <div className="mt-0.5 font-medium text-amber-600">{missingWordCount}</div>
           </div>
         </div>
 
@@ -131,19 +140,34 @@ export default function VocabTopicCard({
             Open
           </Button>
 
-          <Button
-            size="sm"
-            onClick={() => onToggle(topic)}
-            disabled={isToggling}
-            title={isTopicActive ? "Topic is active" : "Topic is inactive"}
-            className={`h-8 gap-1.5 ${
-              isTopicActive
-                ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                : "bg-muted text-foreground hover:bg-muted/80"
-            }`}
+          <span
+            className="inline-flex"
+            title={!canActivate && !isTopicActive ? "Topic must be READY before publishing" : isTopicActive ? "Unpublish topic" : "Publish topic"}
           >
-            {isToggling && <Loader2 size={14} className="animate-spin" />}
-            {isToggling ? "Saving" : isTopicActive ? "Active" : "Inactive"}
+            <Button
+              size="sm"
+              onClick={() => onToggle(topic)}
+              disabled={isToggling || (!isTopicActive && !canActivate)}
+              className={`h-8 gap-1.5 ${
+                isTopicActive
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  : "bg-muted text-foreground hover:bg-muted/80"
+              }`}
+            >
+              {isToggling && <Loader2 size={14} className="animate-spin" />}
+              {isToggling ? "Saving" : isTopicActive ? "Active" : "Inactive"}
+            </Button>
+          </span>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            disabled={isRepairing}
+            onClick={() => onRepair(topic.id)}
+            title="Repair counters and status"
+          >
+            <Wrench size={14} className={isRepairing ? "animate-spin" : ""} />
           </Button>
 
           <Button

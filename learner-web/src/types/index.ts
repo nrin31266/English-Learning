@@ -339,6 +339,8 @@ export interface IVocabTopic {
   estimatedWordCount: number;
   subtopicCount: number;
   readySubtopicCount: number;
+  wordCount: number;
+  readyWordCount: number;
   status: "DRAFT" | "GENERATING_SUBTOPICS" | "READY_FOR_WORD_GEN" | "PROCESSING" | "READY";
   isActive: boolean;
   active?: boolean;

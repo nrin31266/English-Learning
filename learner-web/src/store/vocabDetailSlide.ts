@@ -44,7 +44,9 @@ export const fetchSubTopics = createAsyncThunk(
         endpoint: `/dictionaries/vocab/topics/${topicId}/subtopics`,
         params: { activeOnly: true },
       });
-      return res.map((s) => ({
+      return res
+        .filter((s) => s.status === "READY")
+        .map((s) => ({
         ...s,
         isActive: (s as { isActive?: boolean; active?: boolean }).isActive
           ?? (s as { active?: boolean }).active
@@ -61,9 +63,10 @@ export const fetchWords = createAsyncThunk(
   "vocabDetail/fetchWords",
   async (subtopicId: string, { rejectWithValue }) => {
     try {
-      return await handleAPI<IVocabWordEntry[]>({
+      const words = await handleAPI<IVocabWordEntry[]>({
         endpoint: `/dictionaries/vocab/subtopics/${subtopicId}/words`,
       });
+      return words.filter((word) => word.wordReady && word.wordDetail?.status === "READY");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Unknown error";
       return rejectWithValue(msg);

@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   BookMarked,
   Loader2,
-  Play,
   Volume2,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
@@ -34,6 +33,10 @@ function getWordLevel(word: IVocabWordEntry) {
 
 function getAudioUrl(word: IVocabWordEntry) {
   return word.wordDetail?.phonetics?.usAudioUrl || word.wordDetail?.phonetics?.ukAudioUrl || "";
+}
+
+function getPhonetic(word: IVocabWordEntry) {
+  return word.wordDetail?.phonetics?.us || word.wordDetail?.phonetics?.uk || "";
 }
 
 function playWordAudio(word: IVocabWordEntry) {
@@ -90,11 +93,6 @@ export default function VocabTopicDetail() {
     navigate(`/vocab/topics/${id}/subtopics/${sub.id}`);
   };
 
-  const handleStartLearning = () => {
-    if (!id || !activeSubtopicId) return;
-    
-  };
-
   const handleHeaderBack = () => {
     if (!id) return;
     const isCompactLayout = window.matchMedia("(max-width: 1279px)").matches;
@@ -121,9 +119,9 @@ export default function VocabTopicDetail() {
   );
 
   const rightLearningState = (
-    <div className="flex flex-col p-4 xl:h-full xl:min-h-0 xl:overflow-y-auto">
-      <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="flex flex-col p-2.5 sm:p-3 xl:h-full xl:min-h-0 xl:overflow-y-auto">
+      <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="truncate text-xl font-bold">{activeSubtopic?.title}</h2>
@@ -139,17 +137,17 @@ export default function VocabTopicDetail() {
               <p className="mt-1 text-sm text-muted-foreground">{activeSubtopic.titleVi}</p>
             )}
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-36">
-            <div className="inline-flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
+          <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:min-w-36">
+            <div className="inline-flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-1.5">
               <span className="text-xs font-medium text-muted-foreground">Tổng số từ</span>
               <span className="text-base font-bold">{words.length || activeSubtopic?.wordCount || 0}</span>
             </div>
             <button
-              onClick={handleStartLearning}
-              disabled={wordsStatus === "loading" || words.length === 0}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled
+              title="Vocabulary practice is coming soon"
+              className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Học bài này
+              Sắp ra mắt
             </button>
           </div>
         </div>
@@ -174,7 +172,7 @@ export default function VocabTopicDetail() {
       )}
 
       {wordsStatus === "succeeded" && words.length > 0 && (
-        <div className="mt-4 grid gap-3">
+        <div className="mt-3 grid items-start gap-2">
           {words
             .slice()
             .sort((a, b) => a.order - b.order)
@@ -185,30 +183,33 @@ export default function VocabTopicDetail() {
               const viExample = getWordViExample(word);
               const level = getWordLevel(word);
               const audioUrl = getAudioUrl(word);
+              const phonetic = getPhonetic(word);
 
               return (
-                <article key={word.id} className="rounded-xl border border-border/70 bg-card p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-bold leading-tight">{word.wordText}</h3>
-                        <span className="rounded-md border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                <article key={word.id} className="rounded-lg border border-border/70 bg-card px-3 py-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                        <h3 className="text-[17px] font-bold leading-tight">{word.wordText}</h3>
+                        {phonetic && <span className="text-xs text-muted-foreground">/{phonetic.replace(/^\/+|\/+$/g, "")}/</span>}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className="rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
                           {word.pos}
                         </span>
                         {level && (
                           <LanguageLevelBadge
                             level={level as LanguageLevel}
-                            className="h-6 min-w-[2.1rem] px-2 text-[10px]"
+                            className="h-5 min-w-[1.8rem] px-1.5 text-[9px]"
                             hasBg
                           />
                         )}
                       </div>
-                      {meaning && <p className="mt-1 text-sm font-medium text-primary">{meaning}</p>}
                     </div>
                     {audioUrl && (
                       <button
                         onClick={() => playWordAudio(word)}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground transition-colors hover:text-foreground"
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground transition-colors hover:text-foreground"
                         title="Nghe phát âm"
                       >
                         <Volume2 className="h-4 w-4" />
@@ -216,12 +217,13 @@ export default function VocabTopicDetail() {
                     )}
                   </div>
 
-                  {definition && <p className="mt-3 text-sm text-foreground">{definition}</p>}
+                  {meaning && <p className="mt-2 text-sm font-semibold leading-snug text-primary">{meaning}</p>}
+                  {definition && <p className="mt-1 text-[13px] leading-snug text-foreground/90">{definition}</p>}
 
                   {(example || viExample) && (
-                    <div className="mt-3 rounded-lg bg-muted/30 p-3 text-sm">
-                      {example && <p className="font-medium text-foreground">{example}</p>}
-                      {viExample && <p className="mt-1 text-muted-foreground">{viExample}</p>}
+                    <div className="mt-2 border-t border-border/60 pt-2 text-[13px] leading-snug">
+                      {example && <p className="italic text-foreground/90">“{example}”</p>}
+                      {viExample && <p className="mt-0.5 text-muted-foreground">{viExample}</p>}
                     </div>
                   )}
                 </article>
@@ -233,8 +235,8 @@ export default function VocabTopicDetail() {
   );
 
   return (
-    <div className="py-3 xl:h-[calc(100vh-6rem)]">
-      <div className="mb-3 rounded-2xl border bg-background px-3 py-2">
+    <div className="py-2 xl:h-[calc(100vh-6rem)]">
+      <div className="mb-2 rounded-xl border bg-background px-2.5 py-1.5">
         <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
           <button
             onClick={handleHeaderBack}
@@ -259,18 +261,18 @@ export default function VocabTopicDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:h-[calc(100%-5.5rem)] xl:grid-cols-12">
+      <div className="grid grid-cols-1 gap-2 xl:h-[calc(100%-4.75rem)] xl:grid-cols-12">
         <aside
           className={`col-span-1 w-full flex-col overflow-hidden rounded-2xl border bg-background xl:col-span-4 xl:h-full xl:min-h-0 ${
             activeSubtopicId ? "hidden xl:flex" : "flex"
           }`}
         >
-          <div className="border-b px-3 py-2.5 sm:px-4 sm:py-3">
-            <h2 className="text-lg font-bold sm:text-xl">Sub-topics</h2>
+          <div className="border-b px-3 py-2">
+            <h2 className="text-lg font-bold">Sub-topics</h2>
             <p className="text-sm text-muted-foreground">Chọn bài để xem danh sách từ vựng.</p>
           </div>
 
-          <div className="flex-1 space-y-2 overflow-y-auto p-2.5 sm:p-3">
+          <div className="flex-1 space-y-1.5 overflow-y-auto p-2">
             {subtopicsStatus === "loading" && (
               <div className="flex justify-center py-10">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -292,9 +294,9 @@ export default function VocabTopicDetail() {
                       isActive
                         ? "border-primary/40 bg-primary/10 hover:border-primary/60"
                         : "border-border/70 bg-muted/20 hover:border-primary/30 hover:bg-background"
-                    } p-2.5 sm:p-3`}
+                    } p-2.5`}
                   >
-                    <div className="mb-1.5 flex items-start justify-between gap-2 sm:mb-2">
+                    <div className="mb-1 flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-muted-foreground">#{sub.order + 1}</span>

@@ -41,7 +41,6 @@ export const fetchVocabTopics = createAsyncThunk(
       if (params?.q) queryParams.q = params.q;
       if (params?.tags && params.tags.length > 0) queryParams.tags = params.tags;
       if (params?.status) queryParams.status = params.status;
-      queryParams.activeOnly = true;
       queryParams.page = params?.page ?? 0;
       queryParams.size = params?.size ?? 12;
       queryParams.sort = params?.sort ?? "newest";
@@ -80,7 +79,9 @@ const vocabSlide = createSlice({
       .addCase(fetchVocabTopics.pending, (s) => { s.status = "loading"; })
       .addCase(fetchVocabTopics.fulfilled, (s, a) => {
         s.status = "succeeded";
-        s.data = a.payload.data;
+        s.data = a.payload.data.filter((topic) =>
+          topic.status === "READY" && (topic.isActive === true || topic.active === true)
+        );
         s.page = a.payload.page;
         s.size = a.payload.size;
         s.totalElements = a.payload.totalElements;

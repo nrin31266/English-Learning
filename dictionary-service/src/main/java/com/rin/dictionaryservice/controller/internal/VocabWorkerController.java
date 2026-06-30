@@ -24,7 +24,7 @@ public class VocabWorkerController {
      * Internal endpoint called by the Python worker after processing a Word
      * (fetching dictionary data, generating definitions, etc.).
      * Triggers onWordReady → VocabWordEntry.wordReady=true →
-     * checkSubTopicCompletion → checkTopicCompletion → Kafka event → STOMP → UI.
+     * checkSubTopicCompletion → repair topic counters → Kafka event → STOMP → UI.
      */
     @PostMapping("/words-ready")
     public ApiResponse<String> onWordReady(@RequestBody WordReadyRequest req) {
