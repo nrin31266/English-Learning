@@ -23,8 +23,13 @@ def _json_array(values: list[str] | None) -> str:
 
 CUSTOM_POS_GUIDE = """Quy tắc POS:
 - POS là nhãn học từ vựng do hệ thống định nghĩa để dễ lưu và hiển thị.
-- Chỉ dùng một trong các giá trị sau:
+- Hệ thống có thể nhận POS từ spaCy, Penn Treebank hoặc custom POS.
+- Chỉ dùng một trong các giá trị sau nếu đang sinh word list cho vocab curriculum:
   NOUN, VERB, ADJ, ADV, PHRASE, PHRASAL_VERB, COLLOCATION, IDIOM, FIXED_EXPRESSION
+- Khi phân tích word click từ lesson hoặc dictionary lookup, có thể nhận thêm các POS sau:
+  PRON, DET, AUX, ADP, CCONJ, SCONJ, PART, NUM, INTJ, PROPN, OTHER
+
+Nhóm content words:
 - NOUN: danh từ đơn hoặc cụm danh từ thông dụng.
   Ví dụ: "fare", "boarding pass", "aisle seat", "customer feedback"
 - VERB: động từ đơn.
@@ -32,7 +37,32 @@ CUSTOM_POS_GUIDE = """Quy tắc POS:
 - ADJ: tính từ hoặc cụm tính từ ngắn.
   Ví dụ: "available", "non-refundable", "well known"
 - ADV: trạng từ hoặc cụm trạng từ.
-  Ví dụ: "in advance", "temporarily"
+  Ví dụ: "quickly", "often", "in advance", "temporarily"
+
+Nhóm function words dùng cho WordPopup/dictionary:
+- PRON: đại từ.
+  Ví dụ: "I", "you", "we", "they", "me", "him", "her", "myself"
+- DET: từ hạn định, mạo từ, lượng từ đứng trước danh từ.
+  Ví dụ: "a", "an", "the", "this", "that", "these", "those", "my", "your", "some", "any", "every", "each", "many", "much"
+- AUX: trợ động từ hoặc modal verb.
+  Ví dụ: "am", "is", "are", "was", "were", "be", "been", "being", "do", "does", "did", "have", "has", "had", "can", "could", "will", "would", "may", "might", "must", "should"
+- ADP: giới từ hoặc adposition.
+  Ví dụ: "in", "on", "at", "to", "from", "with", "about", "for", "of", "by"
+- CCONJ: liên từ đẳng lập.
+  Ví dụ: "and", "but", "or", "nor", "so", "yet"
+- SCONJ: liên từ phụ thuộc.
+  Ví dụ: "because", "although", "if", "when", "while", "before", "after"
+- PART: tiểu từ.
+  Ví dụ: "to" trong infinitive, "not", "up" trong một số cụm động từ
+- NUM: số hoặc từ chỉ số lượng.
+  Ví dụ: "one", "two", "first", "second", "half", "both"
+- INTJ: thán từ.
+  Ví dụ: "oh", "wow", "hey", "oops"
+- PROPN: tên riêng.
+  Ví dụ: "John", "Vietnam", "Google"
+- OTHER: POS không rõ hoặc không phân loại được.
+
+Nhóm phrase/custom:
 - PHRASE: cụm từ hữu ích nhưng không thuộc rõ các nhóm dưới.
   Ví dụ: "on time", "at risk", "under pressure"
 - PHRASAL_VERB: cụm động từ có particle/preposition và có nghĩa riêng.
@@ -43,12 +73,19 @@ CUSTOM_POS_GUIDE = """Quy tắc POS:
   Ví dụ: "break the ice", "hit the road"
 - FIXED_EXPRESSION: cụm diễn đạt cố định hoặc bán cố định.
   Ví dụ: "as soon as possible", "in charge of", "according to", "be responsible for something"
-- Nếu là cụm nhiều từ phổ biến, ưu tiên gán loại cụm cụ thể:
-  PHRASAL_VERB, COLLOCATION, IDIOM, FIXED_EXPRESSION.
-- Nếu không chắc cụm thuộc loại nào, dùng PHRASE.
+
+Luật đặc biệt:
+- Không được đánh isValid=false chỉ vì POS là PRON, DET, AUX, ADP, CCONJ, SCONJ, PART, NUM hoặc INTJ.
+- Function words vẫn là từ tiếng Anh hợp lệ và phải được giải thích nếu input là từ thật.
+- Với DET như "every", "each", "some", "any", phải giải thích vai trò hạn định/lượng từ.
+- Với AUX như "am", "is", "are", "do", "have", "can", phải giải thích vai trò trợ động từ hoặc động từ "be/do/have" tùy POS input.
+- Với ADP như "in", "on", "at", "to", phải giải thích nghĩa/cách dùng giới từ phổ biến.
+- Với contraction như "I'm", "you're", "he's", "don't", "can't", "won't", phải xem là tiếng Anh hợp lệ nếu input là contraction thật.
+- Nếu contraction có thể phân tích được, definitions nên giải thích dạng đầy đủ.
+  Ví dụ: "I'm" = "I am", "you're" = "you are", "don't" = "do not", "can't" = "cannot".
 - Có thể dùng placeholder tự nhiên trong cụm nếu cụm đó thường cần tân ngữ/chủ thể:
   someone, somebody, something, one's, your.
-  Ví dụ: "wake someone up", "take something into account", "lose touch with someone", "do one's best", "brush your teeth".
+  Ví dụ: "wake someone up", "take something into account", "lose touch with someone", "do one's best".
 """
 
 

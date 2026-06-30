@@ -39,58 +39,76 @@ public class WordService {
     ObjectMapper objectMapper;
     DictionaryApiClient dictionaryApiClient;
 
-    private static final Map<String, List<String>> SPACY_TO_API_POS = Map.ofEntries(
-            Map.entry("VERB", List.of("verb", "v")),
-            Map.entry("NOUN", List.of("noun", "n")),
-            Map.entry("ADJ", List.of("adjective", "adj", "a")),
-            Map.entry("ADV", List.of("adverb", "adv")),
-            Map.entry("PRON", List.of("pronoun", "pron")),
-            Map.entry("PREP", List.of("preposition", "prep")),
-            Map.entry("CONJ", List.of("conjunction", "conj")),
-            Map.entry("DET", List.of("determiner", "det", "article")),
-            Map.entry("NUM", List.of("numeral", "num", "number")),
-            Map.entry("INTJ", List.of("interjection", "int")),
-            Map.entry("AUX", List.of("auxiliary", "aux", "helping verb")),
-            Map.entry("PART", List.of("particle", "part")),
-            Map.entry("SCONJ", List.of("subordinating conjunction", "sconj")),
-            Map.entry("CCONJ", List.of("coordinating conjunction", "cconj")),
-            Map.entry("PROPN", List.of("proper noun", "propn", "name"))
+    private static final Map<String, List<String>> POS_ALIASES = Map.ofEntries(
+            Map.entry("NOUN", List.of("n", "nn", "nns", "noun")),
+            Map.entry("PROPN", List.of("nnp", "nnps", "propn", "proper_noun", "proper noun", "name")),
+
+            Map.entry("VERB", List.of("v", "vb", "vbd", "vbg", "vbn", "vbp", "vbz", "verb")),
+            Map.entry("AUX", List.of("md", "aux", "auxiliary", "modal", "helping verb")),
+
+            Map.entry("ADJ", List.of("a", "jj", "jjr", "jjs", "adj", "adjective")),
+            Map.entry("ADV", List.of("r", "rb", "rbr", "rbs", "wrb", "adv", "adverb")),
+
+            Map.entry("PRON", List.of("prp", "prp$", "wp", "wp$", "pron", "pronoun")),
+            Map.entry("DET", List.of("dt", "pdt", "wdt", "det", "determiner", "article")),
+
+            Map.entry("ADP", List.of("in", "adp", "prep", "preposition")),
+            Map.entry("CCONJ", List.of("cc", "conj", "cconj", "conjunction", "coordinating conjunction")),
+            Map.entry("SCONJ", List.of("sconj", "subordinating conjunction")),
+
+            Map.entry("NUM", List.of("cd", "num", "numeral", "number")),
+            Map.entry("PART", List.of("pos", "rp", "to", "part", "particle")),
+            Map.entry("INTJ", List.of("uh", "int", "intj", "interjection")),
+
+            Map.entry("PUNCT", List.of("punct", "punctuation")),
+            Map.entry("SYM", List.of("sym", "symbol")),
+
+            Map.entry("PHRASE", List.of("phrase", "phr")),
+            Map.entry("PHRASAL_VERB", List.of("phrasal_verb", "phrasalverb", "phr_v")),
+            Map.entry("COLLOCATION", List.of("collocation", "colloc")),
+            Map.entry("IDIOM", List.of("idiom", "idiomatic_expression")),
+            Map.entry("FIXED_EXPRESSION", List.of("fixed_expression", "fixed_phrase")),
+
+            Map.entry("OTHER", List.of("x", "fw", "unknown", "other"))
     );
-
     private String normalizePos(String pos) {
-        if (pos == null) return null;
+        if (pos == null || pos.isBlank()) return null;
 
-        String upperPos = pos.toUpperCase();
+        String normalized = pos.trim()
+                .toUpperCase()
+                .replace("-", "_")
+                .replace(" ", "_");
 
-        // Kiểm tra nếu có mapping
-        if (SPACY_TO_API_POS.containsKey(upperPos)) {
-            // Ưu tiên trả về mapping đầu tiên (thông dụng nhất)
-            return SPACY_TO_API_POS.get(upperPos).get(0);
+        if (POS_ALIASES.containsKey(normalized)) {
+            return normalized;
         }
 
-        // Fallback: trả về lowercase
-        return pos.toLowerCase();
+        for (Map.Entry<String, List<String>> entry : POS_ALIASES.entrySet()) {
+            boolean matched = entry.getValue().stream()
+                    .anyMatch(alias -> alias.equalsIgnoreCase(pos.trim())
+                            || alias.replace(" ", "_").equalsIgnoreCase(normalized));
+
+            if (matched) {
+                return entry.getKey();
+            }
+        }
+
+        return normalized;
     }
 
-    // Hỗ trợ fuzzy matching (cho trường hợp dictionary API trả về POS hơi khác)
     private String fuzzyMatchPos(String apiPos, String targetPos) {
         if (apiPos == null || targetPos == null) return null;
 
-        String apiPosLower = apiPos.toLowerCase();
-        String targetPosNormalized = normalizePos(targetPos);
+        String canonicalTarget = normalizePos(targetPos);
+        String apiPosLower = apiPos.trim().toLowerCase();
 
-        // Exact match
-        if (apiPosLower.equals(targetPosNormalized)) {
-            return targetPosNormalized;
-        }
+        if (canonicalTarget == null) return null;
 
-        // Check nếu apiPos nằm trong danh sách mapping của targetPos
-        String upperTarget = targetPos.toUpperCase();
-        if (SPACY_TO_API_POS.containsKey(upperTarget)) {
-            List<String> allowedApiPos = SPACY_TO_API_POS.get(upperTarget);
-            if (allowedApiPos.contains(apiPosLower)) {
-                return apiPosLower;
-            }
+        List<String> aliases = POS_ALIASES.getOrDefault(canonicalTarget, List.of());
+
+        if (canonicalTarget.equalsIgnoreCase(apiPos)
+                || aliases.stream().anyMatch(alias -> alias.equalsIgnoreCase(apiPosLower))) {
+            return canonicalTarget;
         }
 
         return null;
@@ -195,7 +213,7 @@ public class WordService {
                     .definitions(List.of())
                     .build();
         }
-        if (!isValidWord(wordSoft, request.getPosTag(), request.getEntityType())) {
+        if (!isValidWord(wordSoft)) {
             throw new BaseException(BaseErrorCode.INVALID_REQUEST, "Invalid word: " + request.getText());
         }
 
@@ -266,33 +284,56 @@ public class WordService {
     // 'LAW', 'LOC', 'MONEY', 'NORP', 'ORDINAL', 'ORG',
     // 'PERCENT', 'PERSON', 'PRODUCT', 'QUANTITY',
     // 'TIME', 'WORK_OF_ART')
-    private boolean isValidWord(String text, String pos, String entType) {
+    private boolean isValidWord(String text) {
+        if (text == null) return false;
 
+        String value = text.trim();
+        if (value.isEmpty()) return false;
 
-        // số
-        if (text.matches("\\d+")) return false;
+        String lower = value.toLowerCase();
 
-        // link/email
-        if (text.contains("@") || text.contains("http") || text.contains("www")) return false;
+        // Chặn URL/email
+        if (lower.contains("@")
+                || lower.startsWith("http://")
+                || lower.startsWith("https://")
+                || lower.startsWith("www.")
+                || lower.contains(".com")
+                || lower.contains(".vn")
+                || lower.contains(".net")
+                || lower.contains(".org")) {
+            return false;
+        }
 
-        // ký tự
-        if (!text.matches("^[a-zA-Z]+([-''][a-zA-Z]+)*$")) return false;
+        // Chặn token quá dài bất thường
+        if (value.length() > 40) return false;
 
-        // loại proper noun
-        if ("PROPN".equals(pos)) return false;
+        // Chặn rỗng / quá ngắn, nhưng cho phép I, a
+        if (value.length() < 2
+                && !"I".equals(value)
+                && !"a".equalsIgnoreCase(value)) {
+            return false;
+        }
 
-        // chỉ chặn ent_type "rác"
-        List<String> invalidEntTypes = Arrays.asList(
-                "DATE", "TIME",
-                "MONEY", "PERCENT", "QUANTITY"
-        );
+        // Chặn có khoảng trắng vì flow này là click 1 từ đơn trong lesson
+        if (value.matches(".*\\s+.*")) return false;
 
-        if (invalidEntTypes.contains(entType)) return false;
+        // Chặn toàn số
+        if (value.matches("^\\d+$")) return false;
 
-        // độ dài
-        if (text.length() < 2 && !"I".equals(text)) return false;
+        // Chặn số + ký hiệu spam rõ ràng: 50%, $20, 12/10, 7:30
+        if (value.matches(".*\\d.*") && value.matches(".*[%$€£¥₫/,:].*")) {
+            return false;
+        }
 
-        return true;
+        // Chặn token toàn punctuation/ký tự đặc biệt
+        if (!value.matches(".*\\p{L}.*")) return false;
+
+        // Chặn ký tự nguy hiểm/rác
+        if (value.matches(".*[<>\\[\\]{}()=+*_#~`|\\\\].*")) return false;
+
+        // Cho phép chữ Unicode, apostrophe, dấu nháy cong, hyphen.
+        // Ví dụ: Every, week, don't, don’t, teacher's, well-known, café, résumé.
+        return value.matches("(?iu)^\\p{L}+(?:['’\\-]\\p{L}+)*$");
     }
     @Scheduled(fixedDelay = 60000)
     public void recoverStuckJobs() {
