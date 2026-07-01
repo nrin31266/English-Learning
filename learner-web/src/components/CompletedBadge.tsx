@@ -7,9 +7,10 @@ interface CompletedBadgeProps {
   className?: string
   size?: "sm" | "md"
   isAbsolute?: boolean // Tùy chọn để neo góc tuyệt đối hoặc không
+  label?: string
 }
 
-const CompletedBadge = ({ className, size = "md", isAbsolute = true }: CompletedBadgeProps) => {
+const CompletedBadge = ({ className, size = "md", isAbsolute = true, label }: CompletedBadgeProps) => {
   return (
     <div 
       className={cn(
@@ -29,9 +30,7 @@ const CompletedBadge = ({ className, size = "md", isAbsolute = true }: Completed
       <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={3} />
       
       <span className="text-[11px] sm:text-[12px] font-bold uppercase tracking-widest mt-[0.5px]">
-        {/* 👉 Responsive text: Màn nhỏ hiện DONE, màn sm trở lên hiện COMPLETED */}
-        <span className="inline sm:hidden">Done</span>
-        <span className="hidden sm:inline">Completed</span>
+        {label || <><span className="inline sm:hidden">Done</span><span className="hidden sm:inline">Completed</span></>}
       </span>
     </div>
   )

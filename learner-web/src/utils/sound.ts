@@ -15,3 +15,10 @@ export const failSound = new Howl({
   volume: 0.8,
   html5: false,
 })
+
+export const rewardCelebrationSound = new Howl({
+  src: ["/sounds/preview.ogg"],
+  preload: true,
+  volume: 0.8,
+  html5: false,
+})

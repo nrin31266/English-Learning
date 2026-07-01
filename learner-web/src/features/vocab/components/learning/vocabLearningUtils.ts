@@ -1,6 +1,7 @@
 import type { IVocabWordEntry } from "@/types";
 
 export type VocabLearningMode = "FLASHCARD" | "EN_TO_VI" | "VI_TO_EN" | "LISTEN_AND_TYPE";
+export type VocabStudyPlan = "COMBINED" | VocabLearningMode;
 export type ReviewRating = "AGAIN" | "HARD" | "MEDIUM" | "EASY" | "DONE";
 
 export type LocalVocabWordProgress = {
@@ -24,6 +25,10 @@ export const REVIEW_RATING_META: Record<ReviewRating, { label: string; interval:
   AGAIN: { label: "Học lại", interval: "1d" }, HARD: { label: "Khó", interval: "3d" },
   MEDIUM: { label: "Trung bình", interval: "7d" }, EASY: { label: "Dễ", interval: "14d" },
   DONE: { label: "Đã thuộc", interval: "Hoàn tất" },
+};
+
+export const REVIEW_RATING_SCORE: Record<ReviewRating, number> = {
+  AGAIN: 20, HARD: 40, MEDIUM: 60, EASY: 100, DONE: 100,
 };
 
 export const REVIEW_RATING_STYLES: Record<ReviewRating, string> = {
@@ -91,7 +96,7 @@ export function applyReviewRating(progress: LocalVocabWordProgress, rating: Revi
   const day = 24 * 3_600_000;
   const delays: Partial<Record<ReviewRating, number>> = { AGAIN: day, HARD: 3 * day, MEDIUM: 7 * day, EASY: 14 * day };
   const delay = delays[rating];
-  return { ...progress, reviewRating: rating, nextReviewAt: delay ? new Date(now.getTime() + delay).toISOString() : null, needsReview: rating === "AGAIN" || rating === "HARD" || rating === "MEDIUM", isDone: rating === "DONE", lastStudiedAt: now.toISOString() };
+  return { ...progress, reviewRating: rating, nextReviewAt: delay ? new Date(now.getTime() + delay).toISOString() : null, needsReview: rating === "AGAIN" || rating === "HARD" || rating === "MEDIUM", isDone: rating === "DONE", lastStudiedAt: now.toISOString(), masteryScore: REVIEW_RATING_SCORE[rating] };
 }
 
 export const needsReview = (progress?: LocalVocabWordProgress) => !!progress && !progress.isDone && (progress.needsReview || !!progress.nextReviewAt);
@@ -108,7 +113,8 @@ export function loadProgress(subtopicId: string): ProgressMap {
     return Object.fromEntries(Object.entries(stored).map(([id, value]) => {
       if (Array.isArray(value.completedModes)) {
         const mappedModes = [...new Set((value.completedModes as string[]).map((mode) => mode === "MULTIPLE_CHOICE" ? "EN_TO_VI" : mode === "TYPE_WORD" ? "LISTEN_AND_TYPE" : mode).filter((mode): mode is VocabLearningMode => ["FLASHCARD", "EN_TO_VI", "VI_TO_EN", "LISTEN_AND_TYPE"].includes(mode)))];
-        return [id, { ...emptyProgress(id), ...value, completedModes: mappedModes, wordId: id } as LocalVocabWordProgress];
+        const reviewRating = value.reviewRating as ReviewRating | undefined;
+        return [id, { ...emptyProgress(id), ...value, completedModes: mappedModes, wordId: id, masteryScore: reviewRating ? REVIEW_RATING_SCORE[reviewRating] : Math.min(100, Number(value.masteryScore || 0)) } as LocalVocabWordProgress];
       }
       const legacyRating: ReviewRating | undefined = value.status === "MASTERED" || value.knowledgeLevel === "EASY" ? "DONE" : value.isHard || value.knowledgeLevel === "HARD" || value.knowledgeLevel === "UNKNOWN" ? "HARD" : value.seenCount ? "MEDIUM" : undefined;
       const migrated = { ...emptyProgress(id), seenCount: Number(value.seenCount || 0), completedModes: value.seenCount ? ["FLASHCARD" as const] : [], modeScores: value.seenCount ? { FLASHCARD: 20 } : {}, masteryScore: value.seenCount ? 20 : 0 };

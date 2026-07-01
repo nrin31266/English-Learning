@@ -553,3 +553,18 @@ body{
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+@keyframes reward-celebration-burst {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(0deg); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(45deg); }
+  75% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--burst-x)), calc(-50% + var(--burst-y))) scale(0.75) rotate(540deg); }
+}
+
+.reward-celebration-particle {
+  animation: reward-celebration-burst 1.8s cubic-bezier(0.18, 0.8, 0.28, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reward-celebration-particle { display: none; }
+}

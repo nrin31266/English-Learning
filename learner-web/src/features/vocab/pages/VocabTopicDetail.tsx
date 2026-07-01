@@ -4,10 +4,15 @@ import { clearDetail, fetchSubTopics, fetchTopicDetail, fetchWords, setActiveSub
 import type { IVocabSubTopic, IVocabWordEntry } from "@/types";
 import { getPartOfSpeechI18nKey } from "@/utils/partOfSpeech";
 import VocabLearningPanel from "../components/learning/VocabLearningPanel";
-import { loadProgress, needsReview, REVIEW_RATING_META, REVIEW_RATING_STYLES, saveProgress, type ProgressMap } from "../components/learning/vocabLearningUtils";
+import { loadProgress, needsReview, REVIEW_RATING_META, REVIEW_RATING_STYLES, saveProgress, type ProgressMap, type VocabStudyPlan } from "../components/learning/vocabLearningUtils";
 import {
   ArrowLeft,
   BookMarked,
+  CircleHelp,
+  Headphones,
+  Languages,
+  Layers3,
+  LayoutGrid,
   Loader2,
   Volume2,
 } from "lucide-react";
@@ -46,6 +51,22 @@ function playWordAudio(word: IVocabWordEntry) {
   void new Audio(audioUrl).play();
 }
 
+const STUDY_PLANS: Array<{ id: VocabStudyPlan; label: string; description: string }> = [
+  { id: "COMBINED", label: "Kết hợp", description: "Học lần lượt cả 4 chế độ" },
+  { id: "FLASHCARD", label: "Flashcard", description: "Xem thẻ và ghi nhớ" },
+  { id: "EN_TO_VI", label: "Anh → Việt", description: "Chọn nghĩa tiếng Việt" },
+  { id: "VI_TO_EN", label: "Việt → Anh", description: "Chọn từ tiếng Anh" },
+  { id: "LISTEN_AND_TYPE", label: "Nghe & nhập", description: "Nghe rồi gõ lại từ" },
+];
+
+const STUDY_PLAN_ICONS = [
+  { id: "COMBINED" as const, icon: LayoutGrid, shortLabel: "Kết hợp" },
+  { id: "FLASHCARD" as const, icon: Layers3, shortLabel: "Thẻ" },
+  { id: "EN_TO_VI" as const, icon: CircleHelp, shortLabel: "Anh→Việt" },
+  { id: "VI_TO_EN" as const, icon: Languages, shortLabel: "Việt→Anh" },
+  { id: "LISTEN_AND_TYPE" as const, icon: Headphones, shortLabel: "Nghe" },
+];
+
 export default function VocabTopicDetail() {
   const { t } = useTranslation();
   const { id, subtopicId } = useParams<{ id: string; subtopicId?: string }>();
@@ -55,6 +76,7 @@ export default function VocabTopicDetail() {
   const [startLearningInReview, setStartLearningInReview] = useState(false);
   const [learnAllRemaining, setLearnAllRemaining] = useState(false);
   const [localProgress, setLocalProgress] = useState<ProgressMap>({});
+  const [studyPlan, setStudyPlan] = useState<VocabStudyPlan>("COMBINED");
 
   const { topic, topicStatus, subtopics, subtopicsStatus, words, wordsStatus, activeSubtopicId } = useAppSelector((s) => s.vocabDetail);
 
@@ -114,9 +136,8 @@ export default function VocabTopicDetail() {
 
   const hardCount = words.filter((word) => needsReview(localProgress[word.id])).length;
   const learnedCount = words.filter((word) => !!localProgress[word.id]?.reviewRating).length;
-  const doneCount = words.filter((word) => localProgress[word.id]?.reviewRating === "DONE").length;
   const remainingCount = words.filter((word) => !localProgress[word.id]?.reviewRating).length;
-  const hasStartedLearning = Object.values(localProgress).some((progress) => progress.seenCount > 0 || progress.completedModes.length > 0);
+  const activeStudyPlanIndex = Math.max(0, STUDY_PLAN_ICONS.findIndex((plan) => plan.id === studyPlan));
 
   const handleSelectSubtopic = (sub: IVocabSubTopic) => {
     if (!id) return;
@@ -151,48 +172,23 @@ export default function VocabTopicDetail() {
 
   const rightLearningState = (
     <div className="flex flex-col p-2.5 sm:p-3 xl:h-full xl:min-h-0 xl:overflow-y-auto">
-      <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate text-xl font-bold">{activeSubtopic?.title}</h2>
-              {activeSubtopic?.cefrLevel && (
-                <LanguageLevelBadge
-                  level={activeSubtopic.cefrLevel as LanguageLevel}
-                  className="h-6 min-w-[2.1rem] px-2 text-[10px]"
-                  hasBg
-                />
-              )}
-            </div>
-            {activeSubtopic?.titleVi && (
-              <p className="mt-1 text-sm text-muted-foreground">{activeSubtopic.titleVi}</p>
-            )}
+      <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="truncate text-xl font-bold tracking-tight sm:text-2xl">{activeSubtopic?.title}</h2>{activeSubtopic?.cefrLevel && <LanguageLevelBadge level={activeSubtopic.cefrLevel as LanguageLevel} className="h-6 min-w-[2.1rem] px-2 text-[10px]" hasBg />}</div></div>
+        </div>
+        <div className="mt-1.5 max-w-2xl">{activeSubtopic?.titleVi && <p className="text-sm text-muted-foreground">{activeSubtopic.titleVi}</p>}<p className="mt-2 text-xs text-muted-foreground"><b className="font-semibold text-foreground">{learnedCount}/{words.length}</b> từ đã học<span className="mx-1.5">·</span>{remainingCount} từ còn lại{hardCount > 0 && <><span className="mx-1.5">·</span><span className="font-medium text-amber-600 dark:text-amber-400">{hardCount} cần ôn</span></>}</p><div className="mt-1.5 h-1.5 max-w-md overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${words.length ? Math.round(learnedCount / words.length * 100) : 0}%` }} /></div></div>
+
+        <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="relative grid h-12 w-full max-w-md shrink-0 grid-cols-5 overflow-hidden rounded-xl border bg-muted/60 p-1 xl:w-96">
+            <span className="absolute bottom-1 top-1 w-[calc(20%-0.4rem)] rounded-lg border bg-background shadow-sm transition-[left] duration-300" style={{ left: `calc(${activeStudyPlanIndex * 20}% + 0.2rem)` }} />
+            {STUDY_PLAN_ICONS.map((item) => { const Icon = item.icon; const plan = STUDY_PLANS.find((candidate) => candidate.id === item.id); const active = studyPlan === item.id; return <button key={item.id} onClick={() => setStudyPlan(item.id)} title={`${plan?.label}: ${plan?.description}`} aria-label={plan?.label} className={cn("relative z-10 flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors", active ? "text-primary" : "text-muted-foreground hover:text-foreground")}><Icon className={cn("h-3.5 w-3.5", active && "drop-shadow-sm")} /><span className="whitespace-nowrap text-[9px] font-semibold leading-none sm:text-[10px]">{item.shortLabel}</span></button>; })}
           </div>
-          <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:justify-end">
-            <span className="rounded-lg border bg-background px-3 py-1.5 text-xs"><span className="text-muted-foreground">Còn lại </span><b>{remainingCount}/{words.length}</b></span>
-            <button disabled={!remainingCount} onClick={() => { setStartLearningInReview(false); setLearnAllRemaining(false); setLearningMode(true); }} className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground disabled:opacity-50">Học {Math.min(5, remainingCount)} từ</button>
-            <button disabled={!remainingCount} onClick={() => { setStartLearningInReview(false); setLearnAllRemaining(true); setLearningMode(true); }} className="inline-flex h-8 items-center justify-center rounded-lg border bg-background px-3 text-xs font-bold disabled:opacity-50">Học hết {remainingCount} từ</button>
-            <button disabled={!hardCount} onClick={() => { setStartLearningInReview(true); setLearnAllRemaining(false); setLearningMode(true); }} title={hardCount ? "Học lại tối đa 5 từ bạn chưa nhớ chắc" : "Chưa có từ nào cần học lại"} className="inline-flex h-8 items-center justify-center rounded-lg border bg-background px-3 text-xs font-bold disabled:opacity-50">Học lại từ chưa nhớ{hardCount ? ` (${hardCount})` : ""}</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button disabled={!remainingCount} onClick={() => { setStartLearningInReview(false); setLearnAllRemaining(false); setLearningMode(true); }} className="inline-flex h-9 flex-1 items-center justify-center rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition-opacity disabled:opacity-50 sm:flex-none">Bắt đầu {Math.min(5, remainingCount)} từ</button>
+            <button disabled={!remainingCount} onClick={() => { setStartLearningInReview(false); setLearnAllRemaining(true); setLearningMode(true); }} className="inline-flex h-9 flex-1 items-center justify-center rounded-lg border bg-background px-4 text-sm font-semibold transition-colors hover:bg-muted disabled:opacity-50 sm:flex-none">Học tất cả</button>
+            <button disabled={!hardCount} onClick={() => { setStartLearningInReview(true); setLearnAllRemaining(false); setLearningMode(true); }} title={hardCount ? "Học lại tối đa 5 từ bạn chưa nhớ chắc" : "Chưa có từ nào cần học lại"} className="inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40">Ôn lại{hardCount ? ` (${hardCount})` : ""}</button>
           </div>
         </div>
-        {hasStartedLearning && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-md border bg-background px-2 py-1 font-medium">Đã học {learnedCount}/{words.length}</span>
-            <span className="rounded-md border bg-background px-2 py-1 font-medium">Hoàn tất {doneCount}</span>
-            {hardCount > 0 && <span className="rounded-md border bg-background px-2 py-1 font-medium">Cần ôn {hardCount}</span>}
-            <button
-              className="ml-auto rounded-md px-2 py-1 font-medium text-muted-foreground hover:bg-background hover:text-foreground"
-              onClick={() => {
-                if (!activeSubtopicId || !window.confirm("Đặt lại toàn bộ tiến độ học thử của subtopic này?")) return;
-                localStorage.removeItem(`vocab-learning:${activeSubtopicId}`);
-                localStorage.removeItem(`vocab-learning-plan:${activeSubtopicId}`);
-                setLocalProgress({});
-              }}
-            >
-              Đặt lại tiến độ
-            </button>
-          </div>
-        )}
       </div>
 
       {wordsStatus === "loading" && (
@@ -308,13 +304,13 @@ export default function VocabTopicDetail() {
 
       <div className="grid grid-cols-1 gap-2 xl:h-[calc(100%-4.75rem)] xl:grid-cols-12">
         <aside
-          className={`col-span-1 w-full flex-col overflow-hidden rounded-2xl border bg-background xl:col-span-4 xl:h-full xl:min-h-0 ${
+          className={`col-span-1 w-full flex-col overflow-hidden rounded-2xl border bg-background xl:col-span-3 xl:h-full xl:min-h-0 ${
             learningMode ? "hidden" : activeSubtopicId ? "hidden xl:flex" : "flex"
           }`}
         >
-          <div className="border-b px-3 py-2">
-            <h2 className="text-lg font-bold">Sub-topics</h2>
-            <p className="text-sm text-muted-foreground">Chọn bài để xem danh sách từ vựng.</p>
+          <div className="border-b px-3 py-2.5">
+            <h2 className="text-base font-bold">Sub-topics</h2>
+            <p className="text-xs text-muted-foreground">Chọn bài để xem từ vựng.</p>
           </div>
 
           <div className="flex-1 space-y-1.5 overflow-y-auto p-2">
@@ -337,40 +333,27 @@ export default function VocabTopicDetail() {
                   <button
                     key={sub.id}
                     onClick={() => handleSelectSubtopic(sub)}
-                    className={`group w-full rounded-xl border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+                    className={`group w-full rounded-lg border border-l-2 p-2.5 text-left transition-colors ${
                       isActive
-                        ? "border-primary/40 bg-primary/10 hover:border-primary/60"
-                        : "border-border/70 bg-muted/20 hover:border-primary/30 hover:bg-background"
-                    } p-2.5`}
+                        ? "border-primary/40 border-l-primary bg-primary/[0.07] shadow-sm"
+                        : "border-border/60 border-l-transparent bg-background hover:border-primary/25 hover:bg-muted/30"
+                    }`}
                   >
-                    <div className="mb-1 flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-muted-foreground">#{sub.order + 1}</span>
+                    <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-semibold text-muted-foreground">#{sub.order + 1}</span>
                           {sub.cefrLevel && (
                             <LanguageLevelBadge
                               level={sub.cefrLevel as LanguageLevel}
-                              className="h-6 min-w-[2.1rem] px-2 text-[10px]"
+                              className="h-5 min-w-[1.8rem] px-1.5 text-[9px]"
                               hasBg
                             />
                           )}
-                        </div>
-                        <p className="mt-0.5 truncate text-sm font-semibold transition-colors group-hover:text-primary sm:mt-1 sm:text-base">{sub.title}</p>
-                        {sub.titleVi && (
-                          <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">{sub.titleVi}</p>
-                        )}
-                      </div>
                     </div>
-                    <div className="mt-2">
-                      <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
-                        <span className={cn("font-semibold", learningProgress.learned > 0 ? "text-primary" : "text-muted-foreground")}>{progressStatus}</span>
-                        <span className="text-muted-foreground">{learningProgress.learned}/{learningProgress.total} từ · {learningProgress.percent}%</span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${learningProgress.percent}%` }} />
-                      </div>
-                      {learningProgress.needsReviewCount > 0 && <p className="mt-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">{learningProgress.needsReviewCount} từ cần ôn lại</p>}
-                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug transition-colors group-hover:text-primary">{sub.title}</p>
+                    {sub.titleVi && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{sub.titleVi}</p>}
+                    <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">{learningProgress.percent >= 100 ? <span className="font-semibold text-emerald-600 dark:text-emerald-400">Hoàn thành</span> : <span className={cn("font-medium", learningProgress.learned > 0 ? "text-primary" : "text-muted-foreground")}>{progressStatus}</span>}<span className="text-muted-foreground">{learningProgress.learned}/{learningProgress.total} từ</span></div>
+                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${learningProgress.percent}%` }} /></div>
+                    {learningProgress.needsReviewCount > 0 && <p className="mt-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">{learningProgress.needsReviewCount} từ cần ôn</p>}
                   </button>
                 );
               })}
@@ -378,7 +361,7 @@ export default function VocabTopicDetail() {
         </aside>
 
         <main
-          className={`col-span-1 w-full rounded-2xl border bg-background ${learningMode ? "xl:col-span-12" : "xl:col-span-8"} xl:h-full xl:min-h-0 xl:overflow-hidden ${
+          className={`col-span-1 w-full rounded-2xl border bg-background ${learningMode ? "xl:col-span-12" : "xl:col-span-9"} xl:h-full xl:min-h-0 xl:overflow-hidden ${
             activeSubtopicId ? "block" : "hidden xl:block"
           }`}
         >
@@ -391,6 +374,7 @@ export default function VocabTopicDetail() {
               onClose={() => setLearningMode(false)}
               startInReview={startLearningInReview}
               learnAll={learnAllRemaining}
+              studyPlan={studyPlan}
             />
           ) : rightLearningState}
         </main>
