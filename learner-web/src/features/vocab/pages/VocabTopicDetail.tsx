@@ -3,15 +3,18 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { clearDetail, fetchSubTopics, fetchTopicDetail, fetchWords, setActiveSubtopic } from "@/store/vocabDetailSlide";
 import type { IVocabSubTopic, IVocabWordEntry } from "@/types";
 import { getPartOfSpeechI18nKey } from "@/utils/partOfSpeech";
+import VocabLearningPanel from "../components/learning/VocabLearningPanel";
+import { loadProgress, needsReview, REVIEW_RATING_META, REVIEW_RATING_STYLES, saveProgress, type ProgressMap } from "../components/learning/vocabLearningUtils";
 import {
   ArrowLeft,
   BookMarked,
   Loader2,
   Volume2,
 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 function getWordDefinition(word: IVocabWordEntry) {
   return word.contextDefinition || word.wordDetail?.definitions?.[0]?.definition || "";
@@ -48,6 +51,10 @@ export default function VocabTopicDetail() {
   const { id, subtopicId } = useParams<{ id: string; subtopicId?: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const [learningMode, setLearningMode] = useState(false);
+  const [startLearningInReview, setStartLearningInReview] = useState(false);
+  const [learnAllRemaining, setLearnAllRemaining] = useState(false);
+  const [localProgress, setLocalProgress] = useState<ProgressMap>({});
 
   const { topic, topicStatus, subtopics, subtopicsStatus, words, wordsStatus, activeSubtopicId } = useAppSelector((s) => s.vocabDetail);
 
@@ -60,6 +67,16 @@ export default function VocabTopicDetail() {
     () => activeSubtopics.find((s) => s.id === activeSubtopicId),
     [activeSubtopics, activeSubtopicId]
   );
+
+  const subtopicProgress = useMemo(() => new Map(activeSubtopics.map((sub) => {
+    const savedProgress = sub.id === activeSubtopicId ? localProgress : loadProgress(sub.id);
+    const entries = Object.values(savedProgress);
+    const learned = entries.filter((item) => !!item.reviewRating).length;
+    const needsReviewCount = entries.filter((item) => needsReview(item)).length;
+    const total = sub.wordCount ?? 0;
+    const percent = total > 0 ? Math.min(100, Math.round(learned / total * 100)) : 0;
+    return [sub.id, { learned, needsReviewCount, total, percent }] as const;
+  })), [activeSubtopicId, activeSubtopics, localProgress]);
 
   useEffect(() => {
     if (!id) return;
@@ -84,7 +101,22 @@ export default function VocabTopicDetail() {
   useEffect(() => {
     if (!activeSubtopicId) return;
     dispatch(fetchWords(activeSubtopicId));
+    setLocalProgress(loadProgress(activeSubtopicId));
+    setLearningMode(false);
+    setStartLearningInReview(false);
+    setLearnAllRemaining(false);
   }, [dispatch, activeSubtopicId]);
+
+  const handleProgressChange = useCallback((progress: ProgressMap) => {
+    setLocalProgress(progress);
+    if (activeSubtopicId) saveProgress(activeSubtopicId, progress);
+  }, [activeSubtopicId]);
+
+  const hardCount = words.filter((word) => needsReview(localProgress[word.id])).length;
+  const learnedCount = words.filter((word) => !!localProgress[word.id]?.reviewRating).length;
+  const doneCount = words.filter((word) => localProgress[word.id]?.reviewRating === "DONE").length;
+  const remainingCount = words.filter((word) => !localProgress[word.id]?.reviewRating).length;
+  const hasStartedLearning = Object.values(localProgress).some((progress) => progress.seenCount > 0 || progress.completedModes.length > 0);
 
   const handleSelectSubtopic = (sub: IVocabSubTopic) => {
     if (!id) return;
@@ -136,20 +168,31 @@ export default function VocabTopicDetail() {
               <p className="mt-1 text-sm text-muted-foreground">{activeSubtopic.titleVi}</p>
             )}
           </div>
-          <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:min-w-36">
-            <div className="inline-flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Tổng số từ</span>
-              <span className="text-base font-bold">{words.length || activeSubtopic?.wordCount || 0}</span>
-            </div>
-            <button
-              disabled
-              title="Vocabulary practice is coming soon"
-              className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Sắp ra mắt
-            </button>
+          <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:justify-end">
+            <span className="rounded-lg border bg-background px-3 py-1.5 text-xs"><span className="text-muted-foreground">Còn lại </span><b>{remainingCount}/{words.length}</b></span>
+            <button disabled={!remainingCount} onClick={() => { setStartLearningInReview(false); setLearnAllRemaining(false); setLearningMode(true); }} className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground disabled:opacity-50">Học {Math.min(5, remainingCount)} từ</button>
+            <button disabled={!remainingCount} onClick={() => { setStartLearningInReview(false); setLearnAllRemaining(true); setLearningMode(true); }} className="inline-flex h-8 items-center justify-center rounded-lg border bg-background px-3 text-xs font-bold disabled:opacity-50">Học hết {remainingCount} từ</button>
+            <button disabled={!hardCount} onClick={() => { setStartLearningInReview(true); setLearnAllRemaining(false); setLearningMode(true); }} title={hardCount ? "Học lại tối đa 5 từ bạn chưa nhớ chắc" : "Chưa có từ nào cần học lại"} className="inline-flex h-8 items-center justify-center rounded-lg border bg-background px-3 text-xs font-bold disabled:opacity-50">Học lại từ chưa nhớ{hardCount ? ` (${hardCount})` : ""}</button>
           </div>
         </div>
+        {hasStartedLearning && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-md border bg-background px-2 py-1 font-medium">Đã học {learnedCount}/{words.length}</span>
+            <span className="rounded-md border bg-background px-2 py-1 font-medium">Hoàn tất {doneCount}</span>
+            {hardCount > 0 && <span className="rounded-md border bg-background px-2 py-1 font-medium">Cần ôn {hardCount}</span>}
+            <button
+              className="ml-auto rounded-md px-2 py-1 font-medium text-muted-foreground hover:bg-background hover:text-foreground"
+              onClick={() => {
+                if (!activeSubtopicId || !window.confirm("Đặt lại toàn bộ tiến độ học thử của subtopic này?")) return;
+                localStorage.removeItem(`vocab-learning:${activeSubtopicId}`);
+                localStorage.removeItem(`vocab-learning-plan:${activeSubtopicId}`);
+                setLocalProgress({});
+              }}
+            >
+              Đặt lại tiến độ
+            </button>
+          </div>
+        )}
       </div>
 
       {wordsStatus === "loading" && (
@@ -183,6 +226,9 @@ export default function VocabTopicDetail() {
               const audioUrl = getAudioUrl(word);
               const phonetic = getPhonetic(word);
               const posLabel = t(getPartOfSpeechI18nKey(word.pos));
+              const wordProgress = localProgress[word.id];
+              const progressCode = wordProgress?.reviewRating;
+              const progressLabel = progressCode ? REVIEW_RATING_META[progressCode].label : "New";
 
               return (
                 <article key={word.id} className="rounded-lg border border-border/70 bg-card px-2.5 py-2">
@@ -199,6 +245,11 @@ export default function VocabTopicDetail() {
                         </span>
                       </div>
                     </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className={cn(
+                        "rounded-full border px-2.5 py-1 text-xs font-bold",
+                        progressCode ? REVIEW_RATING_STYLES[progressCode] : "border-border bg-muted text-muted-foreground"
+                      )}>{progressLabel}</span>
                     {audioUrl && (
                       <button
                         onClick={() => playWordAudio(word)}
@@ -208,6 +259,7 @@ export default function VocabTopicDetail() {
                         <Volume2 className="h-4 w-4" />
                       </button>
                     )}
+                    </div>
                   </div>
 
                   {meaning && <p className="mt-0.5 text-[15px] font-semibold leading-snug text-primary">{meaning}</p>}
@@ -257,7 +309,7 @@ export default function VocabTopicDetail() {
       <div className="grid grid-cols-1 gap-2 xl:h-[calc(100%-4.75rem)] xl:grid-cols-12">
         <aside
           className={`col-span-1 w-full flex-col overflow-hidden rounded-2xl border bg-background xl:col-span-4 xl:h-full xl:min-h-0 ${
-            activeSubtopicId ? "hidden xl:flex" : "flex"
+            learningMode ? "hidden" : activeSubtopicId ? "hidden xl:flex" : "flex"
           }`}
         >
           <div className="border-b px-3 py-2">
@@ -279,6 +331,8 @@ export default function VocabTopicDetail() {
             {subtopicsStatus === "succeeded" &&
               activeSubtopics.map((sub) => {
                 const isActive = sub.id === activeSubtopicId;
+                const learningProgress = subtopicProgress.get(sub.id) || { learned: 0, needsReviewCount: 0, total: sub.wordCount ?? 0, percent: 0 };
+                const progressStatus = learningProgress.percent >= 100 ? "Hoàn thành" : learningProgress.learned > 0 ? "Đang học" : "Chưa học";
                 return (
                   <button
                     key={sub.id}
@@ -307,7 +361,16 @@ export default function VocabTopicDetail() {
                         )}
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">{sub.wordCount ?? 0} từ</div>
+                    <div className="mt-2">
+                      <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
+                        <span className={cn("font-semibold", learningProgress.learned > 0 ? "text-primary" : "text-muted-foreground")}>{progressStatus}</span>
+                        <span className="text-muted-foreground">{learningProgress.learned}/{learningProgress.total} từ · {learningProgress.percent}%</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${learningProgress.percent}%` }} />
+                      </div>
+                      {learningProgress.needsReviewCount > 0 && <p className="mt-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">{learningProgress.needsReviewCount} từ cần ôn lại</p>}
+                    </div>
                   </button>
                 );
               })}
@@ -315,11 +378,21 @@ export default function VocabTopicDetail() {
         </aside>
 
         <main
-          className={`col-span-1 w-full rounded-2xl border bg-background xl:col-span-8 xl:h-full xl:min-h-0 xl:overflow-hidden ${
+          className={`col-span-1 w-full rounded-2xl border bg-background ${learningMode ? "xl:col-span-12" : "xl:col-span-8"} xl:h-full xl:min-h-0 xl:overflow-hidden ${
             activeSubtopicId ? "block" : "hidden xl:block"
           }`}
         >
-          {!activeSubtopicId ? rightEmptyState : rightLearningState}
+          {!activeSubtopicId ? rightEmptyState : learningMode && activeSubtopic && words.length > 0 ? (
+            <VocabLearningPanel
+              subtopic={activeSubtopic}
+              words={words}
+              initialProgress={localProgress}
+              onProgressChange={handleProgressChange}
+              onClose={() => setLearningMode(false)}
+              startInReview={startLearningInReview}
+              learnAll={learnAllRemaining}
+            />
+          ) : rightLearningState}
         </main>
       </div>
     </div>
