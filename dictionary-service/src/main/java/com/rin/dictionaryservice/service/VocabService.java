@@ -480,6 +480,18 @@ public class VocabService {
         }
     }
 
+    public VocabSubTopicResponse deleteWordEntry(String entryId) {
+        VocabWordEntry entry = getWordEntryOrThrow(entryId);
+        VocabSubTopic subtopic = getSubtopicOrThrow(entry.getSubtopicId());
+
+        wordEntryRepo.delete(entry);
+        log.info("[VocabWordEntry] Deleted entry: {} from subtopic: {}", entryId, subtopic.getId());
+
+        VocabSubTopic updatedSubtopic = recalculateSubtopicCounts(subtopic);
+        recalculateTopicCountsOnly(updatedSubtopic.getTopicId());
+        return toSubTopicResponse(updatedSubtopic);
+    }
+
     public void deleteSubTopic(String subtopicId) {
         VocabSubTopic subtopic = getSubtopicOrThrow(subtopicId);
         String topicId = subtopic.getTopicId();

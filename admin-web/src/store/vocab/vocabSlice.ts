@@ -185,6 +185,13 @@ const vocabSlice = createSlice({
         }
         s.words = asyncIdle([]);
       })
+      .addCase(deleteWordEntry.fulfilled, (s, a) => {
+        const { entryId } = a.meta.arg;
+        const updatedSubtopic = a.payload as IVocabSubTopic;
+        s.words.data = s.words.data.filter((word) => word.id !== entryId);
+        const idx = s.subtopics.data.findIndex((subtopic) => subtopic.id === updatedSubtopic.id);
+        if (idx !== -1) s.subtopics.data[idx] = updatedSubtopic;
+      })
       // deleteSubTopic
       .addCase(deleteSubTopic.fulfilled, (s, a) => {
         const subtopicId = a.meta.arg;
@@ -301,6 +308,11 @@ export const deleteVocabTopic = createAsyncThunk("vocab/deleteTopic", async (top
 
 export const deleteAllWordsInSubTopic = createAsyncThunk("vocab/deleteAllWords", async (subtopicId: string, { rejectWithValue }) => {
   try { return await handleAPI<string>({ endpoint: `${BASE}/subtopics/${subtopicId}/words`, method: "DELETE" }); }
+  catch (e) { return rejectWithValue(extractError(e)); }
+});
+
+export const deleteWordEntry = createAsyncThunk("vocab/deleteWordEntry", async ({ entryId }: { entryId: string }, { rejectWithValue }) => {
+  try { return await handleAPI<IVocabSubTopic>({ endpoint: `${BASE}/word-entries/${entryId}`, method: "DELETE" }); }
   catch (e) { return rejectWithValue(extractError(e)); }
 });
 

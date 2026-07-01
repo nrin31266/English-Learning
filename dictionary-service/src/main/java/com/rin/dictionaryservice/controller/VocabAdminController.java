@@ -114,6 +114,13 @@ public class VocabAdminController {
         return ApiResponse.<String>builder().result("deleted").build();
     }
 
+    @DeleteMapping("/word-entries/{entryId}")
+    public ApiResponse<VocabSubTopicResponse> deleteWordEntry(@PathVariable String entryId) {
+        return ApiResponse.<VocabSubTopicResponse>builder()
+                .result(vocabService.deleteWordEntry(entryId))
+                .build();
+    }
+
     @PostMapping("/topics/{topicId}/recalculate")
     public ApiResponse<String> recalculateTopic(@PathVariable String topicId) {
         vocabService.recalculateTopic(topicId);

@@ -11,7 +11,7 @@ export default function Page() {
   useGamificationSocket()
 
   const { pathname } = useLocation()
-  const showSidebar = pathname !== "/"
+  // const showSidebar = pathname !== "/"
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -19,7 +19,7 @@ export default function Page() {
 
       <SidebarInset className="flex min-h-screen flex-col bg-background">
         <header className="sticky top-0 z-48 h-16 border-b border-border/40 bg-background/70 shadow-sm backdrop-blur">
-          <AppHeaderContent showSidebarTrigger={showSidebar} />
+          <AppHeaderContent />
         </header>
 
         <main className="flex flex-1 flex-col px-4 py-4 sm:px-6 lg:px-8">

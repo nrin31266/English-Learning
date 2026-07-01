@@ -1,7 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { IVocabWordEntry } from "@/types";
-import { CheckCircle2, Clock, Loader2, Pencil, Volume2 } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, MoreVertical, Pencil, Trash2, Volume2 } from "lucide-react";
 
 interface VocabWordCardProps {
   entry: IVocabWordEntry;
@@ -10,6 +16,7 @@ interface VocabWordCardProps {
   audioAvailable: boolean;
   onPlayAudio: () => void;
   onOpenContext: () => void;
+  onDelete: () => void;
 }
 
 export default function VocabWordCard({
@@ -19,6 +26,7 @@ export default function VocabWordCard({
   audioAvailable,
   onPlayAudio,
   onOpenContext,
+  onDelete,
 }: VocabWordCardProps) {
   const hasContext =
     entry.contextDefinition ||
@@ -67,29 +75,26 @@ export default function VocabWordCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-8 w-8 shrink-0"
-            disabled={!audioAvailable || isPlaying}
-            onClick={onPlayAudio}
-            title={audioAvailable ? "Play US audio" : "No US audio"}
-          >
-            {isPlaying ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onOpenContext}
-            disabled={!entry.wordReady}
-            title="Context"
-            className="h-8 gap-1.5 px-2.5"
-          >
-            <Pencil size={13} className="mr-1" />
-            Context
-          </Button>
+        <div className="shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" title="Công cụ">
+                <MoreVertical size={15} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onPlayAudio} disabled={!audioAvailable || isPlaying}>
+                {isPlaying ? <Loader2 className="animate-spin" /> : <Volume2 />}
+                {audioAvailable ? "Phát audio US" : "Chưa có audio US"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={onOpenContext} disabled={!entry.wordReady}>
+                <Pencil /> Chỉnh ngữ cảnh
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                <Trash2 /> Xóa khỏi subtopic
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

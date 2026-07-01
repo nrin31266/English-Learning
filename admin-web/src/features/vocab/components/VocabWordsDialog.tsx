@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { showNotification } from "@/store/system/notificationSlice";
 import {
   deleteAllWordsInSubTopic,
+  deleteWordEntry,
   fetchWords,
   updateEntryContextManual,
   generateSingleMeaningSync,
@@ -46,12 +47,15 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [editEntryId, setEditEntryId] = useState<string | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
+  const [deletingEntry, setDeletingEntry] = useState(false);
 
   const readyCount = subtopic?.readyWordCount ?? words.data.filter((w) => w.wordReady).length;
   const totalCount = subtopic?.wordCount ?? words.data.length;
   const subtopicTitleEn = subtopic?.title?.trim() || "Words";
   const subtopicTitleVi = subtopic?.titleVi?.trim() || "";
   const editingEntry = words.data.find((w) => w.id === editEntryId) ?? null;
+  const deletingWord = words.data.find((w) => w.id === deleteEntryId) ?? null;
 
   const handleReload = async () => {
     if (!activeSubtopicId) return;
@@ -77,6 +81,19 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
       dispatch(showNotification({ message: "Xóa từ thất bại", variant: "error" }));
     }
     setDeletingAll(false);
+  };
+
+  const handleDeleteWord = async () => {
+    if (!deleteEntryId) return;
+    setDeletingEntry(true);
+    const res = await dispatch(deleteWordEntry({ entryId: deleteEntryId }));
+    if (deleteWordEntry.fulfilled.match(res)) {
+      dispatch(showNotification({ message: `Đã xóa “${deletingWord ? getWordDisplay(deletingWord) : "từ"}” khỏi subtopic`, variant: "success" }));
+      setDeleteEntryId(null);
+    } else {
+      dispatch(showNotification({ message: "Xóa từ thất bại", variant: "error" }));
+    }
+    setDeletingEntry(false);
   };
 
   const handlePickDefinition = async (entryId: string, def: IWordDefinition) => {
@@ -215,6 +232,7 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
                     audioAvailable={!!audioUrl}
                     onPlayAudio={() => handlePlayUsAudio(entry)}
                     onOpenContext={() => setEditEntryId(entry.id)}
+                    onDelete={() => setDeleteEntryId(entry.id)}
                   />
                 );
               })}
@@ -263,6 +281,24 @@ export default function VocabWordsDialog({ open, onClose }: Props) {
               ) : (
                 <><Trash2 size={12} className="mr-1" /> Xóa tất cả</>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteEntryId} onOpenChange={(open) => !open && !deletingEntry && setDeleteEntryId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xóa từ khỏi subtopic?</DialogTitle>
+            <DialogDescription>
+              Word entry <strong>“{deletingWord ? getWordDisplay(deletingWord) : ""}”</strong> sẽ bị xóa khỏi
+              subtopic này. Dữ liệu từ điển dùng chung của từ sẽ được giữ lại.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDeleteEntryId(null)} disabled={deletingEntry}>Hủy</Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteWord} disabled={deletingEntry}>
+              {deletingEntry ? <><Loader2 size={12} className="mr-1 animate-spin" /> Đang xóa...</> : <><Trash2 size={12} className="mr-1" /> Xóa từ</>}
             </Button>
           </DialogFooter>
         </DialogContent>
