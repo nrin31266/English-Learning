@@ -29,10 +29,6 @@ function getWordViExample(word: IVocabWordEntry) {
   return word.contextViExample || word.wordDetail?.definitions?.[0]?.viExample || "";
 }
 
-function getWordLevel(word: IVocabWordEntry) {
-  return word.contextLevel || word.wordDetail?.cefrLevel || "";
-}
-
 function getAudioUrl(word: IVocabWordEntry) {
   return word.wordDetail?.phonetics?.usAudioUrl || word.wordDetail?.phonetics?.ukAudioUrl || "";
 }
@@ -184,32 +180,22 @@ export default function VocabTopicDetail() {
               const meaning = getWordMeaning(word);
               const example = getWordExample(word);
               const viExample = getWordViExample(word);
-              const level = getWordLevel(word);
               const audioUrl = getAudioUrl(word);
               const phonetic = getPhonetic(word);
+              const posLabel = t(getPartOfSpeechI18nKey(word.pos));
 
               return (
-                <article key={word.id} className="rounded-lg border border-border/70 bg-card px-3 py-2.5">
+                <article key={word.id} className="rounded-lg border border-border/70 bg-card px-2.5 py-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                        <h3 className="text-[17px] font-bold leading-tight">{word.wordText}</h3>
-                        {phonetic && <span className="text-xs text-muted-foreground">/{phonetic.replace(/^\/+|\/+$/g, "")}/</span>}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        {level && (
-                          <LanguageLevelBadge
-                            level={level as LanguageLevel}
-                            className="h-5 w-9 min-w-9 px-0 text-[9px]"
-                            hasBg
-                          />
-                        )}
-                        {!level && <span className="h-5 w-9" aria-hidden="true" />}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h3 className="text-lg font-bold leading-tight">{word.wordText}</h3>
+                        {phonetic && <span className="text-sm text-muted-foreground">/{phonetic.replace(/^\/+|\/+$/g, "")}/</span>}
                         <span
-                          className="inline-flex h-5 w-24 items-center justify-center truncate rounded border px-1.5 text-[10px] font-semibold text-muted-foreground"
-                          title={t(getPartOfSpeechI18nKey(word.pos))}
+                          className="inline-flex h-6 items-center rounded-md border border-border bg-muted px-2 text-xs font-semibold text-foreground"
+                          title={posLabel}
                         >
-                          {t(getPartOfSpeechI18nKey(word.pos))}
+                          {posLabel}
                         </span>
                       </div>
                     </div>
@@ -224,11 +210,11 @@ export default function VocabTopicDetail() {
                     )}
                   </div>
 
-                  {meaning && <p className="mt-2 text-sm font-semibold leading-snug text-primary">{meaning}</p>}
-                  {definition && <p className="mt-1 text-[13px] leading-snug text-foreground/90">{definition}</p>}
+                  {meaning && <p className="mt-0.5 text-[15px] font-semibold leading-snug text-primary">{meaning}</p>}
+                  {definition && <p className="mt-0.5 text-sm leading-snug text-foreground/90">{definition}</p>}
 
                   {(example || viExample) && (
-                    <div className="mt-2 border-t border-border/60 pt-2 text-[13px] leading-snug">
+                    <div className="mt-1.5 border-t border-border/60 pt-1.5 text-sm leading-snug">
                       {example && <p className="italic text-foreground/90">“{example}”</p>}
                       {viExample && <p className="mt-0.5 text-muted-foreground">{viExample}</p>}
                     </div>
