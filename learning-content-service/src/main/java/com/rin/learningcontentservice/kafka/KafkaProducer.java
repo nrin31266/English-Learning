@@ -41,7 +41,7 @@ public class KafkaProducer {
     }
     public void publishGamificationRewardEvent(GamificationRewardEvent event) {
         // Bác nhớ khai báo GAMIFICATION_REWARD_TOPIC = "gamification-reward-events" bên KafkaTopics nhé
-        kafkaTemplate.send(KafkaTopics.GAMIFICATION_REWARD_TOPIC, event)
+        kafkaTemplate.send(KafkaTopics.GAMIFICATION_REWARD_TOPIC, event.getUserId(), event)
                 .whenComplete((result, ex) -> {
                     if (ex == null) {
                         log.info("✅ Gửi GamificationRewardEvent thành công tới topic {} cho user {}",

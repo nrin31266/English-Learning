@@ -9,6 +9,7 @@ const TopicsPage = lazy(() => import('@/features/topic/pages/Topics'))
 const TopicsDetailsPage = lazy(() => import('@/features/topic/pages/TopicDetails'))
 const VocabTopicsPage = lazy(() => import('@/features/vocab/pages/VocabTopicsPage'))
 const VocabTopicDetail = lazy(() => import('@/features/vocab/pages/VocabTopicDetail'))
+const VocabReviewPage = lazy(() => import('@/features/vocab/pages/VocabReviewPage'))
 const ShadowingModePage = lazy(() => import('@/features/learnshadowing/pages/ShadowingMode'))
 const DictationModePage = lazy(() => import('@/features/learndictation/pages/DictationMode'))
 const DictionaryPage = () => <div>Dictionary Page</div>
@@ -42,6 +43,10 @@ const router = createBrowserRouter([
       {
         path: "/vocab/topics",
         element: withSuspense(<VocabTopicsPage />),
+      },
+      {
+        path: "/vocab/review",
+        element: withSuspense(<VocabReviewPage />),
       },
       {
         path: "/vocab/topics/:id",

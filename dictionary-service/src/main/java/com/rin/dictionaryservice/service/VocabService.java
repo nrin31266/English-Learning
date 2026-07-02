@@ -37,11 +37,13 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -660,6 +662,13 @@ public class VocabService {
                 .contextLevel(entry.getContextLevel() != null ? entry.getContextLevel().name() : null)
                 .wordDetail(word)
                 .build();
+    }
+
+    public Map<String, VocabWordEntryResponse> getReadyWordEntriesById(Collection<String> ids) {
+        return wordEntryRepo.findAllById(ids).stream()
+                .filter(VocabWordEntry::isWordReady)
+                .map(this::buildSingleWordEntryResponse)
+                .collect(Collectors.toMap(VocabWordEntryResponse::getId, Function.identity()));
     }
 
     /**

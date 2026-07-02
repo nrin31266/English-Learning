@@ -1,16 +1,19 @@
+import { combineReducers, configureStore } from "@reduxjs/toolkit";
+// Thunk không cần destructure
+import {
+  useDispatch,
+  useSelector,
+  type TypedUseSelectorHook,
+} from "react-redux";
+import systemReducer from "./system/index";
+import topicsReducer from "./topicsSlide";
+import topicReducer from "./topicSlide";
 
-
-import { combineReducers, configureStore } from '@reduxjs/toolkit';
- // Thunk không cần destructure
-import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux'; 
-import systemReducer from './system/index';
-import topicsReducer from './topicsSlide';
-import topicReducer from './topicSlide';
-
-import vocabReducer from './vocabSlide';
-import vocabDetailReducer from './vocabDetailSlide';
-import activeLessonReducer from './activeLessonSlice';
-import gamificationReducer from './gamificationSlice';
+import vocabReducer from "./vocabSlide";
+import vocabDetailReducer from "./vocabDetailSlide";
+import activeLessonReducer from "./activeLessonSlice";
+import gamificationReducer from "./gamificationSlice";
+import vocabProgressReducer from "./vocabProgressSlice";
 
 const rootReducer = combineReducers({
   system: systemReducer,
@@ -20,8 +23,8 @@ const rootReducer = combineReducers({
   vocab: vocabReducer,
   vocabDetail: vocabDetailReducer,
   gamification: gamificationReducer,
+  vocabProgress: vocabProgressReducer,
 });
-
 
 const store = configureStore({
   reducer: rootReducer,

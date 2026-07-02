@@ -25,42 +25,77 @@ import {
   type IFetchVocabTopicsParams,
 } from "@/store/vocabSlide";
 import type { IVocabTopic } from "@/types";
-import { BookMarked, LayoutGrid, List, X, Search } from "lucide-react";
+import {
+  BookMarked,
+  ChartNoAxesColumnIncreasing,
+  LayoutGrid,
+  List,
+  X,
+  Search,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VocabTopicCard from "../components/VocabTopicCard";
 import VocabTopicListCard from "../components/VocabTopicListCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/features/keycloak/providers/AuthProvider";
+import { fetchVocabDashboard } from "@/store/vocabProgressSlice";
+import VocabProgressDashboardView from "../components/VocabProgressDashboard";
+import KeycloakClient from "@/features/keycloak/keycloak";
 
 export default function VocabTopicsPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { data, status, totalPages: tp, page: cp, hasNext, hasPrevious, totalElements } =
-    useAppSelector((s) => s.vocab);
+  const { profile } = useAuth();
+  const {
+    data,
+    status,
+    totalPages: tp,
+    page: cp,
+    hasNext,
+    hasPrevious,
+    totalElements,
+  } = useAppSelector((s) => s.vocab);
 
   // ── URL‑synced filter state ──────────────────────────────────────────────
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchInput, setSearchInput] = useState(() => searchParams.get("q") || "");
+  const [searchInput, setSearchInput] = useState(
+    () => searchParams.get("q") || "",
+  );
   const [selectedTags, setSelectedTags] = useState<Set<string>>(
-    () => new Set(searchParams.get("tags")?.split(",").filter(Boolean) || [])
+    () => new Set(searchParams.get("tags")?.split(",").filter(Boolean) || []),
   );
   const [sort, setSort] = useState(() => searchParams.get("sort") || "newest");
   const [page, setPage] = useState(() => Number(searchParams.get("page")) || 0);
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [showAllTags, setShowAllTags] = useState(false);
+  const [activeTab, setActiveTab] = useState<"topics" | "progress">(() =>
+    searchParams.get("tab") === "progress" ? "progress" : "topics",
+  );
+  const dashboard = useAppSelector((state) => state.vocabProgress.dashboard);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(false);
-  
+
+  useEffect(() => {
+    if (profile) void dispatch(fetchVocabDashboard());
+  }, [dispatch, profile]);
+  const topicProgress = new Map(
+    (dashboard?.topics || []).map((item) => [item.topicId, item]),
+  );
+
   // Giữ params hiện tại để biết cái gì thay đổi
   const currentParamsRef = useRef({ searchInput, selectedTags, sort, page });
 
   // Load tags once
   useEffect(() => {
-    dispatch(fetchVocabTags()).unwrap().then((res) => {
-      setTagOptions(res.map((t) => t.name?.trim()).filter(Boolean));
-    }).catch(() => {});
+    dispatch(fetchVocabTags())
+      .unwrap()
+      .then((res) => {
+        setTagOptions(res.map((t) => t.name?.trim()).filter(Boolean));
+      })
+      .catch(() => {});
   }, [dispatch]);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
@@ -68,28 +103,31 @@ export default function VocabTopicsPage() {
     (params: IFetchVocabTopicsParams) => {
       dispatch(fetchVocabTopics(params));
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Sync URL mỗi khi state thay đổi
   useEffect(() => {
     const params = new URLSearchParams();
     if (searchInput.trim()) params.set("q", searchInput.trim());
-    if (selectedTags.size > 0) params.set("tags", Array.from(selectedTags).join(","));
+    if (selectedTags.size > 0)
+      params.set("tags", Array.from(selectedTags).join(","));
     if (sort !== "newest") params.set("sort", sort);
     if (page > 0) params.set("page", String(page));
+    if (activeTab === "progress") params.set("tab", "progress");
     setSearchParams(params, { replace: true });
-  }, [searchInput, selectedTags, sort, page, setSearchParams]);
+  }, [searchInput, selectedTags, sort, page, activeTab, setSearchParams]);
 
   // Fetch data
   useEffect(() => {
     const prev = currentParamsRef.current;
-    
+
     // Lần đầu mount -> fetch ngay
     if (!mountedRef.current) {
       mountedRef.current = true;
       currentParamsRef.current = { searchInput, selectedTags, sort, page };
-      const tagsArr = selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
+      const tagsArr =
+        selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
       doFetch({
         q: searchInput.trim() || undefined,
         tags: tagsArr,
@@ -105,7 +143,8 @@ export default function VocabTopicsPage() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         currentParamsRef.current = { searchInput, selectedTags, sort, page };
-        const tagsArr = selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
+        const tagsArr =
+          selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
         doFetch({
           q: searchInput.trim() || undefined,
           tags: tagsArr,
@@ -125,7 +164,8 @@ export default function VocabTopicsPage() {
     ) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       currentParamsRef.current = { searchInput, selectedTags, sort, page };
-      const tagsArr = selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
+      const tagsArr =
+        selectedTags.size > 0 ? Array.from(selectedTags) : undefined;
       doFetch({
         q: searchInput.trim() || undefined,
         tags: tagsArr,
@@ -166,9 +206,12 @@ export default function VocabTopicsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const handleOpenTopic = useCallback((topic: IVocabTopic) => {
-    navigate(`/vocab/topics/${topic.id}`);
-  }, [navigate]);
+  const handleOpenTopic = useCallback(
+    (topic: IVocabTopic) => {
+      navigate(`/vocab/topics/${topic.id}`);
+    },
+    [navigate],
+  );
 
   // Pagination helpers
   const totalPages = tp ?? 0;
@@ -206,220 +249,280 @@ export default function VocabTopicsPage() {
         </p>
       </div>
 
-      {/* Filters bar */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
-        {/* Search with icon */}
-        <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
-          <Input
-            value={searchInput}
-            onChange={(e) => {
-              setSearchInput(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Search topics..."
-            className="h-11 pl-10 text-base"
-          />
-        </div>
+      <div className="inline-flex w-fit rounded-xl bg-muted p-1">
+        <button
+          onClick={() => setActiveTab("topics")}
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "topics" ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}
+        >
+          <BookMarked className="h-4 w-4" /> Chủ đề từ vựng
+        </button>
+        <button
+          onClick={() => setActiveTab("progress")}
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "progress" ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}
+        >
+          <ChartNoAxesColumnIncreasing className="h-4 w-4" /> Tiến độ của tôi
+        </button>
+      </div>
 
-        {/* Sort */}
-        <Select value={sort} onValueChange={handleSortChange}>
-          <SelectTrigger className="h-11 w-[150px] text-sm">
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Newest</SelectItem>
-            <SelectItem value="oldest">Oldest</SelectItem>
-          </SelectContent>
-        </Select>
+      {activeTab === "topics" && (
+        <>
+          {/* Filters bar */}
+          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+            {/* Search with icon */}
+            <div className="relative w-full lg:w-72">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+              <Input
+                value={searchInput}
+                onChange={(e) => {
+                  setSearchInput(e.target.value);
+                  setPage(0);
+                }}
+                placeholder="Search topics..."
+                className="h-11 pl-10 text-base"
+              />
+            </div>
 
-        {/* View toggle */}
-        <div className="flex items-center gap-1 rounded-lg border bg-background p-1">
-          <Button
-            size="icon"
-            variant={viewMode === "card" ? "default" : "ghost"}
-            className="h-9 w-9"
-            onClick={() => setViewMode("card")}
-          >
-            <LayoutGrid size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant={viewMode === "list" ? "default" : "ghost"}
-            className="h-9 w-9"
-            onClick={() => setViewMode("list")}
-          >
-            <List size={16} />
-          </Button>
-        </div>
+            {/* Sort */}
+            <Select value={sort} onValueChange={handleSortChange}>
+              <SelectTrigger className="h-11 w-[150px] text-sm">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+              </SelectContent>
+            </Select>
 
-        {/* Tags */}
-        {tagOptions.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(showAllTags ? tagOptions : tagOptions.slice(0, 30)).map((tag) => {
-              const isSelected = selectedTags.has(tag);
-              return (
-                <Badge
-                  key={tag}
-                  variant={isSelected ? "default" : "outline"}
-                  className={`cursor-pointer text-sm px-3 py-1.5 ${
-                    isSelected
-                      ? "bg-primary text-primary-foreground hover:bg-primary/80"
-                      : "hover:bg-accent"
-                  }`}
-                  onClick={() => toggleTag(tag)}
-                >
+            {/* View toggle */}
+            <div className="flex items-center gap-1 rounded-lg border bg-background p-1">
+              <Button
+                size="icon"
+                variant={viewMode === "card" ? "default" : "ghost"}
+                className="h-9 w-9"
+                onClick={() => setViewMode("card")}
+              >
+                <LayoutGrid size={16} />
+              </Button>
+              <Button
+                size="icon"
+                variant={viewMode === "list" ? "default" : "ghost"}
+                className="h-9 w-9"
+                onClick={() => setViewMode("list")}
+              >
+                <List size={16} />
+              </Button>
+            </div>
+
+            {/* Tags */}
+            {tagOptions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(showAllTags ? tagOptions : tagOptions.slice(0, 30)).map(
+                  (tag) => {
+                    const isSelected = selectedTags.has(tag);
+                    return (
+                      <Badge
+                        key={tag}
+                        variant={isSelected ? "default" : "outline"}
+                        className={`cursor-pointer text-sm px-3 py-1.5 ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground hover:bg-primary/80"
+                            : "hover:bg-accent"
+                        }`}
+                        onClick={() => toggleTag(tag)}
+                      >
+                        {tag}
+                      </Badge>
+                    );
+                  },
+                )}
+                {tagOptions.length > 30 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground"
+                    onClick={() => setShowAllTags((v) => !v)}
+                  >
+                    {showAllTags ? "Less" : `+${tagOptions.length - 30} more`}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Selected tags summary */}
+          {selectedTags.size > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              <span>Filters:</span>
+              {Array.from(selectedTags).map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-[11px]">
                   {tag}
+                  <X
+                    size={11}
+                    className="ml-1 cursor-pointer"
+                    onClick={() => toggleTag(tag)}
+                  />
                 </Badge>
-              );
-            })}
-            {tagOptions.length > 30 && (
+              ))}
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs text-muted-foreground"
-                onClick={() => setShowAllTags((v) => !v)}
+                className="h-6 px-1.5 text-[11px]"
+                onClick={handleClearAll}
               >
-                {showAllTags ? "Less" : `+${tagOptions.length - 30} more`}
+                Clear all
               </Button>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
 
-      {/* Selected tags summary */}
-      {selectedTags.size > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-          <span>Filters:</span>
-          {Array.from(selectedTags).map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-[11px]">
-              {tag}
-              <X size={11} className="ml-1 cursor-pointer" onClick={() => toggleTag(tag)} />
-            </Badge>
-          ))}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-1.5 text-[11px]"
-            onClick={handleClearAll}
-          >
-            Clear all
-          </Button>
-        </div>
-      )}
+          {/* Content */}
+          {/* Loading skeleton */}
+          {isLoading && viewMode === "card" && (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <Skeleton className="h-40 w-full rounded-none" />
+                  <CardContent className="p-4 space-y-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
-      {/* Content */}
-            {/* Loading skeleton */}
-      {isLoading && viewMode === "card" && (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Card key={i} className="overflow-hidden">
-              <Skeleton className="h-40 w-full rounded-none" />
-              <CardContent className="p-4 space-y-2">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-1/2" />
+          {isLoading && viewMode === "list" && (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Card key={i} className="p-4">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-12 w-12 rounded-lg shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-1/3" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </div>
+                    <Skeleton className="h-8 w-20 rounded-md" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+          {/* Empty */}
+          {!isLoading && data.length === 0 && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+                <BookMarked size={34} className="text-muted-foreground" />
+                <p className="mt-3 text-sm font-medium">
+                  No vocabulary topics yet
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Topics will appear here once they are created and published.
+                </p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          )}
 
-      {isLoading && viewMode === "list" && (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i} className="p-4">
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-12 w-12 rounded-lg shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-5 w-1/3" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-                <Skeleton className="h-8 w-20 rounded-md" />
-              </div>
-            </Card>
-          ))}
-        </div>
+          {/* Results count */}
+          {!isLoading && data.length > 0 && (
+            <div className="text-sm font-medium text-muted-foreground">
+              {totalElements} topic{totalElements !== 1 ? "s" : ""}
+              {totalPages > 1 && ` — Page ${currentPage + 1}/${totalPages}`}
+            </div>
+          )}
+
+          {/* Card view - YouTube style grid */}
+          {!isLoading && data.length > 0 && viewMode === "card" && (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {data.map((topic) => (
+                <VocabTopicCard
+                  key={topic.id}
+                  topic={topic}
+                  progress={topicProgress.get(topic.id)}
+                  onOpen={handleOpenTopic}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* List view - compact row items */}
+          {!isLoading && data.length > 0 && viewMode === "list" && (
+            <div className="space-y-2">
+              {data.map((topic) => (
+                <VocabTopicListCard
+                  key={topic.id}
+                  topic={topic}
+                  progress={topicProgress.get(topic.id)}
+                  onOpen={() => handleOpenTopic(topic)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && !isLoading && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() =>
+                      hasPrevious && handlePageChange(currentPage - 1)
+                    }
+                    className={
+                      !hasPrevious
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+                {renderPageNumbers().map((p, idx) =>
+                  p === "..." ? (
+                    <PaginationItem key={`ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        isActive={p === currentPage}
+                        onClick={() => handlePageChange(p as number)}
+                        className="cursor-pointer"
+                      >
+                        {(p as number) + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => hasNext && handlePageChange(currentPage + 1)}
+                    className={
+                      !hasNext
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
       )}
-      {/* Empty */}
-      {!isLoading && data.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-20 text-center">
-            <BookMarked size={34} className="text-muted-foreground" />
-            <p className="mt-3 text-sm font-medium">No vocabulary topics yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Topics will appear here once they are created and published.
+      {activeTab === "progress" &&
+        (profile ? (
+          <VocabProgressDashboardView data={dashboard} />
+        ) : (
+          <div className="rounded-2xl border bg-card p-10 text-center">
+            <h2 className="text-xl font-bold">Đăng nhập để xem tiến độ</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Tiến độ từ vựng chỉ được lưu an toàn trên tài khoản của bạn.
             </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Results count */}
-      {!isLoading && data.length > 0 && (
-        <div className="text-sm font-medium text-muted-foreground">
-          {totalElements} topic{totalElements !== 1 ? "s" : ""}
-          {totalPages > 1 && ` — Page ${currentPage + 1}/${totalPages}`}
-        </div>
-      )}
-
-      {/* Card view - YouTube style grid */}
-      {!isLoading && data.length > 0 && viewMode === "card" && (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {data.map((topic) => (
-            <VocabTopicCard
-              key={topic.id}
-              topic={topic}
-              onOpen={handleOpenTopic}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* List view - compact row items */}
-      {!isLoading && data.length > 0 && viewMode === "list" && (
-        <div className="space-y-2">
-          {data.map((topic) => (
-            <VocabTopicListCard key={topic.id} topic={topic} onOpen={handleOpenTopic} />
-          ))}
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && !isLoading && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => hasPrevious && handlePageChange(currentPage - 1)}
-                className={!hasPrevious ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-            {renderPageNumbers().map((p, idx) =>
-              p === "..." ? (
-                <PaginationItem key={`ellipsis-${idx}`}>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              ) : (
-                <PaginationItem key={p}>
-                  <PaginationLink
-                    isActive={p === currentPage}
-                    onClick={() => handlePageChange(p as number)}
-                    className="cursor-pointer"
-                  >
-                    {(p as number) + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              )
-            )}
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => hasNext && handlePageChange(currentPage + 1)}
-                className={!hasNext ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
+            <Button
+              className="mt-4"
+              onClick={() => void KeycloakClient.getInstance().keycloak.login()}
+            >
+              Đăng nhập
+            </Button>
+          </div>
+        ))}
     </div>
   );
 }

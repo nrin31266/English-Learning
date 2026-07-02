@@ -28,7 +28,8 @@ public enum DictionaryErrorCode implements ErrorCode {
     WORD_IN_USE(2014, "Cannot delete word because it is used by %s vocab entries.", HttpStatus.BAD_REQUEST),
     WORD_DEFINITION_INDEX_INVALID(2015, "Definition index invalid: %s", HttpStatus.BAD_REQUEST),
     WORD_CREATE_INVALID(2016, "Word create invalid: %s", HttpStatus.BAD_REQUEST),
-    WORD_UPDATE_INVALID(2017, "Word update invalid: %s", HttpStatus.BAD_REQUEST)
+    WORD_UPDATE_INVALID(2017, "Word update invalid: %s", HttpStatus.BAD_REQUEST),
+    VOCAB_PROGRESS_CONFLICT(2018, "Vocab progress was updated concurrently; retry the request", HttpStatus.CONFLICT)
 
     ;
 

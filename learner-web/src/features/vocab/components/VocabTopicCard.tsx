@@ -4,9 +4,10 @@ import { BookMarked, Layers, ChevronRight } from "lucide-react"
 interface Props {
   topic: IVocabTopic
   onOpen: (topic: IVocabTopic) => void
+  progress?: { learnedWords: number; totalWords: number; dueReviewWords: number; status: "IN_PROGRESS" | "COMPLETED" }
 }
 
-export default function VocabTopicCard({ topic, onOpen }: Props) {
+export default function VocabTopicCard({ topic, onOpen, progress }: Props) {
   const subtopicCount = topic.readySubtopicCount ?? 0
   const tags = topic.tags?.slice(0, 3) ?? []
 
@@ -44,6 +45,7 @@ export default function VocabTopicCard({ topic, onOpen }: Props) {
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
+        {progress && <div className="flex items-center justify-between text-xs"><span className={progress.status === "COMPLETED" ? "font-semibold text-emerald-600" : "font-semibold text-primary"}>{progress.status === "COMPLETED" ? "Hoàn thành" : "Đang học"}</span><span className="text-muted-foreground">{progress.learnedWords}/{progress.totalWords} từ</span></div>}
         <h3 className="line-clamp-2 text-[17px] font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
           {topic.title}
         </h3>

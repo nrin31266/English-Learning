@@ -44,7 +44,8 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable);
 
         http.authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll() // Hoặc .authenticated() tùy logic của bạn
+                .requestMatchers("/vocab/subtopics/*/progress", "/vocab/subtopics/*/progress/**", "/vocab/progress/**").authenticated()
+                .anyRequest().permitAll()
         );
 
         // Bật Keycloak để check JWT token từ UI truyền lên

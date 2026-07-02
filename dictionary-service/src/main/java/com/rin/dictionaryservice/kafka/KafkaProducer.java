@@ -4,6 +4,7 @@ import com.rin.englishlearning.common.constants.KafkaTopics;
 import com.rin.englishlearning.common.event.VocabSubTopicReadyEvent;
 import com.rin.englishlearning.common.event.VocabSubTopicProgressEvent;
 import com.rin.englishlearning.common.event.VocabSubtopicsGeneratedEvent;
+import com.rin.englishlearning.common.event.GamificationRewardEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,11 @@ public class KafkaProducer {
 
     public void sendVocabSubTopicProgress(VocabSubTopicProgressEvent event) {
         kafkaTemplate.send(KafkaTopics.VOCAB_SUBTOPIC_PROGRESS_TOPIC, event.getSubtopicId(), event);
+    }
+
+    public void sendGamificationReward(GamificationRewardEvent event) {
+        kafkaTemplate.send(KafkaTopics.GAMIFICATION_REWARD_TOPIC, event.getUserId(), event);
+        log.info("[Kafka] Vocab reward sent: user={}, word={}, delta={}", event.getUserId(), event.getTargetId(), event.getDeltaScore());
     }
 
 }

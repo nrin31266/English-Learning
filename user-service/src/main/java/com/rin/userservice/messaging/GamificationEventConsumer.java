@@ -3,9 +3,8 @@ package com.rin.userservice.messaging;
 import com.rin.englishlearning.common.constants.KafkaTopics;
 import com.rin.englishlearning.common.event.GamificationRewardEvent;
 import com.rin.englishlearning.common.event.NotificationPushEvent;
-import com.rin.englishlearning.common.utils.GamificationUtils;
 import com.rin.userservice.dto.response.GamificationRewardResult;
-import com.rin.userservice.service.UserGamificationService;
+import com.rin.userservice.service.GamificationRewardProcessor;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -23,7 +22,7 @@ import java.util.Map;
 public class GamificationEventConsumer {
 
     GamificationEventPublisher publisher;
-    UserGamificationService userGamificationService;
+    GamificationRewardProcessor rewardProcessor;
 
     @KafkaListener(
             topics = KafkaTopics.GAMIFICATION_REWARD_TOPIC,
@@ -42,35 +41,30 @@ public class GamificationEventConsumer {
             return;
         }
 
-        double scoreDifference = event.getDeltaScore();
-        double multiplier = GamificationUtils.extractMultiplier(event.getDifficulty());
+        var processed = rewardProcessor.process(event);
+        if (processed.isEmpty()) {
+            log.info("Skipping duplicate GamificationRewardEvent eventId={}", event.getEventId());
+            return;
+        }
+        GamificationRewardResult result = processed.get();
 
-        double baseXp = scoreDifference * multiplier;
-        int earnedXp = Math.max(1, (int) Math.round(baseXp));
-
-        double baseCoins = (scoreDifference / 10.0) * multiplier;
-        int earnedCoins = Math.max(1, (int) Math.floor(baseCoins));
-
-        GamificationRewardResult result = userGamificationService.addRewards(
-                event.getUserId(),
-                earnedXp,
-                earnedCoins
-        );
-
-        sendRewardNotification(event.getUserId(), result);
+        sendRewardNotification(event, result);
 
         if (result.isStreakUpdated()) {
             sendStreakNotification(event.getUserId(), result);
         }
     }
 
-    private void sendRewardNotification(String userId, GamificationRewardResult result) {
+    private void sendRewardNotification(GamificationRewardEvent event, GamificationRewardResult result) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("earnedXp", result.getEarnedXp());
         payload.put("earnedCoins", result.getEarnedCoins());
+        payload.put("eventId", event.getEventId());
+        payload.put("trigger", event.getTrigger().name());
+        payload.put("targetId", event.getTargetId());
 
         NotificationPushEvent pushEvent = NotificationPushEvent.builder()
-                .userId(userId)
+                .userId(event.getUserId())
                 .module("GAMIFICATION")
                 .actionType("REWARD_EARNED")
                 .payload(payload)

@@ -4,12 +4,14 @@ import { useEffect } from "react"
 import { useAppDispatch } from "@/store"
 import { gainRewards, updateStreak } from "@/store/gamificationSlice"
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
+import { publishVocabSessionReward } from "@/features/vocab/api/vocabRewardBus"
+import type { IMessage } from "@stomp/stompjs"
 
 type GamificationSocketEvent = {
   userId: string
   module: "GAMIFICATION"
   actionType: "REWARD_EARNED" | "STREAK_UPDATED" | string
-  payload: Record<string, any>
+  payload: Record<string, unknown>
 }
 
 const toNumber = (value: unknown, fallback = 0) => {
@@ -33,7 +35,7 @@ export const useGamificationSocket = () => {
 
     const subscription = stompClient.subscribe(
       "/user/queue/gamification/alerts",
-      (message: any) => {
+      (message: IMessage) => {
         try {
           const event = JSON.parse(message.body) as GamificationSocketEvent
 
@@ -56,6 +58,14 @@ export const useGamificationSocket = () => {
                   source: "websocket",
                 })
               )
+
+              if (event.payload?.trigger === "VOCAB_WORD_REVIEWED" && event.payload?.targetId) {
+                publishVocabSessionReward({
+                  sessionId: String(event.payload.targetId),
+                  earnedXp,
+                  earnedCoins,
+                })
+              }
 
               break
             }

@@ -4,11 +4,17 @@ import com.rin.dictionaryservice.dto.VocabSubTopicResponse;
 import com.rin.dictionaryservice.dto.VocabTopicResponse;
 import com.rin.dictionaryservice.dto.VocabWordEntryResponse;
 import com.rin.dictionaryservice.service.VocabService;
+import com.rin.dictionaryservice.service.VocabProgressService;
+import com.rin.dictionaryservice.dto.VocabProgressResponse;
+import com.rin.dictionaryservice.dto.VocabSessionSubmitRequest;
+import com.rin.dictionaryservice.dto.VocabProgressDashboardResponse;
+import com.rin.dictionaryservice.dto.VocabReviewQueueResponse;
 import com.rin.englishlearning.common.dto.ApiResponse;
 import com.rin.englishlearning.common.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -19,6 +25,7 @@ import java.util.List;
 public class VocabController {
 
     VocabService vocabService;
+    VocabProgressService vocabProgressService;
 
     @GetMapping("/topics")
     public ApiResponse<PageResponse<VocabTopicResponse>> listTopics(
@@ -52,5 +59,32 @@ public class VocabController {
         return ApiResponse.<List<VocabWordEntryResponse>>builder()
                 .result(vocabService.listWordsForPublic(subtopicId))
                 .build();
+    }
+
+    @GetMapping("/subtopics/{subtopicId}/progress")
+    public ApiResponse<VocabProgressResponse> getProgress(@PathVariable String subtopicId) {
+        return ApiResponse.<VocabProgressResponse>builder().result(vocabProgressService.getProgress(subtopicId)).build();
+    }
+
+    @PostMapping("/subtopics/{subtopicId}/progress/sessions")
+    public ApiResponse<VocabProgressResponse> submitSession(
+            @PathVariable String subtopicId, @Valid @RequestBody VocabSessionSubmitRequest request) {
+        return ApiResponse.<VocabProgressResponse>builder()
+                .result(vocabProgressService.submitSession(subtopicId, request)).build();
+    }
+
+    @GetMapping("/progress/dashboard")
+    public ApiResponse<VocabProgressDashboardResponse> getDashboard() {
+        return ApiResponse.<VocabProgressDashboardResponse>builder().result(vocabProgressService.getDashboard()).build();
+    }
+
+    @GetMapping("/progress/review")
+    public ApiResponse<VocabReviewQueueResponse> getReviewQueue(@RequestParam(defaultValue = "10") int limit) {
+        return ApiResponse.<VocabReviewQueueResponse>builder().result(vocabProgressService.getReviewQueue(limit)).build();
+    }
+
+    @PostMapping("/progress/review/sessions")
+    public ApiResponse<VocabProgressResponse> submitReviewSession(@Valid @RequestBody VocabSessionSubmitRequest request) {
+        return ApiResponse.<VocabProgressResponse>builder().result(vocabProgressService.submitReviewSession(request)).build();
     }
 }

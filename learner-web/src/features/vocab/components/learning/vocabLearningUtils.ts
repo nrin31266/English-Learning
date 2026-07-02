@@ -73,12 +73,11 @@ export function shuffle<T>(items: T[]): T[] {
   return result;
 }
 
-export function getLearningSessions(subtopicId: string, words: IVocabWordEntry[], progress: ProgressMap): IVocabWordEntry[][] {
-  const storageKey = `vocab-learning-plan:${subtopicId}`;
+export function getLearningSessions(words: IVocabWordEntry[], progress: ProgressMap): IVocabWordEntry[][] {
   const sorted = [...words].sort((a, b) => a.order - b.order);
   const ordered = [...sorted.filter((word) => !progress[word.id]?.isDone), ...sorted.filter((word) => progress[word.id]?.isDone)];
   const sessions = Array.from({ length: Math.ceil(ordered.length / SESSION_SIZE) }, (_, index) => ordered.slice(index * SESSION_SIZE, (index + 1) * SESSION_SIZE));
-  localStorage.setItem(storageKey, JSON.stringify(sessions.map((session) => session.map((word) => word.id)))); return sessions;
+  return sessions;
 }
 
 export const isRevealableChar = (char: string) => /[\p{L}\p{N}]/u.test(char);
@@ -106,21 +105,3 @@ export function getReviewWords(words: IVocabWordEntry[], progress: ProgressMap, 
 }
 
 export const modeLabel = (mode: VocabLearningMode) => ({ FLASHCARD: "Flashcard", EN_TO_VI: "Anh → Việt", VI_TO_EN: "Việt → Anh", LISTEN_AND_TYPE: "Nghe & nhập" })[mode];
-
-export function loadProgress(subtopicId: string): ProgressMap {
-  try {
-    const stored = JSON.parse(localStorage.getItem(`vocab-learning:${subtopicId}`) || "{}") as Record<string, Record<string, unknown>>;
-    return Object.fromEntries(Object.entries(stored).map(([id, value]) => {
-      if (Array.isArray(value.completedModes)) {
-        const mappedModes = [...new Set((value.completedModes as string[]).map((mode) => mode === "MULTIPLE_CHOICE" ? "EN_TO_VI" : mode === "TYPE_WORD" ? "LISTEN_AND_TYPE" : mode).filter((mode): mode is VocabLearningMode => ["FLASHCARD", "EN_TO_VI", "VI_TO_EN", "LISTEN_AND_TYPE"].includes(mode)))];
-        const reviewRating = value.reviewRating as ReviewRating | undefined;
-        return [id, { ...emptyProgress(id), ...value, completedModes: mappedModes, wordId: id, masteryScore: reviewRating ? REVIEW_RATING_SCORE[reviewRating] : Math.min(100, Number(value.masteryScore || 0)) } as LocalVocabWordProgress];
-      }
-      const legacyRating: ReviewRating | undefined = value.status === "MASTERED" || value.knowledgeLevel === "EASY" ? "DONE" : value.isHard || value.knowledgeLevel === "HARD" || value.knowledgeLevel === "UNKNOWN" ? "HARD" : value.seenCount ? "MEDIUM" : undefined;
-      const migrated = { ...emptyProgress(id), seenCount: Number(value.seenCount || 0), completedModes: value.seenCount ? ["FLASHCARD" as const] : [], modeScores: value.seenCount ? { FLASHCARD: 20 } : {}, masteryScore: value.seenCount ? 20 : 0 };
-      return [id, legacyRating ? applyReviewRating(migrated, legacyRating) : migrated];
-    }));
-  } catch { return {}; }
-}
-
-export const saveProgress = (subtopicId: string, progress: ProgressMap) => localStorage.setItem(`vocab-learning:${subtopicId}`, JSON.stringify(progress));

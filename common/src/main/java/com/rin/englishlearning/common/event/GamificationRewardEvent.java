@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GamificationRewardEvent {
+    private String eventId;
     private String userId;
     private double deltaScore;
     private GamificationTrigger trigger;

@@ -1,19 +1,29 @@
-import type { IVocabTopic } from "@/types"
 import { BookMarked, ChevronRight, Layers } from "lucide-react"
 
-interface Props {
-  topic: IVocabTopic
-  onOpen: (topic: IVocabTopic) => void
+export type VocabTopicListModel = {
+  id: string
+  title: string
+  description?: string
+  tags?: string[]
+  cefrRange?: string
+  readySubtopicCount?: number
+  thumbnailUrl?: string
 }
 
-export default function VocabTopicListCard({ topic, onOpen }: Props) {
+interface Props {
+  topic: VocabTopicListModel
+  onOpen: () => void
+  progress?: { learnedWords: number; totalWords: number; dueReviewWords: number; status: "IN_PROGRESS" | "COMPLETED" }
+}
+
+export default function VocabTopicListCard({ topic, onOpen, progress }: Props) {
   const subtopicCount = topic.readySubtopicCount ?? 0
   const tags = topic.tags?.slice(0, 4) ?? []
 
   return (
     <button
       type="button"
-      onClick={() => onOpen(topic)}
+      onClick={onOpen}
       className="group flex w-full items-center gap-4 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
     >
       <div className="relative h-20 w-32 shrink-0 overflow-hidden rounded-xl bg-muted/40 sm:h-24 sm:w-40">
@@ -49,6 +59,7 @@ export default function VocabTopicListCard({ topic, onOpen }: Props) {
             {topic.title}
           </h3>
         </div>
+        {progress && <div className="mt-1 flex items-center gap-2 text-xs"><span className={progress.status === "COMPLETED" ? "font-semibold text-emerald-600" : "font-semibold text-primary"}>{progress.status === "COMPLETED" ? "Hoàn thành" : "Đang học"}</span><span className="text-muted-foreground">{progress.learnedWords}/{progress.totalWords} từ</span></div>}
 
         {topic.description && (
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
