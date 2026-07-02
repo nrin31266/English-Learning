@@ -15,6 +15,7 @@ public class TopicSummaryResponse {
     private Long id;
     private String name;
     private String slug;
+    private String color;
     private LocalDateTime updatedAt;
     private Long totalLessons;
 }

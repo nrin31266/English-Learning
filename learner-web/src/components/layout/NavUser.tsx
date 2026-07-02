@@ -9,6 +9,7 @@ import {
   LogOut,
   Sparkles,
   LogIn,
+  User,
 } from "lucide-react"
 
 import {
@@ -115,17 +116,17 @@ export function NavUser({
            
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <BadgeCheck />
+                <User />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              {/* <DropdownMenuItem>
                 <CreditCard />
                 Billing
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />
                 Notifications
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             {/* 👉 Gắn hành động thực tế vào nút Log out */}

@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class HomeLessonResponse {
     private Long id;
+    private Long topicId;
+    private String topicName;
     private String topicSlug; // Nếu cần thì truyền vào lúc map
     private String title;
     private String thumbnailUrl;
@@ -30,4 +32,5 @@ public class HomeLessonResponse {
     private Integer shadowingProgressPercent;
     private Integer dictationProgressPercent;
     private Integer activeSentenceCount;
+    private java.sql.Timestamp publishedAt;
 }

@@ -14,7 +14,9 @@
 
     @Entity
     @Table(name = "lessons", indexes = {
-            @Index(name = "idx_lessons_topic_published", columnList = "topic_id, published_at DESC")
+            @Index(name = "idx_lessons_topic_published", columnList = "topic_id, published_at DESC"),
+            @Index(name = "idx_lessons_published", columnList = "published_at DESC"),
+            @Index(name = "idx_lessons_language_level", columnList = "language_level")
     })
     @AllArgsConstructor
     @NoArgsConstructor

@@ -148,25 +148,19 @@ export interface ILessonDetailsResponse {
   progressOverview: LessonProgressOverview;  // 👈 thêm trường này để chứa progress của cả bài học
 }
 
-export interface ITopicDetailsResponse {
-  id: number;
-  name: string;
-  slug: string;
-  updatedAt: string;
-  totalLessons: number;
-  lessons: IHomeLessonResponse[];
-}
-
 export interface ITopicSummaryResponse {
   id: number;
   name: string;
   slug: string;
+  color: string | null;
   updatedAt: string;
   totalLessons: number;
 }
 
 export interface IHomeLessonResponse {
   id: number;
+  topicId?: number;
+  topicName?: string;
   topicSlug: string; // Đã map từ backend
   title: string;
   thumbnailUrl: string | null;
@@ -183,13 +177,17 @@ export interface IHomeLessonResponse {
   shadowingProgressPercent: number;
   dictationProgressPercent: number;
   activeSentenceCount: number;
+  publishedAt?: string;
 }
 
-export interface IHomeTopicResponse {
-  id: number;
-  name: string;
-  slug: string;
-  lessons: IHomeLessonResponse[];
+export interface ILessonExploreResponse {
+  data: IHomeLessonResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 export interface IResumeLessonDto {
@@ -211,12 +209,6 @@ export interface IResumeLearningResponse {
   totalInProgress: number;
   hasMore: boolean;
   recentLessons: IResumeLessonDto[];
-}
-
-export interface IHomeTopicsResponse {
-  allTopics: ITopicSummaryResponse[];
-  topics: IHomeTopicResponse[];
-  resumeLearning: IResumeLearningResponse | null;
 }
 
 export interface IUserProfile {

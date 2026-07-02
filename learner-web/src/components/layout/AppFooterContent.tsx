@@ -2,8 +2,8 @@ import {
   BookOpen,
   Building2,
   ExternalLink,
-  Github,
   Mail,
+  Phone,
   Server
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -89,10 +89,10 @@ const AppFooterContent = () => {
             </li>
             <li className="flex items-center gap-3 group">
               <div className="p-2 rounded-md bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                <Github size={16} />
+                <Phone size={16} />
               </div>
-              <a href="https://github.com/your-org" className="hover:text-primary transition-colors" target="_blank" rel="noreferrer">
-                {t("footer.openSource")}
+              <a href="tel:+84912345678" className="hover:text-primary transition-colors truncate">
+                +84 912 345 678
               </a>
             </li>
           </ul>

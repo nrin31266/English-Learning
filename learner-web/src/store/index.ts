@@ -7,7 +7,6 @@ import {
 } from "react-redux";
 import systemReducer from "./system/index";
 import topicsReducer from "./topicsSlide";
-import topicReducer from "./topicSlide";
 
 import vocabReducer from "./vocabSlide";
 import vocabDetailReducer from "./vocabDetailSlide";
@@ -18,7 +17,6 @@ import vocabProgressReducer from "./vocabProgressSlice";
 const rootReducer = combineReducers({
   system: systemReducer,
   topics: topicsReducer,
-  topic: topicReducer,
   activeLesson: activeLessonReducer,
   vocab: vocabReducer,
   vocabDetail: vocabDetailReducer,

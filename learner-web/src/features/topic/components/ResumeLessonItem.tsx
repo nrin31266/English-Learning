@@ -20,7 +20,7 @@ const ResumeLessonItem = ({ lesson, onContinue }: ResumeLessonItemProps) => {
     <button
       type="button"
       onClick={() => onContinue(lesson)}
-      className="group flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md active:scale-[0.99]"
+      className="group flex w-full items-center gap-3 rounded-xl border bg-background px-4 py-3 text-left shadow-xs transition-all duration-200 hover:border-primary/30 hover:shadow-md active:scale-[0.99]"
     >
       {/* Mode icon */}
       <div

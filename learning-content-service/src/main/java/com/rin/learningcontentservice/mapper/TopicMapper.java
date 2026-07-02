@@ -1,7 +1,6 @@
 package com.rin.learningcontentservice.mapper;
 
 import com.rin.learningcontentservice.dto.request.AddEditTopicRequest;
-import com.rin.learningcontentservice.dto.response.TopicDetailsResponse;
 import com.rin.learningcontentservice.dto.response.TopicResponseWithLessonCount;
 import com.rin.learningcontentservice.model.Topic;
 import org.mapstruct.Mapper;
@@ -10,5 +9,4 @@ import org.mapstruct.Mapper;
 public interface TopicMapper {
     TopicResponseWithLessonCount toTopicResponse(Topic topic);
     Topic toTopic(AddEditTopicRequest topicRequest);
-    TopicDetailsResponse toTopicDetails(Topic topic);
 }

@@ -8,6 +8,21 @@
     "noPlaylists": "Không có danh sách phát nào.",
     "searchPlaceholder": "Tìm kiếm danh sách phát...",
     "noResults": "Không tìm thấy danh sách phát nào cho \"{{query}}\""
+    ,"explorerTitle": "Bài học", "explorerSubtitle": "Tìm bài nghe, shadowing và dictation phù hợp với bạn.",
+    "lessonSearch": "Tìm video, bài nghe...", "topicFilter": "Chủ đề", "levelFilter": "Trình độ",
+    "all": "Tất cả", "newest": "Mới nhất", "shortest": "Ngắn nhất", "longest": "Dài nhất",
+    "allModes": "Chế độ", "bothModes": "Cả hai", "allStatuses": "Trạng thái",
+    "notStarted": "Chưa học", "inProgress": "Đang học", "completed": "Đã học xong", "clearFilters": "Xóa bộ lọc",
+    "allLessons": "Tất cả bài học", "matchingLessons": "{{count}} bài học phù hợp",
+    "emptyLessons": "Không tìm thấy bài học phù hợp", "emptyHint": "Thử đổi từ khóa hoặc bỏ bớt bộ lọc.",
+    "previous": "Trước", "next": "Sau", "inProgressCount": "{{count}} bài đang học dở",
+    "viewResume": "Xem", "hideResume": "Ẩn"
+  },
+  "allLessons": {
+    "pagination": {
+      "previous": "Trước",
+      "next": "Sau"
+    }
   },
   "topicDetails": {
     "backToPlaylists": "Quay lại Danh sách phát",
@@ -25,7 +40,7 @@
       "new": "Mới", "learned": "Đã học", "due": "Cần ôn", "mastered": "Thuộc hẳn"
     },
     "catalog": {
-      "title": "Từ vựng", "subtitle": "Khám phá các chủ đề và bắt đầu học từ mới.",
+      "title": "Từ vựng", "subtitle": "Khám phá các chủ đề và bắt đầu học từ mới với lịch ôn SRS.",
       "topicsTab": "Chủ đề từ vựng", "progressTab": "Tiến độ của tôi",
       "search": "Tìm kiếm chủ đề...", "sort": "Sắp xếp", "newest": "Mới nhất", "oldest": "Cũ nhất",
       "less": "Thu gọn", "more": "+{{count}} nhãn khác", "filters": "Bộ lọc:", "clearAll": "Xóa tất cả",
@@ -112,29 +127,32 @@
     "completionContinue": "Tiếp tục luyện tập"
   },
   "home": {
-    "badge": "Tiêu chuẩn mới trong việc học ngôn ngữ",
-    "welcome": "Chào mừng đến với",
-    "appName": "Fluenrin.",
-    "tagline": "Làm chủ tiếng Anh qua phương pháp Thực hành sâu.",
-    "description": "Fluenrin không chỉ là một ứng dụng flashcard thông thường. Đây là một môi trường được thiết kế kỹ lưỡng dành cho người học nghiêm túc. Bằng cách kết hợp các phương pháp đã được kiểm chứng là <strong>Shadowing</strong> và <strong>Chính tả</strong>, Fluenrin buộc não bạn phải xử lý ngôn ngữ một cách chủ động.",
-    "startJourney": "Bắt đầu hành trình",
-    "seeHowItWorks": "Xem cách hoạt động",
-    "scienceTitle": "Khoa học về Gợi nhớ Chủ động",
-    "scienceDesc1": "Hầu hết người học ngôn ngữ dành nhiều năm để xem video thụ động hoặc chọn đáp án trắc nghiệm mà không bao giờ cải thiện khả năng nói trôi chảy. Fluenrin thay đổi mô hình này bằng cách yêu cầu sự tham gia chủ động.",
-    "scienceDesc2": "Khi bạn sử dụng chế độ <strong>Chính tả</strong>, bạn đang rèn tai để bắt từng âm thanh tinh tế của người bản xứ, kết nối ngữ âm trực tiếp với chính tả. Nó hé lộ những điểm mù trong kỹ năng nghe mà việc xem thụ động che giấu.",
-    "scienceDesc3": "Chuyển sang <strong>Shadowing</strong>, bạn ngay lập tức áp dụng những gì đã nghe. Bằng cách bắt chước nhịp điệu, ngữ điệu và trọng âm của người bản xứ trong thời gian thực, bạn lập trình lại cơ bắp phát âm để nói tiếng Anh tự nhiên, thoát khỏi lối nói dịch thuật, máy móc.",
-    "scienceQuote": "\"Sự trôi chảy là một thói quen, không phải là đích đến.\"",
-    "featuresTitle": "Tính năng chính",
-    "featuresSubtitle": "Mọi thứ bạn cần để đạt đến trình độ tiếp theo.",
-    "featureShadowingTitle": "Luyện Shadowing",
-    "featureShadowingDesc": "Nghe audio bản xứ và nói to đồng thời. Hoàn thiện nhịp điệu, âm điệu và cách nối âm của bạn.",
-    "featureDictationTitle": "Chính tả tập trung",
-    "featureDictationDesc": "Gõ chính xác những gì bạn nghe được. Bài tập cường độ cao này buộc bạn phải nhận ra các âm nối và dạng yếu.",
-    "featureVocabularyTitle": "Từ vựng theo ngữ cảnh",
-    "featureVocabularyDesc": "Ngừng ghi nhớ từ riêng lẻ. Học từ vựng trong bối cảnh của các câu và tình huống thực tế.",
-    "ctaTitle": "Sẵn sàng xây dựng sự trôi chảy của bạn?",
-    "ctaDesc": "Tham gia Fluenrin ngay hôm nay và thay đổi cách bạn học tiếng Anh. Luyện tập đều đặn, tập trung mang lại kết quả tốt nhất.",
-    "ctaButton": "Tạo tài khoản"
+    "badge": "Học tiếng Anh theo tiến độ rõ ràng",
+    "welcome": "Welcome to",
+    "appName": "Fluenrin",
+    "tagline": "Luyện nghe, nói và từ vựng trong một hệ thống.",
+    "description": "Fluenrin hỗ trợ người học luyện tập qua <strong>bài học nghe</strong>, <strong>shadowing</strong>, <strong>dictation</strong> và <strong>từ vựng có lịch ôn SRS</strong>.",
+    "startJourney": "Bắt đầu học",
+    "seeHowItWorks": "Khám phá bài học",
+
+    "scienceTitle": "Học đều hơn nhờ tiến độ và ôn tập có kiểm soát",
+    "scienceDesc1": "Việc học hiệu quả hơn khi người học biết mình đang luyện kỹ năng nào, đã hoàn thành đến đâu và nên tiếp tục ở đâu.",
+    "scienceDesc2": "Fluenrin chia quá trình học thành các hoạt động rõ ràng như <strong>nghe, lặp lại, nhập lại và ôn từ</strong>.",
+    "scienceDesc3": "Từ vựng không được ôn tràn lan. Hệ thống chỉ đưa từ vào phiên ôn khi đến hạn theo mức độ ghi nhớ đã chọn — đây chính là phương pháp SRS (Spaced Repetition System).",
+    "scienceQuote": "Học mới vừa đủ, luyện tập có phản hồi, ôn lại đúng thời điểm.",
+
+    "featuresTitle": "Các phần học chính",
+    "featuresSubtitle": "Tập trung vào những hoạt động người học dùng hằng ngày.",
+    "featureShadowingTitle": "Shadowing",
+    "featureShadowingDesc": "Nghe và lặp lại theo từng câu để cải thiện phản xạ nói, nhịp điệu và khả năng bắt âm.",
+    "featureDictationTitle": "Dictation",
+    "featureDictationDesc": "Nghe và nhập lại nội dung để rèn độ chính xác, chính tả và khả năng nhận diện âm.",
+    "featureVocabularyTitle": "Từ vựng",
+    "featureVocabularyDesc": "Học từ theo chủ đề, luyện bằng nhiều chế độ, tự đánh giá mức nhớ và ôn lại khi từ đến hạn — dựa trên SRS (Spaced Repetition System).",
+
+    "ctaTitle": "Sẵn sàng bắt đầu phiên học tiếp theo?",
+    "ctaDesc": "Chọn bài học phù hợp hoặc tiếp tục tiến độ đang có của bạn.",
+    "ctaButton": "Vào học ngay"
   },
   "header": {
     "playlists": "Danh sách phát",

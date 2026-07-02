@@ -4,11 +4,7 @@
 import * as React from "react"
 import {
   BookMarked,
-  Library,
-  MessageCircle,
-  Newspaper,
   Notebook,
-  Trophy,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -62,23 +58,29 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const learningMenu = [
     { title: t("header.playlists"), url: "/topics", icon: Notebook },
     { title: t("header.dictionary"), url: "/vocab/topics", icon: BookMarked },
-    {
+  ]
+
+  /* 🔒 Chưa có页面
+  const practiceSubItems = [
+    { title: t("header.reviewHub"), url: "/review" },
+    { title: t("header.mockTest"), url: "/mock-test" },
+    { title: t("header.grammar"), url: "/grammar" },
+  ].filter(Boolean)
+  if (practiceSubItems.length) {
+    learningMenu.push({
       title: t("header.practice"),
       url: "#",
       icon: Library,
-      items: [
-        { title: t("header.reviewHub"), url: "/review" },
-        { title: t("header.mockTest"), url: "/mock-test" },
-        { title: t("header.grammar"), url: "/grammar" },
-      ],
-    },
-  ]
+      items: practiceSubItems,
+    })
+  }
 
   const socialMenu = [
     { title: t("header.leaderboard"), url: "/leaderboard", icon: Trophy },
     { title: t("header.discussions"), url: "/discussions", icon: MessageCircle },
     { title: t("header.blog"), url: "/blog", icon: Newspaper },
   ]
+  */
 
   return (
     <Sidebar
@@ -92,7 +94,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent className="gap-0 py-2">
         <NavMain label={t("header.learning") || "Học tập"} items={learningMenu} />
-        <NavMain label={t("header.community") || "Cộng đồng"} items={socialMenu} />
+        {/* 🔒 NavMain label={t("header.community") || "Cộng đồng"} items={socialMenu} */}
 
         <SidebarGroup className="mt-auto border-t border-border/40 px-2 pt-3">
           <div className="grid grid-cols-2 gap-2 group-data-[collapsible=icon]:grid-cols-1 group-data-[collapsible=icon]:place-items-center group-data-[collapsible=icon]:px-0">

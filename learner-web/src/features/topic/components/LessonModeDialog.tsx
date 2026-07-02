@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import YouTubeTag from "@/components/YouTubeTag"
 import LanguageLevelBadge from "@/components/LanguageLevel"
-import type { IHomeLessonResponse, IHomeTopicResponse } from "@/types"
+import type { IHomeLessonResponse } from "@/types"
 import { formatDuration } from "@/utils/timeUtils"
 import { Mic, Keyboard, Sparkles, Clock } from "lucide-react"
 
@@ -18,7 +18,7 @@ type LessonModeDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   lesson: IHomeLessonResponse | null
-  topic: IHomeTopicResponse | null
+  topicName?: string
   onNavigate: (mode: "listening" | "shadowing" | "dictation") => void
 }
 
@@ -26,10 +26,10 @@ const LessonModeDialog = ({
   open,
   onOpenChange,
   lesson,
-  topic,
+  topicName,
   onNavigate,
 }: LessonModeDialogProps) => {
-  if (!lesson || !topic) return null
+  if (!lesson) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,7 +42,7 @@ const LessonModeDialog = ({
               {lesson.title}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground mt-1.5">
-              {topic.name}
+              {topicName}
             </DialogDescription>
           </DialogHeader>
 

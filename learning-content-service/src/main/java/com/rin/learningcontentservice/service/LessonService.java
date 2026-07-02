@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rin.englishlearning.common.constants.LessonProcessingStep;
 import com.rin.englishlearning.common.constants.LessonStatus;
 import com.rin.englishlearning.common.constants.LessonType;
+import com.rin.englishlearning.common.constants.LessonSourceType;
 import com.rin.englishlearning.common.event.LessonGenerationRequestedEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
@@ -31,6 +32,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -42,6 +46,9 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import com.rin.englishlearning.common.dto.PageResponse;
+import com.rin.englishlearning.common.constants.CefrLevel;
 
 
 @Service
@@ -57,6 +64,96 @@ public class LessonService {
     private final UserLessonProgressRepository userLessonProgressRepository;
     //
     private final ApplicationEventPublisher eventPublisher;
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public PageResponse<HomeLessonResponse> exploreLessons(
+            String q, String topicSlug, String levelGroup, String mode, String progressStatus, String sourceType,
+            String sort, int page, int size, String userId) {
+        Specification<Lesson> spec = (root, query, cb) -> {
+            if (query.getResultType() != Long.class && query.getResultType() != long.class)
+                root.fetch("topic", jakarta.persistence.criteria.JoinType.INNER);
+            var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
+            predicates.add(cb.isNotNull(root.get("publishedAt")));
+            predicates.add(cb.isTrue(root.get("topic").get("isActive")));
+            if (q != null && !q.isBlank())
+                predicates.add(cb.like(cb.lower(root.get("title")), "%" + q.trim().toLowerCase() + "%"));
+            if (topicSlug != null && !topicSlug.isBlank())
+                predicates.add(cb.equal(root.get("topic").get("slug"), topicSlug));
+            List<CefrLevel> levels = switch (levelGroup == null ? "ALL" : levelGroup) {
+                case "BEGINNER" -> List.of(CefrLevel.A1, CefrLevel.A2);
+                case "INTERMEDIATE" -> List.of(CefrLevel.B1, CefrLevel.B2);
+                case "ADVANCED" -> List.of(CefrLevel.C1, CefrLevel.C2);
+                default -> List.of();
+            };
+            if (!levels.isEmpty()) predicates.add(root.get("languageLevel").in(levels));
+            if (sourceType != null && !sourceType.isBlank())
+                predicates.add(cb.equal(root.get("sourceType"), LessonSourceType.valueOf(sourceType)));
+            switch (mode == null ? "ALL" : mode) {
+                case "SHADOWING" -> predicates.add(cb.isTrue(root.get("enableShadowing")));
+                case "DICTATION" -> predicates.add(cb.isTrue(root.get("enableDictation")));
+                case "BOTH" -> {
+                    predicates.add(cb.isTrue(root.get("enableShadowing")));
+                    predicates.add(cb.isTrue(root.get("enableDictation")));
+                }
+            }
+            if (userId != null && progressStatus != null && !"ALL".equals(progressStatus)) {
+                var sub = query.subquery(Long.class);
+                var progress = sub.from(UserLessonProgress.class);
+                var progressPredicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
+                progressPredicates.add(cb.equal(progress.get("userId"), userId));
+                progressPredicates.add(cb.equal(progress.get("lessonId"), root.get("id")));
+                if ("SHADOWING".equals(mode) || "DICTATION".equals(mode))
+                    progressPredicates.add(cb.equal(progress.get("mode"), LearningMode.valueOf(mode)));
+                if (!"NOT_STARTED".equals(progressStatus))
+                    progressPredicates.add(cb.equal(progress.get("status"), ProgressStatus.valueOf(progressStatus)));
+                sub.select(progress.get("id")).where(progressPredicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+                predicates.add("NOT_STARTED".equals(progressStatus) ? cb.not(cb.exists(sub)) : cb.exists(sub));
+            }
+            return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        Sort ordering = switch (sort == null ? "newest" : sort) {
+            case "shortest" -> Sort.by(Sort.Order.asc("durationSeconds").nullsLast());
+            case "longest" -> Sort.by(Sort.Order.desc("durationSeconds").nullsLast());
+            case "title_asc" -> Sort.by("title").ascending();
+            default -> Sort.by("publishedAt").descending();
+        };
+        Page<Lesson> result = lessonRepository.findAll(spec, PageRequest.of(Math.max(0, page), Math.min(48, Math.max(1, size)), ordering));
+        List<Long> ids = result.getContent().stream().map(Lesson::getId).toList();
+        Map<Long, List<UserLessonProgress>> progressMap = userId == null || ids.isEmpty()
+                ? Map.of()
+                : userLessonProgressRepository.findByUserIdAndLessonIdIn(userId, ids).stream()
+                .collect(Collectors.groupingBy(UserLessonProgress::getLessonId));
+        List<HomeLessonResponse> items = result.getContent().stream()
+                .map(lesson -> toExploreResponse(lesson, progressMap.getOrDefault(lesson.getId(), List.of())))
+                .toList();
+        return PageResponse.<HomeLessonResponse>builder().data(items).page(result.getNumber()).size(result.getSize())
+                .totalElements(result.getTotalElements()).totalPages(result.getTotalPages())
+                .hasNext(result.hasNext()).hasPrevious(result.hasPrevious()).build();
+    }
+
+    private HomeLessonResponse toExploreResponse(Lesson lesson, List<UserLessonProgress> progresses) {
+        HomeLessonResponse response = HomeLessonResponse.builder()
+                .id(lesson.getId()).topicId(lesson.getTopic().getId()).topicName(lesson.getTopic().getName())
+                .topicSlug(lesson.getTopic().getSlug()).title(lesson.getTitle()).slug(lesson.getSlug())
+                .thumbnailUrl(lesson.getThumbnailUrl())
+                .languageLevel(lesson.getLanguageLevel() == null ? null : lesson.getLanguageLevel().name())
+                .sourceType(lesson.getSourceType() == null ? null : lesson.getSourceType().name())
+                .durationSeconds(lesson.getDurationSeconds()).enableDictation(lesson.getEnableDictation())
+                .enableShadowing(lesson.getEnableShadowing()).activeSentenceCount(lesson.getTotalSentences())
+                .publishedAt(lesson.getPublishedAt()).build();
+        lessonMapper.initializeDefaultProgress(response);
+        int total = lesson.getTotalSentences() == null ? 0 : lesson.getTotalSentences();
+        for (UserLessonProgress progress : progresses) {
+            int percent = lessonMapper.calculatePercent(
+                    progress.getCompletedSentenceCount() == null ? 0 : progress.getCompletedSentenceCount(), total);
+            if (progress.getMode() == LearningMode.SHADOWING) {
+                response.setShadowingStatus(progress.getStatus().name()); response.setShadowingProgressPercent(percent);
+            } else if (progress.getMode() == LearningMode.DICTATION) {
+                response.setDictationStatus(progress.getStatus().name()); response.setDictationProgressPercent(percent);
+            }
+        }
+        return response;
+    }
 
 
     public LessonSummaryResponse addLesson(AddLessonRequest request) {

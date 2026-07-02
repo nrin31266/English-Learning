@@ -50,13 +50,14 @@ public interface TopicRepository extends JpaRepository<Topic,Long> {
             t.id,
             t.name,
             t.slug,
+            t.color,
             t.updatedAt,
             COUNT(DISTINCT l.id)
     )
     FROM Topic t
     LEFT JOIN Lesson l ON l.topic.id = t.id
     WHERE t.isActive = true
-    GROUP BY t.id, t.name, t.slug, t.updatedAt
+    GROUP BY t.id, t.name, t.slug, t.color, t.updatedAt
     ORDER BY t.updatedAt DESC
 """)
     List<TopicSummaryResponse> findActiveTopics();

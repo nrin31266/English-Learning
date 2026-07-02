@@ -16,7 +16,8 @@ import java.util.Map;
         name = "user_lesson_progress",
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"user_id", "lesson_id", "mode"})
-        }
+        },
+        indexes = @Index(name = "idx_user_lesson_progress_lookup", columnList = "user_id, lesson_id, mode")
 )
 @Data
 @Builder

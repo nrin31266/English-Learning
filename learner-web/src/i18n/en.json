@@ -8,6 +8,21 @@
     "noPlaylists": "No playlists available.",
     "searchPlaceholder": "Search for playlists...",
     "noResults": "No playlists found for \"{{query}}\""
+    ,"explorerTitle": "Lessons", "explorerSubtitle": "Find listening, shadowing, and dictation lessons that suit you.",
+    "lessonSearch": "Search videos and listening lessons...", "topicFilter": "Topic", "levelFilter": "Level",
+    "all": "All", "newest": "Newest", "shortest": "Shortest", "longest": "Longest",
+    "allModes": "Mode", "bothModes": "Both", "allStatuses": "Status",
+    "notStarted": "Not started", "inProgress": "In progress", "completed": "Completed", "clearFilters": "Clear filters",
+    "allLessons": "All lessons", "matchingLessons": "{{count}} matching lessons",
+    "emptyLessons": "No matching lessons", "emptyHint": "Try another keyword or remove some filters.",
+    "previous": "Previous", "next": "Next", "inProgressCount": "{{count}} lessons in progress",
+    "viewResume": "View", "hideResume": "Hide"
+  },
+  "allLessons": {
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    }
   },
   "topicDetails": {
     "backToPlaylists": "Back to Playlists",
@@ -25,7 +40,7 @@
       "new": "New", "learned": "Learned", "due": "Due for review", "mastered": "Mastered"
     },
     "catalog": {
-      "title": "Vocabulary", "subtitle": "Browse vocabulary topics and start learning new words.",
+      "title": "Vocabulary", "subtitle": "Browse vocabulary topics and start learning new words with SRS review.",
       "topicsTab": "Vocabulary topics", "progressTab": "My progress",
       "search": "Search topics...", "sort": "Sort", "newest": "Newest", "oldest": "Oldest",
       "less": "Less", "more": "+{{count}} more", "filters": "Filters:", "clearAll": "Clear all",
@@ -112,29 +127,32 @@
     "completionContinue": "Continue practicing"
   },
   "home": {
-    "badge": "The New Standard in Language Learning",
+    "badge": "English learning with clear progress",
     "welcome": "Welcome to",
-    "appName": "Fluenrin.",
-    "tagline": "Master English through Deep Immersion.",
-    "description": "Fluenrin is not just another flashcard application. It is a carefully engineered environment designed for serious learners. By combining the proven methodologies of <strong>Shadowing</strong> and <strong>Dictation</strong>, Fluenrin forces your brain to actively process language.",
-    "startJourney": "Start Your Journey",
-    "seeHowItWorks": "See How It Works",
-    "scienceTitle": "The Science of Active Recall",
-    "scienceDesc1": "Most language learners spend years passively watching videos or clicking multiple-choice answers without ever improving their spoken fluency. Fluenrin changes this paradigm by requiring active participation.",
-    "scienceDesc2": "When you use our <strong>Dictation</strong> mode, you are training your ear to catch every subtle native sound, linking phonetics directly to spelling. It reveals the blind spots in your listening skills that passive watching hides.",
-    "scienceDesc3": "Transitioning to <strong>Shadowing</strong>, you immediately apply what you've heard. By mimicking the rhythm, intonation, and stress of native speakers in real-time, you reprogram your vocal muscles to speak English naturally, breaking away from translated, robotic speech.",
-    "scienceQuote": "\"Fluency is a habit, not a destination.\"",
-    "featuresTitle": "Core Features",
-    "featuresSubtitle": "Everything you need to reach the next level.",
-    "featureShadowingTitle": "Shadowing Practice",
-    "featureShadowingDesc": "Listen to native audio and speak aloud simultaneously. Perfect your rhythm, tone, and connected speech.",
-    "featureDictationTitle": "Focused Dictation",
-    "featureDictationDesc": "Type exactly what you hear. This intense exercise forces you to recognize linking sounds and weak forms.",
-    "featureVocabularyTitle": "Contextual Vocabulary",
-    "featureVocabularyDesc": "Stop memorizing isolated words. Learn vocabulary within the context of real sentences and situations.",
-    "ctaTitle": "Ready to build your fluency?",
-    "ctaDesc": "Join Fluenrin today and transform the way you learn English. Consistent, focused practice yields the best results.",
-    "ctaButton": "Create Your Account"
+    "appName": "Fluenrin",
+    "tagline": "Practice listening, speaking, and vocabulary in one system.",
+    "description": "Fluenrin helps learners practice through <strong>listening lessons</strong>, <strong>shadowing</strong>, <strong>dictation</strong>, and <strong>vocabulary with SRS scheduled review</strong>.",
+    "startJourney": "Start learning",
+    "seeHowItWorks": "Explore lessons",
+
+    "scienceTitle": "Learn more consistently with progress tracking and guided review",
+    "scienceDesc1": "Learning becomes easier to maintain when you know what skill you are practicing, how far you have progressed, and what to continue next.",
+    "scienceDesc2": "Fluenrin organizes learning into clear activities such as <strong>listening, repeating, typing, and reviewing vocabulary</strong>.",
+    "scienceDesc3": "Vocabulary is not reviewed randomly. Words only return to review sessions when they are due, based on the memory rating you selected — this is the SRS (Spaced Repetition System) approach.",
+    "scienceQuote": "Learn a manageable amount, practice with feedback, and review at the right time.",
+
+    "featuresTitle": "Core learning areas",
+    "featuresSubtitle": "Focused activities for daily English practice.",
+    "featureShadowingTitle": "Shadowing",
+    "featureShadowingDesc": "Listen and repeat sentence by sentence to improve speaking rhythm, pronunciation, and listening reflexes.",
+    "featureDictationTitle": "Dictation",
+    "featureDictationDesc": "Listen and type what you hear to improve accuracy, spelling, and sound recognition.",
+    "featureVocabularyTitle": "Vocabulary",
+    "featureVocabularyDesc": "Learn words by topic, practice with different modes, rate your memory, and review words when they are due — powered by SRS (Spaced Repetition System).",
+
+    "ctaTitle": "Ready for your next learning session?",
+    "ctaDesc": "Choose a suitable lesson or continue from your current progress.",
+    "ctaButton": "Start now"
   },
   "header": {
     "playlists": "Playlists",
