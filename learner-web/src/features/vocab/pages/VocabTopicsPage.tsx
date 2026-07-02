@@ -252,18 +252,16 @@ export default function VocabTopicsPage() {
 
   return (
     <div className="mx-auto min-h-[calc(100vh-8vh)] w-full space-y-6 ">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <BookMarked className="h-7 w-7 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">{t("vocab.catalog.title")}</h1>
+      {/* Header + Tabs inline */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="group relative flex items-center gap-2">
+          <BookMarked className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight">{t("vocab.catalog.title")}</h1>
+          <div className="absolute -bottom-8 left-0 z-10 hidden rounded-md border bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-sm group-hover:block whitespace-nowrap">
+            {t("vocab.catalog.subtitle")}
+          </div>
         </div>
-        <p className="text-base text-muted-foreground">
-          {t("vocab.catalog.subtitle")}
-        </p>
-      </div>
-
-      <div className="inline-flex w-fit rounded-xl bg-muted p-1">
+        <div className="inline-flex rounded-xl bg-muted p-1">
         <button
           onClick={() => setActiveTab("topics")}
           className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "topics" ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}
@@ -277,12 +275,14 @@ export default function VocabTopicsPage() {
           <ChartNoAxesColumnIncreasing className="h-4 w-4" /> {t("vocab.catalog.progressTab")}
         </button>
       </div>
+      </div>
 
       {activeTab === "topics" && (
         <>
-          {/* Filters bar */}
-          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
-            {/* Search with icon */}
+          {/* Filters card */}
+          <Card>
+            <CardContent className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
+            {/* Mobile row 1: Search full width */}
             <div className="relative w-full lg:w-72">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
               <Input
@@ -296,35 +296,36 @@ export default function VocabTopicsPage() {
               />
             </div>
 
-            {/* Sort */}
-            <Select value={sort} onValueChange={handleSortChange}>
-              <SelectTrigger className="h-11 w-[150px] text-sm">
-                <SelectValue placeholder={t("vocab.catalog.sort")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">{t("vocab.catalog.newest")}</SelectItem>
-                <SelectItem value="oldest">{t("vocab.catalog.oldest")}</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Mobile row 2: Sort + View toggle side by side */}
+            <div className="flex items-center gap-2">
+              <Select value={sort} onValueChange={handleSortChange}>
+                <SelectTrigger className="h-11 w-[150px] text-sm">
+                  <SelectValue placeholder={t("vocab.catalog.sort")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">{t("vocab.catalog.newest")}</SelectItem>
+                  <SelectItem value="oldest">{t("vocab.catalog.oldest")}</SelectItem>
+                </SelectContent>
+              </Select>
 
-            {/* View toggle */}
-            <div className="flex items-center gap-1 rounded-lg border bg-background p-1">
-              <Button
-                size="icon"
-                variant={viewMode === "card" ? "default" : "ghost"}
-                className="h-9 w-9"
-                onClick={() => setViewMode("card")}
-              >
-                <LayoutGrid size={16} />
-              </Button>
-              <Button
-                size="icon"
-                variant={viewMode === "list" ? "default" : "ghost"}
-                className="h-9 w-9"
-                onClick={() => setViewMode("list")}
-              >
-                <List size={16} />
-              </Button>
+              <div className="flex items-center gap-1 rounded-lg border bg-background p-1">
+                <Button
+                  size="icon"
+                  variant={viewMode === "card" ? "default" : "ghost"}
+                  className="h-9 w-9"
+                  onClick={() => setViewMode("card")}
+                >
+                  <LayoutGrid size={16} />
+                </Button>
+                <Button
+                  size="icon"
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  className="h-9 w-9"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List size={16} />
+                </Button>
+              </div>
             </div>
 
             {/* Tags */}
@@ -361,9 +362,10 @@ export default function VocabTopicsPage() {
                 )}
               </div>
             )}
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Selected tags summary */}
+        {/* Selected tags summary */}
           {selectedTags.size > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
               <span>{t("vocab.catalog.filters")}</span>
