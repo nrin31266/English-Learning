@@ -1,11 +1,7 @@
 package com.rin.dictionaryservice.controller;
 
-import com.rin.dictionaryservice.dto.SpaCyWordAnalysisDto;
-import com.rin.dictionaryservice.dto.SpaCyWordAnalysisRequest;
 import com.rin.dictionaryservice.dto.WordResponse;
 import com.rin.dictionaryservice.dto.WordSearchRequest;
-import com.rin.dictionaryservice.model.Word;
-import com.rin.dictionaryservice.repository.httpclient.LanguageProcessingClient;
 import com.rin.dictionaryservice.service.WordService;
 import com.rin.dictionaryservice.utils.TextUtils;
 import com.rin.englishlearning.common.dto.ApiResponse;
@@ -23,9 +19,6 @@ public class WordController {
 
     @PostMapping
     public ApiResponse<WordResponse> addOrGetWord(@RequestBody WordSearchRequest request) {
-
-
-
         return ApiResponse.success(
                 wordService.addOrGetWord(TextUtils.canonicalForm(request.getText()), request)
         );

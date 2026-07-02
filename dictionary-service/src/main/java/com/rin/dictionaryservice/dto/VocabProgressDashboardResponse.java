@@ -9,6 +9,7 @@ import java.util.Map;
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class VocabProgressDashboardResponse {
+    int totalLearnedWords;
     int totalMasteredWords;
     int dueReviewWords;
     Map<String, Integer> activityByDate;
@@ -27,7 +28,11 @@ public class VocabProgressDashboardResponse {
         int learnedWords;
         int totalWords;
         int dueReviewWords;
+        int masteredCount;
+        int dueReviewCount;
+        int newCount;
         String status;
+        String learningStatus;
     }
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
@@ -37,6 +42,10 @@ public class VocabProgressDashboardResponse {
         int learnedWords;
         int totalWords;
         int dueReviewWords;
+        int masteredCount;
+        int dueReviewCount;
+        int newCount;
         String status;
+        String learningStatus;
     }
 }

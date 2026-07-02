@@ -18,6 +18,58 @@
     "all": "Tất cả",
     "noLessons": "Không có bài học nào trong danh sách phát này"
   },
+  "vocab": {
+    "common": {
+      "back": "Quay lại", "words": "từ", "noTags": "Không có nhãn",
+      "notStarted": "Chưa học", "learning": "Đang học", "completed": "Đã học xong",
+      "new": "Mới", "learned": "Đã học", "due": "Cần ôn", "mastered": "Thuộc hẳn"
+    },
+    "catalog": {
+      "title": "Từ vựng", "subtitle": "Khám phá các chủ đề và bắt đầu học từ mới.",
+      "topicsTab": "Chủ đề từ vựng", "progressTab": "Tiến độ của tôi",
+      "search": "Tìm kiếm chủ đề...", "sort": "Sắp xếp", "newest": "Mới nhất", "oldest": "Cũ nhất",
+      "less": "Thu gọn", "more": "+{{count}} nhãn khác", "filters": "Bộ lọc:", "clearAll": "Xóa tất cả",
+      "emptyTitle": "Chưa có chủ đề từ vựng", "emptyText": "Các chủ đề sẽ xuất hiện sau khi được tạo và xuất bản.",
+      "resultCount": "{{count}} chủ đề", "page": "Trang {{current}}/{{total}}",
+      "loginTitle": "Đăng nhập để xem tiến độ", "loginText": "Tiến độ học và lịch ôn được lưu theo tài khoản của bạn.",
+      "login": "Đăng nhập", "subtopicCount": "{{count}} bài", "noSubtopics": "Chưa có bài"
+    },
+    "detail": {
+      "loadingTopic": "Đang tải chủ đề...", "topicFallback": "Chủ đề từ vựng",
+      "subtopics": "Các bài học", "chooseLesson": "Chọn bài để xem từ vựng.",
+      "lessonSummary": "Đã học {{learned}}/{{total}} bài", "emptySubtopics": "Chưa có bài học đang hoạt động.",
+      "chooseAbove": "Chọn một bài ở danh sách phía trên", "chooseLeft": "Chọn một bài ở danh sách bên trái",
+      "chooseTitle": "Chọn một bài để bắt đầu", "chooseText": "Xem danh sách từ, tiến độ và chọn chế độ học phù hợp với bạn.",
+      "learnedProgress": "Đã học", "newRemaining": "Còn", "newWords": "{{count}} từ mới", "dueWords": "{{count}} cần ôn",
+      "studyMode": "Chế độ học", "learnNew": "Học {{count}} từ mới", "learnAllNew": "Học hết {{count}} từ mới",
+      "lessonCompleted": "Đã học xong bài này", "signInToLearn": "Đăng nhập để học",
+      "noWords": "Bài này chưa có từ vựng sẵn sàng. Vui lòng quay lại sau.",
+      "loadWordsFailed": "Không tải được danh sách từ vựng. Vui lòng thử lại.",
+      "playAudio": "Nghe phát âm", "masteredHint": "Không còn trong lịch ôn"
+      ,"loadProgressFailed": "Không tải được tiến độ từ máy chủ.", "saveProgressFailed": "Không thể lưu tiến độ. Vui lòng thử lại.",
+      "combined": "Kết hợp", "flashcard": "Thẻ", "enToVi": "Anh→Việt", "viToEn": "Việt→Anh", "listen": "Nghe",
+      "combinedDesc": "Học lần lượt cả 4 chế độ", "flashcardDesc": "Xem thẻ và ghi nhớ", "enToViDesc": "Chọn nghĩa tiếng Việt", "viToEnDesc": "Chọn từ tiếng Anh", "listenDesc": "Nghe rồi gõ lại từ"
+    },
+    "progress": {
+      "loading": "Đang tải tiến độ...", "reviewToday": "Hôm nay cần ôn", "noReview": "Không có từ đến hạn ôn",
+      "dueSubtitle": "Bạn có {{count}} từ đến hạn theo lịch ngắt quãng.",
+      "cleanSubtitle": "Lịch ôn của bạn đang sạch. Hôm nay nên học tiếp một chủ đề mới.",
+      "dueHelper": "Mỗi phiên lấy tối đa 10 từ đến hạn sớm nhất.", "cleanHelper": "Từ đã học sẽ tự xuất hiện lại khi đến hạn ôn.",
+      "startReview": "Bắt đầu ôn", "continue": "Học tiếp", "explore": "Khám phá chủ đề",
+      "activity": "Hoạt động học từ", "activitySubtitle": "Số từ bạn đã chốt trong 12 tháng gần nhất.",
+      "activityHint": "Di chuột vào từng ô để xem ngày và số từ đã học.", "noActivity": "Không có hoạt động",
+      "learningTopics": "Chủ đề đang học", "learningTopicsSubtitle": "Tiếp tục từ nơi bạn đã dừng lại.",
+      "noDue": "Không có từ đến hạn", "noTopics": "Bạn chưa bắt đầu chủ đề từ vựng nào.",
+      "overview": "Tổng quan", "today": "Hôm nay", "reviewDue": "Cần ôn",
+      "guide": "Cách lịch ôn hoạt động", "guideSubtitle": "Bạn chốt mức nhớ sau mỗi từ. Hệ thống tự đưa từ vào lịch ôn.",
+      "again": "Học lại", "hard": "Khó", "medium": "Vừa", "easy": "Dễ",
+      "oneDay": "1 ngày", "threeDays": "3 ngày", "sevenDays": "7 ngày", "fourteenDays": "14 ngày", "removeSchedule": "Bỏ khỏi lịch ôn"
+    },
+    "review": {
+      "doneTitle": "Hôm nay đã ôn xong", "doneText": "Bạn không còn từ nào đến hạn trong hàng đợi.",
+      "backProgress": "Tiến độ của tôi", "todayTitle": "Ôn tập hôm nay"
+    }
+  },
   "resume": {
     "continueLearning": "Tiếp tục học",
     "inProgress": "đang học",

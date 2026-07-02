@@ -13,9 +13,6 @@ import type { IVocabSubTopic, IVocabWordEntry } from "@/types";
 import { getPartOfSpeechI18nKey } from "@/utils/partOfSpeech";
 import VocabLearningPanel from "../components/learning/VocabLearningPanel";
 import {
-  needsReview,
-  REVIEW_RATING_META,
-  REVIEW_RATING_STYLES,
   type ProgressMap,
   type VocabStudyPlan,
 } from "../components/learning/vocabLearningUtils";
@@ -96,28 +93,60 @@ function playWordAudio(word: IVocabWordEntry) {
   void new Audio(audioUrl).play();
 }
 
+function isDueProgress(item?: ProgressMap[string]) {
+  if (!item || item.isDone || !item.nextReviewAt) return false;
+  return new Date(item.nextReviewAt).getTime() <= Date.now();
+}
+
+function getWordStatus(item?: ProgressMap[string]) {
+  if (!item?.reviewRating) {
+    return {
+      labelKey: "vocab.common.new",
+      className: "border-border bg-muted text-muted-foreground",
+      titleKey: undefined,
+    };
+  }
+  if (item.reviewRating === "DONE") {
+    return {
+      labelKey: "vocab.common.mastered",
+      className:
+        "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300",
+      titleKey: "vocab.detail.masteredHint",
+    };
+  }
+  if (isDueProgress(item)) {
+    return {
+      labelKey: "vocab.common.due",
+      className:
+        "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300",
+      titleKey: undefined,
+    };
+  }
+  return {
+    labelKey: "vocab.common.learned",
+    className: "border-primary/25 bg-primary/10 text-primary",
+    titleKey: undefined,
+  };
+}
+
 const STUDY_PLANS: Array<{
   id: VocabStudyPlan;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
 }> = [
-  { id: "COMBINED", label: "Kết hợp", description: "Học lần lượt cả 4 chế độ" },
-  { id: "FLASHCARD", label: "Flashcard", description: "Xem thẻ và ghi nhớ" },
-  { id: "EN_TO_VI", label: "Anh → Việt", description: "Chọn nghĩa tiếng Việt" },
-  { id: "VI_TO_EN", label: "Việt → Anh", description: "Chọn từ tiếng Anh" },
-  {
-    id: "LISTEN_AND_TYPE",
-    label: "Nghe & nhập",
-    description: "Nghe rồi gõ lại từ",
-  },
+  { id: "COMBINED", labelKey: "vocab.detail.combined", descriptionKey: "vocab.detail.combinedDesc" },
+  { id: "FLASHCARD", labelKey: "vocab.detail.flashcard", descriptionKey: "vocab.detail.flashcardDesc" },
+  { id: "EN_TO_VI", labelKey: "vocab.detail.enToVi", descriptionKey: "vocab.detail.enToViDesc" },
+  { id: "VI_TO_EN", labelKey: "vocab.detail.viToEn", descriptionKey: "vocab.detail.viToEnDesc" },
+  { id: "LISTEN_AND_TYPE", labelKey: "vocab.detail.listen", descriptionKey: "vocab.detail.listenDesc" },
 ];
 
 const STUDY_PLAN_ICONS = [
-  { id: "COMBINED" as const, icon: LayoutGrid, shortLabel: "Kết hợp" },
-  { id: "FLASHCARD" as const, icon: Layers3, shortLabel: "Thẻ" },
-  { id: "EN_TO_VI" as const, icon: CircleHelp, shortLabel: "Anh→Việt" },
-  { id: "VI_TO_EN" as const, icon: Languages, shortLabel: "Việt→Anh" },
-  { id: "LISTEN_AND_TYPE" as const, icon: Headphones, shortLabel: "Nghe" },
+  { id: "COMBINED" as const, icon: LayoutGrid, labelKey: "vocab.detail.combined" },
+  { id: "FLASHCARD" as const, icon: Layers3, labelKey: "vocab.detail.flashcard" },
+  { id: "EN_TO_VI" as const, icon: CircleHelp, labelKey: "vocab.detail.enToVi" },
+  { id: "VI_TO_EN" as const, icon: Languages, labelKey: "vocab.detail.viToEn" },
+  { id: "LISTEN_AND_TYPE" as const, icon: Headphones, labelKey: "vocab.detail.listen" },
 ];
 
 export default function VocabTopicDetail() {
@@ -178,6 +207,9 @@ export default function VocabTopicDetail() {
     activeSubtopics.every(
       (sub) => (subtopicProgress.get(sub.id)?.percent || 0) >= 100,
     );
+  const completedSubtopicCount = activeSubtopics.filter(
+    (sub) => (subtopicProgress.get(sub.id)?.percent || 0) >= 100,
+  ).length;
 
   useEffect(() => {
     if (!id) return;
@@ -228,7 +260,7 @@ export default function VocabTopicDetail() {
         .catch(() =>
           dispatch(
             showNotification({
-              message: "Không tải được tiến độ từ server.",
+              message: t("vocab.detail.loadProgressFailed"),
               variant: "error",
             }),
           ),
@@ -236,7 +268,7 @@ export default function VocabTopicDetail() {
     }
     setLearningMode(false);
     setLearnAllRemaining(false);
-  }, [dispatch, activeSubtopicId, profile]);
+  }, [dispatch, activeSubtopicId, profile, t]);
 
   const handleProgressChange = useCallback((progress: ProgressMap) => {
     setLocalProgress(progress);
@@ -263,8 +295,11 @@ export default function VocabTopicDetail() {
         ).unwrap();
         setLocalProgress(committed.progress);
         const learnedWords = Object.keys(committed.progress).length;
-        const dueReviewWords = Object.values(committed.progress).filter(
-          (item) => needsReview(item),
+        const dueReviewWords = Object.values(committed.progress).filter((item) =>
+          isDueProgress(item),
+        ).length;
+        const masteredCount = Object.values(committed.progress).filter(
+          (item) => item.reviewRating === "DONE",
         ).length;
         setSubtopicSummaries((current) => ({
           ...current,
@@ -273,7 +308,16 @@ export default function VocabTopicDetail() {
             learnedWords,
             totalWords: words.length,
             dueReviewWords,
+            masteredCount,
+            dueReviewCount: dueReviewWords,
+            newCount: Math.max(0, words.length - learnedWords),
             status: learnedWords >= words.length ? "COMPLETED" : "IN_PROGRESS",
+            learningStatus:
+              learnedWords === 0
+                ? "NOT_STARTED"
+                : learnedWords >= words.length
+                  ? "LEARNED"
+                  : "LEARNING",
           },
         }));
         return {
@@ -283,18 +327,18 @@ export default function VocabTopicDetail() {
       } catch (error) {
         dispatch(
           showNotification({
-            message: "Không thể lưu tiến độ. Vui lòng thử lại.",
+            message: t("vocab.detail.saveProgressFailed"),
             variant: "error",
           }),
         );
         throw error;
       }
     },
-    [activeSubtopicId, dispatch, profile, words.length],
+    [activeSubtopicId, dispatch, profile, t, words.length],
   );
 
-  const hardCount = words.filter((word) =>
-    needsReview(localProgress[word.id]),
+  const dueCount = words.filter((word) =>
+    isDueProgress(localProgress[word.id]),
   ).length;
   const learnedCount = words.filter(
     (word) => !!localProgress[word.id]?.reviewRating,
@@ -325,17 +369,45 @@ export default function VocabTopicDetail() {
   };
 
   const rightEmptyState = (
-    <div className="flex h-full items-center justify-center p-10">
-      <div className="max-w-xl text-center">
-        <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-          <BookMarked className="h-8 w-8 text-primary" />
+    <div className="relative flex h-full items-center justify-center overflow-hidden p-10">
+      <div className="pointer-events-none absolute -right-16 top-16 h-56 w-56 rounded-full bg-primary/[0.04] blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-20 left-1/4 h-64 w-64 rounded-full bg-primary/[0.05] blur-3xl" />
+
+      <div className="relative max-w-xl text-center">
+        <div className="relative mx-auto mb-6 h-28 w-48" aria-hidden="true">
+          <div className="absolute left-1 top-5 h-20 w-36 -rotate-6 rounded-xl border border-primary/10 bg-primary/[0.04]" />
+          <div className="absolute right-1 top-3 h-20 w-36 rotate-6 rounded-xl border border-primary/15 bg-card" />
+          <div className="absolute inset-x-4 top-0 h-24 rounded-2xl border border-primary/25 bg-card p-3 shadow-sm">
+            <div className="flex items-center justify-between border-b border-border/60 pb-2">
+              <div className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary/30" />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary/20" />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary/10" />
+              </div>
+              <span className="h-2 w-8 rounded-full bg-primary/10" />
+            </div>
+            <div className="mt-3 flex items-center gap-3 text-left">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <BookMarked className="h-5 w-5" />
+              </span>
+              <div className="flex-1 space-y-2">
+                <div className="h-2.5 w-3/4 rounded-full bg-primary/20" />
+                <div className="h-2 w-full rounded-full bg-muted" />
+                <div className="h-2 w-2/3 rounded-full bg-muted" />
+              </div>
+            </div>
+          </div>
         </div>
+
+        <span className="mb-3 inline-flex items-center rounded-full border border-primary/15 bg-primary/[0.06] px-3 py-1 text-xs font-semibold text-primary">
+          <span className="xl:hidden">{t("vocab.detail.chooseAbove")}</span>
+          <span className="hidden xl:inline">{t("vocab.detail.chooseLeft")}</span>
+        </span>
         <h2 className="text-2xl font-bold tracking-tight">
-          Chọn 1 sub-topic để xem từ vựng
+          {t("vocab.detail.chooseTitle")}
         </h2>
         <p className="mt-2 text-base text-muted-foreground">
-          Khi bạn chọn bài ở danh sách bên trái, hệ thống sẽ hiển thị toàn bộ từ
-          vựng trong sub-topic đó.
+          {t("vocab.detail.chooseText")}
         </p>
       </div>
     </div>
@@ -347,7 +419,7 @@ export default function VocabTopicDetail() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+              <h2 className="line-clamp-2 text-xl font-bold tracking-tight sm:text-2xl">
                 {activeSubtopic?.title}
               </h2>
               {activeSubtopic?.cefrLevel && (
@@ -360,28 +432,30 @@ export default function VocabTopicDetail() {
             </div>
           </div>
         </div>
-        <div className="mt-1.5 max-w-2xl">
+        <div className="mt-1.5 max-w-3xl">
           {activeSubtopic?.titleVi && (
             <p className="text-sm text-muted-foreground">
               {activeSubtopic.titleVi}
             </p>
           )}
           <p className="mt-2 text-xs text-muted-foreground">
+            {t("vocab.detail.learnedProgress")}{" "}
             <b className="font-semibold text-foreground">
-              {learnedCount}/{words.length}
-            </b>{" "}
-            từ đã học<span className="mx-1.5">·</span>
-            {remainingCount} từ còn lại
-            {hardCount > 0 && (
-              <>
-                <span className="mx-1.5">·</span>
-                <span className="font-medium text-amber-600 dark:text-amber-400">
-                  {hardCount} cần ôn
-                </span>
-              </>
+              {learnedCount}/{words.length} từ
+            </b>
+            <span className="mx-1.5 text-border">|</span>
+            {t("vocab.detail.newRemaining")}{" "}
+            <b className="font-semibold text-foreground">
+              {t("vocab.detail.newWords", { count: remainingCount })}
+            </b>
+            {dueCount > 0 && (
+              <span className="ml-1.5 font-semibold text-amber-600 dark:text-amber-400">
+                <span className="mr-1.5 text-border">|</span>
+                {t("vocab.detail.dueWords", { count: dueCount })}
+              </span>
             )}
           </p>
-          <div className="mt-1.5 h-1.5 max-w-md overflow-hidden rounded-full bg-muted">
+          <div className="mt-2 h-1.5 max-w-md overflow-hidden rounded-full bg-muted">
             <div
               className="h-full rounded-full bg-primary transition-[width]"
               style={{
@@ -391,62 +465,72 @@ export default function VocabTopicDetail() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="relative grid h-12 w-full max-w-md shrink-0 grid-cols-5 overflow-hidden rounded-xl border bg-muted/60 p-1 xl:w-96">
-            <span
-              className="absolute bottom-1 top-1 w-[calc(20%-0.4rem)] rounded-lg border bg-background shadow-sm transition-[left] duration-300"
-              style={{ left: `calc(${activeStudyPlanIndex * 20}% + 0.2rem)` }}
-            />
-            {STUDY_PLAN_ICONS.map((item) => {
-              const Icon = item.icon;
-              const plan = STUDY_PLANS.find(
-                (candidate) => candidate.id === item.id,
-              );
-              const active = studyPlan === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setStudyPlan(item.id)}
-                  title={`${plan?.label}: ${plan?.description}`}
-                  aria-label={plan?.label}
-                  className={cn(
-                    "relative z-10 flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors",
-                    active
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <Icon
-                    className={cn("h-3.5 w-3.5", active && "drop-shadow-sm")}
-                  />
-                  <span className="whitespace-nowrap text-[9px] font-semibold leading-none sm:text-[10px]">
-                    {item.shortLabel}
-                  </span>
-                </button>
-              );
-            })}
+        <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-3 xl:flex-row xl:items-end xl:justify-between">
+          <div className="w-full max-w-md shrink-0 xl:w-96">
+            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {t("vocab.detail.studyMode")}
+            </p>
+            <div className="relative grid h-12 grid-cols-5 overflow-hidden rounded-xl border border-primary/15 bg-primary/[0.04] p-1">
+              <span
+                className="absolute bottom-1 top-1 w-[calc(20%-0.4rem)] rounded-lg border border-primary/35 bg-primary/15 shadow-sm ring-1 ring-primary/10 transition-[left] duration-300"
+                style={{ left: `calc(${activeStudyPlanIndex * 20}% + 0.2rem)` }}
+              />
+              {STUDY_PLAN_ICONS.map((item) => {
+                const Icon = item.icon;
+                const plan = STUDY_PLANS.find(
+                  (candidate) => candidate.id === item.id,
+                );
+                const active = studyPlan === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setStudyPlan(item.id)}
+                    title={`${plan ? t(plan.labelKey) : ""}: ${plan ? t(plan.descriptionKey) : ""}`}
+                    aria-label={plan ? t(plan.labelKey) : undefined}
+                    className={cn(
+                      "relative z-10 flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors",
+                      active
+                        ? "text-primary drop-shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Icon
+                      className={cn("h-3.5 w-3.5", active && "drop-shadow-sm")}
+                    />
+                    <span className="whitespace-nowrap text-[9px] font-semibold leading-none sm:text-[10px]">
+                      {t(item.labelKey)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          {profile ? (
+          {remainingCount === 0 ? (
+            <div className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+              <CheckCircle2 className="h-4 w-4" />
+              {t("vocab.detail.lessonCompleted")}
+            </div>
+          ) : profile ? (
             <div className="flex flex-wrap items-center gap-2">
               <button
-                disabled={!remainingCount}
                 onClick={() => {
                   setLearnAllRemaining(false);
                   setLearningMode(true);
                 }}
-                className="inline-flex h-9 flex-1 items-center justify-center rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition-opacity disabled:opacity-50 sm:flex-none"
+                className="inline-flex h-9 flex-1 items-center justify-center rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm sm:flex-none"
               >
-                Bắt đầu {Math.min(5, remainingCount)} từ
+                {t("vocab.detail.learnNew", {
+                  count: Math.min(5, remainingCount),
+                })}
               </button>
               <button
-                disabled={!remainingCount}
                 onClick={() => {
                   setLearnAllRemaining(true);
                   setLearningMode(true);
                 }}
-                className="inline-flex h-9 flex-1 items-center justify-center rounded-lg border bg-background px-4 text-sm font-semibold transition-colors hover:bg-muted disabled:opacity-50 sm:flex-none"
+                className="inline-flex h-9 flex-1 items-center justify-center rounded-lg border bg-background px-4 text-sm font-semibold transition-colors hover:bg-muted sm:flex-none"
               >
-                Học tất cả
+                {t("vocab.detail.learnAllNew", { count: remainingCount })}
               </button>
             </div>
           ) : (
@@ -454,7 +538,7 @@ export default function VocabTopicDetail() {
               onClick={() => void KeycloakClient.getInstance().keycloak.login()}
               className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground"
             >
-              Đăng nhập để học
+              {t("vocab.detail.signInToLearn")}
             </button>
           )}
         </div>
@@ -468,18 +552,18 @@ export default function VocabTopicDetail() {
 
       {wordsStatus === "succeeded" && words.length === 0 && (
         <div className="mt-4 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-          Sub-topic này chưa có từ vựng sẵn sàng. Vui lòng quay lại sau.
+          {t("vocab.detail.noWords")}
         </div>
       )}
 
       {wordsStatus === "failed" && (
         <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          Không tải được danh sách từ vựng. Vui lòng thử lại.
+          {t("vocab.detail.loadWordsFailed")}
         </div>
       )}
 
       {wordsStatus === "succeeded" && words.length > 0 && (
-        <div className="mt-3 grid items-start gap-2">
+        <div className="mt-3 grid items-start gap-2 xl:grid-cols-2">
           {words
             .slice()
             .sort((a, b) => a.order - b.order)
@@ -492,10 +576,7 @@ export default function VocabTopicDetail() {
               const phonetic = getPhonetic(word);
               const posLabel = t(getPartOfSpeechI18nKey(word.pos));
               const wordProgress = localProgress[word.id];
-              const progressCode = wordProgress?.reviewRating;
-              const progressLabel = progressCode
-                ? REVIEW_RATING_META[progressCode].label
-                : "New";
+              const wordStatus = getWordStatus(wordProgress);
 
               return (
                 <article
@@ -523,20 +604,19 @@ export default function VocabTopicDetail() {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span
+                        title={wordStatus.titleKey ? t(wordStatus.titleKey) : undefined}
                         className={cn(
                           "rounded-full border px-2.5 py-1 text-xs font-bold",
-                          progressCode
-                            ? REVIEW_RATING_STYLES[progressCode]
-                            : "border-border bg-muted text-muted-foreground",
+                          wordStatus.className,
                         )}
                       >
-                        {progressLabel}
+                        {t(wordStatus.labelKey)}
                       </span>
                       {audioUrl && (
                         <button
                           onClick={() => playWordAudio(word)}
                           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground transition-colors hover:text-foreground"
-                          title="Nghe phát âm"
+                          title={t("vocab.detail.playAudio")}
                         >
                           <Volume2 className="h-4 w-4" />
                         </button>
@@ -577,47 +657,44 @@ export default function VocabTopicDetail() {
 
   return (
     <div className="py-2 xl:h-[calc(100vh-6rem)]">
-      <div className="mb-2 rounded-xl border bg-background px-2.5 py-1.5">
-        <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
+      <header className="mb-2 rounded-xl border bg-background px-2.5 py-1.5">
+        <div className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
           <button
             onClick={handleHeaderBack}
-            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+            title="Quay lại"
+            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Quay lại
+            {t("vocab.common.back")}
           </button>
 
-          <span className="shrink-0 text-muted-foreground/50">/</span>
-          <h1 className="max-w-[16rem] truncate text-base font-bold sm:max-w-[28rem]">
+          <span className="shrink-0 text-muted-foreground/40">|</span>
+          <h1 className="max-w-[16rem] truncate text-base font-bold sm:max-w-md">
             {topic?.title ||
-              (topicStatus === "loading" ? "Đang tải topic..." : "Vocab Topic")}
+              (topicStatus === "loading"
+                ? t("vocab.detail.loadingTopic")
+                : t("vocab.detail.topicFallback"))}
           </h1>
 
           {topic?.cefrRange && (
-            <span className="shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-semibold">
+            <span className="shrink-0 rounded-md border border-primary/20 bg-primary/[0.06] px-2 py-0.5 text-[11px] font-semibold text-primary">
               {topic.cefrRange}
             </span>
           )}
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {activeSubtopics.length} sub-topics
-          </span>
-          {topic?.estimatedWordCount ? (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              ~{topic.estimatedWordCount} từ
-            </span>
-          ) : null}
           {topicCompleted && (
-            <div className="ml-1 flex shrink-0 items-center gap-1 rounded-full border border-green-100 bg-green-50 px-1.5 py-0.5 text-green-600 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-400">
+            <div className="flex shrink-0 items-center gap-1 rounded-full border border-green-100 bg-green-50 px-1.5 py-0.5 text-green-600 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-400">
               <CheckCircle2 className="h-3 w-3" />
-              <span className="text-[10px] font-bold">Hoàn thành</span>
+              <span className="text-[10px] font-bold">
+                {t("vocab.common.completed")}
+              </span>
             </div>
           )}
         </div>
-      </div>
+      </header>
 
       <div className="grid grid-cols-1 gap-2 xl:h-[calc(100%-4.75rem)] xl:grid-cols-12">
         <aside
-          className={`col-span-1 w-full flex-col overflow-hidden rounded-2xl border bg-background xl:col-span-3 xl:h-full xl:min-h-0 ${
+          className={`col-span-1 w-full flex-col overflow-hidden rounded-2xl border bg-muted/15 xl:col-span-3 xl:h-full xl:min-h-0 ${
             learningMode
               ? "hidden"
               : activeSubtopicId
@@ -625,10 +702,18 @@ export default function VocabTopicDetail() {
                 : "flex"
           }`}
         >
-          <div className="border-b px-3 py-2.5">
-            <h2 className="text-base font-bold">Sub-topics</h2>
+          <div className="border-b bg-card/80 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base font-bold">{t("vocab.detail.subtopics")}</h2>
+              <span className="rounded-full border border-primary/15 bg-primary/[0.07] px-2 py-0.5 text-[10px] font-semibold text-primary">
+                {t("vocab.detail.lessonSummary", {
+                  learned: completedSubtopicCount,
+                  total: activeSubtopics.length,
+                })}
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Chọn bài để xem từ vựng.
+              {t("vocab.detail.chooseLesson")}
             </p>
           </div>
 
@@ -642,7 +727,7 @@ export default function VocabTopicDetail() {
             {subtopicsStatus === "succeeded" &&
               activeSubtopics.length === 0 && (
                 <div className="py-12 text-center text-sm text-muted-foreground">
-                  Chưa có sub-topic đang active.
+                  {t("vocab.detail.emptySubtopics")}
                 </div>
               )}
 
@@ -656,18 +741,18 @@ export default function VocabTopicDetail() {
                 };
                 const progressStatus =
                   learningProgress.percent >= 100
-                    ? "Hoàn thành"
+                    ? t("vocab.common.completed")
                     : learningProgress.learned > 0
-                      ? "Đang học"
-                      : "Chưa học";
+                      ? t("vocab.common.learning")
+                      : t("vocab.common.notStarted");
                 return (
                   <button
                     key={sub.id}
                     onClick={() => handleSelectSubtopic(sub)}
                     className={`group w-full rounded-lg border border-l-2 p-2.5 text-left transition-colors ${
                       isActive
-                        ? "border-primary/40 border-l-primary bg-primary/[0.07] shadow-sm"
-                        : "border-border/60 border-l-transparent bg-background hover:border-primary/25 hover:bg-muted/30"
+                        ? "border-primary/45 border-l-primary bg-primary/10 shadow-sm ring-1 ring-primary/5"
+                        : "border-border/70 border-l-transparent bg-card shadow-xs hover:border-primary/30 hover:bg-primary/[0.04]"
                     }`}
                   >
                     <div className="flex items-center gap-1.5">
@@ -693,7 +778,7 @@ export default function VocabTopicDetail() {
                     <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
                       {learningProgress.percent >= 100 ? (
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          Hoàn thành
+                          {t("vocab.common.completed")}
                         </span>
                       ) : (
                         <span

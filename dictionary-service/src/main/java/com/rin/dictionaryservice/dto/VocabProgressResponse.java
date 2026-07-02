@@ -16,6 +16,10 @@ public class VocabProgressResponse {
     Map<String, UserVocabWordProgress> words;
     int learnedCount;
     int totalWordCount;
+    int masteredCount;
+    int dueReviewCount;
+    int newCount;
+    String status;
     String sessionId;
     boolean rewardExpected;
 }

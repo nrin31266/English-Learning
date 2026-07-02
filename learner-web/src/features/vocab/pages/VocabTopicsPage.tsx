@@ -45,8 +45,10 @@ import {
 } from "@/store/vocabProgressSlice";
 import VocabProgressDashboardView from "../components/VocabProgressDashboard";
 import KeycloakClient from "@/features/keycloak/keycloak";
+import { useTranslation } from "react-i18next";
 
 export default function VocabTopicsPage() {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -254,10 +256,10 @@ export default function VocabTopicsPage() {
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <BookMarked className="h-7 w-7 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Vocabulary</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("vocab.catalog.title")}</h1>
         </div>
         <p className="text-base text-muted-foreground">
-          Browse vocabulary topics and start learning new words.
+          {t("vocab.catalog.subtitle")}
         </p>
       </div>
 
@@ -266,13 +268,13 @@ export default function VocabTopicsPage() {
           onClick={() => setActiveTab("topics")}
           className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "topics" ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}
         >
-          <BookMarked className="h-4 w-4" /> Chủ đề từ vựng
+          <BookMarked className="h-4 w-4" /> {t("vocab.catalog.topicsTab")}
         </button>
         <button
           onClick={() => setActiveTab("progress")}
           className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "progress" ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}
         >
-          <ChartNoAxesColumnIncreasing className="h-4 w-4" /> Tiến độ của tôi
+          <ChartNoAxesColumnIncreasing className="h-4 w-4" /> {t("vocab.catalog.progressTab")}
         </button>
       </div>
 
@@ -289,7 +291,7 @@ export default function VocabTopicsPage() {
                   setSearchInput(e.target.value);
                   setPage(0);
                 }}
-                placeholder="Search topics..."
+                placeholder={t("vocab.catalog.search")}
                 className="h-11 pl-10 text-base"
               />
             </div>
@@ -297,11 +299,11 @@ export default function VocabTopicsPage() {
             {/* Sort */}
             <Select value={sort} onValueChange={handleSortChange}>
               <SelectTrigger className="h-11 w-[150px] text-sm">
-                <SelectValue placeholder="Sort" />
+                <SelectValue placeholder={t("vocab.catalog.sort")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="oldest">Oldest</SelectItem>
+                <SelectItem value="newest">{t("vocab.catalog.newest")}</SelectItem>
+                <SelectItem value="oldest">{t("vocab.catalog.oldest")}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -354,7 +356,7 @@ export default function VocabTopicsPage() {
                     className="h-7 px-2 text-xs text-muted-foreground"
                     onClick={() => setShowAllTags((v) => !v)}
                   >
-                    {showAllTags ? "Less" : `+${tagOptions.length - 30} more`}
+                    {showAllTags ? t("vocab.catalog.less") : t("vocab.catalog.more", { count: tagOptions.length - 30 })}
                   </Button>
                 )}
               </div>
@@ -364,7 +366,7 @@ export default function VocabTopicsPage() {
           {/* Selected tags summary */}
           {selectedTags.size > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-              <span>Filters:</span>
+              <span>{t("vocab.catalog.filters")}</span>
               {Array.from(selectedTags).map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-[11px]">
                   {tag}
@@ -381,7 +383,7 @@ export default function VocabTopicsPage() {
                 className="h-6 px-1.5 text-[11px]"
                 onClick={handleClearAll}
               >
-                Clear all
+                {t("vocab.catalog.clearAll")}
               </Button>
             </div>
           )}
@@ -389,10 +391,10 @@ export default function VocabTopicsPage() {
           {/* Content */}
           {/* Loading skeleton */}
           {isLoading && viewMode === "card" && (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} className="overflow-hidden">
-                  <Skeleton className="h-40 w-full rounded-none" />
+                  <Skeleton className="h-32 w-full rounded-none" />
                   <CardContent className="p-4 space-y-2">
                     <Skeleton className="h-5 w-3/4" />
                     <Skeleton className="h-4 w-full" />
@@ -425,10 +427,10 @@ export default function VocabTopicsPage() {
               <CardContent className="flex flex-col items-center justify-center py-20 text-center">
                 <BookMarked size={34} className="text-muted-foreground" />
                 <p className="mt-3 text-sm font-medium">
-                  No vocabulary topics yet
+                  {t("vocab.catalog.emptyTitle")}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Topics will appear here once they are created and published.
+                  {t("vocab.catalog.emptyText")}
                 </p>
               </CardContent>
             </Card>
@@ -437,14 +439,14 @@ export default function VocabTopicsPage() {
           {/* Results count */}
           {!isLoading && data.length > 0 && (
             <div className="text-sm font-medium text-muted-foreground">
-              {totalElements} topic{totalElements !== 1 ? "s" : ""}
-              {totalPages > 1 && ` — Page ${currentPage + 1}/${totalPages}`}
+              {t("vocab.catalog.resultCount", { count: totalElements })}
+              {totalPages > 1 && ` — ${t("vocab.catalog.page", { current: currentPage + 1, total: totalPages })}`}
             </div>
           )}
 
           {/* Card view - YouTube style grid */}
           {!isLoading && data.length > 0 && viewMode === "card" && (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {data.map((topic) => (
                 <VocabTopicCard
                   key={topic.id}
@@ -523,15 +525,15 @@ export default function VocabTopicsPage() {
           <VocabProgressDashboardView data={dashboard} />
         ) : (
           <div className="rounded-2xl border bg-card p-10 text-center">
-            <h2 className="text-xl font-bold">Đăng nhập để xem tiến độ</h2>
+            <h2 className="text-xl font-bold">{t("vocab.catalog.loginTitle")}</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Tiến độ từ vựng chỉ được lưu an toàn trên tài khoản của bạn.
+              {t("vocab.catalog.loginText")}
             </p>
             <Button
               className="mt-4"
               onClick={() => void KeycloakClient.getInstance().keycloak.login()}
             >
-              Đăng nhập
+              {t("vocab.catalog.login")}
             </Button>
           </div>
         ))}

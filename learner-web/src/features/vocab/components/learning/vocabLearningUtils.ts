@@ -22,9 +22,9 @@ export type ProgressMap = Record<string, LocalVocabWordProgress>;
 export const SESSION_SIZE = 5;
 
 export const REVIEW_RATING_META: Record<ReviewRating, { label: string; interval: string }> = {
-  AGAIN: { label: "Học lại", interval: "1d" }, HARD: { label: "Khó", interval: "3d" },
-  MEDIUM: { label: "Trung bình", interval: "7d" }, EASY: { label: "Dễ", interval: "14d" },
-  DONE: { label: "Đã thuộc", interval: "Hoàn tất" },
+  AGAIN: { label: "Học lại", interval: "Ôn sau 1 ngày" }, HARD: { label: "Khó", interval: "Ôn sau 3 ngày" },
+  MEDIUM: { label: "Vừa", interval: "Ôn sau 7 ngày" }, EASY: { label: "Dễ", interval: "Ôn sau 14 ngày" },
+  DONE: { label: "Thuộc hẳn", interval: "Bỏ ôn" },
 };
 
 export const REVIEW_RATING_SCORE: Record<ReviewRating, number> = {
@@ -82,7 +82,6 @@ export function getLearningSessions(words: IVocabWordEntry[], progress: Progress
 
 export const isRevealableChar = (char: string) => /[\p{L}\p{N}]/u.test(char);
 export const getRevealableCharIndexes = (text: string) => Array.from(text).flatMap((char, index) => isRevealableChar(char) ? [index] : []);
-export const buildMaskedText = (text: string, revealed: Set<number>) => Array.from(text).map((char, index) => !isRevealableChar(char) || revealed.has(index) ? char : "_").join("");
 export function getMaxHints(text: string) { const count = getRevealableCharIndexes(text).length; if (count <= 1) return 0; if (count <= 3) return 1; if (count <= 5) return 2; if (count <= 8) return 3; if (count <= 12) return 4; return Math.min(6, count - 1); }
 
 export function completeMode(progress: LocalVocabWordProgress, mode: VocabLearningMode, score: number): LocalVocabWordProgress {

@@ -161,8 +161,14 @@ public class VocabProgressService {
                     .trigger(GamificationTrigger.VOCAB_WORD_REVIEWED).targetId(request.getSessionId())
                     .timestamp(System.currentTimeMillis()).difficulty(DifficultyLevel.UNKNOWN).build());
         }
-        return VocabProgressResponse.builder().subtopicId("review").words(merged).learnedCount(request.getWords().size())
-                .totalWordCount(request.getWords().size()).sessionId(request.getSessionId()).rewardExpected(rewardDelta > 0).build();
+        int learnedCount = merged.size();
+        int masteredCount = (int) merged.values().stream().filter(word -> word.getReviewRating() == VocabReviewRating.DONE).count();
+        int dueReviewCount = (int) merged.values().stream().filter(word -> isDue(word, now)).count();
+        int totalWordCount = request.getWords().size();
+        return VocabProgressResponse.builder().subtopicId("review").words(merged).learnedCount(learnedCount)
+                .totalWordCount(totalWordCount).masteredCount(masteredCount).dueReviewCount(dueReviewCount)
+                .newCount(Math.max(0, totalWordCount - learnedCount)).status(learningStatus(learnedCount, totalWordCount))
+                .sessionId(request.getSessionId()).rewardExpected(rewardDelta > 0).build();
     }
 
     public VocabProgressDashboardResponse getDashboard() {
@@ -175,7 +181,7 @@ public class VocabProgressService {
         Map<String, Integer> activity = new TreeMap<>();
         Map<String, int[]> topicCounts = new HashMap<>();
         List<VocabProgressDashboardResponse.SubtopicProgress> subtopicSummaries = new ArrayList<>();
-        int mastered = 0, due = 0;
+        int learnedTotal = 0, mastered = 0, due = 0;
 
         for (UserVocabProgress progress : progresses) {
             VocabSubTopic subtopic = subtopics.get(progress.getSubtopicId());
@@ -185,30 +191,48 @@ public class VocabProgressService {
             int subMastered = progress.getMasteredWordCount() != null ? progress.getMasteredWordCount()
                     : (progress.getWords() == null ? 0 : (int) progress.getWords().values().stream()
                     .filter(word -> word.getReviewRating() == VocabReviewRating.DONE).count());
-            mastered += subMastered; due += subDue;
+            learnedTotal += subLearned;
+            mastered += subMastered;
+            due += subDue;
             if (progress.getActivityByDate() != null) progress.getActivityByDate().forEach((date, count) -> activity.merge(date, count, Integer::sum));
             if (subLearned == 0) continue;
             int subTotal = subtopic.getReadyWordCount();
             subtopicSummaries.add(VocabProgressDashboardResponse.SubtopicProgress.builder()
                     .subtopicId(subtopic.getId()).learnedWords(subLearned).totalWords(subTotal).dueReviewWords(subDue)
-                    .status(subTotal > 0 && subLearned >= subTotal ? "COMPLETED" : "IN_PROGRESS").build());
-            int[] counts = topicCounts.computeIfAbsent(subtopic.getTopicId(), ignored -> new int[2]);
-            counts[0] += subLearned; counts[1] += subDue;
+                    .masteredCount(subMastered).dueReviewCount(subDue).newCount(Math.max(0, subTotal - subLearned))
+                    .status(legacyStatus(subLearned, subTotal)).learningStatus(learningStatus(subLearned, subTotal)).build());
+            int[] counts = topicCounts.computeIfAbsent(subtopic.getTopicId(), ignored -> new int[3]);
+            counts[0] += subLearned;
+            counts[1] += subDue;
+            counts[2] += subMastered;
         }
 
-        List<VocabProgressDashboardResponse.TopicProgress> topics = topicCounts.entrySet().stream().map(entry -> {
-            int total = subtopicRepository.findAllByTopicIdAndIsActiveTrueOrderByOrder(entry.getKey()).stream()
-                    .filter(sub -> sub.getStatus() == VocabSubTopicStatus.READY).mapToInt(VocabSubTopic::getReadyWordCount).sum();
-            int topicLearned = entry.getValue()[0];
-            VocabTopic topic = topicRepository.findById(entry.getKey()).orElse(null);
-            return VocabProgressDashboardResponse.TopicProgress.builder().topicId(entry.getKey())
+        List<String> topicIds = new ArrayList<>(topicCounts.keySet());
+        Map<String, List<VocabSubTopic>> readySubtopicsByTopic = subtopicRepository.findAllByTopicIdInAndIsActiveTrue(topicIds).stream()
+                .filter(sub -> sub.getStatus() == VocabSubTopicStatus.READY)
+                .collect(Collectors.groupingBy(VocabSubTopic::getTopicId));
+        Map<String, VocabTopic> topicsById = topicRepository.findAllById(topicIds).stream()
+                .collect(Collectors.toMap(VocabTopic::getId, Function.identity()));
+
+        List<VocabProgressDashboardResponse.TopicProgress> topics = topicIds.stream().map(topicId -> {
+            int[] counts = topicCounts.getOrDefault(topicId, new int[]{0, 0, 0});
+            int topicLearned = counts[0];
+            int topicDue = counts[1];
+            int topicMastered = counts[2];
+            int total = readySubtopicsByTopic.getOrDefault(topicId, List.of()).stream()
+                    .mapToInt(VocabSubTopic::getReadyWordCount).sum();
+            VocabTopic topic = topicsById.get(topicId);
+            return VocabProgressDashboardResponse.TopicProgress.builder().topicId(topicId)
                     .title(topic == null ? "Vocabulary topic" : topic.getTitle())
-                    .description(topic == null ? null : topic.getDescription()).thumbnailUrl(topic == null ? null : topic.getThumbnailUrl())
-                    .cefrRange(topic == null ? null : topic.getCefrRange()).subtopicCount(topic == null ? 0 : topic.getReadySubtopicCount())
-                    .learnedWords(topicLearned).totalWords(total).dueReviewWords(entry.getValue()[1])
-                    .status(total > 0 && topicLearned >= total ? "COMPLETED" : "IN_PROGRESS").build();
+                    .description(topic == null ? null : topic.getDescription())
+                    .thumbnailUrl(topic == null ? null : topic.getThumbnailUrl())
+                    .cefrRange(topic == null ? null : topic.getCefrRange())
+                    .subtopicCount(topic == null ? 0 : topic.getReadySubtopicCount())
+                    .learnedWords(topicLearned).totalWords(total).dueReviewWords(topicDue)
+                    .masteredCount(topicMastered).dueReviewCount(topicDue).newCount(Math.max(0, total - topicLearned))
+                    .status(legacyStatus(topicLearned, total)).learningStatus(learningStatus(topicLearned, total)).build();
         }).toList();
-        return VocabProgressDashboardResponse.builder().totalMasteredWords(mastered).dueReviewWords(due)
+        return VocabProgressDashboardResponse.builder().totalLearnedWords(learnedTotal).totalMasteredWords(mastered).dueReviewWords(due)
                 .activityByDate(activity).topics(topics).subtopics(subtopicSummaries).build();
     }
 
@@ -231,10 +255,14 @@ public class VocabProgressService {
                     VocabSubTopic subtopic = subtopicsById.get(progress.getSubtopicId());
                     int learned = progress.getWords() == null ? 0 : progress.getWords().size();
                     int due = progress.getWords() == null ? 0 : (int) progress.getWords().values().stream().filter(word -> isDue(word, now)).count();
+                    int mastered = progress.getMasteredWordCount() != null ? progress.getMasteredWordCount()
+                            : (progress.getWords() == null ? 0 : (int) progress.getWords().values().stream()
+                            .filter(word -> word.getReviewRating() == VocabReviewRating.DONE).count());
                     int total = subtopic.getReadyWordCount();
                     return VocabProgressDashboardResponse.SubtopicProgress.builder().subtopicId(subtopic.getId())
                             .learnedWords(learned).totalWords(total).dueReviewWords(due)
-                            .status(total > 0 && learned >= total ? "COMPLETED" : "IN_PROGRESS").build();
+                            .masteredCount(mastered).dueReviewCount(due).newCount(Math.max(0, total - learned))
+                            .status(legacyStatus(learned, total)).learningStatus(learningStatus(learned, total)).build();
                 }).filter(item -> item.getLearnedWords() > 0).toList();
 
         Map<String, List<VocabSubTopic>> subtopicsByTopic = subtopics.stream().collect(Collectors.groupingBy(VocabSubTopic::getTopicId));
@@ -245,10 +273,16 @@ public class VocabProgressService {
                     .mapToInt(progress -> progress.getWords() == null ? 0 : progress.getWords().size()).sum();
             int due = children.stream().map(VocabSubTopic::getId).map(progressBySubtopic::get).filter(Objects::nonNull)
                     .mapToInt(progress -> progress.getWords() == null ? 0 : (int) progress.getWords().values().stream().filter(word -> isDue(word, now)).count()).sum();
+            int mastered = children.stream().map(VocabSubTopic::getId).map(progressBySubtopic::get).filter(Objects::nonNull)
+                    .mapToInt(progress -> progress.getMasteredWordCount() != null ? progress.getMasteredWordCount()
+                            : (progress.getWords() == null ? 0 : (int) progress.getWords().values().stream()
+                            .filter(word -> word.getReviewRating() == VocabReviewRating.DONE).count()))
+                    .sum();
             return VocabProgressDashboardResponse.TopicProgress.builder().topicId(topic.getId()).title(topic.getTitle())
                     .description(topic.getDescription()).thumbnailUrl(topic.getThumbnailUrl()).cefrRange(topic.getCefrRange())
                     .subtopicCount(children.size()).learnedWords(learned).totalWords(total).dueReviewWords(due)
-                    .status(total > 0 && learned >= total ? "COMPLETED" : "IN_PROGRESS").build();
+                    .masteredCount(mastered).dueReviewCount(due).newCount(Math.max(0, total - learned))
+                    .status(legacyStatus(learned, total)).learningStatus(learningStatus(learned, total)).build();
         }).filter(item -> item.getLearnedWords() > 0).toList();
         return VocabScopedProgressResponse.builder().topics(topicProgress).subtopics(subtopicProgress).build();
     }
@@ -287,8 +321,15 @@ public class VocabProgressService {
 
     private VocabProgressResponse toResponse(UserVocabProgress progress, int total, String sessionId, boolean rewardExpected) {
         Map<String, UserVocabWordProgress> words = progress.getWords() == null ? Map.of() : progress.getWords();
+        int learnedCount = words.size();
+        int masteredCount = progress.getMasteredWordCount() != null ? progress.getMasteredWordCount()
+                : (int) words.values().stream().filter(word -> word.getReviewRating() == VocabReviewRating.DONE).count();
+        Instant now = Instant.now();
+        int dueReviewCount = (int) words.values().stream().filter(word -> isDue(word, now)).count();
         return VocabProgressResponse.builder().subtopicId(progress.getSubtopicId()).words(words)
-                .learnedCount(words.size()).totalWordCount(total).sessionId(sessionId).rewardExpected(rewardExpected).build();
+                .learnedCount(learnedCount).totalWordCount(total).masteredCount(masteredCount)
+                .dueReviewCount(dueReviewCount).newCount(Math.max(0, total - learnedCount))
+                .status(learningStatus(learnedCount, total)).sessionId(sessionId).rewardExpected(rewardExpected).build();
     }
 
     private VocabSubTopic requirePublicSubtopic(String subtopicId) {
@@ -297,6 +338,13 @@ public class VocabProgressService {
                         String.format(DictionaryErrorCode.SUBTOPIC_NOT_FOUND.getMessage(), subtopicId)));
     }
     private String requireUserId() { String id = SecurityUtils.getCurrentUserId(); if (id == null) throw new BaseException(BaseErrorCode.UNAUTHORIZED); return id; }
+        private String learningStatus(int learned, int total) {
+                if (learned <= 0) return "NOT_STARTED";
+                return total > 0 && learned >= total ? "LEARNED" : "LEARNING";
+        }
+        private String legacyStatus(int learned, int total) {
+                return total > 0 && learned >= total ? "COMPLETED" : "IN_PROGRESS";
+        }
     private int scoreFor(VocabReviewRating rating) { return switch (rating) { case AGAIN -> 20; case HARD -> 40; case MEDIUM -> 60; case EASY, DONE -> 100; }; }
     private Instant nextReviewAt(VocabReviewRating rating, Instant now) { return switch (rating) { case AGAIN -> now.plus(1, ChronoUnit.DAYS); case HARD -> now.plus(3, ChronoUnit.DAYS); case MEDIUM -> now.plus(7, ChronoUnit.DAYS); case EASY -> now.plus(14, ChronoUnit.DAYS); case DONE -> null; }; }
     private DifficultyLevel toDifficulty(com.rin.dictionaryservice.model.CefrLevel level) { return level == null ? DifficultyLevel.UNKNOWN : DifficultyLevel.valueOf(level.name()); }

@@ -18,6 +18,58 @@
     "all": "All",
     "noLessons": "No lessons in this playlist"
   },
+  "vocab": {
+    "common": {
+      "back": "Back", "words": "words", "noTags": "No tags",
+      "notStarted": "Not started", "learning": "Learning", "completed": "Completed",
+      "new": "New", "learned": "Learned", "due": "Due for review", "mastered": "Mastered"
+    },
+    "catalog": {
+      "title": "Vocabulary", "subtitle": "Browse vocabulary topics and start learning new words.",
+      "topicsTab": "Vocabulary topics", "progressTab": "My progress",
+      "search": "Search topics...", "sort": "Sort", "newest": "Newest", "oldest": "Oldest",
+      "less": "Less", "more": "+{{count}} more", "filters": "Filters:", "clearAll": "Clear all",
+      "emptyTitle": "No vocabulary topics yet", "emptyText": "Topics will appear once they are created and published.",
+      "resultCount": "{{count}} topics", "page": "Page {{current}}/{{total}}",
+      "loginTitle": "Sign in to view progress", "loginText": "Your learning progress and review schedule are saved to your account.",
+      "login": "Sign in", "subtopicCount": "{{count}} lessons", "noSubtopics": "No lessons"
+    },
+    "detail": {
+      "loadingTopic": "Loading topic...", "topicFallback": "Vocabulary topic",
+      "subtopics": "Lessons", "chooseLesson": "Choose a lesson to view its vocabulary.",
+      "lessonSummary": "Learned {{learned}}/{{total}} lessons", "emptySubtopics": "No active lessons yet.",
+      "chooseAbove": "Choose a lesson from the list above", "chooseLeft": "Choose a lesson from the list on the left",
+      "chooseTitle": "Choose a lesson to begin", "chooseText": "View its words and progress, then choose a learning mode that suits you.",
+      "learnedProgress": "Learned", "newRemaining": "Remaining", "newWords": "{{count}} new words", "dueWords": "{{count}} due",
+      "studyMode": "Learning mode", "learnNew": "Learn {{count}} new words", "learnAllNew": "Learn all {{count}} new words",
+      "lessonCompleted": "Lesson completed", "signInToLearn": "Sign in to learn",
+      "noWords": "This lesson has no ready vocabulary yet. Please come back later.",
+      "loadWordsFailed": "Could not load vocabulary. Please try again.",
+      "playAudio": "Play pronunciation", "masteredHint": "No longer in the review schedule"
+      ,"loadProgressFailed": "Could not load progress from the server.", "saveProgressFailed": "Could not save progress. Please try again.",
+      "combined": "Combined", "flashcard": "Cards", "enToVi": "EN→VI", "viToEn": "VI→EN", "listen": "Listen",
+      "combinedDesc": "Practice all four modes in sequence", "flashcardDesc": "Review and recall with cards", "enToViDesc": "Choose the Vietnamese meaning", "viToEnDesc": "Choose the English word", "listenDesc": "Listen and type the word"
+    },
+    "progress": {
+      "loading": "Loading progress...", "reviewToday": "Review today", "noReview": "No words due for review",
+      "dueSubtitle": "You have {{count}} words due in your spaced-repetition schedule.",
+      "cleanSubtitle": "Your review schedule is clear. Continue learning a new topic today.",
+      "dueHelper": "Each session takes up to 10 earliest-due words.", "cleanHelper": "Learned words will reappear automatically when they are due.",
+      "startReview": "Start review", "continue": "Continue learning", "explore": "Explore topics",
+      "activity": "Vocabulary activity", "activitySubtitle": "Words completed over the last 12 months.",
+      "activityHint": "Hover over a cell to see the date and word count.", "noActivity": "No activity",
+      "learningTopics": "Topics in progress", "learningTopicsSubtitle": "Continue where you left off.",
+      "noDue": "No words due", "noTopics": "You haven't started a vocabulary topic yet.",
+      "overview": "Overview", "today": "Today", "reviewDue": "Due",
+      "guide": "How the review schedule works", "guideSubtitle": "Rate your recall after each word and the system schedules its next review.",
+      "again": "Again", "hard": "Hard", "medium": "Medium", "easy": "Easy",
+      "oneDay": "1 day", "threeDays": "3 days", "sevenDays": "7 days", "fourteenDays": "14 days", "removeSchedule": "Remove from schedule"
+    },
+    "review": {
+      "doneTitle": "Today's review is complete", "doneText": "There are no more due words in your queue.",
+      "backProgress": "My progress", "todayTitle": "Today's review"
+    }
+  },
   "resume": {
     "continueLearning": "Continue Learning",
     "inProgress": "in progress",

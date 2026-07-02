@@ -93,6 +93,9 @@ const RATING_SHORTCUT: Record<ReviewRating, number> = {
   HARD: 4,
   AGAIN: 5,
 };
+const SCHEDULED_RATINGS = RATING_ORDER.filter(
+  (rating): rating is Exclude<ReviewRating, "DONE"> => rating !== "DONE",
+);
 
 function isTypingTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -399,7 +402,7 @@ function LearningHeader({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <span className="text-xs font-semibold text-muted-foreground">
-            {result ? "Hoàn thành" : `${Math.min(current, total)}/${total} từ`}
+            {result ? "Đã học xong" : `${Math.min(current, total)}/${total} từ`}
           </span>
           <Button
             size="icon"
@@ -496,16 +499,16 @@ function FlashcardMode({
   });
   return (
     <div className="mx-auto w-full max-w-2xl">
-      <div className="h-80 [perspective:1200px]">
+      <div className="h-80 perspective-distant">
         <div
           className={cn(
-            "relative h-full transition-transform duration-500 [transform-style:preserve-3d]",
-            flipped && "[transform:rotateY(180deg)]",
+            "relative h-full transform-3d transition-transform duration-500",
+            flipped && "transform-[rotateY(180deg)]",
           )}
         >
           <button
             onClick={flip}
-            className="absolute inset-0 flex h-full w-full flex-col items-center justify-center rounded-2xl border bg-card p-6 [backface-visibility:hidden]"
+            className="absolute inset-0 flex h-full w-full flex-col items-center justify-center rounded-2xl border bg-card p-6 backface-hidden"
           >
             <div className="flex items-center gap-2">
               <h2 className="text-3xl font-bold">{getTarget(word)}</h2>
@@ -523,7 +526,7 @@ function FlashcardMode({
           </button>
           <div
             onClick={flip}
-            className="no-scrollbar absolute inset-0 flex h-full cursor-pointer flex-col justify-center overflow-y-auto rounded-2xl border bg-card p-5 text-center [backface-visibility:hidden] [transform:rotateY(180deg)]"
+            className="no-scrollbar absolute inset-0 flex h-full cursor-pointer flex-col justify-center overflow-y-auto rounded-2xl border bg-card p-5 text-center backface-hidden transform-[rotateY(180deg)]"
           >
             <p className="text-xl font-bold text-primary">{getMeaning(word)}</p>
             <p className="mt-2">{getDefinition(word)}</p>
@@ -617,7 +620,7 @@ function MultipleChoiceMode({
           {direction === "EN_TO_VI"
             ? "Từ này có nghĩa là gì?"
             : "Từ nào mang nghĩa này?"}{" "}
-          · Chọn bằng phím 1–4
+          | Chọn bằng phím 1–4
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <h2 className="text-2xl font-bold">
@@ -811,11 +814,11 @@ function TypingMode({
               <b className="text-foreground">
                 {Math.max(0, maxHints - revealedChars.size)}
               </b>{" "}
-              hint · bấm vào dấu _ muốn mở
+              hint | bấm vào dấu _ muốn mở
             </div>
             <div className="mt-3 flex justify-center gap-2">
               <Button variant="outline" onClick={play}>
-                <Volume2 /> Replay · Ctrl+Space
+                <Volume2 /> Replay | Ctrl+Space
               </Button>
               {canGiveUp && (
                 <Button variant="outline" onClick={unknown}>
@@ -841,7 +844,6 @@ function TypingMode({
             <LearningActions
               onContinue={onContinue}
               onRate={onRate}
-              finishLabel="Đã thuộc"
               directRatings={singleMode}
             />
           </>
@@ -888,12 +890,10 @@ function AnswerDetail({ word }: { word: IVocabWordEntry }) {
 function LearningActions({
   onContinue,
   onRate,
-  finishLabel = "Đã xong",
   directRatings = false,
 }: {
   onContinue: () => void;
   onRate: (rating: ReviewRating) => void;
-  finishLabel?: string;
   directRatings?: boolean;
 }) {
   const [showRatings, setShowRatings] = useState(directRatings);
@@ -931,35 +931,61 @@ function LearningActions({
       {!showRatings ? (
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={() => setShowRatings(true)}>
-            {finishLabel} · Enter <Check />
+            Đánh giá | Enter <Check />
           </Button>
           <Button onClick={onContinue}>
-            Học tiếp · Tab <ChevronRight />
+            Học tiếp | Tab <ChevronRight />
           </Button>
         </div>
       ) : (
         <>
-          <p className="mb-2 text-sm text-muted-foreground">
-            Tự đánh giá mức độ ghi nhớ · phím 1–5
-          </p>
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
-            {RATING_ORDER.map((rating) => (
+          <div className="mb-2 flex items-center gap-2">
+            <button
+              type="button"
+              title="Quay lại"
+              aria-label="Quay lại"
+              onClick={() => setShowRatings(false)}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <p className="text-sm font-medium text-foreground">
+              Tự đánh giá mức độ ghi nhớ
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            {SCHEDULED_RATINGS.map((rating) => (
               <button
+                type="button"
                 key={rating}
                 onClick={() => submitRating(rating)}
                 className={cn(
-                  "rounded-lg border px-2 py-2.5 text-sm transition-colors",
+                  "relative rounded-lg border px-3 py-3 text-left text-sm transition-colors",
                   REVIEW_RATING_STYLES[rating],
                 )}
               >
-                <span className="block font-bold">
-                  {RATING_SHORTCUT[rating]}. {REVIEW_RATING_META[rating].label}
+                <span className="block pr-6 font-bold">
+                  {REVIEW_RATING_META[rating].label}
                 </span>
-                <span className="text-xs opacity-80">
+                <span className="mt-0.5 block text-xs opacity-80">
                   {REVIEW_RATING_META[rating].interval}
                 </span>
+                <kbd className="absolute right-2 top-2 rounded border border-current/20 bg-background/50 px-1.5 py-0.5 text-[10px] font-semibold leading-none opacity-70">
+                  {RATING_SHORTCUT[rating]}
+                </kbd>
               </button>
             ))}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-1 text-xs text-muted-foreground">
+            <span>Đã chắc chắn thuộc?</span>
+            <button
+              type="button"
+              onClick={() => submitRating("DONE")}
+              className="rounded-md px-1.5 py-1 font-medium text-muted-foreground underline-offset-4 transition-colors hover:bg-muted hover:text-foreground hover:underline"
+            >
+              Thuộc hẳn <kbd className="ml-1 rounded border bg-muted px-1 py-0.5 text-[10px]">1</kbd>
+            </button>
+            <span>để bỏ khỏi lịch ôn.</span>
           </div>
         </>
       )}
@@ -1041,7 +1067,7 @@ function ResultView({
                         REVIEW_RATING_STYLES[rating],
                       )}
                     >
-                      {meta.label} · {meta.interval}
+                      {meta.label} | {meta.interval}
                     </span>
                   )}
                 </div>
@@ -1071,7 +1097,7 @@ function ResultView({
   const rewardText = sessionSaving
     ? "Đang lưu..."
     : reward
-      ? `+${reward.earnedXp} XP · +${reward.earnedCoins} coin`
+      ? `+${reward.earnedXp} XP | +${reward.earnedCoins} coin`
       : rewardExpected && !rewardTimedOut
         ? "Đang nhận..."
         : rewardExpected
@@ -1097,9 +1123,9 @@ function ResultView({
               {subtopic.title}
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <Stat label="Đã chốt" value={reviewed.length} />
+              <Stat label="Đã học" value={reviewed.length} />
               <Stat label="Điểm trung bình" value={`${averageScore}/100`} />
-              <Stat label="Cần ôn sớm" value={dueCount} />
+              <Stat label="Cần ôn" value={dueCount} />
               <Stat label="Phần thưởng" value={rewardText} />
             </div>
             {reviewQueueRemaining !== undefined && (
@@ -1125,7 +1151,7 @@ function ResultView({
                 </Button>
               )}
             <Button variant="outline" disabled>
-              Thêm vào bộ thẻ · Sắp ra mắt
+              Thêm vào bộ thẻ | Sắp ra mắt
             </Button>
             <Button
               variant="outline"

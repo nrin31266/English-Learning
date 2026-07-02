@@ -12,8 +12,10 @@ import {
   fetchVocabReviewQueue,
   submitVocabReviewSession,
 } from "@/store/vocabProgressSlice";
+import { useTranslation } from "react-i18next";
 
 export default function VocabReviewPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const queue = useAppSelector((state) => state.vocabProgress.reviewQueue);
@@ -36,22 +38,22 @@ export default function VocabReviewPage() {
     return (
       <div className="mx-auto mt-10 max-w-lg rounded-2xl border bg-card p-8 text-center">
         <CalendarCheck className="mx-auto h-12 w-12 text-emerald-500" />
-        <h1 className="mt-4 text-2xl font-bold">Hôm nay đã ôn xong</h1>
+        <h1 className="mt-4 text-2xl font-bold">{t("vocab.review.doneTitle")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Hiện không còn từ nào đến hạn. Cứ giữ nhịp này nhé.
+          {t("vocab.review.doneText")}
         </p>
         <button
           onClick={() => navigate("/vocab/topics?tab=progress")}
           className="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
         >
-          Về trang tiến độ
+          {t("vocab.review.backProgress")}
         </button>
       </div>
     );
 
   const subtopic = {
     id: "review",
-    title: "Ôn tập hôm nay",
+    title: t("vocab.review.todayTitle"),
   } as IVocabSubTopic;
   return (
     <div className="mx-auto flex h-[calc(100vh-7rem)] w-full max-w-7xl flex-col p-3 sm:p-5">
@@ -59,7 +61,7 @@ export default function VocabReviewPage() {
         onClick={() => navigate("/vocab/topics?tab=progress")}
         className="mb-3 inline-flex w-fit items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="h-4 w-4" /> Tiến độ của tôi
+        <ArrowLeft className="h-4 w-4" /> {t("vocab.review.backProgress")}
       </button>
       <VocabLearningPanel
         key={`review:${reloadKey}`}

@@ -26,16 +26,18 @@ type ServerWordProgress = {
 type ServerProgressResponse = {
   subtopicId: string;
   words: Record<string, ServerWordProgress>;
+  learnedCount?: number;
+  totalWordCount?: number;
+  masteredCount?: number;
+  dueReviewCount?: number;
+  newCount?: number;
+  status?: "NOT_STARTED" | "LEARNING" | "LEARNED";
   sessionId?: string;
   rewardExpected?: boolean;
 };
 
-export type VocabSessionCommitResult = {
-  progress: ProgressMap;
-  sessionId: string;
-  rewardExpected: boolean;
-};
 export type VocabProgressDashboard = {
+  totalLearnedWords: number;
   totalMasteredWords: number;
   dueReviewWords: number;
   activityByDate: Record<string, number>;
@@ -49,7 +51,11 @@ export type VocabProgressDashboard = {
     learnedWords: number;
     totalWords: number;
     dueReviewWords: number;
+    masteredCount?: number;
+    dueReviewCount?: number;
+    newCount?: number;
     status: "IN_PROGRESS" | "COMPLETED";
+    learningStatus?: "NOT_STARTED" | "LEARNING" | "LEARNED";
   }>;
   subtopics: Array<{
     subtopicId: string;
@@ -57,6 +63,10 @@ export type VocabProgressDashboard = {
     totalWords: number;
     dueReviewWords: number;
     status: "IN_PROGRESS" | "COMPLETED";
+    masteredCount?: number;
+    dueReviewCount?: number;
+    newCount?: number;
+    learningStatus?: "NOT_STARTED" | "LEARNING" | "LEARNED";
   }>;
 };
 export type VocabReviewQueue = {
