@@ -37,7 +37,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/keycloak/providers/AuthProvider";
 import {
-  fetchVocabDashboard,
+  fetchScopedVocabProgress,
   fetchVocabProgress,
   submitVocabSession,
   type VocabProgressDashboard,
@@ -194,12 +194,13 @@ export default function VocabTopicDetail() {
       setSubtopicSummaries({});
       return;
     }
-    void dispatch(fetchVocabDashboard())
+    if (!id) return;
+    void dispatch(fetchScopedVocabProgress([id]))
       .unwrap()
-      .then((dashboard) =>
+      .then((scoped) =>
         setSubtopicSummaries(
           Object.fromEntries(
-            dashboard.subtopics.map((item) => [item.subtopicId, item]),
+            scoped.subtopics.map((item) => [item.subtopicId, item]),
           ),
         ),
       )

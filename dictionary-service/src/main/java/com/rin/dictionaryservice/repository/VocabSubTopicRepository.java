@@ -9,6 +9,7 @@ import java.util.List;
 public interface VocabSubTopicRepository extends MongoRepository<VocabSubTopic, String> {
     List<VocabSubTopic> findAllByTopicIdOrderByOrder(String topicId);
     List<VocabSubTopic> findAllByTopicIdAndIsActiveTrueOrderByOrder(String topicId);
+    List<VocabSubTopic> findAllByTopicIdInAndIsActiveTrue(List<String> topicIds);
     long countByTopicIdAndStatus(String topicId, VocabSubTopicStatus status);
     long countByTopicId(String topicId);
     void deleteByTopicId(String topicId);

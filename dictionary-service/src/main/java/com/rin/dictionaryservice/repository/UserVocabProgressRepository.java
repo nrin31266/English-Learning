@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface UserVocabProgressRepository extends MongoRepository<UserVocabProgress, String> {
     Optional<UserVocabProgress> findByUserIdAndSubtopicId(String userId, String subtopicId);
     java.util.List<UserVocabProgress> findAllByUserId(String userId);
+    java.util.List<UserVocabProgress> findAllByUserIdAndSubtopicIdIn(String userId, java.util.Collection<String> subtopicIds);
 }

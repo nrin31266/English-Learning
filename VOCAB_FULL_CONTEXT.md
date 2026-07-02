@@ -77,10 +77,13 @@ Backend chia nội bộ theo subtopic để cập nhật document nhưng gom rew
 - `GET /vocab/subtopics/{id}/progress`.
 - `POST /vocab/subtopics/{id}/progress/sessions`.
 - `GET /vocab/progress/dashboard`.
+- `GET /vocab/progress/scoped?topicIds=...` — progress nhẹ cho các topic đang hiển thị hoặc một topic detail.
 - `GET /vocab/progress/review?limit=10`.
 - `POST /vocab/progress/review/sessions`.
 
 Các endpoint progress yêu cầu JWT; `SecurityUtils` lấy `userId` từ token, không nhận user ID từ client.
+
+Dashboard tổng chỉ được gọi khi mở tab `?tab=progress`. Catalog gửi tối đa IDs của page hiện tại vào scoped API; topic detail chỉ gửi một ID. Scoped API dùng ba bulk query cố định (topic, subtopic, user progress), không gọi theo từng card.
 
 ## Reward flow
 

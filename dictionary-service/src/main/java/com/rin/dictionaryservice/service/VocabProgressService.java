@@ -212,6 +212,47 @@ public class VocabProgressService {
                 .activityByDate(activity).topics(topics).subtopics(subtopicSummaries).build();
     }
 
+    public VocabScopedProgressResponse getScopedProgress(List<String> requestedTopicIds) {
+        String userId = requireUserId();
+        List<String> topicIds = requestedTopicIds.stream().filter(Objects::nonNull).distinct().limit(50).toList();
+        if (topicIds.isEmpty()) return VocabScopedProgressResponse.builder().topics(List.of()).subtopics(List.of()).build();
+
+        Map<String, VocabTopic> topicsById = topicRepository.findAllById(topicIds).stream()
+                .filter(VocabTopic::isActive).collect(Collectors.toMap(VocabTopic::getId, Function.identity()));
+        List<VocabSubTopic> subtopics = subtopicRepository.findAllByTopicIdInAndIsActiveTrue(new ArrayList<>(topicsById.keySet()));
+        Map<String, VocabSubTopic> subtopicsById = subtopics.stream().collect(Collectors.toMap(VocabSubTopic::getId, Function.identity()));
+        Map<String, UserVocabProgress> progressBySubtopic = progressRepository
+                .findAllByUserIdAndSubtopicIdIn(userId, subtopicsById.keySet()).stream()
+                .collect(Collectors.toMap(UserVocabProgress::getSubtopicId, Function.identity()));
+        Instant now = Instant.now();
+
+        List<VocabProgressDashboardResponse.SubtopicProgress> subtopicProgress = progressBySubtopic.values().stream()
+                .map(progress -> {
+                    VocabSubTopic subtopic = subtopicsById.get(progress.getSubtopicId());
+                    int learned = progress.getWords() == null ? 0 : progress.getWords().size();
+                    int due = progress.getWords() == null ? 0 : (int) progress.getWords().values().stream().filter(word -> isDue(word, now)).count();
+                    int total = subtopic.getReadyWordCount();
+                    return VocabProgressDashboardResponse.SubtopicProgress.builder().subtopicId(subtopic.getId())
+                            .learnedWords(learned).totalWords(total).dueReviewWords(due)
+                            .status(total > 0 && learned >= total ? "COMPLETED" : "IN_PROGRESS").build();
+                }).filter(item -> item.getLearnedWords() > 0).toList();
+
+        Map<String, List<VocabSubTopic>> subtopicsByTopic = subtopics.stream().collect(Collectors.groupingBy(VocabSubTopic::getTopicId));
+        List<VocabProgressDashboardResponse.TopicProgress> topicProgress = topicsById.values().stream().map(topic -> {
+            List<VocabSubTopic> children = subtopicsByTopic.getOrDefault(topic.getId(), List.of());
+            int total = children.stream().mapToInt(VocabSubTopic::getReadyWordCount).sum();
+            int learned = children.stream().map(VocabSubTopic::getId).map(progressBySubtopic::get).filter(Objects::nonNull)
+                    .mapToInt(progress -> progress.getWords() == null ? 0 : progress.getWords().size()).sum();
+            int due = children.stream().map(VocabSubTopic::getId).map(progressBySubtopic::get).filter(Objects::nonNull)
+                    .mapToInt(progress -> progress.getWords() == null ? 0 : (int) progress.getWords().values().stream().filter(word -> isDue(word, now)).count()).sum();
+            return VocabProgressDashboardResponse.TopicProgress.builder().topicId(topic.getId()).title(topic.getTitle())
+                    .description(topic.getDescription()).thumbnailUrl(topic.getThumbnailUrl()).cefrRange(topic.getCefrRange())
+                    .subtopicCount(children.size()).learnedWords(learned).totalWords(total).dueReviewWords(due)
+                    .status(total > 0 && learned >= total ? "COMPLETED" : "IN_PROGRESS").build();
+        }).filter(item -> item.getLearnedWords() > 0).toList();
+        return VocabScopedProgressResponse.builder().topics(topicProgress).subtopics(subtopicProgress).build();
+    }
+
     private boolean isDue(UserVocabWordProgress word, Instant now) {
         return word.getReviewRating() != VocabReviewRating.DONE && word.getNextReviewAt() != null && !word.getNextReviewAt().isAfter(now);
     }

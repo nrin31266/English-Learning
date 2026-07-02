@@ -9,6 +9,7 @@ import com.rin.dictionaryservice.dto.VocabProgressResponse;
 import com.rin.dictionaryservice.dto.VocabSessionSubmitRequest;
 import com.rin.dictionaryservice.dto.VocabProgressDashboardResponse;
 import com.rin.dictionaryservice.dto.VocabReviewQueueResponse;
+import com.rin.dictionaryservice.dto.VocabScopedProgressResponse;
 import com.rin.englishlearning.common.dto.ApiResponse;
 import com.rin.englishlearning.common.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
@@ -76,6 +77,12 @@ public class VocabController {
     @GetMapping("/progress/dashboard")
     public ApiResponse<VocabProgressDashboardResponse> getDashboard() {
         return ApiResponse.<VocabProgressDashboardResponse>builder().result(vocabProgressService.getDashboard()).build();
+    }
+
+    @GetMapping("/progress/scoped")
+    public ApiResponse<VocabScopedProgressResponse> getScopedProgress(@RequestParam List<String> topicIds) {
+        return ApiResponse.<VocabScopedProgressResponse>builder()
+                .result(vocabProgressService.getScopedProgress(topicIds)).build();
     }
 
     @GetMapping("/progress/review")

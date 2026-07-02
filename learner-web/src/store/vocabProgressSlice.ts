@@ -64,6 +64,10 @@ export type VocabReviewQueue = {
   words: IVocabWordEntry[];
   progress: ProgressMap;
 };
+export type VocabScopedProgress = Pick<
+  VocabProgressDashboard,
+  "topics" | "subtopics"
+>;
 
 const toLocalWordProgress = (
   wordId: string,
@@ -111,6 +115,19 @@ export const fetchVocabProgress = createAsyncThunk(
         endpoint: `/dictionaries/vocab/subtopics/${subtopicId}/progress`,
       });
       return { subtopicId, progress: toLocalProgress(response) };
+    } catch (error) {
+      return rejectWithValue(rejectMessage(error));
+    }
+  },
+);
+export const fetchScopedVocabProgress = createAsyncThunk(
+  "vocabProgress/fetchScoped",
+  async (topicIds: string[], { rejectWithValue }) => {
+    try {
+      return await handleAPI<VocabScopedProgress>({
+        endpoint: "/dictionaries/vocab/progress/scoped",
+        params: { topicIds },
+      });
     } catch (error) {
       return rejectWithValue(rejectMessage(error));
     }
@@ -192,6 +209,8 @@ export const submitVocabReviewSession = createAsyncThunk(
 type State = {
   dashboard: VocabProgressDashboard | null;
   dashboardStatus: Status;
+  topicSummaries: VocabProgressDashboard["topics"];
+  subtopicSummaries: VocabProgressDashboard["subtopics"];
   progressBySubtopic: Record<string, ProgressMap>;
   reviewQueue: VocabReviewQueue | null;
   reviewStatus: Status;
@@ -199,6 +218,8 @@ type State = {
 const initialState: State = {
   dashboard: null,
   dashboardStatus: "idle",
+  topicSummaries: [],
+  subtopicSummaries: [],
   progressBySubtopic: {},
   reviewQueue: null,
   reviewStatus: "idle",
@@ -222,6 +243,10 @@ const slice = createSlice({
       .addCase(fetchVocabProgress.fulfilled, (state, action) => {
         state.progressBySubtopic[action.payload.subtopicId] =
           action.payload.progress;
+      })
+      .addCase(fetchScopedVocabProgress.fulfilled, (state, action) => {
+        state.topicSummaries = action.payload.topics;
+        state.subtopicSummaries = action.payload.subtopics;
       })
       .addCase(submitVocabSession.fulfilled, (state, action) => {
         state.progressBySubtopic[action.payload.subtopicId] =

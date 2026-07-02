@@ -39,7 +39,10 @@ import VocabTopicCard from "../components/VocabTopicCard";
 import VocabTopicListCard from "../components/VocabTopicListCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/features/keycloak/providers/AuthProvider";
-import { fetchVocabDashboard } from "@/store/vocabProgressSlice";
+import {
+  fetchScopedVocabProgress,
+  fetchVocabDashboard,
+} from "@/store/vocabProgressSlice";
 import VocabProgressDashboardView from "../components/VocabProgressDashboard";
 import KeycloakClient from "@/features/keycloak/keycloak";
 
@@ -74,15 +77,24 @@ export default function VocabTopicsPage() {
     searchParams.get("tab") === "progress" ? "progress" : "topics",
   );
   const dashboard = useAppSelector((state) => state.vocabProgress.dashboard);
+  const topicSummaries = useAppSelector(
+    (state) => state.vocabProgress.topicSummaries,
+  );
+  const visibleTopicIds = data.map((topic) => topic.id).join(",");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(false);
 
   useEffect(() => {
-    if (profile) void dispatch(fetchVocabDashboard());
-  }, [dispatch, profile]);
+    if (profile && activeTab === "progress")
+      void dispatch(fetchVocabDashboard());
+  }, [activeTab, dispatch, profile]);
+  useEffect(() => {
+    if (profile && activeTab === "topics" && visibleTopicIds)
+      void dispatch(fetchScopedVocabProgress(visibleTopicIds.split(",")));
+  }, [activeTab, dispatch, profile, visibleTopicIds]);
   const topicProgress = new Map(
-    (dashboard?.topics || []).map((item) => [item.topicId, item]),
+    topicSummaries.map((item) => [item.topicId, item]),
   );
 
   // Giữ params hiện tại để biết cái gì thay đổi
