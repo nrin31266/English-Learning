@@ -2,7 +2,7 @@
 import asyncio
 import json
 import logging
-import string
+import os
 from typing import List
 
 from src import dto
@@ -12,45 +12,65 @@ from src.kafka.event import (
     LessonProcessingStepUpdatedEvent,
 )
 from src.kafka.producer import publish_lesson_processing_step_updated
-from src.services import media_service, ai_job_service, speech_to_text_service
-from src.services.file_service import fetch_json_from_url, file_exists
-from src.s3_storage import cloud_service
-from src.utils.chunk_utils import chunk_list
 from src.llm.analyzer import analyze_sentence_batch
+from src.s3_storage import cloud_service
+from src.services import ai_job_service, media_service, speech_to_text_service
+from src.services.file_service import fetch_json_from_url, file_exists
 from src.services.spaCy_service import analyze_word
+from src.utils.chunk_utils import chunk_list
 from src.utils.text_utils import clean_for_spacy
 
 logger = logging.getLogger(__name__)
+
+NLP_BATCH_SIZE = int(os.getenv("NLP_BATCH_SIZE", "100"))
+NLP_MAX_CONCURRENCY = int(os.getenv("NLP_MAX_CONCURRENCY", "1"))
+SPACY_PROGRESS_EVERY = int(os.getenv("SPACY_PROGRESS_EVERY", "50"))
+LESSON_GENERATION_START_DELAY = float(os.getenv("LESSON_GENERATION_START_DELAY", "2"))
+
+
+def _job_tag(ai_job_id: str | None) -> str:
+    return f"ai_job_id={ai_job_id or '-'}"
 
 
 async def _is_cancelled(ai_job_id: str | None) -> bool:
     if not ai_job_id:
         return False
+
     cancelled = await ai_job_service.ai_job_was_cancelled(ai_job_id)
+
     if cancelled:
-        print(f"lesson_generation_cancelled ai_job_id={ai_job_id}")
+        logger.info("[LessonGeneration] Cancelled | %s", _job_tag(ai_job_id))
+
     return cancelled
 
 
-async def _load_metadata(url: str | None, is_restart: bool) -> dto.LessonGenerationAiMetadataDto:
+async def _load_metadata(
+    url: str | None,
+    is_restart: bool,
+) -> dto.LessonGenerationAiMetadataDto:
     if not url or is_restart:
         return dto.LessonGenerationAiMetadataDto()
+
     try:
         data = await fetch_json_from_url(url)
-        return (
-            dto.LessonGenerationAiMetadataDto.model_validate(data)
-            if data
-            else dto.LessonGenerationAiMetadataDto()
-        )
-    except Exception:
+
+        if not data:
+            return dto.LessonGenerationAiMetadataDto()
+
+        return dto.LessonGenerationAiMetadataDto.model_validate(data)
+
+    except Exception as e:
+        logger.warning("[LessonGeneration] Load metadata failed: %s", e)
         return dto.LessonGenerationAiMetadataDto()
 
 
 async def _save_metadata(
-    lesson_id: int | None, metadata: dto.LessonGenerationAiMetadataDto
+    lesson_id: int | None,
+    metadata: dto.LessonGenerationAiMetadataDto,
 ) -> str | None:
     if not lesson_id:
         return None
+
     return await cloud_service.upload_json_content(
         json.dumps(metadata.model_dump(by_alias=True), ensure_ascii=False),
         public_id=f"lps/lessons/{lesson_id}/ai-metadata",
@@ -81,8 +101,13 @@ async def _publish_step(
             aiMessage=message,
         )
     )
-    print(
-        f">[Lesson Generation] Step {step} published for ai_job_id={ai_job_id}: {message}"
+
+    logger.info(
+        "[LessonGeneration] Step published | %s | step=%s | skip=%s | %s",
+        _job_tag(ai_job_id),
+        step,
+        is_skip,
+        message,
     )
 
 
@@ -90,14 +115,16 @@ async def _download_audio_by_source(
     event: LessonGenerationRequestedEvent,
 ) -> dto.AudioInfo:
     request = dto.MediaAudioCreateRequest(input_url=event.source_url)
+
     if event.source_type == LessonSourceType.youtube:
         return await media_service.download_youtube_audio(request)
+
     return await media_service.download_audio_file(request)
 
 
 async def _ensure_local_audio_file(audio_info: dto.AudioInfo) -> dto.AudioInfo:
     if file_exists(audio_info.file_path):
-        print(f"Audio file already exists locally: {audio_info.file_path}")
+        logger.info("[LessonGeneration] Local audio exists | path=%s", audio_info.file_path)
         return audio_info
 
     downloaded = await media_service.download_audio_file(
@@ -106,47 +133,50 @@ async def _ensure_local_audio_file(audio_info: dto.AudioInfo) -> dto.AudioInfo:
             audio_name=audio_info.sourceReferenceId,
         )
     )
+
     audio_info.file_path = downloaded.file_path
-    print(f"Downloaded audio file locally: {audio_info.file_path}")
+
+    logger.info("[LessonGeneration] Local audio downloaded | path=%s", audio_info.file_path)
+
     return audio_info
 
 
-# src/kafka/consumer/lesson_generation.py
-# Thêm import này ở đầu file
-from src.services.spaCy_service import analyze_word
-from src.utils.text_utils import clean_for_spacy
-
-
-# WORD ANALYSIS WITH SPACY
 async def _enrich_words_with_spacy(
-    sentence_text: str, words: List[dto.WordDto]
+    sentence_text: str,
+    words: List[dto.WordDto],
 ) -> List[dto.WordDto]:
-    """Thêm posTag và entityType cho từng word trong câu"""
     if not words or not sentence_text:
         return words
 
     enriched_words = []
+
     for word_obj in words:
         word_text = word_obj.word
+
         if not word_text:
             enriched_words.append(word_obj)
             continue
 
         clean_word = clean_for_spacy(word_text)
 
-        if not clean_word or len(clean_word) == 0:
+        if not clean_word:
             word_obj.posTag = "PUNCT"
             word_obj.entityType = None
-        else:
-            try:
-                analysis = await analyze_word(clean_word, sentence_text)
-                word_obj.posTag = analysis.get("pos", "NOUN")
-                word_obj.entityType = analysis.get("ent_type", None)
-                word_obj.lemma = analysis.get("lemma", None)
-            except Exception as e:
-                print(f"  ⚠ SpaCy error for '{word_text}': {e}")
-                word_obj.posTag = "NOUN"
-                word_obj.entityType = None
+            enriched_words.append(word_obj)
+            continue
+
+        try:
+            analysis = await analyze_word(clean_word, sentence_text)
+
+            word_obj.posTag = analysis.get("pos", "NOUN")
+            word_obj.entityType = analysis.get("ent_type", None)
+            word_obj.lemma = analysis.get("lemma", None)
+
+        except Exception as e:
+            logger.warning("[SpaCy] Word enrich failed | word=%s | err=%s", word_text, e)
+
+            word_obj.posTag = "NOUN"
+            word_obj.entityType = None
 
         enriched_words.append(word_obj)
 
@@ -156,86 +186,132 @@ async def _enrich_words_with_spacy(
 async def _enrich_segments_with_spacy(
     segments: List[dto.SegmentDto],
 ) -> List[dto.SegmentDto]:
-    """Thêm posTag và entityType cho tất cả words trong segments"""
-    print(
-        f"[SpaCy] Enriching {len(segments)} segments with POS tags and entity types..."
-    )
-
-    for idx, segment in enumerate(segments):
-        sentence_text = segment.text
-        words = segment.words
-
-        if words and sentence_text:
-            enriched_words = await _enrich_words_with_spacy(sentence_text, words)
-            segment.words = enriched_words
-
-        if (idx + 1) % 50 == 0:
-            print(f"  Processed {idx + 1}/{len(segments)} segments")
-
-    print(f"[SpaCy] Completed! Enriched {len(segments)} segments")
-    return segments
-async def _enrich_segments_with_nlp(
-    segments: List[dto.SegmentDto],
-    batch_size: int = 50,
-    max_concurrency: int = 3
-) -> List[dto.SegmentDto]:
-    """
-    Chỉ gửi text câu lên LLM, nhận về phoneticUs và translationVi
-    Mapping orderIndex được xử lý hoàn toàn bên ngoài
-    """
     if not segments:
         return segments
-    
-    # 1. Extract chỉ text từ segments
-    sentence_texts = [seg.text for seg in segments]
-    
-    # 2. Chunk và gửi lên LLM
+
+    logger.info("[SpaCy] Start enriching segments | total=%s", len(segments))
+
+    for idx, segment in enumerate(segments, start=1):
+        if segment.words and segment.text:
+            segment.words = await _enrich_words_with_spacy(
+                sentence_text=segment.text,
+                words=segment.words,
+            )
+
+        if SPACY_PROGRESS_EVERY > 0 and idx % SPACY_PROGRESS_EVERY == 0:
+            logger.info("[SpaCy] Progress | processed=%s/%s", idx, len(segments))
+
+    logger.info("[SpaCy] Completed | total=%s", len(segments))
+
+    return segments
+
+
+async def _enrich_segments_with_nlp(
+    segments: List[dto.SegmentDto],
+    batch_size: int = NLP_BATCH_SIZE,
+    max_concurrency: int = NLP_MAX_CONCURRENCY,
+) -> List[dto.SegmentDto]:
+    if not segments:
+        return segments
+
+    sentence_texts = [segment.text for segment in segments]
     chunks = list(chunk_list(sentence_texts, batch_size))
     all_results = []
-    
-    for i in range(0, len(chunks), max_concurrency):
-        print(f"Sending chunk {i // batch_size + 1} to LLM for NLP analysis...")
-        wave = chunks[i:i + max_concurrency]
+
+    total_chunks = len(chunks)
+    total_waves = (total_chunks + max_concurrency - 1) // max_concurrency
+
+    logger.info(
+        "[NLP] Start sentence analysis | segments=%s | chunks=%s | batch_size=%s | concurrency=%s",
+        len(segments),
+        total_chunks,
+        batch_size,
+        max_concurrency,
+    )
+
+    for start in range(0, total_chunks, max_concurrency):
+        wave = chunks[start:start + max_concurrency]
+        wave_index = start // max_concurrency + 1
+
+        logger.info(
+            "[NLP] Processing wave | wave=%s/%s | chunks=%s",
+            wave_index,
+            total_waves,
+            len(wave),
+        )
+
         results = await asyncio.gather(
             *[analyze_sentence_batch(chunk) for chunk in wave],
-            return_exceptions=True
+            return_exceptions=True,
         )
-        
+
         for chunk, result in zip(wave, results):
             if isinstance(result, Exception):
                 logger.exception(
-                    "NLP chunk failed (size=%s). First sentence preview: %s",
+                    "[NLP] Chunk failed | chunk_size=%s | first_sentence=%s",
                     len(chunk),
                     chunk[0][:200] if chunk else "<empty>",
                 )
                 raise result
+
             all_results.extend(result)
-    
-    # 3. Map kết quả vào segments (theo đúng thứ tự)
-    for idx, (segment, analysis) in enumerate(zip(segments, all_results)):
+
+    for segment, analysis in zip(segments, all_results):
         segment.phoneticUs = analysis.get("phoneticUs", "")
         segment.translationVi = analysis.get("translationVi", "")
-    
+
+    logger.info("[NLP] Completed sentence analysis | segments=%s", len(segments))
+
     return segments
+
+
+def _need_nlp(metadata: dto.LessonGenerationAiMetadataDto, is_restart: bool) -> bool:
+    if is_restart:
+        return True
+
+    if not metadata.transcribed or not metadata.transcribed.segments:
+        return False
+
+    first_segment = metadata.transcribed.segments[0]
+
+    return not getattr(first_segment, "phoneticUs", None)
+
 
 async def handle_lesson_generation_requested(
     event: LessonGenerationRequestedEvent,
 ) -> None:
-    print(f"[Lesson Generation] Started with event: {event}")
-    BATCH_SIZE, MAX_CONCURRENCY = 100, 1
+    logger.info(
+        "[LessonGeneration] Started | %s | lesson_id=%s | source_type=%s | restart=%s",
+        _job_tag(event.ai_job_id),
+        event.lesson_id,
+        event.source_type,
+        event.is_restart,
+    )
 
     try:
-        await asyncio.sleep(2)
+        if LESSON_GENERATION_START_DELAY > 0:
+            await asyncio.sleep(LESSON_GENERATION_START_DELAY)
+
         if await _is_cancelled(event.ai_job_id):
             return
 
         metadata = await _load_metadata(event.ai_meta_data_url, event.is_restart)
-        print(f"Loaded metadata for lesson_id={event.lesson_id}: {metadata}")
         metadata_url = event.ai_meta_data_url
 
-        # STEP 1: source audio
+        logger.info(
+            "[LessonGeneration] Metadata loaded | %s | lesson_id=%s | has_source=%s | has_transcribed=%s",
+            _job_tag(event.ai_job_id),
+            event.lesson_id,
+            metadata.sourceFetched is not None,
+            metadata.transcribed is not None,
+        )
+
+        # STEP 1: Source audio
         if metadata.sourceFetched is None or event.is_restart:
+            logger.info("[LessonGeneration] Step SOURCE_FETCHED started | %s", _job_tag(event.ai_job_id))
+
             audio_info = await _download_audio_by_source(event)
+
             if await _is_cancelled(event.ai_job_id):
                 return
 
@@ -249,19 +325,20 @@ async def handle_lesson_generation_requested(
             metadata.sourceFetched = dto.SourceFetchedDto.model_validate(
                 audio_info.model_dump(by_alias=True)
             )
+
             metadata_url = await _save_metadata(event.lesson_id, metadata)
             is_skip_step1 = False
+
         else:
             audio_info = dto.AudioInfo.model_validate(metadata.sourceFetched)
             audio_url = audio_info.audioUrl
-            is_skip_step1 = True
             audio_info = await _ensure_local_audio_file(audio_info)
+            is_skip_step1 = True
 
         if metadata.sourceFetched and not metadata.sourceFetched.duration:
-            duration = await speech_to_text_service.get_audio_duration(
-                audio_info.file_path
-            )
+            duration = await speech_to_text_service.get_audio_duration(audio_info.file_path)
             metadata.sourceFetched.duration = int(duration)
+            metadata_url = await _save_metadata(event.lesson_id, metadata)
 
         if await _is_cancelled(event.ai_job_id):
             return
@@ -281,22 +358,23 @@ async def handle_lesson_generation_requested(
                 else 0
             ),
         )
-        print(
-            f"✅ [Lesson Generation] Step SOURCE_FETCHED completed for ai_job_id={event.ai_job_id}"
-        )
 
-        # STEP 2: transcribe
+        logger.info("[LessonGeneration] Step SOURCE_FETCHED completed | %s", _job_tag(event.ai_job_id))
+
+        # STEP 2: Transcribe
         if metadata.transcribed is None or event.is_restart:
+            logger.info("[LessonGeneration] Step TRANSCRIBED started | %s", _job_tag(event.ai_job_id))
+
             raw = await speech_to_text_service.transcribe(audio_info.file_path)
             metadata.transcribed = dto.TranscribedDto.model_validate(raw)
 
-            # 🔥 THÊM DÒNG NÀY: Enrich words với spaCy NGAY SAU KHI TRANSCRIBE
             metadata.transcribed.segments = await _enrich_segments_with_spacy(
                 metadata.transcribed.segments
             )
 
             metadata_url = await _save_metadata(event.lesson_id, metadata)
             is_skip_step2 = False
+
         else:
             is_skip_step2 = True
 
@@ -311,34 +389,22 @@ async def handle_lesson_generation_requested(
             is_skip=is_skip_step2,
             metadata_url=metadata_url,
         )
-        print(
-            f"✅ [Lesson Generation] Step TRANSCRIBED completed for ai_job_id={event.ai_job_id}"
-        )
 
-        
-        # STEP 3: Phonetics & Translation (thay thế NLP step)
-        print(f"Starting NLP analysis for ai_job_id={event.ai_job_id}...")
+        logger.info("[LessonGeneration] Step TRANSCRIBED completed | %s", _job_tag(event.ai_job_id))
 
-        # Kiểm tra xem đã có phoneticUs chưa (segment đầu tiên)
-        need_nlp = False
-        if metadata.transcribed and metadata.transcribed.segments:
-            # Kiểm tra segment đầu tiên xem đã có phoneticUs chưa
-            first_segment = metadata.transcribed.segments[0]
-            if not hasattr(first_segment, 'phoneticUs') or first_segment.phoneticUs is None:
-                need_nlp = True
-        elif event.is_restart:
-            need_nlp = True
+        # STEP 3: NLP analysis
+        if _need_nlp(metadata, event.is_restart):
+            logger.info("[LessonGeneration] Step NLP_ANALYZED started | %s", _job_tag(event.ai_job_id))
 
-        if need_nlp:
-            # Gọi Gemini để lấy phoneticUs và translationVi
-            enriched_segments = await _enrich_segments_with_nlp(
+            metadata.transcribed.segments = await _enrich_segments_with_nlp(
                 metadata.transcribed.segments,
-                batch_size=BATCH_SIZE,
-                max_concurrency=MAX_CONCURRENCY,
+                batch_size=NLP_BATCH_SIZE,
+                max_concurrency=NLP_MAX_CONCURRENCY,
             )
-            metadata.transcribed.segments = enriched_segments
+
             metadata_url = await _save_metadata(event.lesson_id, metadata)
             is_skip_step3 = False
+
         else:
             is_skip_step3 = True
 
@@ -349,11 +415,9 @@ async def handle_lesson_generation_requested(
             metadata_url=metadata_url,
             is_skip=is_skip_step3,
         )
-        print(
-            f"✅ [Lesson Generation] Step NLP_ANALYZED completed for ai_job_id={event.ai_job_id}"
-        )
 
-        await asyncio.sleep(0)
+        logger.info("[LessonGeneration] Step NLP_ANALYZED completed | %s", _job_tag(event.ai_job_id))
+
         if await _is_cancelled(event.ai_job_id):
             return
 
@@ -365,13 +429,15 @@ async def handle_lesson_generation_requested(
             is_skip=False,
         )
 
+        logger.info("[LessonGeneration] Completed | %s", _job_tag(event.ai_job_id))
+
     except Exception as e:
         logger.exception(
-            "lesson_generation_failed ai_job_id=%s err=%s",
-            event.ai_job_id,
+            "[LessonGeneration] Failed | %s | err=%s",
+            _job_tag(event.ai_job_id),
             e,
         )
-        print(f"lesson_generation_failed ai_job_id={event.ai_job_id} err={e}")
+
         await publish_lesson_processing_step_updated(
             LessonProcessingStepUpdatedEvent(
                 aiMessage=f"Lesson generation failed: {e}",
@@ -379,5 +445,6 @@ async def handle_lesson_generation_requested(
                 aiJobId=event.ai_job_id,
             )
         )
+
     finally:
-        print(f"lesson_generation_done ai_job_id={event.ai_job_id}")
+        logger.info("[LessonGeneration] Done | %s", _job_tag(event.ai_job_id))

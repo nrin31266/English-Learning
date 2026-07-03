@@ -1,120 +1,179 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
-import logging
 import asyncio
 import gc
-import torch
+import logging
+import os
 from contextlib import asynccontextmanager
+
+import torch
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.errors.base_exception_handler import (
-    base_exception_handler, global_exception_handler, http_exception_handler
-)
-from src.errors.base_exception import BaseException
 from src.discovery_client.eureka_config import register_with_eureka
+from src.errors.base_exception import BaseException
+from src.errors.base_exception_handler import (
+    base_exception_handler,
+    global_exception_handler,
+    http_exception_handler,
+)
 from src.kafka.consumer.consumer import start_kafka_consumers
 from src.kafka.producer import periodic_flush, producer
-from src.s3_storage.config import setup_cloudinary
 from src.redis.redis_client import redis_client
-from src.routers import spaCy_router, tts_router, ai_job_router, speech_to_text_router
-from src.routers import internal_router
+from src.routers import (
+    ai_job_router,
+    internal_router,
+    spaCy_router,
+    speech_to_text_router,
+    tts_router,
+)
+from src.s3_storage.config import setup_cloudinary
 
-# LOGGING CONFIG
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
+logger = logging.getLogger("language-processing-service")
+
+
+ENABLE_EUREKA = os.getenv("ENABLE_EUREKA", "0") == "1"
+ENABLE_KAFKA = os.getenv("ENABLE_KAFKA", "1") == "1"
+
+
+def _cleanup_gpu_memory() -> None:
+    gc.collect()
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+        try:
+            torch.cuda.ipc_collect()
+        except Exception:
+            pass
+
+
+async def _cancel_task(task: asyncio.Task | None, name: str) -> None:
+    if task is None:
+        return
+
+    task.cancel()
+
+    try:
+        await task
+    except asyncio.CancelledError:
+        logger.info("%s cancelled.", name)
+    except Exception as e:
+        logger.warning("%s stopped with error: %s", name, e)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ========== STARTUP ==========
-    setup_cloudinary()
-    
-    print("Connecting Redis...")
-    try:
-        await redis_client.ping()
-        print("✅ Redis connected")
-    except Exception as e:
-        print("❌ Redis connection failed:", e)
-    
-    # await register_with_eureka()
-    print("✅ Registered with Eureka")
-    
-    # KAFKA CONSUMERS
-    kafka_task = asyncio.create_task(start_kafka_consumers())
-    flush_task = asyncio.create_task(periodic_flush())
-    print("✅ Kafka consumers started")
-    
+    kafka_task = None
+    flush_task = None
 
-    
-    yield  # APP RUNNING
+    # ========== STARTUP ==========
+    logger.info("Starting language-processing-service...")
+
+    try:
+        setup_cloudinary()
+        logger.info("Cloudinary configured.")
+    except Exception as e:
+        logger.warning("Cloudinary setup failed: %s", e)
+
+    try:
+        logger.info("Connecting Redis...")
+        await redis_client.ping()
+        logger.info("Redis connected.")
+    except Exception as e:
+        logger.warning("Redis connection failed: %s", e)
+
+    if ENABLE_EUREKA:
+        try:
+            await register_with_eureka()
+            logger.info("Registered with Eureka.")
+        except Exception as e:
+            logger.warning("Eureka registration failed: %s", e)
+    else:
+        logger.info("Eureka registration skipped.")
+
+    if ENABLE_KAFKA:
+        try:
+            kafka_task = asyncio.create_task(start_kafka_consumers())
+            flush_task = asyncio.create_task(periodic_flush())
+            logger.info("Kafka consumers started.")
+        except Exception as e:
+            logger.warning("Kafka startup failed: %s", e)
+    else:
+        logger.info("Kafka startup skipped.")
+
+    yield
 
     # ========== SHUTDOWN ==========
-    print("Shutting down FastAPI...")
-    
-    # STOP KAFKA
-    kafka_task.cancel()
-    flush_task.cancel()
-    try:
-        await kafka_task
-        await flush_task
-    except asyncio.CancelledError:
-        pass
-    producer.flush(10)
-    
-    # CLEANUP GPU MEMORY
-    print("Cleaning WhisperX & GPU memory...")
-    import src.services.speech_to_text_service as stt_service
-    stt_service.unload_whisperx()
+    logger.info("Shutting down language-processing-service...")
+
+    await _cancel_task(kafka_task, "Kafka consumer task")
+    await _cancel_task(flush_task, "Kafka flush task")
 
     try:
-        del whisper_model
-    except:
-        pass
+        producer.flush(10)
+        logger.info("Kafka producer flushed.")
+    except Exception as e:
+        logger.warning("Kafka producer flush failed: %s", e)
 
     try:
-        from whisperx import alignment
-        alignment.alignment_model = None
-    except:
-        pass
+        import src.services.speech_to_text_service as stt_service
 
-    gc.collect()
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-        torch.cuda.ipc_collect()
-    print("✅ WhisperX model unloaded & GPU memory cleaned.")
+        stt_service.unload_whisperx()
+        logger.info("WhisperX unloaded.")
+    except Exception as e:
+        logger.warning("WhisperX cleanup failed: %s", e)
+
+    _cleanup_gpu_memory()
+    logger.info("GPU memory cleaned.")
 
 
-# ========== FASTAPI APP ==========
-app = FastAPI(title="FastAPI Service", lifespan=lifespan)
+app = FastAPI(
+    title="Language Processing Service",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
-# CORS
+
+cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[origin.strip() for origin in cors_origins if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ROUTERS
+
 app.include_router(speech_to_text_router.router)
 app.include_router(ai_job_router.router)
 app.include_router(tts_router.router)
 app.include_router(spaCy_router.router)
 app.include_router(internal_router.router)
 
-# EXCEPTION HANDLERS
+
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(BaseException, base_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
 
-# ========== HEALTH CHECKS ==========
 @app.get("/health")
 def health():
     return {"status": "UP"}
 
+
 @app.get("/info")
 def info():
-    return {"service": "lps-service", "version": "1.0.0"}
+    return {
+        "service": "language-processing-service",
+        "version": "1.0.0",
+    }

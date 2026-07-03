@@ -1,21 +1,24 @@
 import json
-from typing import Dict, List
-
 import logging
 
 from src.llm.llm_service import generate_json
-from src.llm.prompts import SENTENCE_PROMPT_TEMPLATE, WORD_ANALYSIS_PROMPT_TEMPLATE, build_batch_word_prompt
+from src.llm.prompts import (
+    SENTENCE_PROMPT_TEMPLATE,
+    WORD_ANALYSIS_PROMPT_TEMPLATE,
+    build_batch_word_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
-VALID_CEFR = {"A1", "A2", "B1", "B2", "C1", "C2"}
 
+async def analyze_sentence_batch(sentences_chunk: list[str]) -> list[dict]:
+    """
+    Analyze sentence phonetic + Vietnamese translation.
+    Keeps the same order as input.
+    """
+    if not sentences_chunk:
+        return []
 
-async def analyze_sentence_batch(sentences_chunk: List[str]) -> List[Dict[str, str]]:
-    """
-    sentences_chunk: list of sentence texts only (no orderIndex, no words)
-    Returns: list of dicts with phoneticUs and translationVi only
-    """
     prompt = SENTENCE_PROMPT_TEMPLATE.substitute(
         sentences_json=json.dumps(sentences_chunk, ensure_ascii=False)
     )
@@ -23,7 +26,7 @@ async def analyze_sentence_batch(sentences_chunk: List[str]) -> List[Dict[str, s
     resp = await generate_json(prompt)
 
     if not isinstance(resp, list):
-        raise ValueError("Response must be JSON array")
+        raise ValueError("Sentence analysis response must be a JSON array")
 
     if len(resp) != len(sentences_chunk):
         raise ValueError(
@@ -31,13 +34,17 @@ async def analyze_sentence_batch(sentences_chunk: List[str]) -> List[Dict[str, s
         )
 
     for item in resp:
-        if "phoneticUs" in item and item["phoneticUs"]:
-            item["phoneticUs"] = item["phoneticUs"].strip().strip("/")
+        if isinstance(item, dict) and item.get("phoneticUs"):
+            item["phoneticUs"] = str(item["phoneticUs"]).strip().strip("/").strip("[]")
 
     return resp
 
 
-async def analyze_word(word: str, pos: str, context: str) -> dict:
+async def analyze_word(word: str, pos: str, context: str = "") -> dict:
+    """
+    Analyze one word/phrase by word + POS.
+    Prompt controls schema quality. This function only applies safe defaults.
+    """
     prompt = WORD_ANALYSIS_PROMPT_TEMPLATE.substitute(
         word=word,
         pos=pos,
@@ -46,39 +53,46 @@ async def analyze_word(word: str, pos: str, context: str) -> dict:
 
     resp = await generate_json(prompt)
 
-    required_fields = ["isValid", "summaryVi", "phonetics", "definitions", "cefrLevel"]
-    for field in required_fields:
-        if field not in resp:
-            raise ValueError(f"Missing field: {field}")
+    if not isinstance(resp, dict):
+        resp = {}
 
-    if not isinstance(resp["isValid"], bool):
-        raise ValueError("isValid must be boolean")
-    if not isinstance(resp["definitions"], list):
-        raise ValueError("definitions must be a list")
-    if not isinstance(resp["phonetics"], dict):
-        raise ValueError("phonetics must be an object")
-
-    if resp["cefrLevel"] not in VALID_CEFR:
-        resp["cefrLevel"] = "B1"
-
-    # Defaults for new fields
+    resp.setdefault("isValid", False)
+    resp.setdefault("summaryVi", "")
+    resp.setdefault("phonetics", {})
+    resp.setdefault("definitions", [])
+    resp.setdefault("cefrLevel", "B1")
     resp.setdefault("isPhrase", False)
     resp.setdefault("phraseType", "")
 
+    if resp["cefrLevel"] not in {"A1", "A2", "B1", "B2", "C1", "C2"}:
+        resp["cefrLevel"] = "B1"
+
+    if not isinstance(resp["phonetics"], dict):
+        resp["phonetics"] = {}
+
+    if not isinstance(resp["definitions"], list):
+        resp["definitions"] = []
+
+    if not isinstance(resp["isValid"], bool):
+        resp["isValid"] = bool(resp["isValid"])
+
     logger.info(
         "[ANALYZE] %s_%s | valid=%s cefr=%s defs=%s phrase=%s",
-        word, pos, resp["isValid"], resp["cefrLevel"],
-        len(resp["definitions"]), resp["isPhrase"],
+        word,
+        pos,
+        resp["isValid"],
+        resp["cefrLevel"],
+        len(resp["definitions"]),
+        resp["isPhrase"],
     )
+
     return resp
 
 
 async def analyze_words_batch(words: list[dict]) -> list[dict]:
     """
-    Batch analyze multiple words in a single AI call.
-
-    words: [{"word": "...", "pos": "...", "context": "..."}, ...]
-    Returns list of result dicts in same order. Invalid/malformed entries get isValid=False.
+    Batch analyze multiple words in one AI call.
+    Keeps the same order as input.
     """
     if not words:
         return []
@@ -94,32 +108,42 @@ async def analyze_words_batch(words: list[dict]) -> list[dict]:
             f"Batch size mismatch: sent {len(words)}, got {len(resp)}"
         )
 
-    required = {"isValid", "summaryVi", "phonetics", "definitions", "cefrLevel"}
     results = []
-    for i, (item, word_input) in enumerate(zip(resp, words)):
-        try:
-            if not isinstance(item, dict):
-                raise ValueError("Not a dict")
-            missing = required - set(item.keys())
-            if missing:
-                raise ValueError(f"Missing fields: {missing}")
-            if item.get("cefrLevel") not in VALID_CEFR:
-                item["cefrLevel"] = "B1"
-            if not isinstance(item.get("isValid"), bool):
-                item["isValid"] = False
-            item.setdefault("isPhrase", False)
-            item.setdefault("phraseType", "")
-            logger.info(
-                "[BATCH] %s_%s | valid=%s cefr=%s defs=%s phrase=%s",
-                word_input["word"], word_input["pos"],
-                item["isValid"], item["cefrLevel"],
-                len(item.get("definitions", [])), item["isPhrase"],
-            )
-            results.append(item)
-        except Exception as e:
-            logger.warning("[BATCH] Item %d invalid (%s), marking isValid=False", i, e)
-            results.append({"isValid": False, "summaryVi": "", "phonetics": {},
-                            "definitions": [], "cefrLevel": "B1",
-                            "isPhrase": False, "phraseType": ""})
+
+    for item, word_input in zip(resp, words):
+        if not isinstance(item, dict):
+            item = {}
+
+        item.setdefault("isValid", False)
+        item.setdefault("summaryVi", "")
+        item.setdefault("phonetics", {})
+        item.setdefault("definitions", [])
+        item.setdefault("cefrLevel", "B1")
+        item.setdefault("isPhrase", False)
+        item.setdefault("phraseType", "")
+
+        if item["cefrLevel"] not in {"A1", "A2", "B1", "B2", "C1", "C2"}:
+            item["cefrLevel"] = "B1"
+
+        if not isinstance(item["phonetics"], dict):
+            item["phonetics"] = {}
+
+        if not isinstance(item["definitions"], list):
+            item["definitions"] = []
+
+        if not isinstance(item["isValid"], bool):
+            item["isValid"] = bool(item["isValid"])
+
+        logger.info(
+            "[BATCH] %s_%s | valid=%s cefr=%s defs=%s phrase=%s",
+            word_input.get("word", ""),
+            word_input.get("pos", ""),
+            item["isValid"],
+            item["cefrLevel"],
+            len(item["definitions"]),
+            item["isPhrase"],
+        )
+
+        results.append(item)
 
     return results
