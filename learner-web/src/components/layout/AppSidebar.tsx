@@ -2,17 +2,15 @@
 "use client"
 
 import * as React from "react"
-import {
-  BookMarked,
-  Notebook,
-} from "lucide-react"
+import { BookMarked, Notebook } from "lucide-react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { BrandLogo } from "./BrandLogo"
-import { NavMain } from "./NavMain"
+import { NavMain, type NavItem } from "./NavMain"
 import { NavUser } from "./NavUser"
 import ThemeToggle from "./ThemeToggle"
-import SwitchingLanguage from "../SwitchingLanguage"
+import SwitchingLanguage from "./SwitchingLanguage"
 
 import {
   Sidebar,
@@ -26,7 +24,7 @@ import {
 import { useAuth } from "@/features/keycloak/providers/AuthProvider"
 import { getIndexFromChar } from "@/utils/textUtils"
 
-const defaultAvatars = [
+const DEFAULT_AVATARS = [
   "/defaultavatars/Cat_owl.webp",
   "/defaultavatars/Deer_dogs.webp",
   "/defaultavatars/Frog_squirrel.webp",
@@ -38,27 +36,47 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation()
   const { profile } = useAuth()
 
-  const user = profile
-    ? {
-        name: `${profile.firstName ?? ""} ${profile.lastName ?? ""}`.trim(),
-        email: profile.email || "",
-        avatar:
-          defaultAvatars[
-            getIndexFromChar(profile.firstName?.[0] || "A", defaultAvatars.length)
-          ],
-        isGuest: false,
-      }
-    : {
+  const user = useMemo(() => {
+    if (!profile) {
+      return {
         name: "Guest",
         email: "",
         avatar: "",
         isGuest: true,
       }
+    }
 
-  const learningMenu = [
-    { title: t("header.playlists"), url: "/topics", icon: Notebook },
-    { title: t("header.dictionary"), url: "/vocab/topics", icon: BookMarked },
-  ]
+    const name = `${profile.firstName ?? ""} ${profile.lastName ?? ""}`.trim()
+    const avatarIndex = getIndexFromChar(
+      profile.firstName?.[0] || "A",
+      DEFAULT_AVATARS.length
+    )
+
+    return {
+      name: name || profile.email || "User",
+      email: profile.email || "",
+      avatar: DEFAULT_AVATARS[avatarIndex],
+      isGuest: false,
+    }
+  }, [profile])
+
+  const learningMenu = useMemo<NavItem[]>(
+    () => [
+      {
+        title: t("header.playlists"),
+        url: "/topics",
+        activeUrls: ["/topics", "/learn"],
+        icon: Notebook,
+      },
+      {
+        title: t("header.dictionary"),
+        url: "/vocab/topics",
+        activeUrls: ["/vocab"],
+        icon: BookMarked,
+      },
+    ],
+    [t]
+  )
 
   /* 🔒 Chưa có页面
   const practiceSubItems = [
@@ -93,7 +111,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent className="gap-0 py-2">
-        <NavMain label={t("header.learning") || "Học tập"} items={learningMenu} />
+        <NavMain
+          label={t("header.learning") || "Học tập"}
+          items={learningMenu}
+        />
+
         {/* 🔒 NavMain label={t("header.community") || "Cộng đồng"} items={socialMenu} */}
 
         <SidebarGroup className="mt-auto border-t border-border/40 px-2 pt-3">

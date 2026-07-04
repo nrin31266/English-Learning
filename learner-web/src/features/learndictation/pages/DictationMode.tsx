@@ -62,12 +62,12 @@ const DictationMode = () => {
     isPlaying
   } = mode
 
-  // 👉 TÍNH TOÁN ĐIỂM KỶ LỤC CỦA CÂU HIỆN TẠI TỪ REDUX STORE
+  // TÍNH TOÁN ĐIỂM KỶ LỤC CỦA CÂU HIỆN TẠI TỪ REDUX STORE
   const highestScore = useMemo(() => {
     return lesson?.progressOverview?.dictation?.progressItems?.[currentSentence?.id]?.bestScore ?? 0
   }, [lesson?.progressOverview?.dictation?.progressItems, currentSentence?.id])
 
-  // 👉 ĐỒNG BỘ: Tạo wrapper function chuẩn như bên Shadowing
+  // ĐỒNG BỘ: Tạo wrapper function chuẩn như bên Shadowing
   const handleComplete = useCallback(
     (sentenceId: number, score: number) => handleCompleteSentence(sentenceId, score),
     [handleCompleteSentence]

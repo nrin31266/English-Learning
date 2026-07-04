@@ -1,16 +1,27 @@
+// src/features/lessons/components/LessonModeLayout.tsx
+
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, CheckCircle2, FileText, Loader2 } from "lucide-react"
+import {
+  ArrowLeft,
+  CheckCircle2,
+  FileText,
+  Loader2,
+} from "lucide-react"
+
 import AudioFileTag from "@/components/AudioFileTag"
 import LanguageLevelBadge from "@/components/LanguageLevel"
+import LessonProgressBar from "@/components/LessonProgressStrip"
+import { CompletionModal } from "@/components/ModeModals"
 import YouTubeTag from "@/components/YouTubeTag"
 import KeyboardShortcutsHelp from "@/components/players/KeyboardShortcutsHelp"
 import Player from "@/components/players/Player"
-import LessonProgressBar from "@/components/LessonProgressStrip"
-import { CompletionModal, LoginIncentiveModal } from "@/components/ModeModals"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useAppDispatch } from "@/store"
+import { openAuthDialog } from "@/store/uiSlice"
+
 import type { useLessonMode } from "../hooks/useLessonMode"
 
 interface LessonModeLayoutProps {
@@ -21,9 +32,17 @@ interface LessonModeLayoutProps {
   completionDetails?: ReactNode
 }
 
-const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetails }: LessonModeLayoutProps) => {
+const LessonModeLayout = ({
+  mode,
+  i18nPrefix,
+  panel,
+  transcript,
+  completionDetails,
+}: LessonModeLayoutProps) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+
   const tk = (key: string) => t(`${i18nPrefix}.${key}`)
 
   const {
@@ -36,6 +55,7 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetai
     error,
     completedIdsArray,
     isLessonCompleted,
+
     playerRef,
     playbackRate,
     setPlaybackRate,
@@ -45,12 +65,17 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetai
     setAutoStop,
     largeVideo,
     setLargeVideo,
+
     activeIndex,
     autoPlayOnSentenceChange,
     setUserInteracted,
+
     handlePrev,
     handleNext,
     handleSelectSentence,
+    handleBackToTopic,
+    handleRetry,
+
     showHelp,
     setShowHelp,
     showTranscriptToggle,
@@ -58,69 +83,90 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetai
     effectiveShowTranscript,
     showProgress,
     setShowProgress,
-    showLoginModal,
-    setShowLoginModal,
+
     showCompletionModal,
     setShowCompletionModal,
-    handleBackToTopic,
-    handleLoginIncentive,
-    handleRetry,
+
     profile,
   } = mode
 
-  return (
-    <div className="flex flex-col w-full min-h-screen gap-2 p-2 sm:p-4">
+  const openLoginDialog = () => {
+    dispatch(openAuthDialog())
+  }
 
-      <div className="flex items-center justify-between gap-2 rounded-lg bg-card border px-2 sm:px-3 py-1.5 shadow-sm">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 sm:hidden" onClick={handleBackToTopic}>
+  return (
+    <div className="flex min-h-screen w-full flex-col gap-2 p-2 sm:p-4">
+      <div className="flex items-center justify-between gap-2 rounded-lg border bg-card px-2 py-1.5 shadow-sm sm:px-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0 sm:hidden"
+            onClick={handleBackToTopic}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hidden sm:flex shrink-0" onClick={handleBackToTopic}>
-            <ArrowLeft className="h-3.5 w-3.5 mr-1" /> {tk("back")}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hidden h-7 shrink-0 px-2 text-xs text-muted-foreground sm:flex"
+            onClick={handleBackToTopic}
+          >
+            <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+            {tk("back")}
           </Button>
 
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 whitespace-nowrap pr-2">
+          <div className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap pr-2">
             <span
-              className="text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer shrink-0 transition-colors"
+              className="shrink-0 cursor-pointer text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
               onClick={() => navigate("/topics")}
             >
               {tk("playlists")}
             </span>
-            <span className="text-muted-foreground/40 shrink-0">/</span>
+
+            <span className="shrink-0 text-muted-foreground/40">/</span>
 
             {lesson?.topic && (
               <>
                 <span
-                  className="text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer truncate max-w-[100px] sm:max-w-[150px] shrink-0 transition-colors"
+                  className="max-w-[100px] shrink-0 cursor-pointer truncate text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:max-w-[150px] sm:text-xs"
                   onClick={() => navigate(`/topics/${lesson.topic.slug}`)}
                 >
                   {lesson.topic.name}
                 </span>
-                <span className="text-muted-foreground/40 shrink-0">/</span>
+
+                <span className="shrink-0 text-muted-foreground/40">/</span>
               </>
             )}
 
-            <span className="text-[11px] sm:text-xs font-bold text-foreground truncate max-w-[150px] sm:max-w-[200px] shrink-0">
+            <span className="max-w-[150px] shrink-0 truncate text-[11px] font-bold text-foreground sm:max-w-[200px] sm:text-xs">
               {lesson?.title ?? "Loading..."}
             </span>
 
             {lesson && (
-              <div className="flex items-center gap-1.5 border-l border-border/50 pl-2 ml-1 shrink-0">
+              <div className="ml-1 flex shrink-0 items-center gap-1.5 border-l border-border/50 pl-2">
                 <LanguageLevelBadge level={lesson.languageLevel} />
-                {lesson.sourceType === "YOUTUBE" ? <YouTubeTag /> : <AudioFileTag />}
+
+                {lesson.sourceType === "YOUTUBE" ? (
+                  <YouTubeTag />
+                ) : (
+                  <AudioFileTag />
+                )}
 
                 {isLessonCompleted && (
-                  <div className="flex items-center gap-1 text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100">
+                  <div className="flex items-center gap-1 rounded-full border border-green-100 bg-green-50 px-1.5 py-0.5 text-green-600">
                     <CheckCircle2 className="h-3 w-3" />
-                    <span className="text-[10px] font-bold">{tk("done")}</span>
+                    <span className="text-[10px] font-bold">
+                      {tk("done")}
+                    </span>
                   </div>
                 )}
 
                 {!profile && (
                   <button
-                    onClick={handleLoginIncentive}
-                    className="ml-2 text-[11px] sm:text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline underline-offset-2 transition-colors shrink-0"
+                    onClick={openLoginDialog}
+                    className="ml-2 shrink-0 text-[11px] font-medium text-amber-600 underline-offset-2 transition-colors hover:text-amber-700 hover:underline dark:text-amber-400 dark:hover:text-amber-300 sm:text-xs"
                   >
                     {tk("signInToSave")}
                   </button>
@@ -130,14 +176,14 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetai
           </div>
         </div>
 
-        <div className="hidden xl:flex items-center shrink-0">
+        <div className="hidden shrink-0 items-center xl:flex">
           <Button
             variant={showTranscriptToggle ? "secondary" : "outline"}
             size="sm"
             className="h-7 px-2 text-xs"
             onClick={() => setShowTranscriptToggle((prev) => !prev)}
           >
-            <FileText className="h-3.5 w-3.5 mr-1" />
+            <FileText className="mr-1 h-3.5 w-3.5" />
             <span>{tk("transcript")}</span>
           </Button>
         </div>
@@ -151,9 +197,13 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetai
       ) : status === "failed" ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm">
           <p className="text-destructive">{tk("cannotLoad")}</p>
+
           {error?.message && (
-            <p className="max-w-md text-center text-xs text-destructive/80">{error.message}</p>
+            <p className="max-w-md text-center text-xs text-destructive/80">
+              {error.message}
+            </p>
           )}
+
           {lessonId && (
             <Button size="sm" variant="outline" onClick={handleRetry}>
               {tk("retry")}
@@ -165,8 +215,15 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetai
           {tk("lessonNotFound")}
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 mt-1 ">
-          <div className={cn("flex flex-col gap-3", effectiveShowTranscript ? "xl:col-span-8" : "xl:col-span-8 xl:col-start-3")}>
+        <div className="mt-1 grid grid-cols-1 gap-3 xl:grid-cols-12">
+          <div
+            className={cn(
+              "flex flex-col gap-3",
+              effectiveShowTranscript
+                ? "xl:col-span-8"
+                : "xl:col-span-8 xl:col-start-3"
+            )}
+          >
             <div className="sticky top-18 z-40">
               <Player
                 ref={playerRef}
@@ -192,26 +249,19 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetai
               />
             </div>
 
-            <KeyboardShortcutsHelp open={showHelp} onClose={() => setShowHelp(false)} />
+            <KeyboardShortcutsHelp
+              open={showHelp}
+              onClose={() => setShowHelp(false)}
+            />
 
             {panel}
           </div>
 
           {effectiveShowTranscript && (
-            <div className="xl:col-span-4 h-full">
-              {transcript}
-            </div>
+            <div className="h-full xl:col-span-4">{transcript}</div>
           )}
         </div>
       )}
-
-
-
-      <LoginIncentiveModal
-        open={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLogin={handleLoginIncentive}
-      />
 
       <CompletionModal
         open={showCompletionModal}
@@ -223,7 +273,6 @@ const LessonModeLayout = ({ mode, i18nPrefix, panel, transcript, completionDetai
 
       {showProgress && sentences.length > 0 && (
         <LessonProgressBar
-
           sentences={sentences as { id: number }[]}
           completedIds={completedIdsArray}
           activeIndex={activeIndex}

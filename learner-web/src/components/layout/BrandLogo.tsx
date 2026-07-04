@@ -2,12 +2,106 @@
 "use client"
 
 import { Link } from "react-router-dom"
-import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar"
+import {
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
+
+type LogoSize = "sm" | "md" | "lg"
 
 interface BrandLogoProps {
-    onlyIcon?: boolean; // Nếu true, chỉ hiển thị icon mà không có text
+  onlyIcon?: boolean
+  asSidebar?: boolean
+  size?: LogoSize
+  subtitle?: string
+  className?: string
 }
-export function BrandLogo({ onlyIcon = false }: BrandLogoProps) {
+
+const sizeMap: Record<LogoSize, {
+  icon: string
+  text: string
+  subtitle: string
+  gap: string
+}> = {
+  sm: {
+    icon: "size-8 rounded-lg text-sm",
+    text: "text-base",
+    subtitle: "text-[11px]",
+    gap: "gap-3",
+  },
+  md: {
+    icon: "size-10 rounded-xl text-base",
+    text: "text-lg",
+    subtitle: "text-xs",
+    gap: "gap-3",
+  },
+  lg: {
+    icon: "size-12 rounded-2xl text-lg",
+    text: "text-xl",
+    subtitle: "text-sm",
+    gap: "gap-4",
+  },
+}
+
+export function BrandLogo({
+  onlyIcon = false,
+  asSidebar = true,
+  size = "sm",
+  subtitle,
+  className,
+}: BrandLogoProps) {
+  const sizes = sizeMap[size]
+
+  const content = (
+    <Link
+      to="/"
+      className={cn(
+        "flex h-full w-full select-none items-center",
+        sizes.gap,
+        className
+      )}
+    >
+      <div
+        className={cn(
+          "flex aspect-square shrink-0 items-center justify-center bg-primary font-black text-primary-foreground group-data-[collapsible=icon]:mx-auto",
+          sizes.icon
+        )}
+      >
+        FR
+      </div>
+
+      {!onlyIcon && (
+        <div className="min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
+          <span
+            className={cn(
+              "block truncate font-bold tracking-tight text-foreground",
+              sizes.text
+            )}
+          >
+            Fluenrin
+          </span>
+
+          {subtitle && (
+            <span
+              className={cn(
+                "mt-0.5 block truncate text-muted-foreground",
+                sizes.subtitle
+              )}
+            >
+              {subtitle}
+            </span>
+          )}
+        </div>
+      )}
+    </Link>
+  )
+
+  if (!asSidebar) {
+    return content
+  }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -16,20 +110,7 @@ export function BrandLogo({ onlyIcon = false }: BrandLogoProps) {
           asChild
           className="hover:bg-transparent active:bg-transparent group-data-[collapsible=icon]:p-0"
         >
-          <Link to="/" className="flex items-center gap-3 select-none w-full h-full">
-           
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-black text-sm shrink-0 group-data-[collapsible=icon]:mx-auto">
-              FR
-            </div>
-            
-            
-            {!onlyIcon && (
-              <span className="truncate font-bold text-foreground text-base tracking-tight group-data-[collapsible=icon]:hidden">
-                Fluenrin
-              </span>
-            )}
-           
-          </Link>
+          {content}
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>

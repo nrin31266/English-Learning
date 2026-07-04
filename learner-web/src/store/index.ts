@@ -13,6 +13,7 @@ import vocabDetailReducer from "./vocabDetailSlide";
 import activeLessonReducer from "./activeLessonSlice";
 import gamificationReducer from "./gamificationSlice";
 import vocabProgressReducer from "./vocabProgressSlice";
+import uiReducer from "./uiSlice";
 
 const rootReducer = combineReducers({
   system: systemReducer,
@@ -22,6 +23,7 @@ const rootReducer = combineReducers({
   vocabDetail: vocabDetailReducer,
   gamification: gamificationReducer,
   vocabProgress: vocabProgressReducer,
+  ui: uiReducer,
 });
 
 const store = configureStore({

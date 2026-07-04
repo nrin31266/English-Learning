@@ -1,20 +1,19 @@
 // src/components/layout/Page.tsx
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { Outlet, useLocation } from "react-router-dom"
+import { Outlet } from "react-router-dom"
 import AppFooterContent from "./AppFooterContent"
 import AppHeaderContent from "./AppHeaderContent"
 import { AppSidebar } from "./AppSidebar"
 import { useGamificationSocket } from "@/hooks/useGamificationSocket"
+import AuthDialog from "@/components/auth/AuthDialog"
+
 
 export default function Page() {
   useGamificationSocket()
 
-  const { pathname } = useLocation()
-  // const showSidebar = pathname !== "/"
-
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={true}>
       <AppSidebar />
 
       <SidebarInset className="flex min-h-screen flex-col bg-background">
@@ -30,6 +29,8 @@ export default function Page() {
           <AppFooterContent />
         </footer>
       </SidebarInset>
+
+      <AuthDialog />
     </SidebarProvider>
   )
 }

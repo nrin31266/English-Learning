@@ -26,7 +26,12 @@ export default class KeycloakClient {
   }
 
   public login(): void {
-    this._keycloak.login();
+    this._keycloak.login({
+      idpHint: "google",
+    });
+  }
+  public logout(): void {
+    this._keycloak.logout();
   }
 
   // check user da login chua

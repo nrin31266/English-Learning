@@ -1,4 +1,5 @@
 // src/components/layout/NavMain.tsx
+
 import { ChevronRight, type LucideIcon } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
@@ -29,32 +30,44 @@ import { cn } from "@/lib/utils"
 type NavChildItem = {
   title: string
   url: string
+  activeUrls?: string[]
 }
 
-type NavItem = {
+export type NavItem = {
   title: string
   url: string
+  activeUrls?: string[]
   icon?: LucideIcon
   items?: NavChildItem[]
 }
 
-export function NavMain({
-  items,
-  label,
-}: {
+type NavMainProps = {
   label: string
   items: NavItem[]
-}) {
+}
+
+const isPathActive = (pathname: string, url: string) => {
+  if (!url || url === "#") return false
+  if (url === "/") return pathname === "/"
+
+  return pathname === url || pathname.startsWith(`${url}/`)
+}
+
+const isNavItemActive = (
+  pathname: string,
+  url: string,
+  activeUrls?: string[]
+) => {
+  const urls = activeUrls?.length ? activeUrls : [url]
+
+  return urls.some((itemUrl) => isPathActive(pathname, itemUrl))
+}
+
+export function NavMain({ items, label }: NavMainProps) {
   const { pathname } = useLocation()
   const { state, isMobile } = useSidebar()
 
   const isCollapsed = state === "collapsed" && !isMobile
-
-  const isActiveUrl = (url: string) => {
-    if (!url || url === "#") return false
-    if (url === "/") return pathname === "/"
-    return pathname === url || pathname.startsWith(`${url}/`)
-  }
 
   return (
     <SidebarGroup className="px-2">
@@ -65,8 +78,14 @@ export function NavMain({
       <SidebarMenu className="gap-1">
         {items.map((item) => {
           const hasChildren = !!item.items?.length
-          const isChildActive = item.items?.some((sub) => isActiveUrl(sub.url)) ?? false
-          const isActive = isActiveUrl(item.url) || isChildActive
+          const isChildActive =
+            item.items?.some((subItem) =>
+              isNavItemActive(pathname, subItem.url, subItem.activeUrls)
+            ) ?? false
+
+          const isActive =
+            isNavItemActive(pathname, item.url, item.activeUrls) ||
+            isChildActive
 
           if (hasChildren && isCollapsed) {
             return (
@@ -82,7 +101,8 @@ export function NavMain({
                         "[&>svg]:size-[18px]",
                         "group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:p-0",
                         "group-data-[collapsible=icon]:[&>svg]:size-5",
-                        isActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+                        isActive &&
+                          "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                       )}
                     >
                       {item.icon && <item.icon />}
@@ -101,7 +121,11 @@ export function NavMain({
                     </div>
 
                     {item.items?.map((subItem) => {
-                      const isSubActive = isActiveUrl(subItem.url)
+                      const isSubActive = isNavItemActive(
+                        pathname,
+                        subItem.url,
+                        subItem.activeUrls
+                      )
 
                       return (
                         <DropdownMenuItem
@@ -139,7 +163,8 @@ export function NavMain({
                         "h-10 rounded-lg text-[14px] font-semibold",
                         "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
                         "[&>svg]:size-[18px]",
-                        isActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+                        isActive &&
+                          "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                       )}
                     >
                       {item.icon && <item.icon />}
@@ -158,7 +183,8 @@ export function NavMain({
                       "[&>svg]:size-[18px]",
                       "group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:p-0",
                       "group-data-[collapsible=icon]:[&>svg]:size-5",
-                      isActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+                      isActive &&
+                        "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                     )}
                   >
                     <Link to={item.url}>
@@ -172,7 +198,11 @@ export function NavMain({
                   <CollapsibleContent>
                     <SidebarMenuSub className="mx-0 ml-4 mt-1 border-l border-border/60 pl-3">
                       {item.items?.map((subItem) => {
-                        const isSubActive = isActiveUrl(subItem.url)
+                        const isSubActive = isNavItemActive(
+                          pathname,
+                          subItem.url,
+                          subItem.activeUrls
+                        )
 
                         return (
                           <SidebarMenuSubItem key={subItem.title}>
@@ -182,7 +212,8 @@ export function NavMain({
                               className={cn(
                                 "h-8.5 rounded-md text-[13px] font-medium",
                                 "text-muted-foreground hover:text-foreground",
-                                isSubActive && "bg-primary/10 text-primary font-semibold"
+                                isSubActive &&
+                                  "bg-primary/10 font-semibold text-primary"
                               )}
                             >
                               <Link to={subItem.url}>
