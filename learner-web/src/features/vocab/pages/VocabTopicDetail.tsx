@@ -16,7 +16,7 @@ import {
   type VocabStudyPlan,
 } from "../components/learning/vocabLearningUtils";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,7 @@ export default function VocabTopicDetail() {
   const [learningMode, setLearningMode] = useState(false);
   const [learnAllRemaining, setLearnAllRemaining] = useState(false);
   const [localProgress, setLocalProgress] = useState<ProgressMap>({});
+  const [progressSubtopicId, setProgressSubtopicId] = useState<string | null>(null);
   const [studyPlan, setStudyPlan] = useState<VocabStudyPlan>("COMBINED");
   const [subtopicSummaries, setSubtopicSummaries] = useState<
     Record<string, VocabProgressDashboard["subtopics"][number]>
@@ -72,6 +73,12 @@ export default function VocabTopicDetail() {
     () => activeSubtopics.find((s) => s.id === activeSubtopicId),
     [activeSubtopics, activeSubtopicId],
   );
+  const activeSubtopicIdRef = useRef(activeSubtopicId);
+  activeSubtopicIdRef.current = activeSubtopicId;
+  const activeProgress = useMemo(
+    () => (progressSubtopicId === activeSubtopicId ? localProgress : {}),
+    [activeSubtopicId, localProgress, progressSubtopicId],
+  );
 
   const subtopicProgress = useMemo(
     () =>
@@ -79,7 +86,7 @@ export default function VocabTopicDetail() {
         activeSubtopics.map((sub) => {
           const summary = subtopicSummaries[sub.id];
           const savedProgress =
-            sub.id === activeSubtopicId ? localProgress : {};
+            sub.id === activeSubtopicId ? activeProgress : {};
           const entries = Object.values(savedProgress);
           const learned = entries.length
             ? entries.filter((item) => !!item.reviewRating).length
@@ -90,7 +97,7 @@ export default function VocabTopicDetail() {
           return [sub.id, { learned, total, percent }] as const;
         }),
       ),
-    [activeSubtopicId, activeSubtopics, localProgress, subtopicSummaries],
+    [activeProgress, activeSubtopicId, activeSubtopics, subtopicSummaries],
   );
   const topicCompleted =
     activeSubtopics.length > 0 &&
@@ -143,10 +150,15 @@ export default function VocabTopicDetail() {
     if (!activeSubtopicId) return;
     dispatch(fetchWords(activeSubtopicId));
     setLocalProgress({});
+    setProgressSubtopicId(null);
     if (profile) {
       void dispatch(fetchVocabProgress(activeSubtopicId))
         .unwrap()
-        .then(({ progress }) => setLocalProgress(progress))
+        .then(({ subtopicId: loadedSubtopicId, progress }) => {
+          if (loadedSubtopicId !== activeSubtopicIdRef.current) return;
+          setLocalProgress(progress);
+          setProgressSubtopicId(loadedSubtopicId);
+        })
         .catch(() =>
           dispatch(
             showNotification({
@@ -162,6 +174,7 @@ export default function VocabTopicDetail() {
 
   const handleProgressChange = useCallback((progress: ProgressMap) => {
     setLocalProgress(progress);
+    setProgressSubtopicId(activeSubtopicIdRef.current);
   }, []);
 
   const handleSessionCommit = useCallback(
@@ -184,6 +197,7 @@ export default function VocabTopicDetail() {
           }),
         ).unwrap();
         setLocalProgress(committed.progress);
+        setProgressSubtopicId(activeSubtopicId);
         const learnedWords = Object.keys(committed.progress).length;
         const dueReviewWords = Object.values(committed.progress).filter((item) =>
           isDueProgress(item),
@@ -228,13 +242,13 @@ export default function VocabTopicDetail() {
   );
 
   const dueCount = words.filter((word) =>
-    isDueProgress(localProgress[word.id]),
+    isDueProgress(activeProgress[word.id]),
   ).length;
   const learnedCount = words.filter(
-    (word) => !!localProgress[word.id]?.reviewRating,
+    (word) => !!activeProgress[word.id]?.reviewRating,
   ).length;
   const remainingCount = words.filter(
-    (word) => !localProgress[word.id]?.reviewRating,
+    (word) => !activeProgress[word.id]?.reviewRating,
   ).length;
   const activeStudyPlanIndex = Math.max(
     0,
@@ -243,6 +257,8 @@ export default function VocabTopicDetail() {
 
   const handleSelectSubtopic = (sub: IVocabSubTopic) => {
     if (!id) return;
+    setLocalProgress({});
+    setProgressSubtopicId(null);
     dispatch(setActiveSubtopic(sub.id));
     navigate(`/vocab/topics/${id}/subtopics/${sub.id}`);
   };
@@ -260,8 +276,8 @@ export default function VocabTopicDetail() {
 
   const rightLearningState = (
     <div className="flex flex-col p-2.5 sm:p-3 xl:h-full xl:min-h-0 xl:overflow-y-auto">
-      <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
+      <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm 2xl:grid 2xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] 2xl:grid-rows-[auto_auto] 2xl:items-end 2xl:gap-x-5">
+        <div className="flex items-start justify-between gap-3 2xl:col-start-1 2xl:row-start-1">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="line-clamp-2 text-xl font-bold tracking-tight sm:text-2xl">
@@ -277,7 +293,7 @@ export default function VocabTopicDetail() {
             </div>
           </div>
         </div>
-        <div className="mt-1.5 max-w-3xl">
+        <div className="mt-1.5 max-w-3xl 2xl:col-start-1 2xl:row-start-2">
           {activeSubtopic?.titleVi && (
             <p className="text-sm text-muted-foreground">
               {activeSubtopic.titleVi}
@@ -310,8 +326,8 @@ export default function VocabTopicDetail() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-3 xl:flex-row xl:items-end xl:justify-between">
-          <div className="w-full max-w-xl shrink-0 xl:w-[34rem]">
+        <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-3 xl:flex-row xl:items-end xl:justify-between 2xl:col-start-2 2xl:row-span-2 2xl:row-start-1 2xl:mt-0 2xl:flex-col 2xl:items-stretch 2xl:border-t-0 2xl:pt-0">
+          <div className="w-full max-w-xl shrink-0 2xl:max-w-none">
             <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               {t("vocab.detail.studyMode")}
             </p>
@@ -350,19 +366,19 @@ export default function VocabTopicDetail() {
               })}
             </div>
           </div>
-          {remainingCount === 0 ? (
+          {wordsStatus === "succeeded" && words.length > 0 && remainingCount === 0 ? (
             <div className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
               <CheckCircle2 className="h-4 w-4" />
               {t("vocab.detail.lessonCompleted")}
             </div>
           ) : profile ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-2 2xl:justify-end">
               <button
                 onClick={() => {
                   setLearnAllRemaining(false);
                   setLearningMode(true);
                 }}
-                className="inline-flex h-9 flex-1 items-center justify-center rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm sm:flex-none"
+                className="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground shadow-sm sm:flex-none"
               >
                 {t("vocab.detail.learnNew", {
                   count: Math.min(5, remainingCount),
@@ -373,7 +389,7 @@ export default function VocabTopicDetail() {
                   setLearnAllRemaining(true);
                   setLearningMode(true);
                 }}
-                className="inline-flex h-9 flex-1 items-center justify-center rounded-lg border bg-background px-4 text-sm font-semibold transition-colors hover:bg-muted sm:flex-none"
+                className="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-lg border bg-background px-3 text-sm font-semibold transition-colors hover:bg-muted sm:flex-none"
               >
                 {t("vocab.detail.learnAllNew", { count: remainingCount })}
               </button>
@@ -408,11 +424,11 @@ export default function VocabTopicDetail() {
       )}
 
       {wordsStatus === "succeeded" && words.length > 0 && (
-        <div className="mt-3 grid items-start gap-2 xl:grid-cols-2">
+        <div className="mt-3 grid items-stretch gap-2 xl:grid-cols-2">
           {words
             .slice()
             .sort((a, b) => a.order - b.order)
-            .map((word) => <TopicWordCard key={word.id} word={word} progress={localProgress[word.id]} />)}
+            .map((word) => <TopicWordCard key={word.id} word={word} progress={activeProgress[word.id]} />)}
         </div>
       )}
     </div>
@@ -444,7 +460,7 @@ export default function VocabTopicDetail() {
             <VocabLearningPanel
               subtopic={activeSubtopic}
               words={words}
-              initialProgress={localProgress}
+              initialProgress={activeProgress}
               onProgressChange={handleProgressChange}
               onSessionCommit={handleSessionCommit}
               onClose={() => setLearningMode(false)}
