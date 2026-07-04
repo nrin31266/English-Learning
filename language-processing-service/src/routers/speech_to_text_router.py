@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from src import dto
 from src.dto import ApiResponse
 from src.errors.base_exception import BaseException as AppBaseException
-from src.services.shadowing_service import build_shadowing_result
+from src.services.shadowing.shadowing_service import build_shadowing_result
 from src.services.speech_to_text_service import get_audio_duration, transcribe
 
 # from src.auth.dto import UserPrincipal
