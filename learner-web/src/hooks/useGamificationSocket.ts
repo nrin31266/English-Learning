@@ -5,6 +5,7 @@ import { useAppDispatch } from "@/store"
 import { gainRewards, updateStreak } from "@/store/gamificationSlice"
 import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
 import { publishVocabSessionReward } from "@/features/vocab/api/vocabRewardBus"
+import { publishLessonReward } from "@/features/learnmode/api/lessonRewardBus"
 import type { IMessage } from "@stomp/stompjs"
 
 type GamificationSocketEvent = {
@@ -62,6 +63,14 @@ export const useGamificationSocket = () => {
               if (event.payload?.trigger === "VOCAB_WORD_REVIEWED" && event.payload?.targetId) {
                 publishVocabSessionReward({
                   sessionId: String(event.payload.targetId),
+                  earnedXp,
+                  earnedCoins,
+                })
+              }
+
+              if (event.payload?.trigger === "LESSON_COMPLETED" && event.payload?.targetId) {
+                publishLessonReward({
+                  lessonId: String(event.payload.targetId),
                   earnedXp,
                   earnedCoins,
                 })

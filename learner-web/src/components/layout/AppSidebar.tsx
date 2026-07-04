@@ -69,10 +69,20 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         icon: Notebook,
       },
       {
-        title: t("header.dictionary"),
-        url: "/vocab/topics",
-        activeUrls: ["/vocab"],
+        title: t("header.vocabulary"),
+        url: "#",
         icon: BookMarked,
+        items: [
+          {
+            title: t("header.vocabTopics"),
+            url: "/vocab/topics",
+          },
+          {
+            title: t("header.vocabProgress"),
+            url: "/vocab/progress",
+            activeUrls: ["/vocab/progress", "/vocab/review"],
+          },
+        ],
       },
     ],
     [t]

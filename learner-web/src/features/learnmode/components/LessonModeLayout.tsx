@@ -13,7 +13,6 @@ import {
 import AudioFileTag from "@/components/AudioFileTag"
 import LanguageLevelBadge from "@/components/LanguageLevel"
 import LessonProgressBar from "@/components/LessonProgressStrip"
-import { CompletionModal } from "@/components/ModeModals"
 import YouTubeTag from "@/components/YouTubeTag"
 import KeyboardShortcutsHelp from "@/components/players/KeyboardShortcutsHelp"
 import Player from "@/components/players/Player"
@@ -23,6 +22,7 @@ import { useAppDispatch } from "@/store"
 import { openAuthDialog } from "@/store/uiSlice"
 
 import type { useLessonMode } from "../hooks/useLessonMode"
+import { LessonCompletionDialog } from "./LessonCompletionDialog"
 
 interface LessonModeLayoutProps {
   mode: ReturnType<typeof useLessonMode>
@@ -86,9 +86,24 @@ const LessonModeLayout = ({
 
     showCompletionModal,
     setShowCompletionModal,
+    celebrateCompletion,
 
     profile,
   } = mode
+
+  const rewardMultiplier: Record<string, number> = {
+    A1: 1,
+    A2: 1.5,
+    B1: 2,
+    B2: 2.5,
+    C1: 3,
+    C2: 3.5,
+  }
+  const multiplier = rewardMultiplier[lesson?.languageLevel ?? ""] ?? 1
+  const estimatedReward = {
+    earnedXp: Math.max(1, Math.round(sentences.length * 10 * multiplier)),
+    earnedCoins: Math.max(1, Math.floor(sentences.length * multiplier)),
+  }
 
   const openLoginDialog = () => {
     dispatch(openAuthDialog())
@@ -263,13 +278,17 @@ const LessonModeLayout = ({
         </div>
       )}
 
-      <CompletionModal
+      <LessonCompletionDialog
         open={showCompletionModal}
+        lessonId={lessonId}
+        celebrate={celebrateCompletion}
+        expectReward={Boolean(profile)}
+        estimatedReward={estimatedReward}
         onBack={handleBackToTopic}
-        onReview={() => setShowCompletionModal(false)}
+        onContinue={() => setShowCompletionModal(false)}
       >
         {completionDetails}
-      </CompletionModal>
+      </LessonCompletionDialog>
 
       {showProgress && sentences.length > 0 && (
         <LessonProgressBar

@@ -157,6 +157,9 @@
   "header": {
     "playlists": "Danh sách phát",
     "dictionary": "Từ vựng",
+    "vocabulary": "Từ vựng",
+    "vocabTopics": "Chủ đề",
+    "vocabProgress": "Tiến độ",
     "practice": "Luyện tập",
     "reviewHub": "Ôn tập",
     "reviewHubDesc": "Ôn lại các từ và câu đã lưu.",

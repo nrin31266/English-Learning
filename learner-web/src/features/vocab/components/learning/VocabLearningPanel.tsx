@@ -106,6 +106,20 @@ function isTypingTarget(target: EventTarget | null) {
   );
 }
 
+function responsiveTermSize(value: string, emphasis: "hero" | "prompt" = "hero") {
+  const length = value.trim().length;
+  const words = value.trim().split(/\s+/).filter(Boolean).length;
+  if (emphasis === "prompt") {
+    if (length <= 24 && words <= 3) return "text-2xl sm:text-3xl";
+    if (length <= 48 && words <= 6) return "text-xl sm:text-2xl";
+    return "text-lg sm:text-xl";
+  }
+  if (length <= 12 && words <= 2) return "text-5xl sm:text-6xl";
+  if (length <= 24 && words <= 4) return "text-4xl sm:text-5xl";
+  if (length <= 42 && words <= 7) return "text-3xl sm:text-4xl";
+  return "text-2xl leading-tight sm:text-3xl";
+}
+
 function PosBadge({ pos }: { pos: string }) {
   const { t } = useTranslation();
   return (
@@ -471,6 +485,8 @@ function FlashcardMode({
 }: ModeProps) {
   const [flipped, setFlipped] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const target = getTarget(word);
+  const meaning = getMeaning(word);
   const flip = () => {
     setFlipped((current) => {
       if (!current) {
@@ -511,11 +527,11 @@ function FlashcardMode({
             className="absolute inset-0 flex h-full w-full flex-col items-center justify-center rounded-2xl border bg-card p-6 backface-hidden"
           >
             <div className="flex items-center gap-2">
-              <h2 className="text-3xl font-bold">{getTarget(word)}</h2>
+              <h2 className={cn("max-w-full text-balance font-bold tracking-tight", responsiveTermSize(target))}>{target}</h2>
               <PosBadge pos={word.pos} />
             </div>
             {getPhonetic(word) && (
-              <p className="mt-2 text-muted-foreground">
+              <p className="mt-3 text-lg text-muted-foreground">
                 /{getPhonetic(word).replace(/^\/+|\/+$/g, "")}/
               </p>
             )}
@@ -528,26 +544,22 @@ function FlashcardMode({
             onClick={flip}
             className="no-scrollbar absolute inset-0 flex h-full cursor-pointer flex-col justify-center overflow-y-auto rounded-2xl border bg-card p-5 text-center backface-hidden transform-[rotateY(180deg)]"
           >
-            <p className="text-xl font-bold text-primary">{getMeaning(word)}</p>
-            <p className="mt-2">{getDefinition(word)}</p>
+            <p className={cn("text-balance font-bold text-primary", responsiveTermSize(meaning, "prompt"))}>{meaning}</p>
+            <p className="mt-3 text-lg leading-relaxed">{getDefinition(word)}</p>
             {getExample(word) && (
-              <div className="mt-3 rounded-lg bg-muted p-3 text-left text-sm">
+              <div className="mt-4 rounded-lg bg-muted p-4 text-left text-base leading-relaxed">
                 <p className="italic">“{getExample(word)}”</p>
-                <p className="text-muted-foreground">{getViExample(word)}</p>
+                <p className="mt-1 text-muted-foreground">{getViExample(word)}</p>
               </div>
             )}
-            <div onClick={(event) => event.stopPropagation()}>
-              {completed && (
-                <LearningActions
-                  onContinue={onContinue}
-                  onRate={onRate}
-                  directRatings={singleMode}
-                />
-              )}
-            </div>
           </div>
         </div>
       </div>
+      {completed && (
+        <div onClick={(event) => event.stopPropagation()}>
+          <LearningActions onContinue={onContinue} onRate={onRate} directRatings={singleMode} />
+        </div>
+      )}
     </div>
   );
 }
@@ -594,6 +606,7 @@ function MultipleChoiceMode({
     return { answer, choices: shuffle([answer, ...distractors]) };
   }, [allWords, direction, word]);
   const [selected, setSelected] = useState<string | null>(null);
+  const prompt = direction === "EN_TO_VI" ? getTarget(word) : getMeaning(word);
   const correct = selected === question.answer;
   const choose = (choice: string) => {
     if (selected) return;
@@ -623,19 +636,17 @@ function MultipleChoiceMode({
           | Chọn bằng phím 1–4
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h2 className="text-2xl font-bold">
-            {direction === "EN_TO_VI" ? getTarget(word) : getMeaning(word)}
-          </h2>
+          <h2 className={cn("min-w-0 text-balance font-bold", responsiveTermSize(prompt, "prompt"))}>{prompt}</h2>
           <PosBadge pos={word.pos} />
         </div>
-        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        <div className="mt-5 grid auto-rows-fr gap-2 sm:grid-cols-2">
           {question.choices.map((choice, index) => (
             <button
               key={choice}
               disabled={!!selected}
               onClick={() => choose(choice)}
               className={cn(
-                "flex h-16 items-center gap-3 rounded-xl border p-3 text-left font-medium",
+                "flex min-h-20 min-w-0 items-center gap-3 overflow-hidden rounded-xl border p-3 text-left font-medium",
                 selected &&
                   choice === question.answer &&
                   "border-primary bg-primary/10 text-primary",
@@ -651,7 +662,7 @@ function MultipleChoiceMode({
               <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background text-xs font-bold">
                 {index + 1}
               </span>
-              <span>{choice}</span>
+              <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug [overflow-wrap:anywhere]">{choice}</span>
             </button>
           ))}
         </div>
@@ -668,14 +679,10 @@ function MultipleChoiceMode({
               {correct ? "Chính xác" : "Chưa đúng"}
             </p>
             {singleMode && <AnswerDetail word={word} />}
-            <LearningActions
-              onContinue={onContinue}
-              onRate={onRate}
-              directRatings={singleMode}
-            />
           </>
         )}
       </div>
+      {selected && <LearningActions onContinue={onContinue} onRate={onRate} directRatings={singleMode} />}
     </div>
   );
 }
@@ -841,14 +848,10 @@ function TypingMode({
               {resolved === "correct" ? "Chính xác" : "Chưa nhớ từ này"}
             </p>
             {singleMode && <AnswerDetail word={word} />}
-            <LearningActions
-              onContinue={onContinue}
-              onRate={onRate}
-              directRatings={singleMode}
-            />
           </>
         )}
       </div>
+      {resolved && <LearningActions onContinue={onContinue} onRate={onRate} directRatings={singleMode} />}
     </div>
   );
 }
@@ -927,7 +930,7 @@ function LearningActions({
     return () => window.removeEventListener("keydown", shortcut);
   }, [onContinue, showRatings, submitRating]);
   return (
-    <div className="mt-4">
+    <div className="mt-6">
       {!showRatings ? (
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={() => setShowRatings(true)}>
@@ -1062,12 +1065,13 @@ function ResultView({
                   <PosBadge pos={word.pos} />
                   {meta && rating && (
                     <span
+                      title={meta.interval}
                       className={cn(
-                        "rounded-full border px-2.5 py-1 text-xs font-bold",
+                        "cursor-help rounded-full border px-2.5 py-1 text-xs font-bold",
                         REVIEW_RATING_STYLES[rating],
                       )}
                     >
-                      {meta.label} | {meta.interval}
+                      {meta.label}
                     </span>
                   )}
                 </div>

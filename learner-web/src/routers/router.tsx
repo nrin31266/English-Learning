@@ -8,6 +8,7 @@ const HomePage = lazy(() => import('@/features/home/HomePage'))
 const TopicsPage = lazy(() => import('@/features/topic/pages/Topics'))
 const TopicsDetailsPage = lazy(() => import('@/features/topic/pages/TopicDetails'))
 const VocabTopicsPage = lazy(() => import('@/features/vocab/pages/VocabTopicsPage'))
+const VocabProgressPage = lazy(() => import('@/features/vocab/pages/VocabProgressPage'))
 const VocabTopicDetail = lazy(() => import('@/features/vocab/pages/VocabTopicDetail'))
 const VocabReviewPage = lazy(() => import('@/features/vocab/pages/VocabReviewPage'))
 const ShadowingModePage = lazy(() => import('@/features/learnshadowing/pages/ShadowingMode'))
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
       {
         path: "/vocab/topics",
         element: withSuspense(<VocabTopicsPage />),
+      },
+      {
+        path: "/vocab/progress",
+        element: withSuspense(<VocabProgressPage />),
       },
       {
         path: "/vocab/review",

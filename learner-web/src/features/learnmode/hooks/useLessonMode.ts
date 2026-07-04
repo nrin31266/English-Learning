@@ -74,6 +74,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
   // --- UI State Management ---
   const [showHelp, setShowHelp] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [celebrateCompletion, setCelebrateCompletion] = useState(false)
 
   const lessonState = useAppSelector(selector)
   const { data: lesson, status, error } = lessonState
@@ -138,6 +139,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
   useEffect(() => {
     initialCompletionHandledRef.current = false
     setShowCompletionModal(false)
+    setCelebrateCompletion(false)
 
     if (lessonId) {
       dispatch(fetchAction({ id: Number(lessonId), mode: modeName }) as any)
@@ -164,6 +166,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
     initialCompletionHandledRef.current = true
 
     if (isLessonCompleted) {
+      setCelebrateCompletion(false)
       setShowCompletionModal(true)
     }
   }, [status, lesson, isLessonCompleted])
@@ -256,6 +259,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
           ).unwrap()) as ProgressUpdateResponse
 
           if (response.justCompletedLesson) {
+            setCelebrateCompletion(true)
             window.setTimeout(() => setShowCompletionModal(true), 800)
           }
         } catch {
@@ -278,6 +282,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
       }
 
       if (justCompletedGuestLesson) {
+        setCelebrateCompletion(true)
         window.setTimeout(() => setShowCompletionModal(true), 800)
       }
     },
@@ -544,6 +549,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
 
     showCompletionModal,
     setShowCompletionModal,
+    celebrateCompletion,
 
     handleBackToTopic,
     handleLoginIncentive,

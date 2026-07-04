@@ -157,6 +157,9 @@
   "header": {
     "playlists": "Playlists",
     "dictionary": "Vocabulary",
+    "vocabulary": "Vocabulary",
+    "vocabTopics": "Topics",
+    "vocabProgress": "Progress",
     "practice": "Practice",
     "reviewHub": "Review Hub",
     "reviewHubDesc": "Review your saved words and sentences.",

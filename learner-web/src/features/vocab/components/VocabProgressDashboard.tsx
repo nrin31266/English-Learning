@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
+import { VocabProgressSkeleton } from "./topics/VocabTopicsSkeleton";
 
 const localDateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -50,6 +52,19 @@ export default function VocabProgressDashboard({
 }) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const [paintReady, setPaintReady] = useState(false);
+  useEffect(() => {
+    if (!data) return;
+    setPaintReady(false);
+    let secondFrame = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => setPaintReady(true));
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+    };
+  }, [data]);
   if (!data)
     return (
       <div className="rounded-2xl border p-10 text-center text-sm text-muted-foreground">
@@ -80,7 +95,12 @@ export default function VocabProgressDashboard({
   };
 
   return (
-    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="relative min-h-[32rem]">
+      {!paintReady && <div className="absolute inset-0 z-10 bg-background"><VocabProgressSkeleton /></div>}
+      <div
+        className={`grid min-w-0 gap-4 transition-opacity duration-150 xl:grid-cols-[minmax(0,1fr)_360px] ${paintReady ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        aria-hidden={!paintReady}
+      >
       <main className="min-w-0 space-y-4">
         <section className="rounded-2xl border border-primary/25 bg-linear-to-r from-primary/15 via-primary/5 to-card p-5 shadow-sm">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -285,6 +305,7 @@ export default function VocabProgressDashboard({
         </section>
 
       </aside>
+      </div>
     </div>
   );
 }
