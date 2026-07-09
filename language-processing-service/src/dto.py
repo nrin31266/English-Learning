@@ -1,10 +1,14 @@
-from typing import Generic, TypeVar, Optional, Any, Dict, List
-from pydantic import BaseModel, Field
-from pydantic.generics import GenericModel  # THÊM DÒNG NÀY
 from datetime import datetime as DateTime
-from typing import Literal
-from src.enum   import LessonProcessingStep
+from typing import Any, Dict, Generic, List, Literal, Optional, TypeVar
+
+from pydantic import BaseModel, Field
+from pydantic.generics import GenericModel
+
+from src.enum import LessonProcessingStep
+
 T = TypeVar("T")
+
+
 class ShadowingWordCompare(BaseModel):
     position: int
     expectedWord: Optional[str]
@@ -12,43 +16,55 @@ class ShadowingWordCompare(BaseModel):
     expectedNormalized: Optional[str]
     recognizedNormalized: Optional[str]
     status: Literal["CORRECT", "NEAR", "WRONG", "MISSING", "EXTRA"]
-    score: float  # 0.0 – 1.0
-    # phonemeScore: Optional[float] = None  # 0.0 - 1.0
-    
-    phonemeDiff: dict | None = None  # THÊM: chứa diff_tokens cho UI
-    extraOrMissingIpa: dict | None = None  # THÊM: cho EXTRA/MISSING
 
 
 class DiffToken(BaseModel):
-    type: Literal["MATCH", "MISMATCH", "MISSING", "EXTRA", "NO_DATA"]
+    type: Literal[
+        "MATCH",
+        "MISMATCH",
+        "MISSING",
+        "EXTRA",
+        "NO_DATA",
+        "STRESS_MATCH",
+        "STRESS_WRONG",
+        "PUNCT",
+        "SPACE",
+    ]
+    expected: Optional[str] = None
+    actual: Optional[str] = None
     expected_ipa: Optional[str] = None
     actual_ipa: Optional[str] = None
-    position: Optional[int] = None  # Vị trí trong câu (từ thứ mấy)
+    position: Optional[int] = None  # phoneme stream position, SPACE uses None
+
     class Config:
         from_attributes = True
+
+
 class PhonemeDiff(BaseModel):
- 
     score: float
-    diff_tokens: List[DiffToken] = []
+    diff_tokens: List[DiffToken] = Field(default_factory=list)
     expected_ipa: Optional[str] = None
     actual_ipa: Optional[str] = None
+
     class Config:
         from_attributes = True
+
+
 class ShadowingResult(BaseModel):
     sentenceId: int
     expectedText: str
     recognizedText: str
     totalWords: int
-    correctWords: int          # chỉ đếm CORRECT (exact)
-    accuracy: float            # % (correctWords / totalWords)
-    weightedAccuracy: float    # % (theo score)
-    fluencyScore: float        # 0.0 - 1.0
-    avgPause: float            # giây
-    speechRate: float          # words/second
+    correctWords: int  # word-level exact count, only for transcript/debug display
+    accuracy: float  # pronunciation score percent from sentence IPA
+    weightedAccuracy: float  # same as accuracy for backward compatibility
+    fluencyScore: float  # 0.0 - 1.0
+    avgPause: float  # seconds
+    speechRate: float  # words/second
     recognizedWordCount: int
     lastRecognizedPosition: int
     compares: List[ShadowingWordCompare]
-    phoneme_diff: Optional[PhonemeDiff] = None  # THÊM: nếu có data phoneme diff, sẽ điền ở đây
+    phoneme_diff: Optional[PhonemeDiff] = None
     
 
 class ShadowingWord(BaseModel):

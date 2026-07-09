@@ -1,10 +1,9 @@
 // src/pages/shadowing/components/ShadowingResultPanel.tsx
 
-import React, { useState, useRef, useCallback, useEffect } from "react"
+import React, { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Target, BookA, Activity } from "lucide-react"
-import type { IShadowingResult, IDiffToken } from "@/types"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import type { IShadowingResult, IDiffToken, IShadowingWordCompare } from "@/types"
 import { SHADOWING_THRESHOLD } from "./ActiveSentencePanel"
 import SkeletonBlock from "@/components/SkeletonBlock"
 import BestScoreBadge from "@/components/BestScoreBadge" 
@@ -17,7 +16,7 @@ interface Props {
   highestScore?: number 
 }
 
-const NOISE_PHONEMES = ["", " ", "ː", "ˑ", "None"]
+const NOISE_PHONEMES = ["", "ː", "ˑ", "None"]
 
 const IPA_TYPOGRAPHY = "font-sans text-[17px] sm:text-[19px] font-medium tracking-[0.03em]"
 const WORD_TYPOGRAPHY = "text-[17px] sm:text-[20px] md:text-[24px] font-medium leading-tight"
@@ -43,11 +42,14 @@ const getTokenColorClass = (token: IDiffToken, showExtra: boolean): string => {
     case "STRESS_MATCH": return "text-emerald-600 font-bold"
     case "STRESS_WRONG": return "text-red-600 font-bold"
     case "PUNCT": return "text-slate-300"
+    case "SPACE": return ""
     default: return "text-muted-foreground"
   }
 }
 
 const getTokenDisplayText = (token: IDiffToken): string => {
+  if (token.type === "SPACE") return " "
+
   const exp = token.expected_ipa || token.expected || ""
   const act = token.actual_ipa || token.actual || ""
   
@@ -56,15 +58,30 @@ const getTokenDisplayText = (token: IDiffToken): string => {
   return ""
 }
 
+const normalizeDisplayTokens = (tokens: IDiffToken[]): IDiffToken[] => {
+  const normalized: IDiffToken[] = []
+
+  for (const token of tokens) {
+    if (token.type === "SPACE" && normalized.length === 0) continue
+    if (token.type === "SPACE" && normalized.at(-1)?.type === "SPACE") continue
+
+    normalized.push(token)
+  }
+
+  while (normalized.at(-1)?.type === "SPACE") {
+    normalized.pop()
+  }
+
+  return normalized
+}
+
 const IpaRenderer = React.memo(({ 
-  compares, 
-  lastRecognizedPosition = 0, 
+  phonemeDiff,
   expectedPhonetic,
   showOriginal,
   showExtra
 }: { 
-  compares?: IShadowingResult['compares'], 
-  lastRecognizedPosition?: number,
+  phonemeDiff?: IShadowingResult["phoneme_diff"],
   expectedPhonetic?: string | null,
   showOriginal: boolean,
   showExtra: boolean
@@ -72,12 +89,14 @@ const IpaRenderer = React.memo(({
   const wordGroupClass = "underline decoration-muted-foreground/40 underline-offset-[5px] decoration-1"
   const spaceElement = <span className="select-none inline-block w-2 sm:w-2.5" />
 
-  if (!compares || compares.length === 0 || showOriginal) {
-    if (!expectedPhonetic) {
+  if (showOriginal) {
+    const originalIpa = expectedPhonetic || phonemeDiff?.expected_ipa || ""
+
+    if (!originalIpa) {
       return <span className="text-sm text-muted-foreground/50 italic">No phonetic data</span>
     }
 
-    const originalWords = expectedPhonetic.split(/\s+/).filter(w => w.trim() !== "")
+    const originalWords = originalIpa.split(/\s+/).filter(w => w.trim() !== "")
 
     return (
       <div className={cn("w-full wrap-break-word text-center leading-loose", IPA_TYPOGRAPHY)}>
@@ -95,80 +114,33 @@ const IpaRenderer = React.memo(({
     )
   }
 
-  const filteredCompares = showExtra 
-    ? compares 
-    : compares.filter(c => c.status !== "EXTRA")
+  const diffTokens = phonemeDiff?.diff_tokens || []
+
+  if (diffTokens.length === 0) {
+    return <span className="text-sm text-muted-foreground/50 italic">No phonetic data</span>
+  }
+
+  const displayTokens = normalizeDisplayTokens(
+    showExtra
+      ? diffTokens
+      : diffTokens.filter(token => token.type !== "EXTRA")
+  )
 
   return (
-    <div className={cn("w-full wrap-break-word text-center leading-loose", IPA_TYPOGRAPHY)}>
+    <div className={cn("w-full wrap-break-word whitespace-pre-wrap text-center leading-loose", IPA_TYPOGRAPHY)}>
       <span className="text-muted-foreground/50 select-none mr-1.5">/</span>
-      
-      {filteredCompares.map((c, idx) => {
-        const attempted = c.position <= lastRecognizedPosition
+      <span>
+        {displayTokens.map((token, tokenIdx) => {
+          const displayText = getTokenDisplayText(token as IDiffToken)
+          if (!displayText || NOISE_PHONEMES.includes(displayText)) return null
 
-        if (c.status === "EXTRA" && showExtra) {
-          const extraText = c.phonemeDiff?.actual_ipa || c.recognizedWord || ""
-          if (!extraText || extraText === "None") return null
           return (
-            <React.Fragment key={`ipa-${idx}`}>
-              {idx > 0 && spaceElement}
-              <span className={cn("inline-block text-amber-500 line-through opacity-80 text-[0.9em]", wordGroupClass)}>
-                {extraText}
-              </span>
-            </React.Fragment>
-          )
-        }
-
-        if (c.status === "EXTRA" && !showExtra) return null
-
-        if (!attempted) {
-          const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
-          return (
-            <React.Fragment key={`ipa-${idx}`}>
-              {idx > 0 && spaceElement}
-              <span className={cn("inline-block text-muted-foreground/40", wordGroupClass)}>
-                {ipaText}
-              </span>
-            </React.Fragment>
-          )
-        }
-
-        const diffTokens = c.phonemeDiff?.diff_tokens
-        if (!diffTokens || diffTokens.length === 0) {
-          const ipaText = c.phonemeDiff?.expected_ipa || c.expectedWord || ""
-          let colorClass = "text-emerald-600"
-          if (c.status === "MISSING") colorClass = "text-slate-400"
-          else if (c.status === "NEAR" || c.status === "WRONG") colorClass = "text-red-500"
-          
-          return (
-            <React.Fragment key={`ipa-${idx}`}>
-              {idx > 0 && spaceElement}
-              <span className={cn("inline-block", colorClass, wordGroupClass)}>
-                {ipaText}
-              </span>
-            </React.Fragment>
-          )
-        }
-
-        const displayTokens = showExtra ? diffTokens : diffTokens.filter(t => t.type !== "EXTRA")
-        
-        return (
-          <React.Fragment key={`ipa-${idx}`}>
-            {idx > 0 && spaceElement}
-            <span className={cn("inline-block", wordGroupClass)}>
-              {displayTokens.map((token, tokenIdx) => {
-                const displayText = getTokenDisplayText(token as IDiffToken)
-                if (!displayText || NOISE_PHONEMES.includes(displayText)) return null
-                return (
-                  <span key={`token-${idx}-${tokenIdx}`} className={getTokenColorClass(token as IDiffToken, showExtra)}>
-                    {displayText}
-                  </span>
-                )
-              })}
+            <span key={`token-${tokenIdx}`} className={getTokenColorClass(token as IDiffToken, showExtra)}>
+              {displayText}
             </span>
-          </React.Fragment>
-        )
-      })}
+          )
+        })}
+      </span>
       
       <span className="text-muted-foreground/50 select-none ml-1.5">/</span>
     </div>
@@ -176,25 +148,9 @@ const IpaRenderer = React.memo(({
 })
 IpaRenderer.displayName = "IpaRenderer"
 
-const WordItem = React.memo(({ c, attempted }: { c: any, attempted: boolean }) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  
+const WordItem = React.memo(({ c, attempted }: { c: IShadowingWordCompare, attempted: boolean }) => {
   const isExtra = c.status === "EXTRA"
   const hasError = !isExtra && c.status !== "CORRECT" && attempted && c.recognizedWord
-
-  useEffect(() => {
-    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
-  }, [])
-
-  const handleMouseEnter = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    setIsOpen(true)
-  }, [])
-
-  const handleMouseLeave = useCallback(() => {
-    timeoutRef.current = setTimeout(() => setIsOpen(false), 120)
-  }, [])
 
   if (isExtra) {
     return (
@@ -212,48 +168,18 @@ const WordItem = React.memo(({ c, attempted }: { c: any, attempted: boolean }) =
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <div className="flex flex-col items-center">
-        <PopoverTrigger asChild>
-          <div
-            className="flex flex-col items-center cursor-pointer group hover:bg-muted/30 rounded px-1 transition-colors"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            <div className="min-h-5 flex items-end justify-center mb-0.5 whitespace-nowrap">
-              {hasError ? (
-                <span className={cn("text-muted-foreground/60 line-through leading-none", ERROR_TYPOGRAPHY)}>
-                  {c.recognizedWord}
-                </span>
-              ) : null}
-            </div>
-            <span className={cn(WORD_TYPOGRAPHY, "leading-none", getWordClass(c.status, attempted))}>
-              {c.expectedWord || "_"}
-            </span>
-          </div>
-        </PopoverTrigger>
+    <div className="flex flex-col items-center px-1">
+      <div className="min-h-5 flex items-end justify-center mb-0.5 whitespace-nowrap">
+        {hasError ? (
+          <span className={cn("text-muted-foreground/60 line-through leading-none", ERROR_TYPOGRAPHY)}>
+            {c.recognizedWord}
+          </span>
+        ) : null}
       </div>
-      <PopoverContent className="w-auto min-w-40 p-3 rounded-lg border-border/60 shadow-md" sideOffset={6}>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-2">
-            <span className={cn("text-[15px] font-bold tracking-wide", getWordClass(c.status, attempted))}>
-              {c.expectedWord || c.recognizedWord}
-            </span>
-            {c.phonemeDiff?.score !== undefined && (
-              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                {Math.max(0, c.phonemeDiff.score * 100).toFixed(0)}%
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-1">
-            <span className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground/70">Correct</span>
-            <span className="text-[11px] font-bold tracking-widest uppercase text-muted-foreground/70">You said</span>
-            <span className="font-mono text-emerald-600 text-[14px] font-medium">/{c.phonemeDiff?.expected_ipa || "—"}/</span>
-            <span className="font-mono text-red-500 text-[14px] font-medium">/{c.phonemeDiff?.actual_ipa || "—"}/</span>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+      <span className={cn(WORD_TYPOGRAPHY, "leading-none", getWordClass(c.status, attempted))}>
+        {c.expectedWord || "_"}
+      </span>
+    </div>
   )
 })
 WordItem.displayName = "WordItem"
@@ -273,6 +199,7 @@ WordEvaluationList.displayName = "WordEvaluationList"
 const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading, expectedPhonetic, highestScore = 0 }) => {
   const [showOriginalIpa, setShowOriginalIpa] = useState(false)
   const [showExtraIpa, setShowExtraIpa] = useState(false)
+  const phonemeDiff = result?.phoneme_diff ?? null
 
   return (
     <div className={cn("rounded-xl border bg-card p-3 sm:p-4 w-full flex flex-col gap-3", className)}>
@@ -288,7 +215,7 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading, e
               <div className="flex items-center gap-1.5 pr-3 sm:pr-4">
                 <Target className={cn("h-4 w-4 sm:h-5 sm:w-5", result.weightedAccuracy >= SHADOWING_THRESHOLD.NEXT ? "text-emerald-500" : "text-red-500")} />
                 <div className="flex flex-col">
-                  <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase leading-none tracking-widest mb-0.5">Accuracy</span>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase leading-none tracking-widest mb-0.5">Pronunciation</span>
                   <span className="text-sm sm:text-base font-bold leading-none">{Math.round(result.weightedAccuracy)}%</span>
                 </div>
               </div>
@@ -348,8 +275,7 @@ const ShadowingResultPanel: React.FC<Props> = ({ result, className, isLoading, e
       {/* --- SECTION 2: IPA BOX --- */}
       <div className="min-h-[50px] flex items-center justify-center rounded-lg bg-muted/20 px-3 py-2 border border-border/40 shadow-sm">
         <IpaRenderer 
-          compares={result?.compares} 
-          lastRecognizedPosition={result?.lastRecognizedPosition}
+          phonemeDiff={phonemeDiff}
           expectedPhonetic={expectedPhonetic}
           showOriginal={showOriginalIpa}
           showExtra={showExtraIpa}

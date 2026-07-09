@@ -1,8 +1,10 @@
 # src/services/shadowing/sequence_alignment.py
 
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence, TypeVar
 
 AlignmentPair = tuple[Optional[str], Optional[str]]
+T = TypeVar("T")
+U = TypeVar("U")
 
 SIMILAR_PHONEMES: dict[tuple[str, str], float] = {
     ("p", "b"): 0.6,
@@ -33,6 +35,130 @@ COST_DIFFERENT = 0.6
 COST_INSERT_DELETE = 1.0
 SWAP_PENALTY = 0.3
 EPSILON = 1e-6
+
+
+def levenshtein_distance(a: Sequence[str] | str, b: Sequence[str] | str) -> int:
+    if a == b:
+        return 0
+
+    if not a:
+        return len(b)
+
+    if not b:
+        return len(a)
+
+    rows = len(a) + 1
+    cols = len(b) + 1
+    dp = [[0] * cols for _ in range(rows)]
+
+    for i in range(rows):
+        dp[i][0] = i
+
+    for j in range(cols):
+        dp[0][j] = j
+
+    for i in range(1, rows):
+        for j in range(1, cols):
+            cost = 0 if a[i - 1] == b[j - 1] else 1
+            dp[i][j] = min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + cost,
+            )
+
+    return dp[-1][-1]
+
+
+def normalized_similarity(a: Sequence[str] | str, b: Sequence[str] | str) -> float:
+    max_len = max(len(a), len(b))
+
+    if max_len == 0:
+        return 1.0
+
+    return max(0.0, 1.0 - levenshtein_distance(a, b) / max_len)
+
+
+def normalized_distance_cost(
+    a: str,
+    b: str,
+    similarity_weight: float = 0.8,
+) -> float:
+    if a == b:
+        return 0.0
+
+    return round(1.0 - normalized_similarity(a, b) * similarity_weight, 4)
+
+
+def align_sequences(
+    expected_items: Sequence[T],
+    actual_items: Sequence[U],
+    substitution_cost_fn: Callable[[T, U], float],
+    delete_cost: float = 1.0,
+    insert_cost: float = 1.0,
+    prefer_gap_on_tie: bool = False,
+) -> list[tuple[Optional[T], Optional[U], str]]:
+    expected_count = len(expected_items)
+    actual_count = len(actual_items)
+
+    dp = [[0.0] * (actual_count + 1) for _ in range(expected_count + 1)]
+
+    for i in range(1, expected_count + 1):
+        dp[i][0] = dp[i - 1][0] + delete_cost
+
+    for j in range(1, actual_count + 1):
+        dp[0][j] = dp[0][j - 1] + insert_cost
+
+    for i in range(1, expected_count + 1):
+        for j in range(1, actual_count + 1):
+            cost = substitution_cost_fn(expected_items[i - 1], actual_items[j - 1])
+
+            dp[i][j] = min(
+                dp[i - 1][j - 1] + cost,
+                dp[i - 1][j] + delete_cost,
+                dp[i][j - 1] + insert_cost,
+            )
+
+    aligned_reversed: list[tuple[Optional[T], Optional[U], str]] = []
+    i = expected_count
+    j = actual_count
+
+    while i > 0 or j > 0:
+        if prefer_gap_on_tie and i > 0:
+            if abs(dp[i][j] - (dp[i - 1][j] + delete_cost)) < EPSILON:
+                aligned_reversed.append((expected_items[i - 1], None, "DELETE"))
+                i -= 1
+                continue
+
+        if prefer_gap_on_tie and j > 0:
+            if abs(dp[i][j] - (dp[i][j - 1] + insert_cost)) < EPSILON:
+                aligned_reversed.append((None, actual_items[j - 1], "INSERT"))
+                j -= 1
+                continue
+
+        if i > 0 and j > 0:
+            cost = substitution_cost_fn(expected_items[i - 1], actual_items[j - 1])
+
+            if abs(dp[i][j] - (dp[i - 1][j - 1] + cost)) < EPSILON:
+                align_type = "MATCH" if cost == 0.0 else "SUBSTITUTE"
+                aligned_reversed.append(
+                    (expected_items[i - 1], actual_items[j - 1], align_type)
+                )
+                i -= 1
+                j -= 1
+                continue
+
+        if not prefer_gap_on_tie and j > 0 and abs(dp[i][j] - (dp[i][j - 1] + insert_cost)) < EPSILON:
+            aligned_reversed.append((None, actual_items[j - 1], "INSERT"))
+            j -= 1
+            continue
+
+        if i > 0:
+            aligned_reversed.append((expected_items[i - 1], None, "DELETE"))
+            i -= 1
+
+    aligned_reversed.reverse()
+
+    return aligned_reversed
 
 
 def get_phoneme_similarity(a: str, b: str) -> float:

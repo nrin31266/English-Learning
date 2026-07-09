@@ -26,31 +26,30 @@ export interface IShadowingWord {
   score: number
 }
 
-// 👇 THÊM 2 TYPE NÀY
-export type DiffTokenType = "MATCH" | "MISMATCH" | "MISSING" | "EXTRA" | "STRESS_MATCH" | "PUNCT" | "NO_DATA" | "STRESS_WRONG";
+export type DiffTokenType =
+  | "MATCH"
+  | "MISMATCH"
+  | "MISSING"
+  | "EXTRA"
+  | "STRESS_MATCH"
+  | "PUNCT"
+  | "NO_DATA"
+  | "STRESS_WRONG"
+  | "SPACE"
 export type WordStatus = "CORRECT" | "NEAR" | "WRONG" | "MISSING" | "EXTRA"
 
 export interface IDiffToken {
   type: DiffTokenType
-  expected: string | null      // 👈 đổi từ expected_ipa → expected
-  actual: string | null        // 👈 đổi từ actual_ipa → actual
+  expected: string | null
+  actual: string | null
   position: number | null
-  // Optional fields cho STRESS/PUNCT
   expected_ipa?: string | null
   actual_ipa?: string | null
-  stress?: {
-    expected: string | null
-    actual: string | null
-  }
-  punct?: {
-    expected: string | null
-    actual: string | null
-  }
 }
 
 export interface IPhonemeDiff {
   score: number
-  diff_tokens: IDiffToken[]     // 👈 bỏ optional, luôn có (có thể là [])
+  diff_tokens: IDiffToken[]
   expected_ipa: string | null
   actual_ipa: string | null
 }
@@ -62,8 +61,6 @@ export interface IShadowingWordCompare {
   expectedNormalized: string | null
   recognizedNormalized: string | null
   status: WordStatus
-  score: number
-  phonemeDiff: IPhonemeDiff      // 👈 bỏ optional, luôn có
 }
 
 export interface IShadowingResult {
@@ -80,7 +77,7 @@ export interface IShadowingResult {
   recognizedWordCount: number
   lastRecognizedPosition: number
   compares: IShadowingWordCompare[]
-  phonemeDiff?: IPhonemeDiff | null
+  phoneme_diff?: IPhonemeDiff | null
 }
 
 export interface ILessonSentenceDetailsResponse {
