@@ -125,6 +125,7 @@ def _download_youtube_audio_sync(rq: dto.MediaAudioCreateRequest) -> dto.AudioIn
 
         video_id = info.get("id")
         title = info.get("title", "")
+        description = info.get("description", "")
         duration_sec = int(info.get("duration") or 0)
         thumbnail_url = info.get("thumbnail")
 
@@ -166,6 +167,8 @@ def _download_youtube_audio_sync(rq: dto.MediaAudioCreateRequest) -> dto.AudioIn
             file_path=final_mp3_path,
             duration=duration_sec,
             sourceReferenceId=video_id,
+            sourceTitle=title,
+            sourceDescription=description,
             thumbnailUrl=thumbnail_url,
         )
 
@@ -239,6 +242,7 @@ def _download_audio_file_sync(rq: dto.MediaAudioCreateRequest) -> dto.AudioInfo:
         return dto.AudioInfo(
             file_path=save_path,
             sourceReferenceId=Path(filename).stem,
+            sourceTitle=Path(filename).stem.replace("_", " "),
         )
 
     except BaseException:

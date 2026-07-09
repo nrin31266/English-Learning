@@ -16,7 +16,6 @@ export interface LessonFilterParams {
   search?: string;
   status?: string;
   topicSlug?: string;
-  lessonType?: string;
   languageLevel?: string;
   sourceType?: string;
   enableDictation?: string;
@@ -54,7 +53,13 @@ export const fetchLessons = createAsyncThunk(
         method: "GET",
         params: filters,
       });
-      return res;
+      return {
+        ...res,
+        data: res.data ?? res.content ?? [],
+        page: res.page ?? res.number ?? 0,
+        hasNext: res.hasNext ?? ((res.page ?? res.number ?? 0) < res.totalPages - 1),
+        hasPrevious: res.hasPrevious ?? ((res.page ?? res.number ?? 0) > 0),
+      };
     } catch (err) {
       return rejectWithValue(extractError(err));
     }
@@ -69,11 +74,26 @@ export const lessonSlice = createSlice({
       state,
       action: PayloadAction<ILessonProcessingStepNotifyEvent>
     ) => {
-      const { lessonId, processingStep, aiJobId, audioUrl, sourceReferenceId, thumbnailUrl, durationSeconds } =
+      const {
+        lessonId,
+        processingStep,
+        aiJobId,
+        audioUrl,
+        sourceReferenceId,
+        thumbnailUrl,
+        durationSeconds,
+        title,
+        slug,
+        description,
+        languageLevel,
+        sourceLanguage,
+        sourceLicenseType,
+      } =
         action.payload;
       if (!state.lessons.data) return;
 
-      const lesson = state.lessons.data.content.find((l) => l.id === lessonId);
+      const lessons = state.lessons.data.data ?? state.lessons.data.content ?? [];
+      const lesson = lessons.find((l) => l.id === lessonId);
       if (!lesson) return;
 
       // update core fields từ event
@@ -82,7 +102,13 @@ export const lessonSlice = createSlice({
       if (audioUrl) lesson.audioUrl = audioUrl;
       if (sourceReferenceId) lesson.sourceReferenceId = sourceReferenceId;
       if (thumbnailUrl) lesson.thumbnailUrl = thumbnailUrl;
-      if (durationSeconds !== null) lesson.durationSeconds = durationSeconds || lesson.durationSeconds; // chỉ update nếu có giá trị mới
+      if (durationSeconds !== null && durationSeconds !== undefined) lesson.durationSeconds = durationSeconds;
+      if (title) lesson.title = title;
+      if (slug) lesson.slug = slug;
+      if (description) lesson.description = description;
+      if (languageLevel) lesson.languageLevel = languageLevel as ILessonDto["languageLevel"];
+      if (sourceLanguage) lesson.sourceLanguage = sourceLanguage;
+      if (sourceLicenseType) lesson.sourceLicenseType = sourceLicenseType;
 
       // map step -> status
       if (processingStep === "FAILED") {

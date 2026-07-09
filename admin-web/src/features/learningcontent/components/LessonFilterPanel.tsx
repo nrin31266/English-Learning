@@ -3,17 +3,16 @@ import { SearchForm } from "@/components/SearchForm";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import {
     Select,
     SelectContent,
     SelectGroup,
     SelectItem,
-    SelectLabel,
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { lessonStatusSelectOptions, lessonTypeOptions } from "@/types";
+import { lessonStatusSelectOptions } from "@/types";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchTopicOptions } from "@/store/learningcontent/topicSlide";
 interface LessonFilterPanelProps {
@@ -30,7 +29,7 @@ const LessonFilterPanel = ({ searchParams, setSearchParams }: LessonFilterPanelP
     const [searchTerm, setSearchTerm] = useState<string>(searchParams.get("search") || "");
     const dispatch = useAppDispatch();
     const { topicOptions} = useAppSelector((state) => state.learningContent.topics);
-    const handleChangeSearchParam = (key: string, value: any, resetPage: boolean = true) => {
+    const handleChangeSearchParam = (key: string, value: string | boolean | number | null | undefined, resetPage: boolean = true) => {
         const newParams = new URLSearchParams(searchParams);
 
         const shouldDelete =

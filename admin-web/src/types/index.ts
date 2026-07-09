@@ -220,13 +220,19 @@ export interface IAsyncState<T> {
 
 export type MutationType = "add" | "edit" | "delete" | null;
 
-export const lessonTypeOptions = ["AI_ASSISTED", "TRADITIONAL"] as const;
 export const cefrLevelOptions = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
-export const sourceTypeOptions = ["YOUTUBE", "AUDIO_FILE", "OTHER"] as const;
+export const sourceTypeOptions = ["YOUTUBE", "AUDIO_FILE"] as const;
 export const sourceTypeSelectOptions = [
   { value: "YOUTUBE", label: "YouTube" },
   { value: "AUDIO_FILE", label: "Audio File" },
-  { value: "OTHER", label: "Other" },
+] as const;
+
+export const sourceLicenseTypeOptions = [
+  "STANDARD_YOUTUBE",
+  "CREATIVE_COMMONS",
+  "OWNED_CONTENT",
+  "PERMISSION_GRANTED",
+  "UNKNOWN",
 ] as const;
 
 export const sourceLanguageOptions = ["en-US", "en-UK"] as const;
@@ -255,16 +261,6 @@ export const lessonStatusSelectOptions = [
   { value: "ERROR", label: "Error" },
 ] as const;
 
-export const LessonType = [
-  "AI_ASSISTED",
-  "TRADITIONAL"
-] as const;
-
-export const lessonTypeSelectOptions = [
-  { value: "AI_ASSISTED", label: "AI Assisted" },
-  { value: "TRADITIONAL", label: "Traditional" },
-] as const;
-
 export interface ISortInfo {
   empty: boolean;
   sorted: boolean;
@@ -282,10 +278,13 @@ export interface IPageableInfo {
 
 export interface IPageResponse<T> {
   data: T[];
+  content?: T[];
   page: number;
+  number?: number;
   size: number;
   totalElements: number;
   totalPages: number;
+  numberOfElements?: number;
   hasNext: boolean;
   hasPrevious: boolean;
 }
@@ -297,7 +296,8 @@ export interface ILessonDto {
   thumbnailUrl: string | null;
   slug: string;
   description: string | null;
-  lessonType: typeof LessonType[number];
+  dictationHint: string | null;
+  sourceLicenseType?: typeof sourceLicenseTypeOptions[number] | null;
   processingStep: typeof LessonProcessingStep[number];
   languageLevel: typeof cefrLevelOptions[number];
   sourceType: typeof sourceTypeOptions[number];
@@ -358,7 +358,8 @@ export interface ILessonDetailsDto {
   thumbnailUrl: string | null;
   slug: string;
   description: string | null;
-  lessonType: typeof LessonType[number];
+  dictationHint: string | null;
+  sourceLicenseType?: typeof sourceLicenseTypeOptions[number] | null;
   processingStep: typeof LessonProcessingStep[number];
   languageLevel: typeof cefrLevelOptions[number];
   sourceType: typeof sourceTypeOptions[number];
@@ -389,6 +390,7 @@ export interface ILessonMinimalDto {
 export interface IEditLessonPayload {
   title: string;
   description: string | null;
+  dictationHint: string | null;
   languageLevel: typeof cefrLevelOptions[number];
   sourceLanguage: string;
   thumbnailUrl: string | null;
@@ -438,4 +440,10 @@ export interface ILessonProcessingStepNotifyEvent{
   sourceReferenceId?: string | null;
   thumbnailUrl?: string | null;
   durationSeconds?: number | null;
+  title?: string | null;
+  slug?: string | null;
+  description?: string | null;
+  languageLevel?: string | null;
+  sourceLanguage?: string | null;
+  sourceLicenseType?: typeof sourceLicenseTypeOptions[number] | null;
 }

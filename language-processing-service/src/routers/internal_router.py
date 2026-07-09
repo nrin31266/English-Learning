@@ -109,3 +109,23 @@ async def upload_image(
     pid = public_id or f"vocab_topic_{file.filename}"
     url = await upload_file(file.file, pid, resource_type="image")
     return UploadResponse(url=url)
+
+
+@router.post("/upload/lesson-audio", response_model=UploadResponse)
+async def upload_lesson_audio(
+    file: UploadFile = File(...),
+    public_id: str | None = None,
+):
+    pid = public_id or f"lesson_audio_{file.filename}"
+    url = await upload_file(file.file, pid, resource_type="video")
+    return UploadResponse(url=url)
+
+
+@router.post("/upload/lesson-thumbnail", response_model=UploadResponse)
+async def upload_lesson_thumbnail(
+    file: UploadFile = File(...),
+    public_id: str | None = None,
+):
+    pid = public_id or f"lesson_thumbnail_{file.filename}"
+    url = await upload_file(file.file, pid, resource_type="image")
+    return UploadResponse(url=url)

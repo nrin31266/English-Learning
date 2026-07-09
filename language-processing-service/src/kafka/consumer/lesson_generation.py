@@ -12,18 +12,17 @@ from src.kafka.event import (
     LessonProcessingStepUpdatedEvent,
 )
 from src.kafka.producer import publish_lesson_processing_step_updated
-from src.llm.analyzer import analyze_sentence_batch
+from src.llm.lesson_prompts import build_lesson_metadata_prompt
+from src.llm.llm_service import generate_json
 from src.s3_storage import cloud_service
 from src.services import ai_job_service, media_service, speech_to_text_service
 from src.services.file_service import fetch_json_from_url, file_exists
+from src.services.shadowing.phonemizer_service import get_ipa
 from src.services.spaCy_service import analyze_word
-from src.utils.chunk_utils import chunk_list
 from src.utils.text_utils import clean_for_spacy
 
 logger = logging.getLogger(__name__)
 
-NLP_BATCH_SIZE = int(os.getenv("NLP_BATCH_SIZE", "100"))
-NLP_MAX_CONCURRENCY = int(os.getenv("NLP_MAX_CONCURRENCY", "1"))
 SPACY_PROGRESS_EVERY = int(os.getenv("SPACY_PROGRESS_EVERY", "50"))
 LESSON_GENERATION_START_DELAY = float(os.getenv("LESSON_GENERATION_START_DELAY", "2"))
 
@@ -87,6 +86,11 @@ async def _publish_step(
     is_skip: bool = False,
     metadata_url: str | None = None,
     duration_seconds: int = 0,
+    title: str | None = None,
+    description: str | None = None,
+    language_level: str | None = None,
+    source_language: str | None = None,
+    source_license_type: str | None = None,
 ) -> None:
     await publish_lesson_processing_step_updated(
         LessonProcessingStepUpdatedEvent(
@@ -98,6 +102,11 @@ async def _publish_step(
             isSkip=is_skip,
             aiMetadataUrl=metadata_url,
             durationSeconds=duration_seconds,
+            title=title,
+            description=description,
+            languageLevel=language_level,
+            sourceLanguage=source_language,
+            sourceLicenseType=source_license_type,
             aiMessage=message,
         )
     )
@@ -206,66 +215,128 @@ async def _enrich_segments_with_spacy(
     return segments
 
 
-async def _enrich_segments_with_nlp(
+def _default_source_license(event: LessonGenerationRequestedEvent) -> str:
+    if event.source_license_type:
+        return event.source_license_type
+    if event.source_type == LessonSourceType.youtube:
+        return "CREATIVE_COMMONS"
+    if event.source_type == LessonSourceType.audio_file:
+        return "OWNED_CONTENT"
+    return "UNKNOWN"
+
+
+def _clean_optional(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+def _apply_requested_or_source_metadata(
+    metadata: dto.LessonGenerationAiMetadataDto,
+    event: LessonGenerationRequestedEvent,
+) -> None:
+    source = metadata.sourceFetched
+
+    if event.source_type == LessonSourceType.youtube:
+        metadata.title = _clean_optional(source.sourceTitle if source else None) or metadata.title
+        metadata.description = _clean_optional(source.sourceDescription if source else None) or metadata.description
+        metadata.sourceLicenseType = _default_source_license(event)
+        return
+
+    metadata.title = _clean_optional(event.title) or metadata.title
+    metadata.description = _clean_optional(event.description) or metadata.description
+    metadata.sourceLicenseType = _default_source_license(event)
+
+
+async def _enrich_segments_with_lesson_ai(
     segments: List[dto.SegmentDto],
-    batch_size: int = NLP_BATCH_SIZE,
-    max_concurrency: int = NLP_MAX_CONCURRENCY,
+    metadata: dto.LessonGenerationAiMetadataDto,
+    event: LessonGenerationRequestedEvent,
 ) -> List[dto.SegmentDto]:
     if not segments:
         return segments
 
     sentence_texts = [segment.text for segment in segments]
-    chunks = list(chunk_list(sentence_texts, batch_size))
-    all_results = []
 
-    total_chunks = len(chunks)
-    total_waves = (total_chunks + max_concurrency - 1) // max_concurrency
+    logger.info("[NLP] Start lesson AI enrichment | segments=%s", len(segments))
 
-    logger.info(
-        "[NLP] Start sentence analysis | segments=%s | chunks=%s | batch_size=%s | concurrency=%s",
-        len(segments),
-        total_chunks,
-        batch_size,
-        max_concurrency,
+    source = metadata.sourceFetched
+    prompt = build_lesson_metadata_prompt(
+        source_type=event.source_type.value,
+        source_title=source.sourceTitle if source else None,
+        existing_title=metadata.title,
+        existing_description=metadata.description,
+        source_license_type=event.source_license_type,
+        language_hint=None,
+        sentences=sentence_texts,
     )
 
-    for start in range(0, total_chunks, max_concurrency):
-        wave = chunks[start:start + max_concurrency]
-        wave_index = start // max_concurrency + 1
+    result = await generate_json(prompt)
 
-        logger.info(
-            "[NLP] Processing wave | wave=%s/%s | chunks=%s",
-            wave_index,
-            total_waves,
-            len(wave),
-        )
+    if not isinstance(result, dict):
+        raise ValueError("Lesson metadata response must be a JSON object")
 
-        results = await asyncio.gather(
-            *[analyze_sentence_batch(chunk) for chunk in wave],
-            return_exceptions=True,
-        )
+    sentence_results = result.get("sentences")
+    if not isinstance(sentence_results, list) or len(sentence_results) != len(segments):
+        raise ValueError("Lesson metadata sentence count mismatch")
 
-        for chunk, result in zip(wave, results):
-            if isinstance(result, Exception):
-                logger.exception(
-                    "[NLP] Chunk failed | chunk_size=%s | first_sentence=%s",
-                    len(chunk),
-                    chunk[0][:200] if chunk else "<empty>",
-                )
-                raise result
+    if event.source_type == LessonSourceType.audio_file:
+        metadata.title = _clean_optional(metadata.title) or _clean_optional(result.get("title")) or "Generated lesson"
+        metadata.description = _clean_optional(metadata.description) or _clean_optional(result.get("description")) or ""
+    else:
+        _apply_requested_or_source_metadata(metadata, event)
 
-            all_results.extend(result)
+    metadata.languageLevel = str(result.get("languageLevel") or metadata.languageLevel or "B1").strip().upper()
+    metadata.sourceLanguage = str(result.get("sourceLanguage") or metadata.sourceLanguage or "unknown").strip()
+    metadata.sourceLicenseType = str(
+        event.source_license_type
+        or result.get("sourceLicenseType")
+        or metadata.sourceLicenseType
+        or _default_source_license(event)
+    ).strip().upper()
 
-    for segment, analysis in zip(segments, all_results):
-        segment.phoneticUs = analysis.get("phoneticUs", "")
+    if metadata.languageLevel not in {"A1", "A2", "B1", "B2", "C1", "C2"}:
+        metadata.languageLevel = "B1"
+
+    if metadata.sourceLicenseType not in {
+        "STANDARD_YOUTUBE",
+        "CREATIVE_COMMONS",
+        "OWNED_CONTENT",
+        "PERMISSION_GRANTED",
+        "UNKNOWN",
+    }:
+        metadata.sourceLicenseType = _default_source_license(event)
+
+    for segment, analysis in zip(segments, sentence_results):
         segment.translationVi = analysis.get("translationVi", "")
 
-    logger.info("[NLP] Completed sentence analysis | segments=%s", len(segments))
+    logger.info("[NLP] Completed lesson AI enrichment | segments=%s", len(segments))
 
     return segments
 
 
-def _need_nlp(metadata: dto.LessonGenerationAiMetadataDto, is_restart: bool) -> bool:
+def _enrich_segments_with_ipa(segments: List[dto.SegmentDto]) -> List[dto.SegmentDto]:
+    for segment in segments:
+        if segment.text and not segment.phoneticUs:
+            segment.phoneticUs = str(
+                get_ipa(
+                    segment.text,
+                    keep_stress=True,
+                    normalize=True,
+                    remove_punctuation=True,
+                    normalize_text=True,
+                )
+                or ""
+            )
+    return segments
+
+
+def _need_nlp(
+    metadata: dto.LessonGenerationAiMetadataDto,
+    event: LessonGenerationRequestedEvent,
+    is_restart: bool,
+) -> bool:
     if is_restart:
         return True
 
@@ -274,7 +345,16 @@ def _need_nlp(metadata: dto.LessonGenerationAiMetadataDto, is_restart: bool) -> 
 
     first_segment = metadata.transcribed.segments[0]
 
-    return not getattr(first_segment, "phoneticUs", None)
+    if not getattr(first_segment, "translationVi", None):
+        return True
+
+    if not metadata.languageLevel or not metadata.sourceLanguage:
+        return True
+
+    if event.source_type == LessonSourceType.audio_file and (not metadata.title or not metadata.description):
+        return True
+
+    return False
 
 
 async def handle_lesson_generation_requested(
@@ -325,6 +405,7 @@ async def handle_lesson_generation_requested(
             metadata.sourceFetched = dto.SourceFetchedDto.model_validate(
                 audio_info.model_dump(by_alias=True)
             )
+            _apply_requested_or_source_metadata(metadata, event)
 
             metadata_url = await _save_metadata(event.lesson_id, metadata)
             is_skip_step1 = False
@@ -333,6 +414,7 @@ async def handle_lesson_generation_requested(
             audio_info = dto.AudioInfo.model_validate(metadata.sourceFetched)
             audio_url = audio_info.audioUrl
             audio_info = await _ensure_local_audio_file(audio_info)
+            _apply_requested_or_source_metadata(metadata, event)
             is_skip_step1 = True
 
         if metadata.sourceFetched and not metadata.sourceFetched.duration:
@@ -357,6 +439,9 @@ async def handle_lesson_generation_requested(
                 if metadata.sourceFetched
                 else 0
             ),
+            title=metadata.title,
+            description=metadata.description,
+            source_license_type=metadata.sourceLicenseType,
         )
 
         logger.info("[LessonGeneration] Step SOURCE_FETCHED completed | %s", _job_tag(event.ai_job_id))
@@ -371,11 +456,18 @@ async def handle_lesson_generation_requested(
             metadata.transcribed.segments = await _enrich_segments_with_spacy(
                 metadata.transcribed.segments
             )
+            metadata.transcribed.segments = _enrich_segments_with_ipa(
+                metadata.transcribed.segments
+            )
 
             metadata_url = await _save_metadata(event.lesson_id, metadata)
             is_skip_step2 = False
 
         else:
+            metadata.transcribed.segments = _enrich_segments_with_ipa(
+                metadata.transcribed.segments
+            )
+            metadata_url = await _save_metadata(event.lesson_id, metadata)
             is_skip_step2 = True
 
         if await _is_cancelled(event.ai_job_id):
@@ -393,13 +485,16 @@ async def handle_lesson_generation_requested(
         logger.info("[LessonGeneration] Step TRANSCRIBED completed | %s", _job_tag(event.ai_job_id))
 
         # STEP 3: NLP analysis
-        if _need_nlp(metadata, event.is_restart):
+        if _need_nlp(metadata, event, event.is_restart):
             logger.info("[LessonGeneration] Step NLP_ANALYZED started | %s", _job_tag(event.ai_job_id))
 
-            metadata.transcribed.segments = await _enrich_segments_with_nlp(
+            metadata.transcribed.segments = await _enrich_segments_with_lesson_ai(
                 metadata.transcribed.segments,
-                batch_size=NLP_BATCH_SIZE,
-                max_concurrency=NLP_MAX_CONCURRENCY,
+                metadata,
+                event,
+            )
+            metadata.transcribed.segments = _enrich_segments_with_ipa(
+                metadata.transcribed.segments
             )
 
             metadata_url = await _save_metadata(event.lesson_id, metadata)
@@ -414,6 +509,11 @@ async def handle_lesson_generation_requested(
             message="Phonetics and translation completed successfully.",
             metadata_url=metadata_url,
             is_skip=is_skip_step3,
+            title=metadata.title,
+            description=metadata.description,
+            language_level=metadata.languageLevel,
+            source_language=metadata.sourceLanguage,
+            source_license_type=metadata.sourceLicenseType,
         )
 
         logger.info("[LessonGeneration] Step NLP_ANALYZED completed | %s", _job_tag(event.ai_job_id))
@@ -427,6 +527,11 @@ async def handle_lesson_generation_requested(
             message="Lesson generation completed successfully.",
             metadata_url=metadata_url,
             is_skip=False,
+            title=metadata.title,
+            description=metadata.description,
+            language_level=metadata.languageLevel,
+            source_language=metadata.sourceLanguage,
+            source_license_type=metadata.sourceLicenseType,
         )
 
         logger.info("[LessonGeneration] Completed | %s", _job_tag(event.ai_job_id))

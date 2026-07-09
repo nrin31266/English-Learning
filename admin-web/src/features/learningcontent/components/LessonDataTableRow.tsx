@@ -15,8 +15,6 @@ import {
   FileAudio2,
   FileQuestion,
   Loader2,
-  Sparkles,
-  User2,
   Youtube
 } from "lucide-react"
 import { Link } from "react-router-dom"
@@ -84,33 +82,6 @@ const renderStatusBadge = (status: ILessonDto["status"]) => {
   )
 }
 
-const renderLessonType = (type: ILessonDto["lessonType"]) => {
-  if (type === "AI_ASSISTED") {
-    return (
-      <Badge
-        variant="outline"
-        className="gap-1 border-purple-300/70 text-purple-700 bg-purple-50/60 text-[11px] px-1.5 py-0 h-5"
-      >
-        <Sparkles className="h-3 w-3" />
-        AI
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge
-      variant="outline"
-      className="gap-1 border-sky-300/70 text-sky-700 bg-sky-50/60 text-[11px] px-1.5 py-0 h-5"
-    >
-      <User2 className="h-3 w-3" />
-      Manual
-    </Badge>
-  )
-}
-
-
-
-
 const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
   const processing = getProcessingMeta(row.processingStep)
   const isError = row.status === "ERROR"
@@ -161,11 +132,6 @@ const LessonDataTableRow = ({ row }: LessonDataTableRowProps) => {
       {/* Level */}
       <TableCell className="px-2.5 py-1 align-middle text-center">
         <span className="text-xs text-muted-foreground">{row.languageLevel}</span>
-      </TableCell>
-
-      {/* Lesson Type */}
-      <TableCell className="px-2.5 py-1 align-middle">
-        {renderLessonType(row.lessonType)}
       </TableCell>
 
       {/* Source */}

@@ -1,6 +1,7 @@
 package com.rin.englishlearning.common.event;
 
 import com.rin.englishlearning.common.constants.LessonProcessingStep;
+import com.rin.englishlearning.common.constants.SourceLicenseType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -38,4 +39,16 @@ public class LessonProcessingStepUpdatedEvent {
     private Integer durationSeconds;
 
     private String aiMetadataUrl;
+
+    private String title;
+
+    private String slug;
+
+    private String description;
+
+    private String languageLevel;
+
+    private String sourceLanguage;
+
+    private SourceLicenseType sourceLicenseType;
 }

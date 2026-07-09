@@ -15,6 +15,7 @@ import { useWebSocket } from "@/features/ws/providers/WebSockerProvider"
 import { useAppDispatch, useAppSelector } from "@/store"
 import { cancelLessonGeneration, fetchLessonDetails, publishLesson, reloadLessonDetails, retryLessonGeneration, unpublishLesson, updateLessonDetailsFromProcessingEvent } from "@/store/learningcontent/lessonDetailsSlide"
 import type { ILessonDetailsDto } from "@/types"
+import type { ILessonProcessingStepNotifyEvent } from "@/types"
 import { formatDate, formatDuration } from "@/utils/timeUtils"
 import {
   AlertTriangle,
@@ -26,7 +27,6 @@ import {
   Languages,
   Loader2,
   Sparkles,
-  User2,
   Youtube
 } from "lucide-react"
 import React, { useCallback, useEffect, useMemo } from "react"
@@ -72,35 +72,6 @@ const SourceIcon = React.memo<SourceIconProps>(({ sourceType }) => {
   }
 });
 SourceIcon.displayName = "SourceIcon";
-
-interface LessonTypeBadgeProps {
-  type: ILessonDetailsDto["lessonType"];
-}
-
-const LessonTypeBadge = React.memo<LessonTypeBadgeProps>(({ type }) => {
-  if (type === "AI_ASSISTED") {
-    return (
-      <Badge
-        variant="outline"
-        className="gap-1 border-purple-300/70 bg-purple-50/60 px-2 py-0 text-[11px] text-purple-700"
-      >
-        <Sparkles className="h-3 w-3" />
-        AI Assisted
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge
-      variant="outline"
-      className="gap-1 border-sky-300/70 bg-sky-50/60 px-2 py-0 text-[11px] text-sky-700"
-    >
-      <User2 className="h-3 w-3" />
-      Traditional
-    </Badge>
-  );
-});
-LessonTypeBadge.displayName = "LessonTypeBadge";
 
 interface StatusBadgeProps {
   status: ILessonDetailsDto["status"];
@@ -202,7 +173,7 @@ const LessonDetails: React.FC = () => {
 
     const subscription = stompClient.subscribe(destination, (msg) => {
       try {
-        const event: any = JSON.parse(msg.body);
+        const event: ILessonProcessingStepNotifyEvent = JSON.parse(msg.body);
 
         if (event.processingStep === "COMPLETED") {
           dispatch(reloadLessonDetails({ id: lesson.id }));
@@ -301,7 +272,6 @@ const LessonDetails: React.FC = () => {
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <div className="flex items-center gap-2">
             <StatusBadge status={data.status} />
-            <LessonTypeBadge type={data.lessonType} />
           </div>
           <Link
             to={`/all-lessons?topicSlug=${data.topic.slug}&page=1`}
@@ -394,6 +364,10 @@ const LessonDetails: React.FC = () => {
                     <p className="text-muted-foreground">
                       {t("lessonDetails.summary.sourceLanguage")}{" "}
                       <span className="font-medium">{data.sourceLanguage}</span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      {t("lessonDetails.summary.sourceLicense", { defaultValue: "License:" })}{" "}
+                      <span className="font-medium">{data.sourceLicenseType || "UNKNOWN"}</span>
                     </p>
                   </div>
 

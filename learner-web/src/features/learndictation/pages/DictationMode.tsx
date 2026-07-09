@@ -105,6 +105,7 @@ const DictationMode = () => {
             onTogglePlayPause={handleTogglePlayPause}
             isPlaying={isPlaying}
             highestScore={highestScore} 
+            dictationHint={lesson?.dictationHint}
           />
         )
       }

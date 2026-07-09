@@ -171,7 +171,7 @@ export const markSentenceActiveInactive = createAsyncThunk(
   "lessons/markSentenceActiveInactive",
   async ({ id, active }: { id: number, active: boolean }, { rejectWithValue }) => {
     try {
-      const res = await handleAPI<null>({
+      await handleAPI<null>({
         endpoint: `/learning-contents/admin/sentences/${id}/mark-active-inactive`,
         method: "POST",
         isAuth: true,
@@ -191,7 +191,7 @@ export const markSentenceActiveInactive = createAsyncThunk(
 //     }
 export const splitSentence = createAsyncThunk(
   "lessons/splitSentence",
-  async ({ id, data }: { id: number, data: any }, { rejectWithValue }) => {
+  async ({ id, data }: { id: number, data: unknown }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonSentence[]>({
         endpoint: `/learning-contents/admin/sentences/${id}/split`,
@@ -211,7 +211,7 @@ export const splitSentence = createAsyncThunk(
 //     }
 export const mergeSentence = createAsyncThunk(
   "lessons/mergeSentence",
-  async ({ data }: { data: any }, { rejectWithValue }) => {
+  async ({ data }: { data: { sentence1Id: number; sentence2Id: number } }, { rejectWithValue }) => {
     try {
       const res = await handleAPI<ILessonSentence>({
         endpoint: `/learning-contents/admin/sentences/merge`,
@@ -233,7 +233,22 @@ export const lessonDetailsSlice = createSlice({
       state,
       action: PayloadAction<ILessonProcessingStepNotifyEvent>
     ) => {
-      const { lessonId, processingStep, aiJobId, audioUrl, sourceReferenceId, thumbnailUrl, aiMessage, durationSeconds } =
+      const {
+        lessonId,
+        processingStep,
+        aiJobId,
+        audioUrl,
+        sourceReferenceId,
+        thumbnailUrl,
+        aiMessage,
+        durationSeconds,
+        title,
+        slug,
+        description,
+        languageLevel,
+        sourceLanguage,
+        sourceLicenseType,
+      } =
         action.payload;
       if (!state.lessonDetails.data) return;
 
@@ -248,7 +263,13 @@ export const lessonDetailsSlice = createSlice({
       if (sourceReferenceId) lesson.sourceReferenceId = sourceReferenceId;
       if (thumbnailUrl) lesson.thumbnailUrl = thumbnailUrl;
       if (aiMessage) lesson.aiMessage = aiMessage;
-      if (durationSeconds) lesson.durationSeconds = durationSeconds;
+      if (durationSeconds !== null && durationSeconds !== undefined) lesson.durationSeconds = durationSeconds;
+      if (title) lesson.title = title;
+      if (slug) lesson.slug = slug;
+      if (description) lesson.description = description;
+      if (languageLevel) lesson.languageLevel = languageLevel as ILessonDetailsDto["languageLevel"];
+      if (sourceLanguage) lesson.sourceLanguage = sourceLanguage;
+      if (sourceLicenseType) lesson.sourceLicenseType = sourceLicenseType;
 
       // map step -> status
       if (processingStep === "FAILED") {
@@ -358,9 +379,12 @@ export const lessonDetailsSlice = createSlice({
         state.lessonDetailsMutation.status = "succeeded";
         if (state.lessonDetails.data && state.lessonDetails.data.id === action.payload.id) {
           state.lessonDetails.data.title = action.payload.title;
+          state.lessonDetails.data.slug = action.payload.slug;
           state.lessonDetails.data.description = action.payload.description;
+          state.lessonDetails.data.dictationHint = action.payload.dictationHint;
           state.lessonDetails.data.languageLevel = action.payload.languageLevel;
           state.lessonDetails.data.sourceLanguage = action.payload.sourceLanguage;
+          state.lessonDetails.data.sourceLicenseType = action.payload.sourceLicenseType;
           state.lessonDetails.data.thumbnailUrl = action.payload.thumbnailUrl;
           state.lessonDetails.data.enableDictation = action.payload.enableDictation;
           state.lessonDetails.data.enableShadowing = action.payload.enableShadowing;
@@ -375,7 +399,7 @@ export const lessonDetailsSlice = createSlice({
         state.lessonDetailsMutation.error = { code: null, message: null };
         state.lessonDetailsMutation.type = "delete";
       })
-      .addCase(deleteLesson.fulfilled, (state, action) => {
+      .addCase(deleteLesson.fulfilled, (state) => {
         state.lessonDetailsMutation.status = "succeeded";
         state.lessonDetails.data = null;
       })
@@ -431,7 +455,7 @@ export const lessonDetailsSlice = createSlice({
         state.sentenceMutation.status = "failed";
         state.sentenceMutation.error = action.payload as IErrorState;
       })
-      .addCase(mergeSentence.pending, (state, action) => {
+      .addCase(mergeSentence.pending, (state) => {
         state.sentenceMutation.status = "loading";
         state.sentenceMutation.error = { code: null, message: null };
         state.sentenceMutation.type = "merge";

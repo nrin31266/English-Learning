@@ -117,6 +117,8 @@ class AudioInfo(BaseModel):
     file_path: str
     duration: Optional[int] = None  # duration in seconds
     sourceReferenceId: Optional[str] = Field(None, alias="sourceReferenceId")
+    sourceTitle: Optional[str] = Field(None, alias="sourceTitle")
+    sourceDescription: Optional[str] = Field(None, alias="sourceDescription")
     thumbnailUrl: Optional[str] = Field(None, alias="thumbnailUrl")
     audioUrl: Optional[str] = Field(None, alias="audioUrl")
     class Config:
@@ -137,6 +139,8 @@ class SourceFetchedDto(BaseModel):
     file_path: Optional[str] = None
     duration: Optional[int] = None  # duration in seconds
     sourceReferenceId: Optional[str] = None
+    sourceTitle: Optional[str] = None
+    sourceDescription: Optional[str] = None
     thumbnailUrl: Optional[str] = None
     audioUrl: Optional[str] = None
     class Config:
@@ -189,6 +193,11 @@ class TranscribedDto(BaseModel):
 class LessonGenerationAiMetadataDto(BaseModel):
     sourceFetched: Optional[SourceFetchedDto] = None
     transcribed: Optional[TranscribedDto] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    languageLevel: Optional[str] = None
+    sourceLanguage: Optional[str] = None
+    sourceLicenseType: Optional[str] = None
 
     class Config:
         from_attributes = True

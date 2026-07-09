@@ -125,7 +125,7 @@ export interface ILessonDetailsResponse {
   thumbnailUrl: string | null;
   slug: string;
   description: string | null;
-  lessonType: typeof LessonType[number];
+  dictationHint: string | null;
   processingStep: typeof lessonProcessingStep[number];
   languageLevel: typeof cefrLevelOptions[number];
   sourceType: typeof sourceTypeOptions[number];
@@ -221,7 +221,6 @@ export interface IUserProfile {
 
 export type MutationType = "add" | "edit" | "delete" | null;
 
-export const lessonTypeOptions = ["AI_ASSISTED", "TRADITIONAL"] as const;
 export const cefrLevelOptions = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 export const sourceTypeOptions = ["YOUTUBE", "AUDIO_FILE", "OTHER"] as const;
 export const sourceTypeSelectOptions = [
@@ -285,11 +284,6 @@ export const lessonStatusSelectOptions = [
   { value: "ERROR", label: "Error" },
 ] as const;
 
-export const LessonType = ["AI_ASSISTED", "TRADITIONAL"] as const;
-export const lessonTypeSelectOptions = [
-  { value: "AI_ASSISTED", label: "AI Assisted" },
-  { value: "TRADITIONAL", label: "Traditional" },
-] as const;
 
 export interface ISortInfo {
   empty: boolean;

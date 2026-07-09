@@ -59,30 +59,33 @@
     "fields": {
       "topic": "Topic",
       "title": "Lesson title",
-      "lessonType": "Lesson type",
       "languageLevel": "Language level",
       "description": "Short description",
       "sourceType": "Source type",
+      "sourceLicenseType": "Source license",
       "sourceLanguage": "Source language",
       "sourceUrl": "Source URL",
       "thumbnailUrl": "Thumbnail URL",
+      "dictationHint": "Dictation hint",
       "enableDictation": "Dictation practice",
       "enableShadowing": "Shadowing practice"
     },
     "placeholders": {
       "topic": "Pick a topic",
       "title": "Name for this lesson",
-      "lessonType": "Select the lesson style",
       "languageLevel": "Select a CEFR level",
       "description": "Brief description of the lesson",
       "sourceType": "Where is the source from?",
+      "sourceLicenseType": "Select source license",
       "sourceLanguage": "Language of the source content",
       "thumbnail": "https://your-domain.com/thumbnail.png",
+      "dictationHint": "Proper names, unusual spellings, acronyms...",
       "youtubeSourceUrl": "Paste a YouTube URL (https://...)",
       "genericSourceUrl": "Paste an article or audio URL"
     },
     "helperTexts": {
       "enableDictation": "Adds voice-typing drills using the generated transcript.",
+      "dictationHint": "Shown above the dictation input for learners.",
       "enableShadowing": "Adds synchronized audio shadowing mode."
     },
     "actions": {
@@ -97,10 +100,6 @@
       "thumbnailRequired": "Thumbnail URL is required for non-YouTube sources"
     },
     "enums": {
-      "lessonType": {
-        "AI_ASSISTED": "AI-assisted",
-        "TRADITIONAL": "Traditional"
-      },
       "languageLevel": {
         "A1": "Beginner (A1)",
         "A2": "Elementary (A2)",
@@ -111,8 +110,14 @@
       },
       "sourceType": {
         "YOUTUBE": "YouTube video",
-        "AUDIO_FILE": "Audio file",
-        "OTHER": "Other source"
+        "AUDIO_FILE": "Audio file"
+      },
+      "sourceLicenseType": {
+        "STANDARD_YOUTUBE": "Standard YouTube",
+        "CREATIVE_COMMONS": "Creative Commons",
+        "OWNED_CONTENT": "Owned content",
+        "PERMISSION_GRANTED": "Permission granted",
+        "UNKNOWN": "Unknown"
       },
       "sourceLanguage": {
         "en-US": "English (US)",
@@ -170,7 +175,6 @@
       "allTypes": "All Types",
       "moreButton": "More",
       "lessonStatus": "Lesson Status",
-      "lessonType": "Lesson Type",
       "topicLabel": "Topic",
       "lessButton": "Less"
     },
@@ -268,10 +272,6 @@
       "on": "Shadowing On",
       "off": "Shadowing Off"
     },
-    "lessonType": {
-      "aiAssisted": "AI Assisted",
-      "traditional": "Traditional"
-    },
     "status": {
       "ready": "Ready",
       "processing": "Processing",
@@ -287,7 +287,7 @@
   "sentencesTab": {
     "title": "Transcript & sentences",
     "viewDescription": "Click on words to open vocabulary later (mock UI for now).",
-    "editDescription": "Edit sentences text. Actions are UI only for now.",
+    "editDescription": "Manage sentence visibility, split and merge actions.",
     "editModeButton": "Edit mode",
     "viewModeButton": "View mode",
     "noSentences": "No sentences available for this lesson.",
@@ -313,6 +313,7 @@
       "title": "Title",
       "languageLevel": "Language level (CEFR)",
       "description": "Description",
+      "dictationHint": "Dictation hint",
       "thumbnailUrl": "Thumbnail URL",
       "sourceLanguage": "Source language",
       "enableDictation": "Enable dictation mode",
@@ -322,6 +323,7 @@
       "title": "Enter lesson title",
       "languageLevel": "Select level",
       "description": "Short summary learners will see...",
+      "dictationHint": "Proper names, unusual spellings, acronyms...",
       "thumbnail": "https://...",
       "sourceLanguage": "Select source language"
     },
@@ -329,6 +331,7 @@
       "youtubeThumbnail": "For YouTube sources, the system may auto-generate a thumbnail.",
       "thumbnailRequired": "For non-YouTube sources, a thumbnail URL is required.",
       "enableDictation": "Learners can type what they hear and check spelling & punctuation.",
+      "dictationHint": "Shown above the dictation input when learners type the transcript.",
       "enableShadowing": "Learners can repeat sentences out loud and practice pronunciation."
     },
     "actions": {

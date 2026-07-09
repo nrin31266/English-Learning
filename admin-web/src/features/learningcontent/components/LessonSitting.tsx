@@ -71,6 +71,7 @@ const createEditLessonSchema = (t: TFunction, sourceType: string) =>
           })
         ),
       description: z.string().optional(),
+      dictationHint: z.string().optional(),
       languageLevel: z.enum(cefrLevelOptions),
       sourceLanguage: z.enum(sourceLanguageOptions),
       thumbnailUrl: z
@@ -121,6 +122,7 @@ const LessonSitting = ({ lesson }: { lesson: ILessonDetailsDto }) => {
     () => ({
       title: lesson.title,
       description: lesson.description || "",
+      dictationHint: lesson.dictationHint || "",
       languageLevel: lesson.languageLevel,
       sourceLanguage: (lesson.sourceLanguage as (typeof sourceLanguageOptions)[number]) || "en-UK",
       thumbnailUrl: lesson.thumbnailUrl || "",
@@ -154,6 +156,7 @@ const LessonSitting = ({ lesson }: { lesson: ILessonDetailsDto }) => {
     const payload: IEditLessonPayload = {
       title: values.title.trim(),
       description: values.description?.trim() || null,
+      dictationHint: values.dictationHint?.trim() || null,
       languageLevel: values.languageLevel,
       sourceLanguage: values.sourceLanguage,
       thumbnailUrl: values.thumbnailUrl?.trim() || null,
@@ -344,6 +347,42 @@ const LessonSitting = ({ lesson }: { lesson: ILessonDetailsDto }) => {
                             {...field}
                           />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* DICTATION HINT */}
+                  <FormField
+                    control={form.control}
+                    name="dictationHint"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <div className="flex items-center justify-between">
+                          <FormLabel>
+                            {t("lessonSettings.fields.dictationHint", {
+                              defaultValue: "Dictation hint",
+                            })}
+                          </FormLabel>
+                          <span className="text-[10px] text-muted-foreground">
+                            {t("lessonSettings.optional", { defaultValue: "Optional" })}
+                          </span>
+                        </div>
+                        <FormControl>
+                          <Textarea
+                            rows={2}
+                            placeholder={t("lessonSettings.placeholders.dictationHint", {
+                              defaultValue: "Proper names, unusual spellings, acronyms...",
+                            })}
+                            {...field}
+                          />
+                        </FormControl>
+                        <p className="mt-1 text-[11px] text-muted-foreground flex items-center gap-1">
+                          <Info className="h-3 w-3" />
+                          {t("lessonSettings.helperTexts.dictationHint", {
+                            defaultValue: "Shown above the dictation input when learners type the transcript.",
+                          })}
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}

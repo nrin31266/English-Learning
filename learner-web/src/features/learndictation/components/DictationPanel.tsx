@@ -32,6 +32,7 @@ type DictationPanelProps = {
     onTogglePlayPause?: () => void
     isPlaying?: boolean
     highestScore?: number
+    dictationHint?: string | null
 }
 
 const getWordDisplay = (w: ILessonWordResponse): string =>
@@ -45,7 +46,8 @@ const DictationPanel = ({
     userInteracted,
     highestScore = 0,
     onTogglePlayPause,
-    isPlaying
+    isPlaying,
+    dictationHint
 }: DictationPanelProps) => {
 
     // --- States ---
@@ -307,6 +309,13 @@ const DictationPanel = ({
                 </div>
                 )}
             </div>
+
+            {dictationHint?.trim() && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm leading-relaxed text-amber-900">
+                    <span className="font-semibold">Hint: </span>
+                    <span>{dictationHint.trim()}</span>
+                </div>
+            )}
 
             {/* TEXTAREA */}
             <div className="relative group z-10">

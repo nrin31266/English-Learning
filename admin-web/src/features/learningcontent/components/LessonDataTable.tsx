@@ -1,4 +1,3 @@
-import React from "react"
 import { useTranslation } from "react-i18next"
 import {
   Table,
@@ -37,9 +36,6 @@ const LessonDataTable = ({ data, loading }: LessonDataTableProps) => {
             <TableHead className="w-[55px] px-2.5 py-1 text-xs font-semibold text-muted-foreground text-center">
               {t("allLessons.table.columns.level")}
             </TableHead>
-            <TableHead className="w-[70px] px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-              {t("allLessons.table.columns.type")}
-            </TableHead>
             <TableHead className="w-[50px] px-2.5 py-1 text-xs font-semibold text-muted-foreground text-center">
               {t("allLessons.table.columns.source")}
             </TableHead>
@@ -67,7 +63,7 @@ const LessonDataTable = ({ data, loading }: LessonDataTableProps) => {
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={12} className="h-24 text-center align-middle">
+              <TableCell colSpan={11} className="h-24 text-center align-middle">
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>{t("allLessons.table.loading")}</span>
@@ -76,7 +72,7 @@ const LessonDataTable = ({ data, loading }: LessonDataTableProps) => {
             </TableRow>
           ) : data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={12} className="h-20 text-center text-xs text-muted-foreground">
+              <TableCell colSpan={11} className="h-20 text-center text-xs text-muted-foreground">
                 {t("allLessons.table.noResults")}
               </TableCell>
             </TableRow>

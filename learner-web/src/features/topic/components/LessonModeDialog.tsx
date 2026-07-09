@@ -13,9 +13,9 @@ import YouTubeTag from "@/components/YouTubeTag"
 import { cn } from "@/lib/utils"
 import type { IHomeLessonResponse } from "@/types"
 import { formatDuration } from "@/utils/timeUtils"
-import { Clock, Keyboard, Mic, MessageCircleMore } from "lucide-react"
+import { Clock, Keyboard, Mic } from "lucide-react"
 
-type LessonMode = "shadowing" | "shadowingClassic" | "dictation"
+type LessonMode = "shadowing" | "dictation"
 
 type LessonModeDialogProps = {
   open: boolean
@@ -25,7 +25,7 @@ type LessonModeDialogProps = {
   onNavigate: (mode: LessonMode) => void
 }
 
-type ModeTone = "primary" | "blue" | "amber"
+type ModeTone = "primary" | "blue"
 
 type ModeCard = {
   key: LessonMode
@@ -33,8 +33,14 @@ type ModeCard = {
   description: string
   label: string
   icon: typeof Mic
+  imageUrl: string
   enabled: boolean
   tone: ModeTone
+}
+
+const MODE_IMAGES = {
+  shadowing: "images/shadowing-mode.png",
+  dictation: "images/dictation-mode.png",
 }
 
 const LessonModeDialog = ({
@@ -52,30 +58,23 @@ const LessonModeDialog = ({
   const modes: ModeCard[] = [
     {
       key: "shadowing",
-      title: "Shadowing with Feedback",
-      description: "Speak and review pronunciation feedback after each sentence.",
+      title: "Shadowing",
+      description: "Speak and review pronunciation feedback.",
       label: "Feedback",
-      icon: MessageCircleMore,
+      icon: Mic,
+      imageUrl: MODE_IMAGES.shadowing,
       enabled: canUseShadowing,
       tone: "primary",
     },
     {
-      key: "shadowingClassic",
-      title: "Classic Shadowing",
-      description: "Listen and repeat with the original sentence rhythm.",
-      label: "Classic",
-      icon: Mic,
-      enabled: canUseShadowing,
-      tone: "blue",
-    },
-    {
       key: "dictation",
       title: "Dictation",
-      description: "Listen carefully and type exactly what you hear.",
+      description: "Listen carefully and type what you hear.",
       label: "Listening",
       icon: Keyboard,
+      imageUrl: MODE_IMAGES.dictation,
       enabled: canUseDictation,
-      tone: "amber",
+      tone: "blue",
     },
   ]
 
@@ -83,7 +82,7 @@ const LessonModeDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-hidden rounded-2xl p-0 sm:max-w-[500px]">
+      <DialogContent className="max-h-[92vh] overflow-hidden rounded-2xl p-0 sm:max-w-[640px]">
         <div className="border-b border-border/50 bg-muted/20 px-5 py-4">
           <DialogHeader>
             <DialogTitle className="line-clamp-2 text-lg font-bold leading-tight">
@@ -117,64 +116,67 @@ const LessonModeDialog = ({
             </span>
           </div>
 
-          <div className="grid gap-2.5">
-            {availableModes.map((mode) => {
-              const Icon = mode.icon
+          {availableModes.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4">
+              {availableModes.map((mode) => {
+                const Icon = mode.icon
 
-              return (
-                <button
-                  key={mode.key}
-                  type="button"
-                  onClick={() => onNavigate(mode.key)}
-                  className={cn(
-                    "group flex w-full items-center gap-3 rounded-xl border p-3 text-left",
-                    "shadow-sm transition-all duration-200",
-                    "hover:-translate-y-0.5 hover:shadow-md",
-                    "active:translate-y-0",
-                    "focus:outline-none focus:ring-2 focus:ring-primary/20",
-                    getCardClass(mode.tone)
-                  )}
-                >
-                  <div
+                return (
+                  <button
+                    key={mode.key}
+                    type="button"
+                    onClick={() => onNavigate(mode.key)}
                     className={cn(
-                      "flex size-12 shrink-0 items-center justify-center rounded-xl transition-colors",
-                      getIconClass(mode.tone)
+                      "group flex w-full flex-col overflow-hidden rounded-2xl border text-left",
+                      "shadow-sm transition-all duration-200",
+                      "hover:-translate-y-0.5 hover:shadow-md",
+                      "active:translate-y-0",
+                      "focus:outline-none focus:ring-2 focus:ring-primary/20",
+                      getCardClass(mode.tone)
                     )}
                   >
-                    <Icon className="h-5 w-5" />
-                  </div>
+                    <div className="relative aspect-square w-full overflow-hidden bg-muted/40">
+                      <img
+                        src={mode.imageUrl}
+                        alt={mode.title}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
 
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-center gap-2">
-                      <h3 className="line-clamp-1 flex-1 text-sm font-bold text-foreground sm:text-[15px]">
-                        {mode.title}
-                      </h3>
-
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "h-5 shrink-0 border-none px-2 text-[10px] font-bold uppercase tracking-wide",
-                          getBadgeClass(mode.tone)
-                        )}
-                      >
-                        {mode.label}
-                      </Badge>
+                      <div className="absolute left-3 top-3 flex size-10 items-center justify-center rounded-xl bg-background/85 text-foreground shadow-sm backdrop-blur">
+                        <Icon className="h-5 w-5" />
+                      </div>
                     </div>
 
-                    <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
-                      {mode.description}
-                    </p>
-                  </div>
-                </button>
-              )
-            })}
+                    <div className="flex flex-1 flex-col p-3">
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <h3 className="line-clamp-1 flex-1 text-sm font-bold text-foreground sm:text-[15px]">
+                          {mode.title}
+                        </h3>
 
-            {availableModes.length === 0 && (
-              <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-                No practice mode is available for this lesson.
-              </div>
-            )}
-          </div>
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "h-5 shrink-0 border-none px-2 text-[10px] font-bold uppercase tracking-wide",
+                            getBadgeClass(mode.tone)
+                          )}
+                        >
+                          {mode.label}
+                        </Badge>
+                      </div>
+
+                      <p className="line-clamp-1 text-xs leading-5 text-muted-foreground">
+                        {mode.description}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+              No practice mode is available for this lesson.
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end border-t border-border/50 bg-muted/20 px-5 py-3">
@@ -201,13 +203,6 @@ const getCardClass = (tone: ModeTone) => {
         "active:bg-blue-500/[0.14]",
       ].join(" ")
 
-    case "amber":
-      return [
-        "border-amber-500/20 bg-amber-500/[0.07]",
-        "hover:border-amber-500/40 hover:bg-amber-500/[0.12]",
-        "active:bg-amber-500/[0.16]",
-      ].join(" ")
-
     default:
       return [
         "border-primary/20 bg-primary/[0.06]",
@@ -217,26 +212,10 @@ const getCardClass = (tone: ModeTone) => {
   }
 }
 
-const getIconClass = (tone: ModeTone) => {
-  switch (tone) {
-    case "blue":
-      return "bg-blue-500 text-white group-hover:bg-blue-600"
-
-    case "amber":
-      return "bg-amber-500 text-white group-hover:bg-amber-600"
-
-    default:
-      return "bg-primary text-primary-foreground group-hover:bg-primary/90"
-  }
-}
-
 const getBadgeClass = (tone: ModeTone) => {
   switch (tone) {
     case "blue":
       return "bg-blue-500/10 text-blue-600 hover:bg-blue-500/10 dark:text-blue-400"
-
-    case "amber":
-      return "bg-amber-500/10 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
 
     default:
       return "bg-primary/10 text-primary hover:bg-primary/10"

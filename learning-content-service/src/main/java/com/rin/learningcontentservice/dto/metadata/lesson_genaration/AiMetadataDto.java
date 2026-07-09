@@ -12,4 +12,14 @@ public class AiMetadataDto {
 
     private Transcribed transcribed;
 
+    private String title;
+
+    private String description;
+
+    private String languageLevel;
+
+    private String sourceLanguage;
+
+    private String sourceLicenseType;
+
 }

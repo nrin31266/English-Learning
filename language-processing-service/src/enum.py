@@ -3,7 +3,6 @@ from enum import Enum
 class LessonSourceType(str, Enum):
     youtube = "YOUTUBE"
     audio_file = "AUDIO_FILE"
-    other = "OTHER"
     
 from enum import Enum
 

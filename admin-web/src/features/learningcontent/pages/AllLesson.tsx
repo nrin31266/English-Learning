@@ -15,7 +15,6 @@ const FILTER_KEYS = [
     "search",
     "status",
     "topicSlug",
-    "lessonType",
     "languageLevel",
     "sourceType",
     "enableDictation",
@@ -42,6 +41,9 @@ const AllLesson = () => {
     const dispatch = useAppDispatch();
     const { status, data } = useAppSelector((state: RootState) => state.learningContent.lessons.lessons);
     const loading = status === "loading";
+    const lessons = data?.data ?? data?.content ?? [];
+    const currentPage = data?.page ?? data?.number ?? 0;
+    const numberOfElements = data?.numberOfElements ?? lessons.length;
 
     useEffect(() => {
         const currStr = searchParams.toString();
@@ -77,7 +79,7 @@ const AllLesson = () => {
         prevParamsRef.current = currStr;
     }, [searchParams.toString()]);
 
-    const handleChangeSearchParam = (key: string, value: any, resetPage: boolean = true) => {
+    const handleChangeSearchParam = (key: string, value: string | number | boolean | null | undefined, resetPage: boolean = true) => {
         const newParams = new URLSearchParams(searchParams);
 
         const shouldDelete =
@@ -145,15 +147,15 @@ const AllLesson = () => {
                 setSearchParams={setSearchParams}
             />
 
-            <LessonDataTable data={data?.content || []} loading={loading} />
+            <LessonDataTable data={lessons} loading={loading} />
 
             {data && (
                 <PaginationBar
-                    page={data.number}
+                    page={currentPage}
                     size={data.size}
                     totalElements={data.totalElements}
                     totalPages={data.totalPages}
-                    numberOfElements={data.numberOfElements}
+                    numberOfElements={numberOfElements}
                     onPageChange={(newPage) => {
                         handleChangeSearchParam("page", newPage + 1, false);
                     }}

@@ -3,8 +3,8 @@ package com.rin.learningcontentservice.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rin.englishlearning.common.constants.LessonProcessingStep;
 import com.rin.englishlearning.common.constants.LessonStatus;
-import com.rin.englishlearning.common.constants.LessonType;
 import com.rin.englishlearning.common.constants.LessonSourceType;
+import com.rin.englishlearning.common.constants.SourceLicenseType;
 import com.rin.englishlearning.common.event.LessonGenerationRequestedEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepNotifyEvent;
 import com.rin.englishlearning.common.event.LessonProcessingStepUpdatedEvent;
@@ -168,13 +168,16 @@ public class LessonService {
         lesson.setTopic(topic);
         lesson.setProcessingStep(LessonProcessingStep.NONE);
         lesson.setStatus(LessonStatus.DRAFT);
-        lesson.setSlug(TextUtils.createSlug(request.getTitle()));
-
-        // If traditional, save and return
-        if (request.getLessonType().equals(LessonType.TRADITIONAL)) {
-            lessonRepository.save(lesson);
-            return lessonMapper.toLessonSummaryResponse(lesson);
-        }
+        lesson.setTitle(defaultIfBlank(request.getTitle(), "Generating lesson"));
+        lesson.setDescription(blankToNull(request.getDescription()));
+        lesson.setDictationHint(blankToNull(request.getDictationHint()));
+        lesson.setLanguageLevel(null);
+        lesson.setSourceLanguage(null);
+        lesson.setSourceLicenseType(
+                request.getSourceLicenseType() == null ? SourceLicenseType.UNKNOWN : request.getSourceLicenseType()
+        );
+        lesson.setThumbnailUrl(blankToNull(request.getThumbnailUrl()));
+        lesson.setSlug(TextUtils.createSlug(lesson.getTitle() + "-" + UUID.randomUUID().toString().substring(0, 8)));
 
         createAiJob(lesson);
 
@@ -185,10 +188,25 @@ public class LessonService {
                 .sourceUrl(lesson.getSourceUrl())
                 .aiJobId(lesson.getAiJobId())
                 .lessonId(lesson.getId())
+                .sourceLicenseType(lesson.getSourceLicenseType())
+                .title(providedTitleForEvent(lesson))
+                .description(blankToNull(lesson.getDescription()))
                 .build();
         kafkaProducer.publishLessonGenerationRequested(event);
 
         return lessonMapper.toLessonSummaryResponse(lesson);
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private String defaultIfBlank(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    private String providedTitleForEvent(Lesson lesson) {
+        return canReplaceGeneratedTitle(lesson) ? null : lesson.getTitle();
     }
 
     // Re try
@@ -197,10 +215,6 @@ public class LessonService {
                 () -> new BaseException(LearningContentErrorCode.LESSON_NOT_FOUND,
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(lessonId))
         );
-        if (!lesson.getLessonType().equals(LessonType.AI_ASSISTED)) {
-            throw new BaseException(LearningContentErrorCode.LESSON_NOT_AI_ASSISTED,
-                    LearningContentErrorCode.LESSON_NOT_AI_ASSISTED.formatMessage(lessonId));
-        }
         createAiJob(lesson);
 
 
@@ -212,6 +226,9 @@ public class LessonService {
                 .aiJobId(lesson.getAiJobId())
                 .aiMetadataUrl(lesson.getAiMetadataUrl())
                 .lessonId(lesson.getId())
+                .sourceLicenseType(lesson.getSourceLicenseType())
+                .title(providedTitleForEvent(lesson))
+                .description(blankToNull(lesson.getDescription()))
                 .isRestart(isRestart)
                 .build();
         kafkaProducer.publishLessonGenerationRequested(event);
@@ -393,6 +410,7 @@ public class LessonService {
         }
 
         updateLessonFromSourceFetched(lesson, metadata.getSourceFetched());
+        updateLessonFromAiMetadata(lesson, metadata);
 
         List<LessonSentence> sentences = buildSentences(lesson, metadata);
 
@@ -402,13 +420,50 @@ public class LessonService {
 
         lessonRepository.save(lesson);
 
-        eventPublisher.publishEvent(
-                LessonProcessingStepNotifyEvent.builder()
-                        .lessonId(lesson.getId())
-                        .processingStep(LessonProcessingStep.COMPLETED)
-                        .aiMessage("Lesson generation completed successfully.")
-                        .build()
-        );
+        var completedNotify = new LessonProcessingStepNotifyEvent();
+        completedNotify.setLessonId(lesson.getId());
+        completedNotify.setProcessingStep(LessonProcessingStep.COMPLETED);
+        completedNotify.setAiJobId(lesson.getAiJobId());
+        completedNotify.setAiMessage("Lesson generation completed successfully.");
+        completedNotify.setAudioUrl(lesson.getAudioUrl());
+        completedNotify.setSourceReferenceId(lesson.getSourceReferenceId());
+        completedNotify.setThumbnailUrl(lesson.getThumbnailUrl());
+        completedNotify.setDurationSeconds(lesson.getDurationSeconds());
+        completedNotify.setTitle(lesson.getTitle());
+        completedNotify.setSlug(lesson.getSlug());
+        completedNotify.setDescription(lesson.getDescription());
+        completedNotify.setLanguageLevel(lesson.getLanguageLevel() == null ? null : lesson.getLanguageLevel().name());
+        completedNotify.setSourceLanguage(lesson.getSourceLanguage());
+        completedNotify.setSourceLicenseType(lesson.getSourceLicenseType());
+
+        eventPublisher.publishEvent(completedNotify);
+    }
+
+    private void updateLessonFromAiMetadata(Lesson lesson, AiMetadataDto metadata) {
+        if (canReplaceGeneratedTitle(lesson) && metadata.getTitle() != null && !metadata.getTitle().isBlank()) {
+            lesson.setTitle(metadata.getTitle().trim());
+            lesson.setSlug(TextUtils.createSlug(metadata.getTitle().trim() + "-" + lesson.getId()));
+        }
+        if (canReplaceGeneratedDescription(lesson) && metadata.getDescription() != null && !metadata.getDescription().isBlank()) {
+            lesson.setDescription(metadata.getDescription().trim());
+        }
+        if (metadata.getLanguageLevel() != null && !metadata.getLanguageLevel().isBlank()) {
+            try {
+                lesson.setLanguageLevel(CefrLevel.valueOf(metadata.getLanguageLevel().trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                log.warn("Invalid AI languageLevel {} for lesson {}", metadata.getLanguageLevel(), lesson.getId());
+            }
+        }
+        if (metadata.getSourceLanguage() != null && !metadata.getSourceLanguage().isBlank()) {
+            lesson.setSourceLanguage(metadata.getSourceLanguage().trim());
+        }
+        if (metadata.getSourceLicenseType() != null && !metadata.getSourceLicenseType().isBlank()) {
+            try {
+                lesson.setSourceLicenseType(SourceLicenseType.valueOf(metadata.getSourceLicenseType().trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                log.warn("Invalid AI sourceLicenseType {} for lesson {}", metadata.getSourceLicenseType(), lesson.getId());
+            }
+        }
     }
 
 
@@ -433,6 +488,15 @@ public class LessonService {
 
         if (sf.getThumbnailUrl() != null) {
             lesson.setThumbnailUrl(sf.getThumbnailUrl());
+        }
+
+        if (canReplaceGeneratedTitle(lesson) && sf.getSourceTitle() != null && !sf.getSourceTitle().isBlank()) {
+            lesson.setTitle(sf.getSourceTitle().trim());
+            lesson.setSlug(TextUtils.createSlug(sf.getSourceTitle().trim() + "-" + lesson.getId()));
+        }
+
+        if (canReplaceGeneratedDescription(lesson) && sf.getSourceDescription() != null && !sf.getSourceDescription().isBlank()) {
+            lesson.setDescription(sf.getSourceDescription().trim());
         }
     }
 
@@ -581,6 +645,7 @@ public class LessonService {
                         LearningContentErrorCode.LESSON_NOT_FOUND.formatMessage(id))
         );
         lessonMapper.updateLessonFromRequest(request, lesson);
+        lesson.setDictationHint(blankToNull(request.getDictationHint()));
         lesson.setSlug(TextUtils.createSlug(lesson.getSlug()));
         return lessonMapper.toLessonResponse(lesson);
     }
@@ -637,7 +702,7 @@ public class LessonService {
 
         lessonRepository.save(lesson);
 
-        sendNotifyToUI(event, lesson.getId());
+        sendNotifyToUI(event, lesson);
 
         log.info("✅ Step {} processed for lesson {}", incomingStep, lesson.getId());
     }
@@ -654,6 +719,8 @@ public class LessonService {
             lesson.setThumbnailUrl(event.getThumbnailUrl());
         }
 
+        applyMetadataFromStepEvent(lesson, event);
+
         if (event.getAiMetadataUrl() != null) {
             lesson.setAiMetadataUrl(event.getAiMetadataUrl());
         }
@@ -663,28 +730,68 @@ public class LessonService {
         lesson.setProcessingStep(event.getProcessingStep());
         lesson.setStatus(LessonStatus.PROCESSING);
         lesson.setAiMessage(event.getAiMessage());
+        applyMetadataFromStepEvent(lesson, event);
 
         if (event.getAiMetadataUrl() != null) {
             lesson.setAiMetadataUrl(event.getAiMetadataUrl());
         }
+    }
+
+    private void applyMetadataFromStepEvent(Lesson lesson, LessonProcessingStepUpdatedEvent event) {
+        if (canReplaceGeneratedTitle(lesson) && event.getTitle() != null && !event.getTitle().isBlank()) {
+            lesson.setTitle(event.getTitle().trim());
+            lesson.setSlug(TextUtils.createSlug(event.getTitle().trim() + "-" + lesson.getId()));
+        }
+        if (canReplaceGeneratedDescription(lesson) && event.getDescription() != null && !event.getDescription().isBlank()) {
+            lesson.setDescription(event.getDescription().trim());
+        }
+        if (event.getLanguageLevel() != null && !event.getLanguageLevel().isBlank()) {
+            try {
+                lesson.setLanguageLevel(CefrLevel.valueOf(event.getLanguageLevel().trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                log.warn("Invalid event languageLevel {} for lesson {}", event.getLanguageLevel(), lesson.getId());
+            }
+        }
+        if (event.getSourceLanguage() != null && !event.getSourceLanguage().isBlank()) {
+            lesson.setSourceLanguage(event.getSourceLanguage().trim());
+        }
+        if (event.getSourceLicenseType() != null) {
+            lesson.setSourceLicenseType(event.getSourceLicenseType());
+        }
+    }
+
+    private boolean canReplaceGeneratedTitle(Lesson lesson) {
+        return lesson.getTitle() == null
+                || lesson.getTitle().isBlank()
+                || lesson.getTitle().startsWith("Generating lesson");
+    }
+
+    private boolean canReplaceGeneratedDescription(Lesson lesson) {
+        return lesson.getDescription() == null || lesson.getDescription().isBlank();
     }
     private void failLesson(Lesson lesson, LessonProcessingStepUpdatedEvent event) {
         lesson.setProcessingStep(LessonProcessingStep.FAILED);
         lesson.setStatus(LessonStatus.ERROR);
         lesson.setAiMessage(event.getAiMessage());
     }
-    private void sendNotifyToUI(LessonProcessingStepUpdatedEvent event, Long lessonId) {
+    private void sendNotifyToUI(LessonProcessingStepUpdatedEvent event, Lesson lesson) {
 
         var notify = new LessonProcessingStepNotifyEvent();
 
         notify.setAiJobId(event.getAiJobId());
-        notify.setLessonId(lessonId);
+        notify.setLessonId(lesson.getId());
         notify.setProcessingStep(event.getProcessingStep());
         notify.setAiMessage(event.getAiMessage());
         notify.setAudioUrl(event.getAudioUrl());
         notify.setSourceReferenceId(event.getSourceReferenceId());
         notify.setThumbnailUrl(event.getThumbnailUrl());
         notify.setDurationSeconds(event.getDurationSeconds());
+        notify.setTitle(lesson.getTitle());
+        notify.setSlug(lesson.getSlug());
+        notify.setDescription(lesson.getDescription());
+        notify.setLanguageLevel(lesson.getLanguageLevel() == null ? null : lesson.getLanguageLevel().name());
+        notify.setSourceLanguage(lesson.getSourceLanguage());
+        notify.setSourceLicenseType(lesson.getSourceLicenseType());
 
         kafkaProducer.publishLessonProcessingStepNotify(notify);
 

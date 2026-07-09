@@ -48,9 +48,12 @@
         @Column(columnDefinition = "TEXT")
         private String description;
 
+        @Column(name = "dictation_hint", columnDefinition = "TEXT")
+        private String dictationHint;
+
         @Enumerated(EnumType.STRING)
-        @Column
-        private LessonType lessonType; // ai_assisted, traditional
+        @Column(name = "source_license_type")
+        private SourceLicenseType sourceLicenseType = SourceLicenseType.UNKNOWN;
 
         @Enumerated(EnumType.STRING)
         private LessonProcessingStep processingStep;

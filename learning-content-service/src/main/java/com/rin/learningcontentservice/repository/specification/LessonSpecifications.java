@@ -22,9 +22,6 @@ public class LessonSpecifications {
             if (f.getStatus() != null)
                 predicates.add(cb.equal(root.get("status"), f.getStatus()));
 
-            if (f.getLessonType() != null)
-                predicates.add(cb.equal(root.get("lessonType"), f.getLessonType()));
-
             if (f.getLanguageLevel() != null)
                 predicates.add(cb.equal(root.get("languageLevel"), f.getLanguageLevel()));
 

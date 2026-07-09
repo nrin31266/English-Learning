@@ -59,30 +59,33 @@
     "fields": {
       "topic": "Chủ đề",
       "title": "Tiêu đề bài học",
-      "lessonType": "Loại bài học",
       "languageLevel": "Trình độ ngôn ngữ",
       "description": "Mô tả ngắn",
       "sourceType": "Loại nguồn",
+      "sourceLicenseType": "Giấy phép nguồn",
       "sourceLanguage": "Ngôn ngữ nguồn",
       "sourceUrl": "Liên kết nguồn",
       "thumbnailUrl": "Liên kết ảnh đại diện",
+      "dictationHint": "Gợi ý chính tả",
       "enableDictation": "Bài tập chính tả",
       "enableShadowing": "Luyện shadowing"
     },
     "placeholders": {
       "topic": "Chọn một chủ đề",
       "title": "Đặt tên cho bài học",
-      "lessonType": "Chọn kiểu bài học",
       "languageLevel": "Chọn cấp độ CEFR",
       "description": "Mô tả ngắn về bài học",
       "sourceType": "Nguồn nội dung đến từ đâu?",
+      "sourceLicenseType": "Chọn giấy phép nguồn",
       "sourceLanguage": "Ngôn ngữ của tài liệu nguồn",
       "thumbnail": "https://ten-mien-cua-ban/thumbnail.png",
+      "dictationHint": "Tên riêng, cách viết lạ, từ viết tắt...",
       "youtubeSourceUrl": "Dán liên kết YouTube (https://...)",
       "genericSourceUrl": "Dán liên kết bài viết hoặc audio"
     },
     "helperTexts": {
       "enableDictation": "Thêm bài tập nhập liệu bằng giọng nói dựa trên bản chép.",
+      "dictationHint": "Hiển thị phía trên ô nhập chính tả cho người học.",
       "enableShadowing": "Bổ sung chế độ shadowing với âm thanh đồng bộ."
     },
     "actions": {
@@ -97,10 +100,6 @@
       "thumbnailRequired": "Cần ảnh đại diện cho nguồn không phải YouTube"
     },
     "enums": {
-      "lessonType": {
-        "AI_ASSISTED": "AI hỗ trợ",
-        "TRADITIONAL": "Truyền thống"
-      },
       "languageLevel": {
         "A1": "Sơ cấp (A1)",
         "A2": "Cơ bản (A2)",
@@ -111,8 +110,14 @@
       },
       "sourceType": {
         "YOUTUBE": "Video YouTube",
-        "AUDIO_FILE": "Tệp âm thanh",
-        "OTHER": "Nguồn khác"
+        "AUDIO_FILE": "Tệp âm thanh"
+      },
+      "sourceLicenseType": {
+        "STANDARD_YOUTUBE": "YouTube tiêu chuẩn",
+        "CREATIVE_COMMONS": "Creative Commons",
+        "OWNED_CONTENT": "Nội dung sở hữu",
+        "PERMISSION_GRANTED": "Đã được cấp phép",
+        "UNKNOWN": "Không rõ"
       },
       "sourceLanguage": {
         "en-US": "Tiếng Anh (Mỹ)",
@@ -185,7 +190,6 @@
       "allTypes": "Tất cả loại",
       "moreButton": "Thêm",
       "lessonStatus": "Trạng thái bài học",
-      "lessonType": "Loại bài học",
       "topicLabel": "Chủ đề",
       "lessButton": "Ít hơn"
     },
@@ -283,10 +287,6 @@
       "on": "Shadowing Bật",
       "off": "Shadowing Tắt"
     },
-    "lessonType": {
-      "aiAssisted": "AI Hỗ trợ",
-      "traditional": "Truyền thống"
-    },
     "status": {
       "ready": "Sẵn sàng",
       "processing": "Đang xử lý",
@@ -302,7 +302,7 @@
   "sentencesTab": {
     "title": "Bản chép & câu",
     "viewDescription": "Nhấp vào từ để mở từ vựng sau này (giao diện mô phỏng).",
-    "editDescription": "Chỉnh sửa văn bản câu. Các hành động chỉ là giao diện.",
+    "editDescription": "Quản lý bật/tắt câu, tách câu và ghép câu.",
     "editModeButton": "Chế độ chỉnh sửa",
     "viewModeButton": "Chế độ xem",
     "noSentences": "Không có câu nào cho bài học này.",
@@ -328,6 +328,7 @@
       "title": "Tiêu đề",
       "languageLevel": "Cấp độ ngôn ngữ (CEFR)",
       "description": "Mô tả",
+      "dictationHint": "Gợi ý chính tả",
       "thumbnailUrl": "URL ảnh đại diện",
       "sourceLanguage": "Ngôn ngữ nguồn",
       "enableDictation": "Bật chế độ chính tả",
@@ -337,6 +338,7 @@
       "title": "Nhập tiêu đề bài học",
       "languageLevel": "Chọn cấp độ",
       "description": "Tóm tắt ngắn người học sẽ thấy...",
+      "dictationHint": "Tên riêng, cách viết lạ, từ viết tắt...",
       "thumbnail": "https://...",
       "sourceLanguage": "Chọn ngôn ngữ nguồn"
     },
@@ -344,6 +346,7 @@
       "youtubeThumbnail": "Đối với nguồn YouTube, hệ thống có thể tự tạo ảnh đại diện.",
       "thumbnailRequired": "Đối với nguồn không phải YouTube, cần URL ảnh đại diện.",
       "enableDictation": "Người học có thể gõ những gì nghe được và kiểm tra chính tả & dấu câu.",
+      "dictationHint": "Hiển thị phía trên ô nhập chính tả khi người học gõ transcript.",
       "enableShadowing": "Người học có thể lặp lại câu to và luyện phát âm."
     },
     "actions": {

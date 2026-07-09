@@ -19,7 +19,8 @@ public class LessonResponse {
     private String thumbnailUrl;
     private String slug;
     private String description;
-    private LessonType lessonType; // ai_assisted, traditional
+    private String dictationHint;
+    private SourceLicenseType sourceLicenseType;
     private LessonProcessingStep processingStep;
     private CefrLevel languageLevel; // CEFR A1–C2
     private LessonSourceType sourceType; // youtube, audio_file, text…

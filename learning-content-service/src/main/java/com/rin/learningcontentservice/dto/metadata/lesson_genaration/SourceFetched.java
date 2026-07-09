@@ -16,6 +16,10 @@ public class SourceFetched {
 
     private String sourceReferenceId;
 
+    private String sourceTitle;
+
+    private String sourceDescription;
+
     private String thumbnailUrl;
 
     private String audioUrl;

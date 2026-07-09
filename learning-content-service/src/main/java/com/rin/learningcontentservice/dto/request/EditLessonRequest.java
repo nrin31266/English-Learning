@@ -1,8 +1,6 @@
 package com.rin.learningcontentservice.dto.request;
 
 import com.rin.englishlearning.common.constants.CefrLevel;
-import com.rin.englishlearning.common.constants.LessonSourceType;
-import com.rin.englishlearning.common.constants.LessonType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +13,7 @@ import lombok.NoArgsConstructor;
 public class EditLessonRequest {
     private String title;
     private String description;
+    private String dictationHint;
     private CefrLevel languageLevel;
     private String sourceLanguage;
     private String thumbnailUrl;
