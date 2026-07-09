@@ -99,7 +99,7 @@ const RecordingControls = ({
             title="Tap or press Space to record"
             className={cn(
               "relative flex items-center justify-center transition-all duration-300 ease-in-out shadow-sm",
-              "w-[140px] sm:w-[160px] h-10 sm:h-12",
+              "w-[140px] sm:w-[160px]",
               isRecording
                 ? "bg-red-500 hover:bg-red-600 text-white" 
                 : "bg-primary hover:bg-primary/90 text-primary-foreground",
@@ -130,11 +130,10 @@ const RecordingControls = ({
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 ">
                 <Mic className="h-4 w-4 drop-shadow-sm shrink-0" />
                 <span className="text-[13px] sm:text-[15px] font-semibold tracking-wide whitespace-nowrap">
                   {hasRecordedAudio ? "Try Again" : "Record"} 
-                  {/* 👉 In đậm số thời gian mặc định */}
                   <span className="font-bold ml-1">({defaultTime}s)</span>
                 </span>
               </div>
@@ -160,10 +159,10 @@ const RecordingControls = ({
               {shouldShowNextButton && (
                 <Button 
                   size="sm"
-                  className="gap-1.5 px-3 sm:px-4 h-8 sm:h-9 bg-primary text-primary-foreground font-bold shadow-sm hover:shadow-md animate-in fade-in zoom-in duration-300 tracking-wide" 
+                  className="gap-1.5 px-3 sm:px-4 h-8 sm:h-9 bg-green-600 text-white font-bold shadow-sm hover:bg-green-700 hover:shadow-md animate-in fade-in zoom-in duration-300 tracking-wide" 
                   onClick={onNext}
                 >
-                  <span className="hidden sm:inline text-[13px]">Next</span> <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
+                  <span className="hidden sm:inline text-[13px]">Next sentence</span> <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
                 </Button>
               )}
             </>

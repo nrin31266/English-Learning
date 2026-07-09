@@ -5,6 +5,9 @@ import React, {
 import YouTube, { type YouTubeProps } from "react-youtube"
 import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
 import type { PlayerRef } from "./types/types"
+import { Button } from "@/components/ui/button"
+import { Video } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 
 const START_PADDING = 0.1
@@ -15,18 +18,22 @@ type YouTubePlayerProps = {
   currentSentence?: ILessonSentenceDetailsResponse
   autoStop: boolean
   largeVideo: boolean
+  hideVideo: boolean
+  fillHeight?: boolean
   autoPlayOnSentenceChange?: boolean
 
   playbackRate?: number
   isPlaying: boolean
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
   userInteracted: boolean,
+  onCurrentTimeChange?: (time: number) => void
+  onHideVideoChange?: (checked: boolean) => void
   onError?: () => void
 }
 
 const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
-  ({ lesson, currentSentence, autoStop, largeVideo, autoPlayOnSentenceChange,
-    userInteracted, playbackRate, isPlaying, setIsPlaying, onError }, ref) => {
+  ({ lesson, currentSentence, autoStop, largeVideo, hideVideo, fillHeight = false, autoPlayOnSentenceChange,
+    userInteracted, playbackRate, isPlaying, setIsPlaying, onCurrentTimeChange, onHideVideoChange, onError }, ref) => {
 
     const playerRef = useRef<any>(null)
     const animationFrameRef = useRef<number | null>(null)
@@ -46,7 +53,7 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
 
     const opts: YouTubeProps["opts"] = {
       width: "100%",
-      height: largeVideo ? "420" : "200",
+      height: fillHeight ? "100%" : largeVideo ? "420" : "200",
       playerVars: {
         controls: 1,
         rel: 0,
@@ -73,22 +80,22 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
 
     const startMonitoring = useCallback(() => {
       const player = playerRef.current
-      const segment = currentSegmentRef.current
 
-      if (!player || !autoStop || !segment) return
+      if (!player) return
 
       const checkAndStop = () => {
         const currentPlayer = playerRef.current
         const currentSegmentData = currentSegmentRef.current
 
-        if (!currentPlayer || !currentSegmentData) {
+        if (!currentPlayer) {
           stopMonitoring()
           return
         }
 
         const currentTime = currentPlayer.getCurrentTime()
+        onCurrentTimeChange?.(currentTime)
 
-        if (currentTime >= currentSegmentData.end) {
+        if (autoStop && currentSegmentData && currentTime >= currentSegmentData.end) {
           currentPlayer.pauseVideo()
           setIsPlaying(false)
           stopMonitoring()
@@ -100,7 +107,7 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
 
       stopMonitoring() 
       animationFrameRef.current = requestAnimationFrame(checkAndStop)
-    }, [autoStop, stopMonitoring])
+    }, [autoStop, onCurrentTimeChange, setIsPlaying, stopMonitoring])
 
     const onReady: YouTubeProps["onReady"] = (event) => {
       playerRef.current = event.target
@@ -112,9 +119,7 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
 
       if (state === 1) { 
         setIsPlaying(true)
-        if (autoStop && currentSegmentRef.current) {
-          startMonitoring()
-        }
+        startMonitoring()
       } else if (state === 2 || state === 0) { 
         setIsPlaying(false)
         stopMonitoring()
@@ -164,11 +169,11 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
 
     useEffect(() => {
       const player = playerRef.current
-      if (!player || !autoStop) return
-      if (isPlaying && currentSegmentRef.current) {
+      if (!player) return
+      if (isPlaying) {
         startMonitoring()
       }
-    }, [autoStop, isPlaying, startMonitoring])
+    }, [isPlaying, startMonitoring])
 
     useEffect(() => {
       const player = playerRef.current
@@ -204,24 +209,45 @@ const YouTubePlayer = forwardRef<PlayerRef, YouTubePlayerProps>(
       }
     }, [stopMonitoring])
 
-    // --- UI ĐÃ ĐƯỢC LÀM SẠCH VÀ TỐI GIẢN ---
     return (
-      <div 
-        className={`w-full border bg-black relative shadow-sm overflow-hidden ${largeVideo ? "rounded-xl" : "rounded-t-xl"}`}
-      >
-        <YouTube
-          videoId={videoId}
-          opts={opts}
-          onReady={onReady}
-          onStateChange={onStateChange}
-          onError={onErrorHandler}
-        />
-
-        {/* Lớp phủ siêu gọn, chỉ hiện nút Play khi chưa tương tác */}
-        {!userInteracted && isReady && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-[2px]"/>
+      <>
+        {hideVideo && (
+          <div className="flex min-h-12 items-center justify-center gap-2 border-b bg-muted/30 px-3 py-2 text-center text-xs text-muted-foreground">
+            <span>Video is hidden.</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 px-2 text-xs"
+              onClick={() => onHideVideoChange?.(false)}
+            >
+              <Video className="h-3.5 w-3.5" />
+              Show video
+            </Button>
+          </div>
         )}
-      </div>
+
+        <div
+          className={cn(
+            hideVideo
+              ? "pointer-events-none absolute h-px w-px overflow-hidden opacity-0"
+              : `w-full border bg-black relative shadow-sm overflow-hidden ${largeVideo ? "rounded-xl" : "rounded-t-xl"}`,
+            fillHeight && !hideVideo && "min-h-[360px] flex-1 [&_iframe]:h-full [&_iframe]:w-full [&>div]:h-full"
+          )}
+        >
+          <YouTube
+            videoId={videoId}
+            opts={opts}
+            onReady={onReady}
+            onStateChange={onStateChange}
+            onError={onErrorHandler}
+          />
+
+          {!userInteracted && isReady && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-[2px]" />
+          )}
+        </div>
+      </>
     )
   }
 )

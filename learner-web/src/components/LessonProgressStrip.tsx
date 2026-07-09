@@ -89,8 +89,15 @@ const LessonProgressBar = ({
     <div
       className={cn(
         "fixed bottom-0 z-40 select-none border-t border-border/70 bg-background/95 pb-safe",
-        "shadow-[0_-8px_24px_rgba(0,0,0,0.04)] backdrop-blur-xl",
-        "transition-all duration-300"
+        /**
+         * Shadow đi qua token thay vì rgba(0,0,0,x) cứng:
+         * - Light mode: bóng mờ dựa trên `foreground` (đủ thấy, không quá gắt).
+         * - Dark mode: bóng đen tuyệt đối gần như vô hình trên nền tối,
+         *   nên đổi hướng dùng `background` đậm hơn để tạo độ sâu.
+         */
+        "shadow-[0_-8px_24px_theme(colors.foreground/6%)]",
+        "dark:shadow-[0_-8px_24px_theme(colors.background/60%)]",
+        "backdrop-blur-xl transition-all duration-300"
       )}
       style={{
         left: `${sidebarWidth}px`,
@@ -158,12 +165,17 @@ const LessonProgressBar = ({
 
                   /**
                    * Đã hoàn thành:
-                   * Dùng accent để không bị xanh cố định.
-                   * Với Monochrome Beach sẽ ra teal, Soft Sand sẽ ra beige.
+                   * Cố định xanh lá (semantic "success"), KHÔNG đi theo accent
+                   * của theme nữa — vì "hoàn thành" là trạng thái mang tính phổ
+                   * quát (giống dấu tick màu xanh ở mọi app học tập), người dùng
+                   * cần nhận ra ngay bất kể đang bật theme màu gì, nên tách khỏi
+                   * hệ màu thương hiệu thay đổi theo theme.
+                   * Light mode dùng nền xanh đậm + chữ trắng; dark mode dùng nền
+                   * xanh sáng hơn + chữ tối để giữ độ tương phản tốt trên nền tối.
                    */
                   isDone &&
                     !isActive &&
-                    "border-accent bg-accent text-accent-foreground shadow-sm hover:brightness-95",
+                    "border-emerald-600 bg-emerald-600 text-white shadow-sm hover:bg-emerald-600/85 dark:border-emerald-500 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-500/85",
 
                   /**
                    * Active:
@@ -174,11 +186,13 @@ const LessonProgressBar = ({
 
                   /**
                    * Active + đã hoàn thành:
-                   * Vẫn dùng primary, nhưng thêm outline accent để phân biệt đã làm.
+                   * Vẫn dùng primary làm nền chính (đang học ở câu này), nhưng
+                   * viền ring đổi sang xanh lá để vẫn báo được là câu này đã
+                   * từng làm xong trước đó.
                    */
                   isActive &&
                     isDone &&
-                    "border-primary bg-primary text-primary-foreground ring-accent/70"
+                    "border-primary bg-primary text-primary-foreground ring-emerald-500/70"
                 )}
               >
                 <span className="relative z-10 mt-[1px]">{index + 1}</span>

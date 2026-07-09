@@ -12,6 +12,7 @@ import MicrophoneSelector from "./MicrophoneSelector"
 import RecordingControls from "./RecordingControls"
 import SentenceDisplay from "./SentenceDisplay"
 import ShadowingResultPanel from "./ShadowingResultPanel"
+import BestScoreBadge from "@/components/BestScoreBadge"
 
 interface ActiveSentencePanelProps {
   lesson: ILessonDetailsResponse
@@ -19,6 +20,8 @@ interface ActiveSentencePanelProps {
   handlePause: () => void
   onNext: () => void
   userInteracted?: boolean
+  isPlaying?: boolean
+  playerCurrentTime?: number
   onComplete?: (sentenceId: number, weightedAccuracy: number) => void
 }
 
@@ -44,6 +47,8 @@ const ActiveSentencePanel = ({
   activeIndex,
   lesson,
   userInteracted = false,
+  isPlaying = false,
+  playerCurrentTime = 0,
   handlePause,
   onComplete
 }: ActiveSentencePanelProps) => {
@@ -274,22 +279,38 @@ const ActiveSentencePanel = ({
 
   // --- Recording Actions ---
   const calculateRecordingTime = useCallback(() => {
-    if (!currentSentenceWords || currentSentenceWords.length === 0) return 5;
-    const firstWord = currentSentenceWords[0];
-    const lastWord = currentSentenceWords[currentSentenceWords.length - 1];
-    const startMs = firstWord.audioStartMs ?? 0;
-    const endMs = lastWord.audioEndMs ?? (startMs + 2000);
-    const exactSeconds = (endMs - startMs) / 1000;
+  if (!currentSentenceWords || currentSentenceWords.length === 0) return 8
 
-    let normalBuffer = 1.5;
-    if (exactSeconds >= 3 && exactSeconds < 7) normalBuffer = 2;
-    if (exactSeconds >= 7) normalBuffer = 2.5;
+  const sortedWords = [...currentSentenceWords].sort(
+    (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)
+  )
 
-    const extraSlowTime = isSlowMode ? (exactSeconds * 0.5 + 2) : 0;
-    return Math.ceil(exactSeconds + normalBuffer + extraSlowTime);
-  }, [currentSentenceWords, isSlowMode]);
+  const firstWord = sortedWords[0]
+  const lastWord = sortedWords[sortedWords.length - 1]
 
-  const defaultTime = calculateRecordingTime();
+  const startMs = firstWord.audioStartMs ?? 0
+  const endMs = lastWord.audioEndMs ?? startMs + 3000
+
+  const exactSeconds = Math.max(1, (endMs - startMs) / 1000)
+
+  let bufferSeconds = 2.5
+
+  if (exactSeconds >= 3 && exactSeconds < 7) {
+    bufferSeconds = 3
+  } else if (exactSeconds >= 7 && exactSeconds < 12) {
+    bufferSeconds = 4
+  } else if (exactSeconds >= 12) {
+    bufferSeconds = 5
+  }
+
+  const slowModeExtra = isSlowMode ? exactSeconds * 0.75 + 2.5 : 0
+
+  const totalSeconds = exactSeconds + bufferSeconds + slowModeExtra
+
+  return Math.ceil(Math.max(7, totalSeconds))
+}, [currentSentenceWords, isSlowMode])
+
+  const defaultTime = useMemo(() => calculateRecordingTime(), [calculateRecordingTime])
 
   const startRecording = useCallback(async () => {
     setRecordError(null)
@@ -455,7 +476,8 @@ const ActiveSentencePanel = ({
     <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-card">
       <div className="flex flex-col items-center gap-4 px-4 py-4 relative">
 
-        {isCompleted && <CompletedBadge />}
+        {isCompleted && <div className="absolute top-2 right-2">
+          <BestScoreBadge score={highestScore} /></div>}
 
         <MicrophoneSelector
           selectedDeviceId={selectedDeviceId}
@@ -490,6 +512,9 @@ const ActiveSentencePanel = ({
             onWordClick={handleSentenceWordClick}
             className="items-center"
             activeWordId={activeWord?.id}
+            mediaCurrentTimeMs={playerCurrentTime * 1000}
+            sentenceStartMs={currentSentence.audioStartMs}
+            isPlayingMedia={isPlaying}
           />
         </div>
 

@@ -77,6 +77,7 @@ const DictationMode = () => {
     <LessonModeLayout
       mode={mode}
       i18nPrefix="dictation"
+      contentLayout="sideBySide"
       completionDetails={
         <div className="border-y border-border/70 py-5 text-center">
           <div className="flex items-baseline justify-center gap-1 text-foreground">

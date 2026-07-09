@@ -16,7 +16,6 @@ class ShadowingWordCompare(BaseModel):
     # phonemeScore: Optional[float] = None  # 0.0 - 1.0
     
     phonemeDiff: dict | None = None  # THÊM: chứa diff_tokens cho UI
-    extraOrMissingIpa: dict | None = None  # THÊM: cho EXTRA/MISSING
 
 
 class DiffToken(BaseModel):

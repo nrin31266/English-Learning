@@ -6,6 +6,7 @@ import YouTubePlayer from "./YouTubePlayer"
 import PlayerControlPanel from "./PlayerControlPanel"
 import { useAppDispatch } from "@/store"
 import { showNotification } from "@/store/system/notificationSlice"
+import { cn } from "@/lib/utils"
 
 interface PlayerProps {
   // Core data
@@ -24,6 +25,7 @@ interface PlayerProps {
   
   // YouTube specific (optional)
   largeVideo?: boolean
+  hideVideo?: boolean
   
   // Navigation controls (optional, nếu không có thì dùng internal)
   onPrev?: () => void
@@ -39,12 +41,17 @@ interface PlayerProps {
   // Settings callbacks (optional)
   onAutoStopChange?: (checked: boolean) => void
   onLargeVideoChange?: (checked: boolean) => void
+  onHideVideoChange?: (checked: boolean) => void
   onPlaybackRateChange?: (rate: number) => void
+  onCurrentTimeChange?: (time: number) => void
   onShowShortcuts?: () => void
 
   // Progress Bar Toggle 👈 Thêm
   showProgress?: boolean
   onToggleProgress?: () => void
+  forceCompactControls?: boolean
+  className?: string
+  fillMediaHeight?: boolean
 }
 
 const Player = forwardRef<PlayerRef, PlayerProps>(
@@ -65,6 +72,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
     
     // YouTube specific
     largeVideo = false,
+    hideVideo = false,
     
     // Navigation controls
     onPrev,
@@ -80,12 +88,17 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
     // Settings callbacks
     onAutoStopChange,
     onLargeVideoChange,
+    onHideVideoChange,
     onPlaybackRateChange,
+    onCurrentTimeChange,
     onShowShortcuts,
 
     // Progress Bar Toggle 👈 Thêm
     showProgress,
-    onToggleProgress
+    onToggleProgress,
+    forceCompactControls = false,
+    className,
+    fillMediaHeight = false,
   }, ref) => {
     // State to track if user has interacted with the player (for auto-play logic)
     const [userInteracted, setUserInteracted] = useState(false)
@@ -100,7 +113,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
     }
     const dispatch = useAppDispatch()
     return (
-      <div className="flex border rounded-2xl flex-col shadow gap-3 w-full bg-card overflow-hidden">
+      <div className={cn("flex border rounded-2xl flex-col shadow gap-2 w-full bg-card overflow-hidden", className)}>
         {/* Media Player - tự động chọn dựa trên sourceType */}
         {lesson.sourceType === "YOUTUBE" && !forceAudioFallback ? (
           <YouTubePlayer
@@ -109,11 +122,15 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
             currentSentence={currentSentence}
             autoStop={autoStop}
             largeVideo={largeVideo}
+            hideVideo={hideVideo}
+            fillHeight={fillMediaHeight}
             autoPlayOnSentenceChange={autoPlayOnSentenceChange}
             playbackRate={playbackRate}
             isPlaying={isPlaying}
             setIsPlaying={setIsPlaying}
             userInteracted={userInteracted}
+            onCurrentTimeChange={onCurrentTimeChange}
+            onHideVideoChange={onHideVideoChange}
             onError={() => {
               setForceAudioFallback(true)
               dispatch(showNotification({
@@ -136,6 +153,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
             isPlaying={isPlaying}
             setIsPlaying={setIsPlaying}
             userInteracted={userInteracted}
+            onCurrentTimeChange={onCurrentTimeChange}
           />
         )}
         
@@ -175,6 +193,8 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
           sourceType={lesson.sourceType === "YOUTUBE" ? "YOUTUBE" : "AUDIO"}
           largeVideo={largeVideo}
           onLargeVideoChange={onLargeVideoChange}
+          hideVideo={hideVideo}
+          onHideVideoChange={onHideVideoChange}
           visableLargeVideoOption={lesson.sourceType === "YOUTUBE" && !forceAudioFallback}
           
           // Playback speed
@@ -185,6 +205,7 @@ const Player = forwardRef<PlayerRef, PlayerProps>(
           onShowShortcuts={onShowShortcuts}
           showProgress={showProgress}
           onToggleProgress={onToggleProgress}
+          forceCompact={forceCompactControls}
         />
       </div>
     )

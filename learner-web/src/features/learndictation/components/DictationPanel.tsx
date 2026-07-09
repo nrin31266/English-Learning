@@ -6,11 +6,9 @@ import { cn } from "@/lib/utils"
 import type { ILessonSentenceDetailsResponse, ILessonWordResponse } from "@/types"
 import { normalizeWordLower } from "@/utils/textUtils"
 import {
-    CheckCircle2,
     ChevronRight,
     Eye,
     RotateCcw,
-    Keyboard
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -18,7 +16,6 @@ import WordChip from "./WordChip"
 import WordPopup from "@/components/WordPopup"
 import { useWordPopup } from "@/hooks/UseWordPopupReturn"
 import { successSound } from "@/utils/sound"
-import CompletedBadge from "@/components/CompletedBadge"
 import BestScoreBadge from "@/components/BestScoreBadge"
 
 type RevealState = Record<number, boolean>
@@ -137,6 +134,7 @@ const DictationPanel = ({
 
     const isAllCorrect = typedTokens.length === totalWords && correctTypedCount === totalWords
     const showCompletedBadge = effectiveCompleted && isAllCorrect
+    const canAdvanceAsCompleted = completed || isAllCorrect
 
     /**
      * Effect: Xử lý sự kiện nộp bài & Gamification
@@ -285,36 +283,29 @@ const DictationPanel = ({
     }, [userInteracted, onTemporaryAnswerChange, isPlaying, onTogglePlayPause])
 
     return (
-        <div className="flex w-full flex-col gap-3 rounded-xl border bg-card p-3 sm:p-4 shadow-sm relative transition-all">
+        <div className="relative flex w-full flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm transition-all sm:p-4">
 
             {/* HEADER */}
             <div className="flex items-start sm:items-center justify-between gap-4 z-10 min-h-[28px]">
                 <div className="flex flex-wrap items-center gap-3 text-sm mt-1 sm:mt-0">
-                    {showCompletedBadge ? (
-                        <div className="animate-in fade-in slide-in-from-left-2">
-                            <CompletedBadge size="md" isAbsolute={false} />
+                    <div className="flex items-center gap-1.5 animate-in fade-in">
+                        <span className="font-semibold text-foreground">
+                            {correctTypedCount}/{totalWords}
+                        </span>
+                        <span className="text-muted-foreground text-xs">words</span>
+                    </div>
+                    {hasRevealedAny && (
+                        <div className="flex items-center gap-1.5 text-xs text-amber-600 animate-in fade-in zoom-in-95">
+                            <Eye className="h-3.5 w-3.5" />
+                            <span>{revealedCount} hints</span>
                         </div>
-                    ) : (
-                        <>
-                            <div className="flex items-center gap-1.5 animate-in fade-in">
-                                <CheckCircle2 className="h-4 w-4 text-primary" />
-                                <span className="font-semibold text-foreground">
-                                    {correctTypedCount}/{totalWords}
-                                </span>
-                                <span className="text-muted-foreground text-xs">words</span>
-                            </div>
-                            {hasRevealedAny && (
-                                <div className="flex items-center gap-1.5 text-xs text-amber-600 animate-in fade-in zoom-in-95">
-                                    <Eye className="h-3.5 w-3.5" />
-                                    <span>{revealedCount} hints</span>
-                                </div>
-                            )}
-                        </>
                     )}
                 </div>
+                {completed && (
                 <div className="shrink-0">
                     <BestScoreBadge score={highestScore} />
                 </div>
+                )}
             </div>
 
             {/* TEXTAREA */}
@@ -372,7 +363,7 @@ const DictationPanel = ({
                     </label>
                 </div>
 
-                <div className="rounded-lg border border-border/50 bg-muted/10 p-3 flex flex-wrap gap-2 max-h-48 overflow-y-auto min-h-[60px]">
+                <div className="flex max-h-48 min-h-[60px] flex-wrap gap-2 overflow-y-auto rounded-lg border border-border/50 bg-muted/10 p-3">
                     {!isTransitioning && sortedWords.map((word, idx) => (
                         <WordChip
                             key={word.id}
@@ -426,16 +417,16 @@ const DictationPanel = ({
 
                 <Button
                     onClick={onNext}
-                    disabled={loading || (!userInteracted && !effectiveCompleted)}
+                    disabled={loading || (!userInteracted && !canAdvanceAsCompleted)}
                     size="sm"
                     className={cn(
                         "h-8 sm:h-9 gap-1.5 px-4 sm:px-6 text-[13px] sm:text-sm font-semibold shadow-sm transition-all",
-                        showCompletedBadge
-                            ? "bg-primary hover:bg-primary/90 text-primary-foreground animate-in zoom-in-95 duration-300"
+                        canAdvanceAsCompleted
+                            ? "bg-green-600 text-white hover:bg-green-700 animate-in zoom-in-95 duration-300"
                             : "bg-muted text-muted-foreground hover:bg-muted/80"
                     )}
                 >
-                    {showCompletedBadge ? "Next" : "Skip"}
+                    {canAdvanceAsCompleted ? "Next sentence" : "Skip"}
                     <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2.5]" />
                 </Button>
             </div>

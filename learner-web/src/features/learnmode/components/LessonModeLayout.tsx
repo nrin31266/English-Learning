@@ -30,6 +30,8 @@ interface LessonModeLayoutProps {
   panel: ReactNode
   transcript: ReactNode
   completionDetails?: ReactNode
+  contentLayout?: "stacked" | "sideBySide"
+  forceCompactPlayerControls?: boolean
 }
 
 const LessonModeLayout = ({
@@ -38,6 +40,8 @@ const LessonModeLayout = ({
   panel,
   transcript,
   completionDetails,
+  contentLayout = "stacked",
+  forceCompactPlayerControls = false,
 }: LessonModeLayoutProps) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -65,6 +69,9 @@ const LessonModeLayout = ({
     setAutoStop,
     largeVideo,
     setLargeVideo,
+    hideVideo,
+    setHideVideo,
+    setPlayerCurrentTime,
 
     activeIndex,
     autoPlayOnSentenceChange,
@@ -216,14 +223,71 @@ const LessonModeLayout = ({
         <div className="flex flex-1 flex-col items-center justify-center text-sm text-muted-foreground">
           {tk("lessonNotFound")}
         </div>
+      ) : contentLayout === "sideBySide" ? (
+        <div className="mt-1 grid grid-cols-1 items-stretch gap-3 xl:min-h-[calc(100vh-11rem)] xl:grid-cols-12">
+          <div
+            className={cn(
+              "flex min-h-0 flex-col gap-3 xl:col-span-4",
+              !effectiveShowTranscript && "xl:col-span-5"
+            )}
+          >
+            <div className="top-18 z-40 h-full xl:sticky">
+              <Player
+                ref={playerRef}
+                lesson={lesson}
+                currentSentence={currentSentence}
+                autoStop={autoStop}
+                autoPlayOnSentenceChange={autoPlayOnSentenceChange}
+                onUserInteracted={setUserInteracted}
+                playbackRate={playbackRate}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
+                largeVideo={largeVideo || !effectiveShowTranscript}
+                hideVideo={hideVideo}
+                onPrev={handlePrev}
+                onNext={handleNext}
+                hasPrev={activeIndex > 0}
+                hasNext={activeIndex < sentences.length - 1}
+                onAutoStopChange={setAutoStop}
+                onLargeVideoChange={setLargeVideo}
+                onHideVideoChange={setHideVideo}
+                onPlaybackRateChange={setPlaybackRate}
+                onCurrentTimeChange={setPlayerCurrentTime}
+                onShowShortcuts={() => setShowHelp(true)}
+                showProgress={showProgress}
+                onToggleProgress={() => setShowProgress((prev) => !prev)}
+                forceCompactControls={forceCompactPlayerControls}
+                className="h-full"
+              />
+            </div>
+
+            <KeyboardShortcutsHelp
+              open={showHelp}
+              onClose={() => setShowHelp(false)}
+            />
+          </div>
+
+          <div
+            className={cn(
+              "min-h-0 min-w-0 xl:col-span-5",
+              !effectiveShowTranscript && "xl:col-span-7"
+            )}
+          >
+            {panel}
+          </div>
+
+          {effectiveShowTranscript && (
+            <div className="min-h-0 xl:col-span-3">{transcript}</div>
+          )}
+        </div>
       ) : (
         <div className="mt-1 grid grid-cols-1 gap-3 xl:grid-cols-12">
           <div
             className={cn(
               "flex flex-col gap-3",
               effectiveShowTranscript
-                ? "xl:col-span-8"
-                : "xl:col-span-8 xl:col-start-3"
+                ? "xl:col-span-9"
+                : "xl:col-span-12"
             )}
           >
             <div className="sticky top-18 z-40">
@@ -238,16 +302,20 @@ const LessonModeLayout = ({
                 isPlaying={isPlaying}
                 setIsPlaying={setIsPlaying}
                 largeVideo={largeVideo}
+                hideVideo={hideVideo}
                 onPrev={handlePrev}
                 onNext={handleNext}
                 hasPrev={activeIndex > 0}
                 hasNext={activeIndex < sentences.length - 1}
                 onAutoStopChange={setAutoStop}
                 onLargeVideoChange={setLargeVideo}
+                onHideVideoChange={setHideVideo}
                 onPlaybackRateChange={setPlaybackRate}
+                onCurrentTimeChange={setPlayerCurrentTime}
                 onShowShortcuts={() => setShowHelp(true)}
                 showProgress={showProgress}
                 onToggleProgress={() => setShowProgress((prev) => !prev)}
+                forceCompactControls={forceCompactPlayerControls}
               />
             </div>
 
@@ -260,7 +328,7 @@ const LessonModeLayout = ({
           </div>
 
           {effectiveShowTranscript && (
-            <div className="h-full xl:col-span-4">{transcript}</div>
+            <div className="h-full xl:col-span-3">{transcript}</div>
           )}
         </div>
       )}

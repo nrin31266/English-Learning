@@ -46,6 +46,8 @@ const ShadowingMode = () => {
     handlePause,
     handleNext,
     userInteracted,
+    isPlaying,
+    playerCurrentTime,
     handleCompleteSentence,
     handleSelectSentence,
     effectiveShowTranscript,
@@ -84,6 +86,8 @@ const ShadowingMode = () => {
             handlePause={handlePause}
             onNext={handleNext}
             userInteracted={userInteracted}
+            isPlaying={isPlaying}
+            playerCurrentTime={playerCurrentTime}
             onComplete={handleComplete}
           />
         )

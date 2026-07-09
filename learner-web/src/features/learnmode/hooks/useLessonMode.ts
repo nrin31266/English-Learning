@@ -103,6 +103,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
   // --- Player & Interaction State ---
   const [autoStop, setAutoStop] = useState(true)
   const [largeVideo, setLargeVideo] = useState(false)
+  const [hideVideo, setHideVideo] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const [autoPlayOnSentenceChange, setAutoPlayOnSentenceChange] =
     useState(true)
@@ -118,6 +119,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
   const playerRef = useRef<PlayerRef | null>(null)
   const [playbackRate, setPlaybackRate] = useState<number>(1.0)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [playerCurrentTime, setPlayerCurrentTime] = useState(0)
 
   /**
    * Theo dõi và cập nhật trạng thái Responsive (Desktop vs Mobile)
@@ -199,11 +201,13 @@ export function useLessonMode(config: UseLessonModeConfig) {
   // --- Navigation Controls ---
   const handlePrev = useCallback(() => {
     setAutoPlayOnSentenceChange(true)
+    setPlayerCurrentTime(0)
     setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev))
   }, [])
 
   const handleNext = useCallback(() => {
     setAutoPlayOnSentenceChange(true)
+    setPlayerCurrentTime(0)
     setActiveIndex((prev) =>
       prev < sentences.length - 1 ? prev + 1 : prev
     )
@@ -215,6 +219,7 @@ export function useLessonMode(config: UseLessonModeConfig) {
 
   const handleSelectSentence = useCallback((index: number) => {
     setAutoPlayOnSentenceChange(true)
+    setPlayerCurrentTime(0)
     setActiveIndex(index)
   }, [])
 
@@ -527,6 +532,10 @@ export function useLessonMode(config: UseLessonModeConfig) {
     setAutoStop,
     largeVideo,
     setLargeVideo,
+    hideVideo,
+    setHideVideo,
+    playerCurrentTime,
+    setPlayerCurrentTime,
 
     activeIndex,
     autoPlayOnSentenceChange,

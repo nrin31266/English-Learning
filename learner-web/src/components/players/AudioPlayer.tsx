@@ -16,6 +16,7 @@ type AudioPlayerProps = {
   isPlaying: boolean
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
   userInteracted: boolean
+  onCurrentTimeChange?: (time: number) => void
 }
 
 const formatTime = (secs: number) => {
@@ -30,7 +31,7 @@ const END_PADDING = 0.05
 
 const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
   ({ lesson, currentSentence, autoStop, autoPlayOnSentenceChange,
-    playbackRate, isPlaying, setIsPlaying, userInteracted }, ref) => {
+    playbackRate, isPlaying, setIsPlaying, userInteracted, onCurrentTimeChange }, ref) => {
     
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const isPlayingRef = useRef(false)
@@ -47,6 +48,7 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
       const onLoaded = () => { if (!isNaN(audio.duration)) setDuration(audio.duration) }
       const onTimeUpdate = () => {
         setCurrentTime(audio.currentTime)
+        onCurrentTimeChange?.(audio.currentTime)
         if (autoStop && currentSentence && audio.currentTime >= currentSentence.audioEndMs / 1000 + END_PADDING) {
           audio.pause()
           setIsPlaying(false)
@@ -67,7 +69,7 @@ const AudioPlayer = forwardRef<PlayerRef, AudioPlayerProps>(
         audio.removeEventListener("pause", onPause)
         audio.removeEventListener("ended", onEnded)
       }
-    }, [currentSentence, autoStop])
+    }, [currentSentence, autoStop, onCurrentTimeChange])
 
     const playCurrentSegment = useCallback(async () => {
       const audio = audioRef.current

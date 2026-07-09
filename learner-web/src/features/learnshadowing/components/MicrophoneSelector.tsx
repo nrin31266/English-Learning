@@ -17,7 +17,7 @@ const MicrophoneSelector = ({
   getAudioInputValue,
   onChange,
 }: MicrophoneSelectorProps) => {
-  
+
   const selectedLabel = useMemo(() => {
     if (audioInputDevices.length === 0) return "No microphone"
     const device = audioInputDevices.find(
@@ -32,12 +32,11 @@ const MicrophoneSelector = ({
         <DropdownMenuTrigger asChild>
           <button
             disabled={disabled}
-            className="group flex h-8 w-8 md:w-auto items-center justify-center md:justify-start md:gap-2 rounded-full border border-border/50 bg-background/60 md:px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm transition-all hover:bg-accent hover:text-foreground disabled:opacity-50"
-            title="Select microphone"
+            className="group relative flex h-8 w-8 items-center justify-center rounded-full border border-border/50 bg-background/60 text-muted-foreground shadow-sm backdrop-blur-sm transition-all hover:bg-accent hover:text-foreground disabled:opacity-50"
+            title={selectedLabel}
           >
-            <Mic className="h-4 w-4 md:h-3.5 md:w-3.5" />
-            <span className="hidden md:inline-block max-w-[120px] truncate">{selectedLabel}</span>
-            <ChevronDown className="hidden md:block h-3 w-3 opacity-50 transition-transform group-data-[state=open]:rotate-180" />
+            <Mic className="h-4 w-4" />
+            <ChevronDown className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-background opacity-70" />
           </button>
         </DropdownMenuTrigger>
 
@@ -54,14 +53,13 @@ const MicrophoneSelector = ({
               const value = getAudioInputValue(device.deviceId, index)
               const isSelected = selectedDeviceId === value
               const label = device.label || `Microphone ${index + 1}`
-              
+
               return (
                 <DropdownMenuItem
                   key={value}
                   onClick={() => onChange(value)}
-                  className={`flex items-center justify-between cursor-pointer rounded-md px-3 py-2 my-0.5 transition-colors ${
-                    isSelected ? "bg-accent text-foreground font-medium" : "text-muted-foreground"
-                  }`}
+                  className={`flex items-center justify-between cursor-pointer rounded-md px-3 py-2 my-0.5 transition-colors ${isSelected ? "bg-accent text-foreground font-medium" : "text-muted-foreground"
+                    }`}
                 >
                   <span className="text-sm truncate flex-1">{label}</span>
                   {isSelected && (

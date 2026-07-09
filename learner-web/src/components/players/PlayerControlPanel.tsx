@@ -9,9 +9,19 @@ import {
     StepForward,
     Volume2,
     Keyboard,
-    PanelBottom // 👈 Thêm icon này
+    PanelBottom,
+    Settings2,
 } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useEffect, useRef, useState } from "react"
 
 interface PlayerControlPanelProps {
@@ -33,6 +43,8 @@ interface PlayerControlPanelProps {
     onAutoStopChange?: (checked: boolean) => void
     largeVideo?: boolean
     onLargeVideoChange?: (checked: boolean) => void
+    hideVideo?: boolean
+    onHideVideoChange?: (checked: boolean) => void
     sourceType?: "YOUTUBE" | "AUDIO"
     
     // Progress Bar Toggle 👈 Thêm
@@ -48,6 +60,7 @@ interface PlayerControlPanelProps {
     userInteracted?: boolean
     onUserInteracted?: (interacted: boolean) => void,
     visableLargeVideoOption?: boolean
+    forceCompact?: boolean
 }
 
 const PlayerControlPanel = ({
@@ -69,6 +82,8 @@ const PlayerControlPanel = ({
     onAutoStopChange,
     largeVideo = false,
     onLargeVideoChange,
+    hideVideo = false,
+    onHideVideoChange,
     sourceType = "AUDIO",
 
     // Progress Bar Toggle 👈 Thêm
@@ -84,10 +99,12 @@ const PlayerControlPanel = ({
     userInteracted,
     onUserInteracted,
     visableLargeVideoOption = false,
+    forceCompact = false,
 }: PlayerControlPanelProps) => {
     const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
     const divRef = useRef<HTMLDivElement>(null)
     const [isSmall, setIsSmall] = useState(false)
+    const [isMobileViewport, setIsMobileViewport] = useState(false)
 
     useEffect(() => {
         if (!divRef.current) return
@@ -105,9 +122,84 @@ const PlayerControlPanel = ({
         return () => observer.disconnect()
     }, [])
 
+    useEffect(() => {
+        const updateViewport = () => {
+            setIsMobileViewport(window.innerWidth < 768)
+        }
+
+        updateViewport()
+        window.addEventListener("resize", updateViewport)
+
+        return () => window.removeEventListener("resize", updateViewport)
+    }, [])
+
+    const showLargeVideoOption = sourceType === "YOUTUBE" && onLargeVideoChange && visableLargeVideoOption
+    const showHideVideoOption = sourceType === "YOUTUBE" && onHideVideoChange && visableLargeVideoOption
+    const compactControls = forceCompact || (isSmall && isMobileViewport)
+
+    const settingsMenu = (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    title="Player settings"
+                >
+                    <Settings2 className="h-3.5 w-3.5" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Player Settings</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                    {onAutoStopChange && (
+                        <DropdownMenuCheckboxItem
+                            checked={autoStop}
+                            onCheckedChange={onAutoStopChange}
+                            onSelect={(event) => event.preventDefault()}
+                        >
+                            Auto Stop
+                        </DropdownMenuCheckboxItem>
+                    )}
+                    {showLargeVideoOption && (
+                        <DropdownMenuCheckboxItem
+                            checked={largeVideo}
+                            onCheckedChange={onLargeVideoChange}
+                            onSelect={(event) => event.preventDefault()}
+                        >
+                            Large video
+                        </DropdownMenuCheckboxItem>
+                    )}
+                    {showHideVideoOption && (
+                        <DropdownMenuCheckboxItem
+                            checked={hideVideo}
+                            onCheckedChange={onHideVideoChange}
+                            onSelect={(event) => event.preventDefault()}
+                        >
+                            Hide video
+                        </DropdownMenuCheckboxItem>
+                    )}
+                    {onToggleProgress && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                                checked={showProgress}
+                                onCheckedChange={() => onToggleProgress()}
+                                onSelect={(event) => event.preventDefault()}
+                            >
+                                Progress strip
+                            </DropdownMenuCheckboxItem>
+                        </>
+                    )}
+                </DropdownMenuGroup>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+
     return (
-        <div ref={divRef} className={`grid  gap-3  px-3 py-2 text-xs ${isSmall ? "" : "grid-cols-[auto_1fr]"}`}>
-            <div className="flex flex-nowrap items-center gap-2">
+        <div ref={divRef} className={`grid gap-2 px-3 py-1.5 text-xs ${compactControls ? "" : isSmall ? "" : "grid-cols-[auto_1fr]"}`}>
+            {!compactControls && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 {/* Left side - Settings toggles */}
                 {/* Auto Stop toggle */}
                 {onAutoStopChange && (
@@ -124,7 +216,7 @@ const PlayerControlPanel = ({
                 )}
 
                 {/* Large Video toggle - chỉ hiện khi source là YouTube */}
-                {sourceType === "YOUTUBE" && onLargeVideoChange && visableLargeVideoOption && (
+                {showLargeVideoOption && (
                     <div className="flex items-center gap-2">
                         <Switch
                             id="large-video"
@@ -136,15 +228,29 @@ const PlayerControlPanel = ({
                         </Label>
                     </div>
                 )}
-            </div>
 
-            <div className=" items-center gap-2 grid grid-cols-2  ">
+                {showHideVideoOption && (
+                    <div className="flex items-center gap-2">
+                        <Switch
+                            id="hide-video"
+                            checked={hideVideo}
+                            onCheckedChange={onHideVideoChange}
+                        />
+                        <Label htmlFor="hide-video" className="text-xs">
+                            Hide video
+                        </Label>
+                    </div>
+                )}
+            </div>
+            )}
+
+            <div className={compactControls ? "grid grid-cols-2 items-center gap-2" : "flex flex-wrap items-center justify-between gap-2"}>
                 {/* Right side - Utility controls */}
                 {
                     !userInteracted ? (
                         <Button
                             onClick={() => onUserInteracted && onUserInteracted(true)}
-                            className="w-full gap-2 h-8"
+                            className="h-8 min-w-32 gap-2"
                         >
                             <Play className="h-4 w-4" />
                             Bắt đầu
@@ -194,9 +300,11 @@ const PlayerControlPanel = ({
                 }
 
 
-                <div className="justify-end gap-2 flex ">
+                <div className="flex justify-end gap-2">
+                    {compactControls && settingsMenu}
+
                     {/* Nút Toggle Progress Bar (Chỉ Icon) 👈 Thêm */}
-                    {onToggleProgress && (
+                    {onToggleProgress && !compactControls && (
                         <Button
                             variant={showProgress ? "secondary" : "outline"}
                             size="icon"
