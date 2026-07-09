@@ -5,7 +5,7 @@ import React, {
 import YouTube, { type YouTubeProps } from "react-youtube"
 import type { ILessonDetailsResponse, ILessonSentenceDetailsResponse } from "@/types"
 import type { PlayerRef } from "./types/types"
-import { Play } from "lucide-react"
+
 
 const START_PADDING = 0.1
 const END_PADDING = 0.05

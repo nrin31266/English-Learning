@@ -34,6 +34,7 @@ const ShadowingMode = () => {
     updateLocalProgress: updateLocalProgress,
     progressKey: "shadowing",
     modeName: "SHADOWING",
+    
   })
 
   const {
@@ -48,6 +49,7 @@ const ShadowingMode = () => {
     handleCompleteSentence,
     handleSelectSentence,
     effectiveShowTranscript,
+
   } = mode
 
   /**

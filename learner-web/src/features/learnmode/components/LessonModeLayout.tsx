@@ -91,19 +91,6 @@ const LessonModeLayout = ({
     profile,
   } = mode
 
-  const rewardMultiplier: Record<string, number> = {
-    A1: 1,
-    A2: 1.5,
-    B1: 2,
-    B2: 2.5,
-    C1: 3,
-    C2: 3.5,
-  }
-  const multiplier = rewardMultiplier[lesson?.languageLevel ?? ""] ?? 1
-  const estimatedReward = {
-    earnedXp: Math.max(1, Math.round(sentences.length * 10 * multiplier)),
-    earnedCoins: Math.max(1, Math.floor(sentences.length * multiplier)),
-  }
 
   const openLoginDialog = () => {
     dispatch(openAuthDialog())
@@ -283,7 +270,7 @@ const LessonModeLayout = ({
         lessonId={lessonId}
         celebrate={celebrateCompletion}
         expectReward={Boolean(profile)}
-        estimatedReward={estimatedReward}
+  
         onBack={handleBackToTopic}
         onContinue={() => setShowCompletionModal(false)}
       >
