@@ -95,7 +95,7 @@ export default function Topics() {
     filterRef.current?.scrollIntoView({ behavior: "smooth" });
   };
   const clearFilters = () => { setSearch(""); setParams({}); };
-  const navigateMode = (mode: "listening" | "shadowing" | "dictation") => {
+  const navigateMode = (mode: string) => {
     if (!selectedLesson) return;
     const base = `/learn/lessons/${selectedLesson.id}/${selectedLesson.slug}`;
     navigate(mode === "listening" ? base : `${base}/${mode}`); setDialogOpen(false);

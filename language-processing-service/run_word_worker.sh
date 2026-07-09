@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Activate virtual environment
-source ./lps-env/bin/activate
+
 mkdir -p logs
 
 echo "👉 Nhập số lượng Word Worker:"

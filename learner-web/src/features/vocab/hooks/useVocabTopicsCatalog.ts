@@ -7,12 +7,14 @@ import {
 import { fetchScopedVocabProgress } from "@/store/vocabProgressSlice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useAuth } from "@/features/keycloak/providers/AuthProvider";
 
 export type VocabCatalogTab = "topics" | "progress";
 export type VocabViewMode = "card" | "list";
 
 export function useVocabTopicsCatalog() {
   const dispatch = useAppDispatch();
+  const { profile } = useAuth();
   const vocab = useAppSelector((state) => state.vocab);
   const topicSummaries = useAppSelector(
     (state) => state.vocabProgress.topicSummaries,
@@ -35,6 +37,8 @@ export function useVocabTopicsCatalog() {
   const tagsLoadedRef = useRef(false);
   const lastTopicsRequestRef = useRef("");
   const lastScopedRequestRef = useRef("");
+
+  const tagsKey = Array.from(selectedTags).sort().join(",");
   const visibleTopicIds = vocab.data.map((topic) => topic.id).join(",");
 
   useEffect(() => {
@@ -45,7 +49,7 @@ export function useVocabTopicsCatalog() {
     if (sort !== "newest") params.set("sort", sort);
     if (page > 0) params.set("page", String(page));
     setSearchParams(params, { replace: true });
-  }, [activeTab, page, searchInput, selectedTags, setSearchParams, sort]);
+  }, [page, searchInput, selectedTags, sort, setSearchParams]);
 
   useEffect(() => {
     if (activeTab !== "topics" || tagsLoadedRef.current) return;
@@ -71,13 +75,16 @@ export function useVocabTopicsCatalog() {
 
   useEffect(() => {
     if (activeTab !== "topics") return;
+
     const requestKey = JSON.stringify({
       q: searchInput.trim(),
-      tags: Array.from(selectedTags).sort(),
+      tags: tagsKey,
       page,
       sort,
     });
+
     if (lastTopicsRequestRef.current === requestKey) return;
+
     const run = () => {
       lastTopicsRequestRef.current = requestKey;
       fetchTopics({
@@ -88,18 +95,22 @@ export function useVocabTopicsCatalog() {
         sort,
       });
     };
+
     if (!mountedRef.current) {
       mountedRef.current = true;
       run();
     } else {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(run, 350);
     }
+
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [activeTab, fetchTopics, page, searchInput, selectedTags, sort]);
+  }, [activeTab, fetchTopics, page, searchInput, tagsKey, sort, selectedTags]);
 
   useEffect(() => {
+    if (!profile) return;
     if (
       activeTab !== "topics" ||
       !visibleTopicIds ||
@@ -107,12 +118,13 @@ export function useVocabTopicsCatalog() {
     ) return;
     lastScopedRequestRef.current = visibleTopicIds;
     void dispatch(fetchScopedVocabProgress(visibleTopicIds.split(",")));
-  }, [activeTab, dispatch, visibleTopicIds]);
+  }, [activeTab, dispatch, profile, visibleTopicIds]);
 
   const topicProgress = useMemo(
     () => new Map(topicSummaries.map((item) => [item.topicId, item])),
     [topicSummaries],
   );
+
   const toggleTag = useCallback((tag: string) => {
     setSelectedTags((current) => {
       const next = new Set(current);
@@ -122,6 +134,7 @@ export function useVocabTopicsCatalog() {
     });
     setPage(0);
   }, []);
+
   const clearFilters = useCallback(() => {
     setSelectedTags(new Set());
     setSearchInput("");

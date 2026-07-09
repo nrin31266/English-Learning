@@ -391,6 +391,7 @@ if __name__ == "__main__":
         ("a", "an"),
         ("strength", "strenth"),
         ("rhythm", "ridim"),
+        ("Hi, how are you?", "Hi, how are you?"),
     ]
 
     for index, (expected, actual) in enumerate(tests, start=1):

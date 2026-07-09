@@ -56,7 +56,7 @@ const TranscriptItem = React.memo(({
         if (hasPunctuation(trimmed) && trimmed.length === 1) return token;
         const normalized = normalizeWordLower(trimmed);
         if (!normalized) return token;
-        return "*".repeat(normalized.length);
+        return "_".repeat(normalized.length);
       })
       .join("");
   }, [sentence.textDisplay, sentence.textRaw, isCompleted]);
@@ -98,7 +98,7 @@ const TranscriptItem = React.memo(({
       </div>
 
       <p className={cn(
-        "text-[15px] leading-snug font-sans tracking-wide",
+        "text-[15px] leading-snug font-normal tracking-widest",
         isActive ? "text-primary" : "text-foreground"
       )}>
         {processedText}
